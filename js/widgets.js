@@ -18,7 +18,7 @@ const wrap = (ctx, def, size, idx, body, extra) => {
   el.style.setProperty('--wc', HUES[idx % HUES.length]);
   return el;
 };
-const rowBtn = (ctx, it, sub) => h('button', { class: 'wrow', on: { click: () => ctx.showItem(it.id) } }, h('span', { class: 'icn', text: (TYPE_META[it.type] || {}).icon || '🔑' }), h('span', { class: 't' }, it.name || '(untitled)', sub ? h('small', { text: '  ' + sub }) : null));
+const rowBtn = (ctx, it, sub) => h('button', { class: 'wrow', on: { click: () => ctx.showItem(it.id) } }, h('span', { class: 'icn', text: (TYPE_META[it.type] || {}).icon || '{{login}}' }), h('span', { class: 't' }, it.name || '(untitled)', sub ? h('small', { text: '  ' + sub }) : null));
 const empty = (t) => h('p', { class: 'wsub', text: t });
 
 const BUILD = {
@@ -62,7 +62,7 @@ const BUILD = {
   generator(ctx) {
     const out = h('div', { class: 'wcode', style: null }), gen = () => { try { out.textContent = generatePassword(ctx.store.settings.gen); } catch { out.textContent = generatePassword({}); } };
     gen();
-    return h('div', null, out, h('div', { class: 'row wrap', style: null }, h('button', { class: 'btn sm', on: { click: gen } }, '⟳'), h('button', { class: 'btn sm', on: { click: () => ctx.copySecret(out.textContent, 'Password copied') } }, '⧉ Copy'), h('button', { class: 'btn sm ghost', on: { click: () => ctx.go('gen') } }, 'Options')));
+    return h('div', null, out, h('div', { class: 'row wrap', style: null }, h('button', { class: 'btn sm', on: { click: gen } }, '⟳'), h('button', { class: 'btn sm', on: { click: () => ctx.copySecret(out.textContent, 'Password copied') } }, '{{copy}} Copy'), h('button', { class: 'btn sm ghost', on: { click: () => ctx.go('gen') } }, 'Options')));
   },
   stats(ctx) {
     const a = ctx.store.active(), used = Object.entries(TYPE_META).filter(([k]) => a.some((i) => i.type === k));
@@ -71,12 +71,12 @@ const BUILD = {
   },
   sync(ctx) {
     const c = ctx.store.settings.sync;
-    return h('div', null, h('p', { class: 'wsub', text: c.last ? (c.last.ok ? '✓ ' : '✕ ') + new Date(c.last.at).toLocaleString() + ' — ' + c.last.msg : 'Not synced yet.' }),
-      h('div', { class: 'row wrap' }, c.token ? h('button', { class: 'btn sm', on: { click: async (e) => { e.target.disabled = true; const r = await ctx.syncNow(true); e.target.disabled = false; if (r.ok) ctx.refresh(); } } }, '⇄ Sync now') : null, h('button', { class: 'btn sm', on: { click: () => ctx.go('beam') } }, '📡 Beam'), h('button', { class: 'btn sm ghost', on: { click: () => { ctx.S.setTab = 'sync'; ctx.go('settings'); } } }, 'Settings')));
+    return h('div', null, h('p', { class: 'wsub', text: c.last ? (c.last.ok ? '{{check}} ' : '{{close}} ') + new Date(c.last.at).toLocaleString() + ' — ' + c.last.msg : 'Not synced yet.' }),
+      h('div', { class: 'row wrap' }, c.token ? h('button', { class: 'btn sm', on: { click: async (e) => { e.target.disabled = true; const r = await ctx.syncNow(true); e.target.disabled = false; if (r.ok) ctx.refresh(); } } }, '{{sync}} Sync now') : null, h('button', { class: 'btn sm', on: { click: () => ctx.go('beam') } }, '{{beam}} Beam'), h('button', { class: 'btn sm ghost', on: { click: () => { ctx.S.setTab = 'sync'; ctx.go('settings'); } } }, 'Settings')));
   },
   conflicts(ctx) {
     const n = ctx.store.conflictCount();
-    return n ? h('div', null, h('p', { class: 'wsub', text: `${n} value${n > 1 ? 's were' : ' was'} edited on two devices.` }), h('button', { class: 'btn sm primary', on: { click: () => ctx.go('conflicts') } }, 'Review now')) : empty('✓ No sync conflicts.');
+    return n ? h('div', null, h('p', { class: 'wsub', text: `${n} value${n > 1 ? 's were' : ' was'} edited on two devices.` }), h('button', { class: 'btn sm primary', on: { click: () => ctx.go('conflicts') } }, 'Review now')) : empty('{{check}} No sync conflicts.');
   },
   tip() { return h('p', { text: TIPS[Math.floor(Date.now() / 864e5) % TIPS.length] }); },
 };

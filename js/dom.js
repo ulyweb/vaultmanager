@@ -1,3 +1,5 @@
+import { splitToken } from './icons.js';
+
 /* Tiny DOM toolkit. Everything is built with createElement / textContent — never innerHTML — so
    vault contents (names, notes, imported data) can never be interpreted as markup. */
 
@@ -10,7 +12,7 @@ export function h(tag, props, ...kids) {
     for (const [k, v] of Object.entries(props)) {
       if (v === undefined || v === null || v === false) continue;
       if (k === 'class') el.className = v;
-      else if (k === 'text') el.textContent = v;
+      else if (k === 'text') setText(el, v);
       else if (k === 'on') for (const [ev, fn] of Object.entries(v)) el.addEventListener(ev, fn);
       else if (k === 'data') for (const [dk, dv] of Object.entries(v)) el.dataset[dk] = dv;
       else if (k === 'value') el.value = v;
@@ -22,10 +24,18 @@ export function h(tag, props, ...kids) {
   append(el, kids);
   return el;
 }
+function setText(el, v) {
+  const t = splitToken(v);
+  if (!t) { el.textContent = v; return; }
+  el.textContent = ''; el.appendChild(t[0]); if (t[1]) el.appendChild(document.createTextNode(t[1]));
+}
+export const setLabel = (el, v) => setText(el, v);
 export function append(el, kids) {
   for (const k of kids.flat(Infinity)) {
     if (k === null || k === undefined || k === false) continue;
-    el.appendChild(k instanceof Node ? k : document.createTextNode(String(k)));
+    if (k instanceof Node) { el.appendChild(k); continue; }
+    const t = splitToken(k);   // a leading {{icon}} token becomes an icon
+    if (t) { el.appendChild(t[0]); if (t[1]) el.appendChild(document.createTextNode(t[1])); } else el.appendChild(document.createTextNode(String(k)));
   }
   return el;
 }
@@ -38,7 +48,9 @@ export function toast(msg, kind = 'ok', ms = 3200) {
   let box = document.getElementById('toasts');
   if (!box) { box = h('div', { id: 'toasts', 'aria-live': 'polite' }); document.body.append(box); }
   const t = h('div', { class: 'toast ' + kind, role: kind === 'err' ? 'alert' : 'status' }, msg);
+  while (box.children.length >= 2) box.firstChild.remove();   // never pile up: keep the two newest
   box.append(t);
+  t.addEventListener('click', () => t.remove());
   setTimeout(() => { t.classList.add('out'); setTimeout(() => t.remove(), 250); }, ms);
 }
 

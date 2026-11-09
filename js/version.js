@@ -1,6 +1,6 @@
 /* Application version, data-format versions and changelog (shown in Settings → About). */
 
-export const APP_VERSION = '0.7.0';
+export const APP_VERSION = '0.8.0';
 export const APP_NAME = 'VaultManager';
 export const REPO_URL = 'https://github.com/ulyweb/vaultmanager';
 
@@ -15,6 +15,12 @@ export const FORMATS = [
 ];
 
 export const CHANGELOG = [
+  { v: '0.8.0', date: '2026-11-09', notes: [
+    'Built for phones as well as PCs: a bottom navigation bar with a centre “New” button, a More sheet that reaches every category and tool, a two-row top bar with a full-width search, bottom-sheet dialogs, scrolling settings tabs, 44-pixel touch targets and safe-area support for notched phones.',
+    'One icon set everywhere: every icon is now a built-in SVG drawn identically on Windows, iPhone, Android and Mac (emoji looked different on every device). Category icons are coloured tiles that follow Settings → Appearance → Icon style.',
+    'Compact welcome screen and docked tour card on small screens; toasts no longer pile up.',
+    'Tested on iPhone SE, iPhone 13, Pixel 7 and iPad Mini profiles: no horizontal overflow on any screen, and the icon artwork is byte-identical to the desktop.',
+  ] },
   { v: '0.7.0', date: '2026-11-09', notes: [
     '15 new categories: Contact, Phone / SIM, Technical account, Crypto wallet, Emergency numbers, Lens prescription, Membership, Internet settings, Prescription / medication, Serial number, Voter card, Picture / photo ID card, Library card, Health numbers and Car / vehicle — 28 in total.',
     'Categories are now grouped by purpose (Everyday, Accounts & access, Home & devices, Money, IDs & documents, Health, Travel & vehicles, People & emergency) in the side bar, the New picker and the Categories dialog; groups fold away.',

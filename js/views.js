@@ -34,13 +34,13 @@ export function pwField(initial, { id, onInput, ctx, autocomplete = 'new-passwor
   const m = h('div');
   const upd = () => { const { el } = meter(input.value); clear(m).append(el); if (onInput) onInput(input.value); };
   input.addEventListener('input', upd);
-  const eye = h('button', { type: 'button', class: 'icon-btn eye', 'aria-label': 'Show or hide', title: 'Show / hide', on: { click: () => { input.type = input.type === 'password' ? 'text' : 'password'; } } }, '👁');
+  const eye = h('button', { type: 'button', class: 'icon-btn eye', 'aria-label': 'Show or hide', title: 'Show / hide', on: { click: () => { input.type = input.type === 'password' ? 'text' : 'password'; } } }, '{{eye}}');
   const g = () => ctx.store.settings.gen;
   const fill = (v) => { input.value = v; input.type = 'text'; upd(); };
   const wrap = h('div', null,
     h('div', { class: 'pwwrap' }, input, eye),
-    h('div', { class: 'row wrap', style: null }, h('button', { type: 'button', class: 'btn sm', on: { click: () => fill(generatePassword(g())) } }, '⚡ Generate'),
-      h('button', { type: 'button', class: 'btn sm', on: { click: () => fill(generatePassphrase({ words: g().words, separator: g().separator, capitalize: g().capitalize, number: g().number })) } }, '🔤 Passphrase'),
+    h('div', { class: 'row wrap', style: null }, h('button', { type: 'button', class: 'btn sm', on: { click: () => fill(generatePassword(g())) } }, '{{bolt}} Generate'),
+      h('button', { type: 'button', class: 'btn sm', on: { click: () => fill(generatePassphrase({ words: g().words, separator: g().separator, capitalize: g().capitalize, number: g().number })) } }, '{{abc}} Passphrase'),
       h('span', { class: 'hint', text: `length ${g().length} · change in Generator` })),
     m);
   upd();
@@ -72,24 +72,24 @@ export function renderVaultView(ctx) {
     h('div', { class: 'list-head' }, h('span', { text: S.view.startsWith('tag:') ? '#' + S.view.slice(4) : TITLES[S.view] || 'Items' }), h('span', { text: String(items.length), style: null }),
       S.view === 'trash' && items.length ? h('button', { class: 'btn sm danger', style: null, on: { click: async () => { if (await confirmDialog({ title: 'Empty trash?', text: 'These items will be permanently deleted.', okLabel: 'Delete forever', danger: true })) { await store.emptyTrash(); ctx.refresh(); } } } }, 'Empty') : null),
     h('div', { class: 'items', role: 'listbox', 'aria-label': 'Items' }, items.length ? items.map((it) => itemRow(ctx, it)) : emptyState(ctx, items)));
-  const detail = h('div', { class: 'panel detail', 'aria-live': 'polite' }, sel ? detailPanel(ctx, sel) : h('div', { class: 'empty' }, h('div', { class: 'big', text: '🔐' }), h('p', { text: 'Select an item to view it.' })));
+  const detail = h('div', { class: 'panel detail', 'aria-live': 'polite' }, sel ? detailPanel(ctx, sel) : h('div', { class: 'empty' }, h('div', { class: 'big', text: '{{shieldlock}}' }), h('p', { text: 'Select an item to view it.' })));
   return h('div', { class: 'split' + (sel ? ' has-sel' : '') }, list, detail);
 }
 
 function emptyState(ctx, items) {
   const { S, store } = ctx;
-  if (S.q) return h('div', { class: 'empty' }, h('div', { class: 'big', text: '🔎' }), h('p', { text: 'Nothing matches “' + S.q + '”.' }));
-  if (S.view === 'trash') return h('div', { class: 'empty' }, h('div', { class: 'big', text: '🗑' }), h('p', { text: 'Trash is empty. Deleted items stay here for 30 days.' }));
-  if (!store.active().length) return h('div', { class: 'empty' }, h('div', { class: 'big', text: '🛡' }), h('p', { text: 'Your vault is empty.' }),
-    h('div', { class: 'row', style: null }, h('button', { class: 'btn primary', on: { click: () => editItem(ctx, null, 'login') } }, '＋ Add your first login'),
-      h('button', { class: 'btn', on: { click: () => ctx.go('data') } }, '⇪ Import')));
+  if (S.q) return h('div', { class: 'empty' }, h('div', { class: 'big', text: '{{search}}' }), h('p', { text: 'Nothing matches “' + S.q + '”.' }));
+  if (S.view === 'trash') return h('div', { class: 'empty' }, h('div', { class: 'big', text: '{{trash}}' }), h('p', { text: 'Trash is empty. Deleted items stay here for 30 days.' }));
+  if (!store.active().length) return h('div', { class: 'empty' }, h('div', { class: 'big', text: '{{shield}}' }), h('p', { text: 'Your vault is empty.' }),
+    h('div', { class: 'row', style: null }, h('button', { class: 'btn primary', on: { click: () => editItem(ctx, null, 'login') } }, '{{plus}} Add your first login'),
+      h('button', { class: 'btn', on: { click: () => ctx.go('data') } }, '{{exportfile}} Import')));
   return h('div', { class: 'empty' }, h('p', { text: 'No items here yet.' }));
 }
 
 function itemRow(ctx, it) {
   const sub = it.type === 'login' ? (it.username || hostOf(it.url)) : it.type === 'card' ? '•••• ' + (it.card.number || '').replace(/\D/g, '').slice(-4) : TEMPLATES[it.type] ? ((it.fields || {})[TEMPLATES[it.type].sub] || (it.notes || '').split('\n')[0].slice(0, 60)) : (it.notes || '').split('\n')[0].slice(0, 60);
   return h('button', { class: 'item' + (ctx.S.sel === it.id ? ' on' : ''), role: 'option', 'aria-selected': String(ctx.S.sel === it.id), on: { click: () => { ctx.S.sel = it.id; ctx.refresh(); } } },
-    avatar(it.name, it.type), h('div', { class: 't' }, h('b', { text: it.name || '(untitled)' }), h('small', { text: sub })), (it.attachments || []).length ? h('span', { class: 'clip', text: '📎', title: it.attachments.length + ' attachment(s)' }) : null, it.favorite ? h('span', { class: 'star', text: '★', 'aria-label': 'Favorite' }) : null);
+    avatar(it.name, it.type), h('div', { class: 't' }, h('b', { text: it.name || '(untitled)' }), h('small', { text: sub })), (it.attachments || []).length ? h('span', { class: 'clip', text: '{{clip}}', title: it.attachments.length + ' attachment(s)' }) : null, it.favorite ? h('span', { class: 'star', text: '{{star}}', 'aria-label': 'Favorite' }) : null);
 }
 
 /* ---------- detail ---------- */
@@ -102,8 +102,8 @@ function field(label, value, { secret, copy, ctx, pre, link, extra } = {}) {
   const set = () => { clear(v); if (link && safeHref(value)) v.append(h('a', { href: safeHref(value), target: '_blank', rel: 'noopener noreferrer nofollow' }, value)); else v.append(shown ? value : '•'.repeat(Math.min(16, Math.max(8, value.length)))); };
   if (value) set();
   const acts = h('div', { class: 'acts' });
-  if (secret) acts.append(h('button', { class: 'icon-btn', 'aria-label': 'Show or hide ' + label, title: 'Show / hide', on: { click: () => { shown = !shown; set(); if (shown && item && ctx.store.settings.logReveal) ctx.store.log('access', 'Revealed ' + label.toLowerCase() + ' of “' + item.name + '”'); } } }, '👁'));
-  if (copy) acts.append(h('button', { class: 'icon-btn', 'aria-label': 'Copy ' + label, title: 'Copy', on: { click: () => ctx.copySecret(value, label + ' copied', item, label) } }, '⧉'));
+  if (secret) acts.append(h('button', { class: 'icon-btn', 'aria-label': 'Show or hide ' + label, title: 'Show / hide', on: { click: () => { shown = !shown; set(); if (shown && item && ctx.store.settings.logReveal) ctx.store.log('access', 'Revealed ' + label.toLowerCase() + ' of “' + item.name + '”'); } } }, '{{eye}}'));
+  if (copy) acts.append(h('button', { class: 'icon-btn', 'aria-label': 'Copy ' + label, title: 'Copy', on: { click: () => ctx.copySecret(value, label + ' copied', item, label) } }, '{{copy}}'));
   return h('div', { class: 'f' }, h('div', { class: 'k', text: label }), extra ? h('div', { class: 'v' }, extra) : v, acts);
 }
 
@@ -119,7 +119,7 @@ function totpField(ctx, it) {
   };
   tick(); const t = setInterval(tick, 1000); ctx.cleanup.push(() => clearInterval(t));
   const f = h('div', { class: 'f' }, h('div', { class: 'k', text: 'One-time code' }), h('div', { class: 'v' }, wrap),
-    h('div', { class: 'acts' }, h('button', { class: 'icon-btn', 'aria-label': 'Copy one-time code', on: { click: () => ctx.copySecret(last, 'Code copied', it, 'one-time code') } }, '⧉')));
+    h('div', { class: 'acts' }, h('button', { class: 'icon-btn', 'aria-label': 'Copy one-time code', on: { click: () => ctx.copySecret(last, 'Code copied', it, 'one-time code') } }, '{{copy}}')));
   return f;
 }
 
@@ -129,17 +129,17 @@ function detailPanel(ctx, it) {
   const trashed = !!it.deleted;
   const actions = h('div', { class: 'detail-actions' },
     h('button', { class: 'btn back sm', on: { click: () => { ctx.S.sel = null; ctx.refresh(); } } }, '← Back'),
-    trashed ? [h('button', { class: 'btn primary sm', on: { click: async () => { await store.restore(it.id); toast('Restored'); ctx.refresh(); } } }, '↩ Restore'),
-      h('button', { class: 'btn danger sm', on: { click: async () => { if (await confirmDialog({ title: 'Delete forever?', text: `“${it.name}” will be permanently deleted.`, okLabel: 'Delete forever', danger: true })) { await store.purge(it.id); ctx.S.sel = null; ctx.refresh(); } } } }, '✕ Delete forever')] :
-      [h('button', { class: 'btn sm', on: { click: () => editItem(ctx, it) } }, '✎ Edit'),
-        h('button', { class: 'btn sm' + (it.favorite ? ' primary' : ''), 'aria-pressed': String(it.favorite), on: { click: async () => { await store.update(it.id, { favorite: !it.favorite }); ctx.refresh(); } } }, it.favorite ? '★ Favorite' : '☆ Favorite'),
-        it.type === 'network' && (it.fields || {}).ssid ? h('button', { class: 'btn sm', on: { click: () => wifiModal(ctx, it) } }, '📶 Wi-Fi QR') : null,
-        h('button', { class: 'btn sm', on: { click: () => shareItem(ctx, it) } }, '▦ Seal as QR'),
-        h('button', { class: 'btn sm', on: { click: async () => { const c = newItem(it.type, { ...structuredClone(it), id: undefined, name: it.name + ' (copy)', history: [], created: Date.now(), updated: Date.now() }); c.id = newItem().id; await store.add(c); ctx.showItem(c.id); toast('Duplicated'); } } }, '⎘ Duplicate'),
-        h('button', { class: 'btn danger sm', on: { click: async () => { await store.trash(it.id); ctx.S.sel = null; toast('Moved to trash'); ctx.refresh(); } } }, '🗑 Delete')]);
+    trashed ? [h('button', { class: 'btn primary sm', on: { click: async () => { await store.restore(it.id); toast('Restored'); ctx.refresh(); } } }, '{{undo}} Restore'),
+      h('button', { class: 'btn danger sm', on: { click: async () => { if (await confirmDialog({ title: 'Delete forever?', text: `“${it.name}” will be permanently deleted.`, okLabel: 'Delete forever', danger: true })) { await store.purge(it.id); ctx.S.sel = null; ctx.refresh(); } } } }, '{{close}} Delete forever')] :
+      [h('button', { class: 'btn sm', on: { click: () => editItem(ctx, it) } }, '{{edit}} Edit'),
+        h('button', { class: 'btn sm' + (it.favorite ? ' primary' : ''), 'aria-pressed': String(it.favorite), on: { click: async () => { await store.update(it.id, { favorite: !it.favorite }); ctx.refresh(); } } }, it.favorite ? '{{star}} Favorite' : '{{starline}} Favorite'),
+        it.type === 'network' && (it.fields || {}).ssid ? h('button', { class: 'btn sm', on: { click: () => wifiModal(ctx, it) } }, '{{network}} Wi-Fi QR') : null,
+        h('button', { class: 'btn sm', on: { click: () => shareItem(ctx, it) } }, '{{qr}} Seal as QR'),
+        h('button', { class: 'btn sm', on: { click: async () => { const c = newItem(it.type, { ...structuredClone(it), id: undefined, name: it.name + ' (copy)', history: [], created: Date.now(), updated: Date.now() }); c.id = newItem().id; await store.add(c); ctx.showItem(c.id); toast('Duplicated'); } } }, '{{dup}} Duplicate'),
+        h('button', { class: 'btn danger sm', on: { click: async () => { await store.trash(it.id); ctx.S.sel = null; toast('Moved to trash'); ctx.refresh(); } } }, '{{trash}} Delete')]);
 
   const rows = [];
-  if ((it.conflicts || []).length && !trashed) rows.push(h('div', { class: 'note warn conflict-banner', role: 'alert' }, '⚠ Edited on two devices: ' + it.conflicts.length + ' value' + (it.conflicts.length > 1 ? 's' : '') + ' differ. The newest was kept and the other is saved. ', h('button', { class: 'linkbtn', on: { click: () => conflictModal(ctx, it) } }, 'Review')));
+  if ((it.conflicts || []).length && !trashed) rows.push(h('div', { class: 'note warn conflict-banner', role: 'alert' }, '{{alert}} Edited on two devices: ' + it.conflicts.length + ' value' + (it.conflicts.length > 1 ? 's' : '') + ' differ. The newest was kept and the other is saved. ', h('button', { class: 'linkbtn', on: { click: () => conflictModal(ctx, it) } }, 'Review')));
   if (it.type === 'login') {
     rows.push(field('Username', it.username, { copy: true, ctx }));
     rows.push(field('Password', it.password, { secret: true, copy: true, ctx, extra: undefined }));
@@ -180,11 +180,11 @@ export function conflictModal(ctx, it0) {
         const mk = (text) => { const v = h('div', { class: 'cval mono', text: shown ? text : '••••••••' }); return v; };
         const cur = describeValue(currentValue(it, c.key)), oth = describeValue(c.value);
         const curEl = mk(cur), othEl = mk(oth);
-        const eye = secret ? h('button', { class: 'btn sm ghost', on: { click: () => { shown = !shown; curEl.textContent = shown ? cur : '••••••••'; othEl.textContent = shown ? oth : '••••••••'; } } }, '👁 Show / hide') : null;
+        const eye = secret ? h('button', { class: 'btn sm ghost', on: { click: () => { shown = !shown; curEl.textContent = shown ? cur : '••••••••'; othEl.textContent = shown ? oth : '••••••••'; } } }, '{{eye}} Show / hide') : null;
         return h('div', { class: 'conf' }, h('div', { class: 'row wrap' }, h('b', { text: keyLabel(it, c.key) }), eye),
           h('div', { class: 'grid2' }, h('div', null, h('p', { class: 'lbl', text: 'Kept (newest)' }), curEl), h('div', null, h('p', { class: 'lbl', text: 'Other version · ' + fmtDate(c.at) }), othEl)),
-          h('div', { class: 'row wrap' }, h('button', { class: 'btn sm', on: { click: async () => { await ctx.store.resolveConflict(it.id, c.id, 'keep'); ctx.refresh(); draw(); } } }, '✓ Keep current'),
-            h('button', { class: 'btn sm primary', on: { click: async () => { await ctx.store.resolveConflict(it.id, c.id, 'other'); ctx.refresh(); draw(); } } }, '↩ Use the other version')));
+          h('div', { class: 'row wrap' }, h('button', { class: 'btn sm', on: { click: async () => { await ctx.store.resolveConflict(it.id, c.id, 'keep'); ctx.refresh(); draw(); } } }, '{{check}} Keep current'),
+            h('button', { class: 'btn sm primary', on: { click: async () => { await ctx.store.resolveConflict(it.id, c.id, 'other'); ctx.refresh(); draw(); } } }, '{{undo}} Use the other version')));
       }));
   };
   let closeConflict = () => {};
@@ -216,7 +216,7 @@ function wifiModal(ctx, it) {
 /* ---------- attachments ---------- */
 const IMG = /^image\/(png|jpeg|gif|webp|bmp|avif)$/;
 export const fmtSize = (n) => (n < 1024 ? n + ' B' : n < 1048576 ? (n / 1024).toFixed(n < 10240 ? 1 : 0) + ' KB' : (n / 1048576).toFixed(1) + ' MB');
-const attIcon = (t) => (IMG.test(t) ? '🖼' : t === 'application/pdf' ? '📕' : /^text\//.test(t) ? '📄' : /zip|compressed|tar/.test(t) ? '🗜' : '📎');
+const attIcon = (t) => (IMG.test(t) ? '{{photoid}}' : t === 'application/pdf' ? '{{pdf}}' : /^text\//.test(t) ? '{{doc}}' : /zip|compressed|tar/.test(t) ? '{{archive}}' : '{{clip}}');
 
 function attachmentsField(ctx, it) {
   const canAdd = !it.deleted;
@@ -227,7 +227,7 @@ function attachmentsField(ctx, it) {
     const thumb = h('div', { class: 'thumb' });
     const dl = h('button', { class: 'icon-btn', 'aria-label': 'Download ' + a.name, title: 'Download', on: { click: async () => {
       try { const { bytes } = await ctx.store.readAttachment(it.id, a.id); download(a.name, bytes, 'application/octet-stream'); if (ctx.store.settings.logReveal) ctx.store.log('access', `Downloaded attachment “${a.name}” of “${it.name}”`); } catch (e) { toast(e.message, 'err', 6000); }
-    } } }, '⬇');
+    } } }, '{{download}}');
     row.append(thumb, h('div', { class: 'meta' }, h('b', { text: a.name }), h('small', { text: fmtSize(a.size) + ' · ' + (a.type || 'file') })), dl);
     thumb.append(h('span', { text: attIcon(a.type) }));
     if (IMG.test(a.type)) {
@@ -249,7 +249,7 @@ function attachmentsField(ctx, it) {
     if (n) { toast(n + ' attachment' + (n > 1 ? 's' : '') + ' added (encrypted)'); ctx.refresh(); }
   } } });
   const fi = quick(false), ci = quick(true);
-  const adder = canAdd ? h('div', { class: 'row wrap' }, h('button', { class: 'btn sm', on: { click: () => fi.click() } }, '📎 Add images / documents'), h('button', { class: 'btn sm', on: { click: () => ci.click() } }, '📷 Take photo'), fi, ci) : null;
+  const adder = canAdd ? h('div', { class: 'row wrap' }, h('button', { class: 'btn sm', on: { click: () => fi.click() } }, '{{clip}} Add images / documents'), h('button', { class: 'btn sm', on: { click: () => ci.click() } }, '{{camera}} Take photo'), fi, ci) : null;
   return h('div', { class: 'f' }, h('div', { class: 'k', text: 'Attachments' }), h('div', { class: 'v' }, list, (it.attachments || []).length ? null : h('p', { class: 'hint', text: 'No attachments yet. Add pictures (ID, receipts, photos) or documents (PDF, Word…) — they are encrypted.' }), adder), h('div', { class: 'acts' }));
 }
 
@@ -258,9 +258,9 @@ function historyModal(ctx, it) {
   const secretFields = new Set(['password', 'totp', 'card']);
   const revs = (it.revisions || []).map((r, idx) => h('div', { class: 'hl' }, h('div', { class: 't' }, h('b', { text: fmtDate(r.at) + ' — before this edit' }),
     h('small', { text: 'changed: ' + r.changed.join(', ') + (r.changed.some((c) => secretFields.has(c)) ? ' (secret values are not shown here)' : '') })),
-    trashed ? null : h('button', { class: 'btn sm', on: { click: async () => { await ctx.store.restoreRevision(it.id, idx); toast('Earlier version restored'); ctx.closeModals(); ctx.refresh(); } } }, '↩ Restore')));
+    trashed ? null : h('button', { class: 'btn sm', on: { click: async () => { await ctx.store.restoreRevision(it.id, idx); toast('Earlier version restored'); ctx.closeModals(); ctx.refresh(); } } }, '{{undo}} Restore')));
   const pws = (it.history || []).map((x) => h('div', { class: 'f' }, h('div', { class: 'k', text: fmtDate(x.at) }), h('div', { class: 'v secret', text: x.pw }),
-    h('div', { class: 'acts' }, h('button', { class: 'icon-btn', 'aria-label': 'Copy', on: { click: () => ctx.copySecret(x.pw, 'Old password copied', it, 'previous password') } }, '⧉'))));
+    h('div', { class: 'acts' }, h('button', { class: 'icon-btn', 'aria-label': 'Copy', on: { click: () => ctx.copySecret(x.pw, 'Old password copied', it, 'previous password') } }, '{{copy}}'))));
   modal({ title: 'Version history', sub: it.name, body: h('div', null,
     revs.length ? [h('p', { class: 'lbl', text: 'Earlier versions (last 10 edits)' }), revs] : null,
     pws.length ? [h('p', { class: 'lbl', text: 'Previous passwords' }), h('p', { class: 'hint', text: 'Shown in readable form. Opening this list is recorded in the audit trail.' }), pws] : null),
@@ -301,17 +301,17 @@ export function editItem(ctx, item, type = 'login') {
       h('input', { class: 'inp', value: c.label, placeholder: 'Label', maxlength: '60', 'aria-label': 'Custom field label', on: { input: (e) => { c.label = e.target.value; } } }),
       h('input', { class: 'inp mono', type: c.secret ? 'password' : 'text', value: c.value, placeholder: 'Value', autocomplete: 'off', 'aria-label': 'Custom field value', on: { input: (e) => { c.value = e.target.value; } } }),
       h('label', { class: 'chk' }, h('input', { type: 'checkbox', checked: c.secret, on: { change: (e) => { c.secret = e.target.checked; drawCustom(); } } }), 'secret'),
-      h('button', { type: 'button', class: 'icon-btn', 'aria-label': 'Remove custom field', title: 'Remove', on: { click: () => { it.custom.splice(i, 1); drawCustom(); } } }, '✕'))));
+      h('button', { type: 'button', class: 'icon-btn', 'aria-label': 'Remove custom field', title: 'Remove', on: { click: () => { it.custom.splice(i, 1); drawCustom(); } } }, '{{close}}'))));
   };
   drawCustom();
-  body.push(h('div', { class: 'field' }, h('label', { text: 'Custom fields' }), customBox, h('button', { type: 'button', class: 'btn sm', on: { click: () => { if (it.custom.length < MAX_CUSTOM) { it.custom.push({ label: '', value: '', secret: false }); drawCustom(); } } } }, '＋ Add a field')));
+  body.push(h('div', { class: 'field' }, h('label', { text: 'Custom fields' }), customBox, h('button', { type: 'button', class: 'btn sm', on: { click: () => { if (it.custom.length < MAX_CUSTOM) { it.custom.push({ label: '', value: '', secret: false }); drawCustom(); } } } }, '{{plus}} Add a field')));
   /* attachments are staged here and applied on Save, so Cancel discards them */
   const staged = [], removed = new Set(), existing = (it.attachments || []).map((a) => ({ ...a }));
   const attList = h('div', { class: 'atts' }), attErr = h('p', { class: 'err', role: 'alert' });
   const drawAtt = () => {
     clear(attList);
-    for (const a of existing) if (!removed.has(a.id)) attList.append(h('div', { class: 'att' }, h('div', { class: 'thumb' }, h('span', { text: attIcon(a.type) })), h('div', { class: 'meta' }, h('b', { text: a.name }), h('small', { text: fmtSize(a.size) })), h('button', { type: 'button', class: 'icon-btn', 'aria-label': 'Remove ' + a.name, title: 'Remove', on: { click: () => { removed.add(a.id); drawAtt(); } } }, '✕')));
-    for (const a of staged) attList.append(h('div', { class: 'att' }, h('div', { class: 'thumb' }, h('span', { text: attIcon(a.type) })), h('div', { class: 'meta' }, h('b', { text: a.name }), h('small', { text: fmtSize(a.bytes.length) + ' · will be added on save' })), h('button', { type: 'button', class: 'icon-btn', 'aria-label': 'Remove ' + a.name, title: 'Remove', on: { click: () => { staged.splice(staged.indexOf(a), 1); drawAtt(); } } }, '✕')));
+    for (const a of existing) if (!removed.has(a.id)) attList.append(h('div', { class: 'att' }, h('div', { class: 'thumb' }, h('span', { text: attIcon(a.type) })), h('div', { class: 'meta' }, h('b', { text: a.name }), h('small', { text: fmtSize(a.size) })), h('button', { type: 'button', class: 'icon-btn', 'aria-label': 'Remove ' + a.name, title: 'Remove', on: { click: () => { removed.add(a.id); drawAtt(); } } }, '{{close}}')));
+    for (const a of staged) attList.append(h('div', { class: 'att' }, h('div', { class: 'thumb' }, h('span', { text: attIcon(a.type) })), h('div', { class: 'meta' }, h('b', { text: a.name }), h('small', { text: fmtSize(a.bytes.length) + ' · will be added on save' })), h('button', { type: 'button', class: 'icon-btn', 'aria-label': 'Remove ' + a.name, title: 'Remove', on: { click: () => { staged.splice(staged.indexOf(a), 1); drawAtt(); } } }, '{{close}}')));
   };
   const pick = (capture) => h('input', { type: 'file', class: 'offscreen', multiple: !capture, accept: capture ? 'image/*' : null, capture: capture ? 'environment' : null, 'aria-label': capture ? 'Take a photo' : 'Choose files', on: { change: async (e) => {
     attErr.textContent = '';
@@ -325,7 +325,7 @@ export function editItem(ctx, item, type = 'login') {
   const fileIn = pick(false), camIn = pick(true);
   drawAtt();
   body.push(h('div', { class: 'field' }, h('label', { text: 'Attachments (images, documents — encrypted, up to ' + fmtSize(MAX_ATTACHMENT) + ' each)' }), attList,
-    h('div', { class: 'row wrap' }, h('button', { type: 'button', class: 'btn sm', on: { click: () => fileIn.click() } }, '📎 Add files'), h('button', { type: 'button', class: 'btn sm', on: { click: () => camIn.click() } }, '📷 Take photo'), fileIn, camIn), attErr));
+    h('div', { class: 'row wrap' }, h('button', { type: 'button', class: 'btn sm', on: { click: () => fileIn.click() } }, '{{clip}} Add files'), h('button', { type: 'button', class: 'btn sm', on: { click: () => camIn.click() } }, '{{camera}} Take photo'), fileIn, camIn), attErr));
   body.push(h('div', { class: 'field' }, h('label', { for: 'f_notes', text: it.type === 'note' ? 'Note' : 'Notes' }), h('textarea', { id: 'f_notes', class: 'ta', rows: it.type === 'note' ? '10' : '4', on: { input: (e) => { it.notes = e.target.value; } } }, it.notes)));
   body.push(inp('tags', 'Tags (comma separated)', { get: () => (it.tags || []).join(', '), set: (v) => { it.tags = v.split(',').map((t) => t.trim().replace(/^#/, '')).filter(Boolean).slice(0, 30); }, ph: 'work, finance' }));
   body.push(h('label', { class: 'chk' }, h('input', { type: 'checkbox', checked: it.favorite, on: { change: (e) => { it.favorite = e.target.checked; } } }), 'Favorite'));
@@ -357,7 +357,7 @@ function tplInput(ctx, it, f) {
   if (f.kind === 'select') control = h('select', { id, class: 'sel', on: { change: (e) => set(e.target.value) } }, h('option', { value: '', text: '— choose —' }), f.options.map((o) => h('option', { value: o, selected: o === val }, o)));
   else if (f.kind === 'multiline') control = h('textarea', { id, class: 'ta', rows: '4', spellcheck: 'false', on: { input: (e) => set(e.target.value) } }, val);
   else if (isSecretField(f) && f.gen) control = pwField(val, { ctx, onInput: set }).el;
-  else if (isSecretField(f)) { const i = h('input', { id, type: 'password', class: 'inp mono', value: val, autocomplete: 'off', spellcheck: 'false', on: { input: (e) => set(e.target.value) } }); control = h('div', { class: 'pwwrap' }, i, h('button', { type: 'button', class: 'icon-btn eye', 'aria-label': 'Show or hide ' + f.l, on: { click: () => { i.type = i.type === 'password' ? 'text' : 'password'; } } }, '👁')); }
+  else if (isSecretField(f)) { const i = h('input', { id, type: 'password', class: 'inp mono', value: val, autocomplete: 'off', spellcheck: 'false', on: { input: (e) => set(e.target.value) } }); control = h('div', { class: 'pwwrap' }, i, h('button', { type: 'button', class: 'icon-btn eye', 'aria-label': 'Show or hide ' + f.l, on: { click: () => { i.type = i.type === 'password' ? 'text' : 'password'; } } }, '{{eye}}')); }
   else control = h('input', { id, class: 'inp' + (f.mono ? ' mono' : ''), type: f.kind === 'date' ? 'date' : 'text', value: val, autocomplete: 'off', spellcheck: 'false', placeholder: f.kind === 'url' ? 'https://' : null, on: { input: (e) => set(e.target.value) } });
   return h('div', { class: 'field' + (full ? ' full' : '') }, h('label', { for: id, text: f.l }), control);
 }
@@ -394,14 +394,14 @@ export function shareItem(ctx, it) {
       canvas = h('canvas', { role: 'img', 'aria-label': 'Encrypted QR code' });
       const r = await drawQR(canvas, sealed, { scale: 6 });
       clear(out).append(h('div', { class: 'qrbox' }, canvas), h('p', { class: 'hint', text: `QR version ${r.version} · ECC ${r.ecc} · AES-256-GCM · PBKDF2-SHA256 600,000 rounds. The password is NOT in the code — share it by a different channel.` }),
-        h('div', { class: 'row wrap' }, h('button', { class: 'btn sm', on: { click: () => canvas.toBlob((b) => download(`vaultmanager-${it.name.replace(/\W+/g, '-').toLowerCase() || 'item'}.png`, b, 'image/png')) } }, '⬇ PNG'),
-          h('button', { class: 'btn sm', on: { click: () => { const c2 = h('canvas'); c2.width = canvas.width; c2.height = canvas.height; c2.getContext('2d').drawImage(canvas, 0, 0); printNodes([h('h1', { text: 'VaultManager — encrypted QR' }), h('div', { class: 'pq' }, c2, h('div', { text: it.name })), h('p', { text: 'Scan in VaultManager (QR tools → Open) or QR Seal and enter the password. The password is not on this page.' })]); } } }, '🖨 Print')));
+        h('div', { class: 'row wrap' }, h('button', { class: 'btn sm', on: { click: () => canvas.toBlob((b) => download(`vaultmanager-${it.name.replace(/\W+/g, '-').toLowerCase() || 'item'}.png`, b, 'image/png')) } }, '{{download}} PNG'),
+          h('button', { class: 'btn sm', on: { click: () => { const c2 = h('canvas'); c2.width = canvas.width; c2.height = canvas.height; c2.getContext('2d').drawImage(canvas, 0, 0); printNodes([h('h1', { text: 'VaultManager — encrypted QR' }), h('div', { class: 'pq' }, c2, h('div', { text: it.name })), h('p', { text: 'Scan in VaultManager (QR tools → Open) or QR Seal and enter the password. The password is not on this page.' })]); } } }, '{{print}} Print')));
     } catch (e) { clear(out); err.textContent = e.message; }
     return false;
   };
   modal({ title: 'Seal as QR code', sub: it.name, wide: true,
     body: h('div', null, h('p', { class: 'note warn', text: 'Anyone with the QR image AND this password can read the item. Pick a password you can tell the recipient separately.' }),
-      h('div', { class: 'field' }, h('label', { text: 'QR password' }), h('div', { class: 'row' }, h('div', { class: 'grow' }, pwBox), h('button', { class: 'btn sm', on: { click: () => { pwBox.value = generatePassphrase({ words: 4 }); } } }, '⚡'))), err, out),
+      h('div', { class: 'field' }, h('label', { text: 'QR password' }), h('div', { class: 'row' }, h('div', { class: 'grow' }, pwBox), h('button', { class: 'btn sm', on: { click: () => { pwBox.value = generatePassphrase({ words: 4 }); } } }, '{{bolt}}'))), err, out),
     actions: [{ label: 'Close' }, { label: 'Create QR', kind: 'primary', onClick: make, close: false }] });
 }
 
@@ -414,8 +414,8 @@ export function showRecoveryKit(ctx, key, { onDone } = {}) {
     h('p', { class: 'note warn', text: 'This key can unlock your vault if you forget your master password. It is shown only once and is not stored anywhere in readable form. Print it or write it down and keep it somewhere safe — not on this device.' }),
     h('div', { class: 'recovery', text: key }),
     h('div', { class: 'qrbox' }, qrCanvas),
-    h('div', { class: 'row wrap' }, h('button', { class: 'btn sm', on: { click: () => copyText(key, 'Recovery key copied', 60) } }, '⧉ Copy'),
-      h('button', { class: 'btn sm', on: { click: () => { const c2 = h('canvas'); c2.width = qrCanvas.width; c2.height = qrCanvas.height; c2.getContext('2d').drawImage(qrCanvas, 0, 0); printNodes([h('h1', { text: 'VaultManager — Emergency Kit' }), h('p', { text: 'Created ' + fmtDate(Date.now()) + '. Keep this page somewhere safe (a safe, a lockbox). Anyone holding it can unlock your vault’s data file if they also obtain that file.' }), h('div', { class: 'rk', text: key }), h('div', { class: 'pq' }, c2, h('div', { text: 'Recovery key QR' })), h('p', { text: 'To use it: VaultManager → lock screen → “Use recovery key”.' })]); } } }, '🖨 Print Emergency Kit')),
+    h('div', { class: 'row wrap' }, h('button', { class: 'btn sm', on: { click: () => copyText(key, 'Recovery key copied', 60) } }, '{{copy}} Copy'),
+      h('button', { class: 'btn sm', on: { click: () => { const c2 = h('canvas'); c2.width = qrCanvas.width; c2.height = qrCanvas.height; c2.getContext('2d').drawImage(qrCanvas, 0, 0); printNodes([h('h1', { text: 'VaultManager — Emergency Kit' }), h('p', { text: 'Created ' + fmtDate(Date.now()) + '. Keep this page somewhere safe (a safe, a lockbox). Anyone holding it can unlock your vault’s data file if they also obtain that file.' }), h('div', { class: 'rk', text: key }), h('div', { class: 'pq' }, c2, h('div', { text: 'Recovery key QR' })), h('p', { text: 'To use it: VaultManager → lock screen → “Use recovery key”.' })]); } } }, '{{print}} Print Emergency Kit')),
     h('label', { class: 'chk', style: null }, ack, 'I have stored my recovery key safely'));
   const m = modal({ title: 'Your recovery key', sub: 'Optional, but strongly recommended', body, wide: false, onClose: () => { if (onDone) onDone(); },
     actions: [{ label: 'Done', kind: 'primary', onClick: async () => { if (!ack.checked && !(await confirmDialog({ title: 'Skip saving it?', text: 'Without the recovery key AND without your master password, your data cannot be recovered by anyone — including us. Close anyway?', okLabel: 'Close anyway', danger: true }))) return false; } }] });

@@ -10,8 +10,8 @@ import { fileURLToPath } from 'node:url';
 import { TEMPLATES, GROUPS } from '../js/templates.js';
 
 const require = createRequire(import.meta.url);
-let chromium;
-try { ({ chromium } = require('playwright')); } catch { ({ chromium } = require('/opt/node-tools/node_modules/playwright')); }
+let chromium, devices;
+try { ({ chromium, devices } = require('playwright')); } catch { ({ chromium, devices } = require('/opt/node-tools/node_modules/playwright')); }
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.webmanifest': 'application/manifest+json' };
@@ -203,24 +203,83 @@ test('recovery key unlocks, and master password change works', async () => {
   await ctx.close();
 });
 
-test('mobile layout: no horizontal scroll, detail replaces list', async () => {
-  const { ctx, page, problems } = await newPage({ viewport: { width: 390, height: 780 }, deviceScaleFactor: 2 });
-  await page.goto(base); await page.waitForSelector('#pw1');
-  await shot(page, '10-mobile-create');
+const EMOJI = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}]/u;
+async function phoneFlow(name) {
+  const { defaultBrowserType, ...dev } = devices[name];
+  const { ctx, page, problems } = await newPage({ ...dev, colorScheme: 'dark', reducedMotion: 'reduce' }); void defaultBrowserType;
+  const vw = dev.viewport.width;
+  const fits = async (label) => {
+    const o = await page.evaluate(() => { const cw = document.documentElement.clientWidth; return { sw: document.documentElement.scrollWidth, cw, off: [...document.querySelectorAll('body *')].filter((e) => { const r = e.getBoundingClientRect(); return r.width > 0 && r.right > cw + 1 && !e.closest('.tabs, .toast, .tour-hole, .scanner'); }).slice(0, 3).map((e) => e.tagName + '.' + String(e.className).slice(0, 30)) }; });
+    assert.ok(o.sw <= o.cw + 1, `${name} · ${label}: horizontal overflow ${o.sw}>${o.cw} ${o.off.join(',')}`);
+  };
+  const tall = async (sel, min, what) => { const hts = await page.$$eval(sel, (els) => els.filter((e) => e.getBoundingClientRect().width > 0).map((e) => Math.round(e.getBoundingClientRect().height))); assert.ok(hts.length > 0 && hts.every((h) => h >= min), `${name}: ${what} touch targets ${hts} (min ${min})`); };
+
+  await page.goto(base); await page.waitForSelector('#pw1'); await fits('create');
   await page.fill('#pw1', MASTER); await page.fill('#pw2', MASTER); await page.check('#ack'); await page.click('button[type=submit]');
-  await page.getByRole('button', { name: 'Skip for now' }).click(); await dismissWelcome(page);
-  await page.waitForSelector('.topbar');
-  await page.getByRole('button', { name: '＋ New' }).click(); await page.getByRole('button', { name: '🔑 Login', exact: true }).click();
-  await page.fill('#f_name', 'Example'); await page.fill('#f_username', 'me@example.com'); await page.getByRole('button', { name: '⚡ Generate' }).click(); await page.getByRole('button', { name: 'Save' }).click();
-  await page.waitForSelector('.detail h2');
-  await shot(page, '11-mobile-detail');
-  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
-  assert.ok(overflow <= 1, 'horizontal overflow ' + overflow);
-  assert.ok(await page.locator('.list').isHidden());
-  await page.getByRole('button', { name: '← Back' }).click();
-  assert.ok(await page.locator('.list').isVisible());
-  assert.deepEqual(problems, []);
-  await ctx.close();
+  await page.getByRole('button', { name: 'Skip for now' }).click();
+  await page.waitForSelector('.welcome.in'); await fits('welcome');
+  assert.ok(await page.locator('.welcome-go').isVisible()); await page.keyboard.press('Escape'); await page.waitForSelector('.welcome', { state: 'detached' });
+
+  // shell: bottom bar, two-row top bar with a full-width search, no desktop side bar / dock
+  await page.waitForSelector('.mbar-item'); await fits('home');
+  assert.ok(await page.locator('.side').isHidden() && await page.locator('.dock').isHidden(), 'no side bar or dock on a phone');
+  const search = await page.locator('.topbar .search').boundingBox(); assert.ok(search.width >= vw * 0.85, `${name}: search is ${search.width}px of ${vw}`);
+  const bar = await page.locator('.mbar').boundingBox(); assert.ok(bar.y + bar.height >= dev.viewport.height - 1, 'bottom bar sits at the bottom');
+  assert.equal(await page.locator('.mbar-item svg').count(), 4); assert.ok(await page.locator('.mbar-fab svg').isVisible());
+  await tall('.mbar-item', 44, 'bottom bar'); await tall('.mbar-fab', 52, 'new button'); await tall('.topbar .btn', 40, 'top bar buttons');
+  for (const sel of ['.mbar', '.topbar']) assert.ok(!EMOJI.test(await page.textContent(sel)), `${name}: no emoji glyphs in ${sel}`);
+  const loginSvg = await page.locator('.mbar-item svg').first().evaluate((e) => e.outerHTML);
+
+  // add items from the center button (every category picker button is reachable and tall enough)
+  await page.getByRole('button', { name: 'New item' }).click(); await page.waitForSelector('.modal-sheet .catgroup'); await fits('picker');
+  assert.equal(await page.locator('.modal-sheet .cats .btn').count(), 28); await tall('.modal-sheet .cats .btn', 44, 'category picker');
+  const sheet = await page.locator('.modal-sheet').boundingBox(); assert.ok(sheet.width >= vw - 1 && sheet.y + sheet.height <= dev.viewport.height + 1, `${name}: dialogs are bottom sheets`);
+  await page.locator('.modal-sheet .cats .btn', { hasText: 'Login' }).first().click();
+  await page.fill('#f_name', 'GitHub'); await page.fill('#f_username', 'octocat'); await fits('editor');
+  await page.getByRole('button', { name: '⚡ Generate' }).click(); await page.getByRole('button', { name: 'Save' }).click();
+  await page.waitForSelector('.detail h2:has-text("GitHub")'); await fits('detail');
+  await page.getByRole('button', { name: 'New item' }).click();
+  await page.locator('.modal-sheet .cats .btn', { hasText: 'Wi-Fi / network' }).first().click(); await page.fill('#f_name', 'Home Wi-Fi'); await page.fill('#tf_ssid', 'Casa'); await page.getByRole('button', { name: 'Save' }).click();
+  await page.waitForSelector('.detail h2:has-text("Home Wi-Fi")'); await fits('detail 2');
+  await page.getByRole('button', { name: '← Back' }).click(); await page.waitForSelector('.list'); assert.ok(await page.locator('.detail').isHidden());
+  await fits('list'); await tall('.item', 56, 'list rows');
+
+  // More sheet: everything is reachable, nothing overflows
+  await page.getByRole('button', { name: 'More' }).click(); await page.waitForSelector('.msheet'); await fits('more');
+  assert.equal(await page.locator('.msheet-item .ico.cat').count(), 28, 'all 28 categories are reachable on a phone'); await tall('.msheet-item', 44, 'more sheet');
+  assert.ok(!EMOJI.test(await page.textContent('.msheet')), `${name}: no emoji glyphs in the menu`);
+  await page.locator('.msheet-item', { hasText: 'Network' }).first().click(); await page.waitForSelector('.item'); await fits('category');
+  await page.getByRole('button', { name: 'More' }).click(); await page.locator('.msheet-item', { hasText: 'Settings' }).first().click(); await page.waitForSelector('.tabs');
+  for (const t of ['General', 'Appearance', 'Effects', 'Dock & menu bar', 'Widgets', 'Security', 'Sync', 'Audit trail', 'About']) { await page.getByRole('tab', { name: new RegExp(t.replace('&', '\\&')) }).click(); await page.waitForTimeout(80); await fits('settings ' + t); }
+  for (const [lbl, sel] of [['Generator', '.genout'], ['More→QR tools', '.tabs'], ['More→Beam sync', '.beam'], ['More→Vault health', '.ring'], ['More→Import & export', '.panel']]) {
+    if (lbl === 'Generator') await page.getByRole('button', { name: 'Generator' }).click(); else { await page.getByRole('button', { name: 'More' }).click(); await page.locator('.msheet-item', { hasText: lbl.split('→')[1] }).first().click(); }
+    await page.waitForSelector(sel); await fits(lbl);
+  }
+  await page.getByRole('button', { name: 'Home' }).click(); await page.waitForSelector('.widgets'); await fits('home widgets');
+  await page.getByRole('button', { name: 'Help', exact: true }).click(); await fits('help'); await page.getByRole('button', { name: /Guided tour/ }).click(); await page.waitForSelector('.tour-card');
+  const card = await page.locator('.tour-card').boundingBox(); assert.ok(card.x >= 0 && card.x + card.width <= vw + 1, 'tour card fits'); await fits('tour'); await page.keyboard.press('Escape');
+
+  // the very same SVG artwork is used on every device (icons no longer depend on the phone's emoji font)
+  const again = await page.locator('.mbar-item svg').first().evaluate((e) => e.outerHTML); assert.equal(again, loginSvg);
+  const catSvg = await page.evaluate(() => { const m = document.createElement('div'); return null; }); void catSvg;
+  assert.deepEqual(problems, []); await ctx.close();
+  return loginSvg;
+}
+
+for (const dev of ['iPhone SE', 'Pixel 7', 'iPad Mini']) {
+  test(`mobile: ${dev} — bottom bar, full-width search, bottom sheets, no overflow, 44px touch targets, SVG icons`, async () => { await phoneFlow(dev); });
+}
+
+test('icons are identical on desktop and phone (one SVG set, no emoji)', async () => {
+  const grab = async (opts) => {
+    const { ctx, page } = await newPage(opts); await page.goto(base); await page.waitForSelector('#pw1');
+    await page.fill('#pw1', MASTER); await page.fill('#pw2', MASTER); await page.check('#ack'); await page.click('button[type=submit]'); await page.getByRole('button', { name: 'Skip for now' }).click(); await dismissWelcome(page);
+    await page.getByRole('button', { name: /New/ }).first().click().catch(async () => page.getByRole('button', { name: 'New item' }).click());
+    await page.waitForSelector('.modal-sheet .cats'); const out = await page.$$eval('.modal-sheet .cats .btn', (bs) => Object.fromEntries(bs.map((b) => [b.textContent.trim(), b.querySelector('svg').outerHTML]))); await ctx.close(); return out;
+  };
+  const desk = await grab({}), phone = await grab({ ...(({ defaultBrowserType, ...d }) => d)(devices['iPhone 13']), colorScheme: 'dark', reducedMotion: 'reduce' });
+  assert.equal(Object.keys(desk).length, 28); assert.deepEqual(desk, phone);
+  const html = Object.values(desk).join('').replace(/aria-label="[^"]*"/g, ''); assert.ok(!EMOJI.test(html), 'icons are drawn shapes, not emoji glyphs');
 });
 
 test('light theme renders', async () => {

@@ -102,7 +102,7 @@ export function renderBeam(ctx) {
     const video = h('video', { muted: true, playsinline: true, 'aria-label': 'Camera preview' }); const box = h('div', { class: 'scanner' }, video, h('p', { class: 'hint', text: 'Point the camera at the QR code on the other device' }));
     e.target.after(box);
     try { stopScan = await startScanner(video, (t) => { target.value = t; stopScan(); stopScan = null; box.remove(); after(); }); } catch (x) { box.remove(); toast('Camera unavailable: ' + (x.message || x.name), 'err', 5000); }
-  } } }, '📷 Scan QR');
+  } } }, '{{camera}} Scan QR');
 
   async function onState(s) {
     if (s === 'open') {
@@ -176,10 +176,10 @@ export function renderBeam(ctx) {
   }
 
   function verifyScreen() {
-    show(h('div', { class: 'panel pad' }, h('div', { class: 'note', text: '✓ Connected — encrypted, peer to peer.' }),
+    show(h('div', { class: 'panel pad' }, h('div', { class: 'note', text: '{{check}} Connected — encrypted, peer to peer.' }),
       h('p', { class: 'lbl', text: 'Check that this number is identical on both screens' }), h('div', { class: 'bverify mono', 'aria-label': 'Verification number', text: verify }),
       h('p', { class: 'hint', text: 'If the numbers differ, someone may be intercepting the connection: press “Don’t match” and start again.' }),
-      h('div', { class: 'row wrap' }, h('button', { class: 'btn primary', on: { click: confirmMatch } }, '✓ Numbers match — sync now'), h('button', { class: 'btn danger', on: { click: () => { cleanup(); home('Cancelled: the verification numbers did not match.'); store.log('sync', 'Beam cancelled — verification numbers did not match', 'warn'); } } }, '✕ They don’t match'))));
+      h('div', { class: 'row wrap' }, h('button', { class: 'btn primary', on: { click: confirmMatch } }, '{{check}} Numbers match — sync now'), h('button', { class: 'btn danger', on: { click: () => { cleanup(); home('Cancelled: the verification numbers did not match.'); store.log('sync', 'Beam cancelled — verification numbers did not match', 'warn'); } } }, '{{close}} They don’t match'))));
   }
 
   /* ----- sync protocol ----- */
@@ -242,7 +242,7 @@ export function renderBeam(ctx) {
     if (!st.mine || !st.peerResult) { if (st.mine) progress('Merged. Waiting for the other device to finish…'); return; }
     const r = st.mine, p = st.peerResult;
     cfg.last = { at: Date.now(), ok: true, msg: 'Beam: ' + `${r.added} added, ${r.updated} updated, ${r.removed} removed` }; store.save();
-    show(h('div', { class: 'panel pad' }, h('div', { class: 'note', text: '✓ Sync complete — both vaults now match.' }), r.conflicts ? h('div', { class: 'note warn', text: '⚠ ' + r.conflicts + ' value(s) were edited on both devices. The newest was kept; review the other versions under “Needs review”.' }) : null,
+    show(h('div', { class: 'panel pad' }, h('div', { class: 'note', text: '{{check}} Sync complete — both vaults now match.' }), r.conflicts ? h('div', { class: 'note warn', text: '{{alert}} ' + r.conflicts + ' value(s) were edited on both devices. The newest was kept; review the other versions under “Needs review”.' }) : null,
       h('div', { class: 'kv' }, h('span', { text: 'Received here' }), h('b', { text: `${r.added} added · ${r.updated} updated · ${r.removed} removed · ${r.attachments} attachment(s)` }), h('span', { text: 'On the other device' }), h('b', { text: p.ok ? p.msg : 'failed: ' + p.msg })),
       h('div', { class: 'row wrap' }, h('button', { class: 'btn primary', on: { click: () => { const l = link; link = null; if (l) l.close(); ctx.go('all'); } } }, 'Done'), h('button', { class: 'btn', on: { click: () => { const l = link; link = null; if (l) l.close(); cleanupState(); home(); } } }, 'Beam again'))));
   }

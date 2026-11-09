@@ -58,7 +58,7 @@ export function appearance(ctx) {
       row('Corner radius', 'From sharp to very round', range('radius', 4, 24, 1, (v) => v + 'px')),
       row('Widget style', 'Vivid gives every widget its own colour and glow; Glass keeps them neutral', select('widgetStyle', [['vivid', 'Vivid (colourful)'], ['glass', 'Glass (neutral)']]))),
     panel(null, h('div', { class: 'row wrap' },
-      h('button', { class: 'btn primary', on: { click: () => { ctx.setLook(randomLook(L(), landscapes.list.map((x) => x[0])), { redraw: true }); toast('🎲 New look: ' + L().iconStyle + ' icons, ' + L().animStyle + ' dialogs'); } } }, '🎲 Surprise me'),
+      h('button', { class: 'btn primary', on: { click: () => { ctx.setLook(randomLook(L(), landscapes.list.map((x) => x[0])), { redraw: true }); toast('{{dice}} New look: ' + L().iconStyle + ' icons, ' + L().animStyle + ' dialogs'); } } }, '{{dice}} Surprise me'),
       h('button', { class: 'btn', on: { click: async () => { if (await confirmDialog({ title: 'Reset appearance?', text: 'Accent, background, icons and sizes go back to the defaults. Effects, layout and widgets are not touched.', okLabel: 'Reset' })) { const D = LOOK_DEFAULTS; ctx.setLook({ accent: D.accent, bg: D.bg, wallpaper: D.wallpaper, bgDim: D.bgDim, iconStyle: D.iconStyle, iconSize: D.iconSize, avatar: D.avatar, uiScale: D.uiScale, density: D.density, radius: D.radius, widgetStyle: D.widgetStyle }, { redraw: true }); } } } }, 'Reset appearance'))));
 }
 
@@ -120,6 +120,6 @@ export function widgetsTab(ctx) {
   draw();
   return h('div', null,
     panel('Home widgets', h('p', { class: 'hint', text: 'Choose what appears on the Home page, in what order and how big. Widgets only show information from your unlocked vault.' }), list,
-      h('div', { class: 'row wrap' }, h('button', { class: 'btn primary', on: { click: () => ctx.go('home') } }, '🏠 Open Home'), h('button', { class: 'btn', on: { click: () => { ctx.setLook({ widgets: LOOK_DEFAULTS.widgets }); draw(); } } }, 'Reset widgets'))));
+      h('div', { class: 'row wrap' }, h('button', { class: 'btn primary', on: { click: () => ctx.go('home') } }, '{{home}} Open Home'), h('button', { class: 'btn', on: { click: () => { ctx.setLook({ widgets: LOOK_DEFAULTS.widgets }); draw(); } } }, 'Reset widgets'))));
 }
 void page; void normalizeLook;

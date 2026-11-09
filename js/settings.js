@@ -1,6 +1,6 @@
 /* Settings: one place for every adjustment, plus sync, audit trail and About / versioning. */
 
-import { h, clear, modal, toast, confirmDialog, askPassword, download, readFileText } from './dom.js';
+import { h, clear, setLabel, modal, toast, confirmDialog, askPassword, download, readFileText } from './dom.js';
 import { generatePassphrase } from './generator.js';
 import { estimate } from './strength.js';
 import { meter, fmtSize } from './views.js';
@@ -13,7 +13,7 @@ import { APP_NAME, APP_VERSION, CHANGELOG, FORMATS, REPO_URL } from './version.j
 import { KEY } from './vault.js';
 import { fmtDate, fmtInt } from './util.js';
 
-const TABS = [['general', '⚙ General'], ['appearance', '🎨 Appearance'], ['effects', '✨ Effects'], ['layout', '🧭 Dock & menu bar'], ['widgets', '🧩 Widgets'], ['security', '🔐 Security'], ['sync', '⇄ Sync'], ['audit', '📜 Audit trail'], ['about', 'ⓘ About']];
+const TABS = [['general', '{{gear}} General'], ['appearance', '{{palette}} Appearance'], ['effects', '{{sparkles}} Effects'], ['layout', '{{compass}} Dock & menu bar'], ['widgets', '{{puzzle}} Widgets'], ['security', '{{shieldlock}} Security'], ['sync', '{{sync}} Sync'], ['audit', '{{scroll}} Audit trail'], ['about', 'ⓘ About']];
 
 export function renderSettings(ctx) {
   const body = h('div');
@@ -46,12 +46,12 @@ function general(ctx) {
     panel('Welcome & help',
       field('Your name', h('input', { class: 'inp', value: s.displayName || '', maxlength: '40', placeholder: 'Used in greetings (optional)', autocomplete: 'off', 'aria-label': 'Your name', on: { change: (e) => { s.displayName = e.target.value.trim(); persist(ctx); } } })),
       chk('Show the welcome screen every time I unlock', s.welcomeAlways, (v) => set('welcomeAlways', v, 'Welcome screen')),
-      h('div', { class: 'row wrap' }, h('button', { class: 'btn', on: { click: () => ctx.tour.welcome() } }, '👋 Welcome screen'), h('button', { class: 'btn', on: { click: () => ctx.tour.start() } }, '🧭 Guided tour'), h('button', { class: 'btn', on: { click: () => ctx.tour.help() } }, '❓ Help & shortcuts'))),
-    panel('Look & feel', h('p', { class: 'hint', text: 'Theme, accent colour, wallpaper, icons, animations, dock and widgets have their own tabs.' }), h('div', { class: 'row wrap' }, h('button', { class: 'btn', on: { click: () => { ctx.S.setTab = 'appearance'; ctx.refresh(); } } }, '🎨 Appearance'), h('button', { class: 'btn', on: { click: () => { ctx.S.setTab = 'effects'; ctx.refresh(); } } }, '✨ Effects'))),
+      h('div', { class: 'row wrap' }, h('button', { class: 'btn', on: { click: () => ctx.tour.welcome() } }, '{{wave}} Welcome screen'), h('button', { class: 'btn', on: { click: () => ctx.tour.start() } }, '{{compass}} Guided tour'), h('button', { class: 'btn', on: { click: () => ctx.tour.help() } }, '{{help}} Help & shortcuts'))),
+    panel('Look & feel', h('p', { class: 'hint', text: 'Theme, accent colour, wallpaper, icons, animations, dock and widgets have their own tabs.' }), h('div', { class: 'row wrap' }, h('button', { class: 'btn', on: { click: () => { ctx.S.setTab = 'appearance'; ctx.refresh(); } } }, '{{palette}} Appearance'), h('button', { class: 'btn', on: { click: () => { ctx.S.setTab = 'effects'; ctx.refresh(); } } }, '{{sparkles}} Effects'))),
     panel('Generator defaults',
       h('p', { class: 'hint', text: 'Length, character sets and passphrase options are remembered as you change them on the Generator page, and used by “Generate” in the item editor.' }),
-      h('button', { class: 'btn', on: { click: () => ctx.go('gen') } }, '⚡ Open the generator')),
-    panel('Data', h('p', { class: 'hint', text: 'Import from other managers, encrypted backups and plaintext export are on their own page.' }), h('button', { class: 'btn', on: { click: () => ctx.go('data') } }, '⇅ Import & export')));
+      h('button', { class: 'btn', on: { click: () => ctx.go('gen') } }, '{{bolt}} Open the generator')),
+    panel('Data', h('p', { class: 'hint', text: 'Import from other managers, encrypted backups and plaintext export are on their own page.' }), h('button', { class: 'btn', on: { click: () => ctx.go('data') } }, '{{swap}} Import & export')));
 }
 
 /* ======================= Security ======================= */
@@ -62,7 +62,7 @@ function security(ctx) {
   const pw2 = h('input', { class: 'inp mono', type: 'password', autocomplete: 'new-password', 'aria-label': 'Repeat new master password' });
   const pwM = h('div'); pw1.addEventListener('input', () => clear(pwM).append(meter(pw1.value).el));
   const pwErr = h('p', { class: 'err', role: 'alert' });
-  const recStatus = h('span', { class: 'chip ' + (sess.hasRecovery() ? 'accent' : 'warn'), text: sess.hasRecovery() ? '✓ recovery key set' : 'no recovery key' });
+  const recStatus = h('span', { class: 'chip ' + (sess.hasRecovery() ? 'accent' : 'warn'), text: sess.hasRecovery() ? '{{check}} recovery key set' : 'no recovery key' });
   return h('div', null,
     panel('Master password',
       field('Current password', pw0), field('New password', h('div', null, h('div', { class: 'pwwrap' }, pw1), pwM), 'At least 12 characters. A passphrase of 5+ random words is ideal.'), field('Repeat new password', pw2),
@@ -73,7 +73,7 @@ function security(ctx) {
         e.target.disabled = true;
         try { await store.changePassword(pw0.value, pw1.value); pw0.value = pw1.value = pw2.value = ''; clear(pwM); toast('Master password changed'); } catch (x) { pwErr.textContent = x.message; }
         e.target.disabled = false;
-      } } }, 'Change master password'), h('button', { class: 'btn', on: { click: () => { pw1.type = pw2.type = 'text'; pw1.value = pw2.value = generatePassphrase({ words: 6 }); pw1.dispatchEvent(new Event('input')); } } }, '⚡ Suggest a passphrase')), pwErr),
+      } } }, 'Change master password'), h('button', { class: 'btn', on: { click: () => { pw1.type = pw2.type = 'text'; pw1.value = pw2.value = generatePassphrase({ words: 6 }); pw1.dispatchEvent(new Event('input')); } } }, '{{bolt}} Suggest a passphrase')), pwErr),
     passkeys(ctx),
     panel('Key derivation',
       h('div', { class: 'kv' }, h('span', { text: 'Encryption' }), h('b', { text: 'AES-256-GCM, fresh 96-bit IV per write' }), h('span', { text: 'Key derivation' }), h('b', { text: `PBKDF2-HMAC-SHA256 · ${fmtInt(sess.iterations())} rounds` }), h('span', { text: 'Master key' }), h('b', { text: 'random 256-bit, stored only wrapped' })),
@@ -87,14 +87,14 @@ function security(ctx) {
       h('div', { class: 'row wrap' }, h('button', { class: 'btn', on: { click: async () => {
         const ok = await askPassword({ title: 'Create recovery key', text: 'Enter your master password to continue.', okLabel: 'Create', verify: (p) => sess.verifyPassword(p) });
         if (!ok) return; const key = await sess.createRecovery(); store.log('security', 'Recovery key created', 'warn'); await store.save(); ctx.showRecoveryKit(key); ctx.refresh();
-      } } }, sess.hasRecovery() ? '⟳ Replace recovery key' : '＋ Create recovery key'),
+      } } }, sess.hasRecovery() ? '⟳ Replace recovery key' : '{{plus}} Create recovery key'),
       sess.hasRecovery() ? h('button', { class: 'btn danger', on: { click: async () => { if (await confirmDialog({ title: 'Remove recovery key?', text: 'The printed key will stop working.', okLabel: 'Remove', danger: true })) { sess.removeRecovery(); store.log('security', 'Recovery key removed', 'warn'); await store.save(); toast('Recovery key removed'); ctx.refresh(); } } } }, 'Remove') : null)),
     panel('Danger zone', h('p', { class: 'hint', text: 'Erasing deletes the encrypted vault and all attachments from this device. Synced copies and backups are not touched.' }),
       h('button', { class: 'btn danger', on: { click: async () => {
         if (!(await confirmDialog({ title: 'Erase everything?', text: 'This permanently deletes the encrypted vault from this device. Make sure you have a backup.', okLabel: 'Continue', danger: true }))) return;
         const ok = await askPassword({ title: 'Erase vault', text: 'Enter your master password to erase this vault.', okLabel: 'Erase forever', verify: (p) => sess.verifyPassword(p) });
         if (ok) { await store.wipe(); ctx.lock(true); toast('Vault erased'); }
-      } } }, '🗑 Erase vault from this device…')));
+      } } }, '{{trash}} Erase vault from this device…')));
 }
 
 function passkeys(ctx) {
@@ -105,7 +105,7 @@ function passkeys(ctx) {
   return panel(null, h('h3', null, 'Passkeys ', h('span', { class: 'chip ' + (list.length ? 'accent' : ''), text: list.length ? list.length + ' registered' : 'none' })),
     h('p', { class: 'hint', text: 'Unlock with your fingerprint, face, Windows Hello, a phone or a security key instead of typing the master password. The authenticator releases a 256-bit secret that wraps the vault key, so it cannot be guessed offline. Your master password always keeps working as the fallback.' }),
     !passkeySupported() ? h('p', { class: 'note warn', text: 'Passkeys are not available here. They need HTTPS (or localhost) and a recent browser: Chrome / Edge 116+, Safari 18+.' }) : null,
-    list.map((w) => h('div', { class: 'hl' }, h('span', { class: 'ic', text: '🔑' }), h('div', { class: 't' }, h('b', { text: w.label }), h('small', { text: 'added ' + fmtDate(w.added) })),
+    list.map((w) => h('div', { class: 'hl' }, h('span', { class: 'ic', text: '{{login}}' }), h('div', { class: 't' }, h('b', { text: w.label }), h('small', { text: 'added ' + fmtDate(w.added) })),
       h('button', { class: 'btn sm danger', on: { click: async () => {
         const ok = await askPassword({ title: 'Remove passkey', text: 'Enter your master password to remove “' + w.label + '”.', okLabel: 'Remove', verify });
         if (!ok) return; sess.removePasskey(w.cred); store.log('security', 'Passkey removed: ' + w.label, 'warn'); await store.save(); toast('Passkey removed'); ctx.refresh();
@@ -122,7 +122,7 @@ function passkeys(ctx) {
           store.log('security', 'Passkey added: ' + (label.value.trim() || 'Passkey'), 'warn'); await store.save(); toast('Passkey added — you can now unlock with it'); ctx.refresh(); return;
         } catch (x) { err.textContent = x.message; }
         e.target.disabled = false;
-      } } }, '＋ Add a passkey'), err] : null);
+      } } }, '{{plus}} Add a passkey'), err] : null);
 }
 function guessDevice() {
   const ua = navigator.userAgent || '';
@@ -136,7 +136,7 @@ function sync(ctx) {
   const { store } = ctx, c = store.settings.sync;
   const status = h('div', { 'aria-live': 'polite' });
   const drawStatus = () => {
-    clear(status).append(c.last ? h('div', { class: 'note' + (c.last.ok ? '' : ' danger') }, (c.last.ok ? '✓ Last sync ' : '✕ Last attempt ') + new Date(c.last.at).toLocaleString() + ' — ' + c.last.msg) : h('div', { class: 'note', text: 'Not synced yet.' }));
+    clear(status).append(c.last ? h('div', { class: 'note' + (c.last.ok ? '' : ' danger') }, (c.last.ok ? '{{check}} Last sync ' : '{{close}} Last attempt ') + new Date(c.last.at).toLocaleString() + ' — ' + c.last.msg) : h('div', { class: 'note', text: 'Not synced yet.' }));
   };
   drawStatus();
 
@@ -165,10 +165,10 @@ function sync(ctx) {
     if (!needPass()) { gErr.textContent = 'Save a sync passphrase first.'; return; }
     syncBtn.disabled = true; syncBtn.textContent = 'Syncing…';
     const r = await ctx.syncNow(true);
-    syncBtn.disabled = false; syncBtn.textContent = '⇄ Sync now';
+    syncBtn.disabled = false; setLabel(syncBtn, '{{sync}} Sync now');
     if (!r.ok) gErr.textContent = r.error; else { gist.value = c.gistId; ctx.refresh(); }
     drawStatus();
-  } } }, '⇄ Sync now');
+  } } }, '{{sync}} Sync now');
 
   return h('div', null,
     panel('How sync works',
@@ -176,17 +176,17 @@ function sync(ctx) {
       h('p', { class: 'hint', text: 'The sync passphrase is separate from your master password, so each device can have its own master password. Both the passphrase and the token are kept only inside your encrypted vault and are never part of exports or bundles.' }), status),
     panel('1 · Sync passphrase',
       field('Passphrase (the same on every device)', h('div', null, h('div', { class: 'pwwrap' }, pass), passM)),
-      h('div', { class: 'row wrap' }, h('button', { class: 'btn primary', on: { click: savePass } }, 'Save passphrase'), h('button', { class: 'btn', on: { click: () => { pass.type = 'text'; pass.value = generatePassphrase({ words: 6 }); pass.dispatchEvent(new Event('input')); } } }, '⚡ Suggest one'), h('button', { class: 'btn ghost', on: { click: () => { pass.type = pass.type === 'password' ? 'text' : 'password'; } } }, '👁 Show')), passErr,
+      h('div', { class: 'row wrap' }, h('button', { class: 'btn primary', on: { click: savePass } }, 'Save passphrase'), h('button', { class: 'btn', on: { click: () => { pass.type = 'text'; pass.value = generatePassphrase({ words: 6 }); pass.dispatchEvent(new Event('input')); } } }, '{{bolt}} Suggest one'), h('button', { class: 'btn ghost', on: { click: () => { pass.type = pass.type === 'password' ? 'text' : 'password'; } } }, '{{eye}} Show')), passErr,
       h('p', { class: 'note warn', text: 'Write this passphrase down. If you lose it, synced data cannot be decrypted (your local vault is not affected).' })),
     panel('2a · Sync file (works anywhere, no account)',
       h('p', { class: 'hint', text: 'Export a .vmsync file, carry it however you like (USB stick, AirDrop, cloud drive, email), and import it on the other device. Importing merges; it never wipes what is already there.' }),
       h('div', { class: 'row wrap' }, h('button', { class: 'btn primary', on: { click: async () => {
         fileErr.textContent = ''; if (!needPass()) return;
         try { download(`vaultmanager-${fmtDate(Date.now())}.vmsync`, await exportSyncFile(store, c.passphrase), 'text/plain'); toast('Sync file saved'); } catch (x) { fileErr.textContent = x.message; }
-      } } }, '⬇ Export sync file'), h('button', { class: 'btn', on: { click: () => fileIn.click() } }, '⬆ Import sync file'), fileIn), fileErr),
+      } } }, '{{download}} Export sync file'), h('button', { class: 'btn', on: { click: () => fileIn.click() } }, '{{upload}} Import sync file'), fileIn), fileErr),
     panel('2b · Beam — device to device, no cloud, no account',
       h('p', { class: 'hint', text: 'Pair your PC and phone directly (QR code or copy / paste, same Wi-Fi) and merge both vaults over an end-to-end encrypted connection. Nothing is uploaded anywhere. This is the ulyOS Beam engine, built into VaultManager.' }),
-      h('button', { class: 'btn primary', on: { click: () => ctx.go('beam') } }, '📡 Open Beam sync')),
+      h('button', { class: 'btn primary', on: { click: () => ctx.go('beam') } }, '{{beam}} Open Beam sync')),
     panel('2c · Automatic sync through a secret GitHub gist',
       h('ol', { class: 'steps' },
         h('li', { text: 'On GitHub: Settings → Developer settings → Personal access tokens → create a token that has only the “gist” permission.' }),
@@ -219,7 +219,7 @@ function audit(ctx) {
       h('div', { class: 'row wrap' }, h('div', { class: 'grow' }, sel('all', KINDS, (v) => { kind = v; draw(); })),
         h('div', { class: 'grow' }, h('input', { class: 'inp', type: 'search', placeholder: 'Filter text…', 'aria-label': 'Filter audit trail', on: { input: (e) => { q = e.target.value.toLowerCase(); draw(); } } }))),
       chk('Warnings only', false, (v) => { warnOnly = v; draw(); }), list,
-      h('div', { class: 'row wrap' }, h('button', { class: 'btn', on: { click: () => { download(`vaultmanager-audit-${fmtDate(Date.now())}.json`, JSON.stringify(store.auditLog().map((e) => ({ time: new Date(e.t).toISOString(), kind: e.k, level: e.l, event: e.m })), null, 2), 'application/json'); store.log('data', 'Exported the audit trail'); } } }, '⬇ Export log'),
+      h('div', { class: 'row wrap' }, h('button', { class: 'btn', on: { click: () => { download(`vaultmanager-audit-${fmtDate(Date.now())}.json`, JSON.stringify(store.auditLog().map((e) => ({ time: new Date(e.t).toISOString(), kind: e.k, level: e.l, event: e.m })), null, 2), 'application/json'); store.log('data', 'Exported the audit trail'); } } }, '{{download}} Export log'),
         h('button', { class: 'btn danger', on: { click: async () => { if (await confirmDialog({ title: 'Clear the audit trail?', text: 'All recorded events will be deleted. A single entry noting the clearing is kept.', okLabel: 'Clear', danger: true })) { await store.clearAudit(); ctx.refresh(); } } } }, 'Clear log'))));
 }
 
@@ -241,13 +241,13 @@ function about(ctx) {
   return h('div', null,
     panel(null, h('div', { class: 'brand' }, h('img', { src: 'icons/icon.svg', alt: '', width: '44', height: '44' }), h('div', null, h('h1', null, 'Vault', h('span', { text: 'Manager' })), h('p', { text: `Version ${APP_VERSION} · zero-knowledge · end-to-end encrypted · offline-first` }))),
       h('p', { class: 'hint', text: 'A password manager that runs entirely in your browser. No account, no server, no analytics. Built on the same core engine as ulyOS. Not independently audited — keep an encrypted backup.' }),
-      h('div', { class: 'row wrap' }, h('a', { class: 'btn', href: REPO_URL, target: '_blank', rel: 'noopener noreferrer' }, '⌥ Source code'), h('a', { class: 'btn', href: REPO_URL + '/blob/main/SECURITY.md', target: '_blank', rel: 'noopener noreferrer' }, '🛡 Security & threat model'),
-        h('button', { class: 'btn', on: { click: () => ctx.tour.start() } }, '🧭 Guided tour'), h('button', { class: 'btn', on: { click: () => ctx.tour.welcome() } }, '👋 Welcome screen'),
-        h('button', { class: 'btn', on: { click: () => selfTest() } }, '✓ Run crypto self-test'))),
+      h('div', { class: 'row wrap' }, h('a', { class: 'btn', href: REPO_URL, target: '_blank', rel: 'noopener noreferrer' }, '⌥ Source code'), h('a', { class: 'btn', href: REPO_URL + '/blob/main/SECURITY.md', target: '_blank', rel: 'noopener noreferrer' }, '{{shield}} Security & threat model'),
+        h('button', { class: 'btn', on: { click: () => ctx.tour.start() } }, '{{compass}} Guided tour'), h('button', { class: 'btn', on: { click: () => ctx.tour.welcome() } }, '{{wave}} Welcome screen'),
+        h('button', { class: 'btn', on: { click: () => selfTest() } }, '{{check}} Run crypto self-test'))),
     panel('Version history', CHANGELOG.map((r, i) => h('div', { class: 'rel' }, h('div', { class: 'row wrap' }, h('b', { class: 'mono', text: 'v' + r.v }), h('span', { class: 'chip' + (i === 0 ? ' accent' : ''), text: i === 0 ? 'current' : r.date }), i === 0 ? h('span', { class: 'hint', text: r.date }) : null), h('ul', null, r.notes.map((n) => h('li', { text: n })))))),
     panel('Data formats', h('div', { class: 'kv' }, FORMATS.map(([k, v]) => [h('span', { text: k }), h('b', { text: v })]))),
     panel('This device', h('div', { class: 'kv' }, h('span', { text: 'Vault ID' }), h('b', { text: sess.id }), h('span', { text: 'Created' }), h('b', { text: fmtDate(store.data.created) }), h('span', { text: 'Key derivation' }), h('b', { text: fmtInt(sess.iterations()) + ' PBKDF2 rounds' }), h('span', { text: 'Recovery key' }), h('b', { text: sess.hasRecovery() ? 'set' : 'not set' }), h('span', { text: 'Sync' }), h('b', { text: store.settings.sync.token ? 'gist sync configured' + (store.settings.sync.last ? ' · last ' + new Date(store.settings.sync.last.at).toLocaleString() : '') : 'file only / off' })), storage,
-      h('div', { class: 'row wrap' }, navigator.storage && navigator.storage.persist ? h('button', { class: 'btn', on: { click: async () => { const ok = await navigator.storage.persist(); toast(ok ? 'Storage protected from automatic eviction' : 'The browser declined (installing the app or bookmarking often helps)'); ctx.refresh(); } } }, '🛡 Protect storage from eviction') : null,
+      h('div', { class: 'row wrap' }, navigator.storage && navigator.storage.persist ? h('button', { class: 'btn', on: { click: async () => { const ok = await navigator.storage.persist(); toast(ok ? 'Storage protected from automatic eviction' : 'The browser declined (installing the app or bookmarking often helps)'); ctx.refresh(); } } }, '{{shield}} Protect storage from eviction') : null,
         h('button', { class: 'btn', title: 'Re-download the app files and reload', on: { click: async () => { try { if ('serviceWorker' in navigator) for (const r of await navigator.serviceWorker.getRegistrations()) await r.unregister(); if (window.caches) for (const k of await caches.keys()) await caches.delete(k); } catch { /* ignore */ } location.reload(); } } }, '⟳ Refresh app files'))),
     panel('Third-party code & licences', h('div', { class: 'kv' }, h('span', { text: 'qrcode-generator' }), h('b', { text: '2.0.4 · MIT · Kazuhiko Arase' }), h('span', { text: 'jsQR' }), h('b', { text: '1.4.0 · Apache-2.0 · Cosmo Wolfe' }), h('span', { text: 'EFF short wordlist' }), h('b', { text: 'CC BY 3.0 US · Electronic Frontier Foundation' }), h('span', { text: 'Cryptography' }), h('b', { text: 'browser WebCrypto only — no bundled crypto library' })),
       h('p', { class: 'hint', text: `${APP_NAME} contacts no server except api.github.com, and only when you turn on gist sync.` })));

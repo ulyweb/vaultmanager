@@ -9,17 +9,17 @@ export const ANIM_STYLES = [['scale', 'Scale'], ['slide', 'Slide up'], ['fade', 
 export const NAV_MODES = [['sidebar', 'Side bar'], ['dock', 'Dock (bottom)']];
 
 export const WIDGET_DEFS = [
-  { id: 'clock', label: 'Clock & date', icon: '🕒', size: 's' },
-  { id: 'health', label: 'Vault health', icon: '🩺', size: 's' },
-  { id: 'totp', label: 'One-time codes', icon: '🔢', size: 'm' },
-  { id: 'expiring', label: 'Expiring soon', icon: '⏳', size: 's' },
-  { id: 'favorites', label: 'Favorites', icon: '★', size: 's' },
-  { id: 'recent', label: 'Recently changed', icon: '🕘', size: 's' },
-  { id: 'generator', label: 'Quick generator', icon: '⚡', size: 's' },
-  { id: 'stats', label: 'Categories', icon: '🗂', size: 'm' },
-  { id: 'sync', label: 'Sync status', icon: '⇄', size: 's' },
-  { id: 'conflicts', label: 'Needs review', icon: '⚠', size: 's' },
-  { id: 'tip', label: 'Security tip', icon: '💡', size: 's' },
+  { id: 'clock', label: 'Clock & date', icon: '{{clock}}', size: 's' },
+  { id: 'health', label: 'Vault health', icon: '{{pulse}}', size: 's' },
+  { id: 'totp', label: 'One-time codes', icon: '{{locker}}', size: 'm' },
+  { id: 'expiring', label: 'Expiring soon', icon: '{{hourglass}}', size: 's' },
+  { id: 'favorites', label: 'Favorites', icon: '{{star}}', size: 's' },
+  { id: 'recent', label: 'Recently changed', icon: '{{history}}', size: 's' },
+  { id: 'generator', label: 'Quick generator', icon: '{{bolt}}', size: 's' },
+  { id: 'stats', label: 'Categories', icon: '{{vault}}', size: 'm' },
+  { id: 'sync', label: 'Sync status', icon: '{{sync}}', size: 's' },
+  { id: 'conflicts', label: 'Needs review', icon: '{{alert}}', size: 's' },
+  { id: 'tip', label: 'Security tip', icon: '{{bulb}}', size: 's' },
 ];
 
 export const LOOK_DEFAULTS = {

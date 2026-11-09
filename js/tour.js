@@ -22,23 +22,23 @@ export function createTour(ctx) {
   const go = (view, tab) => () => { if (tab) ctx.S.setTab = tab; ctx.go(view); };
 
   const STEPS = () => [
-    { icon: '🔐', title: 'Welcome to VaultManager', text: 'A password manager that lives entirely in your browser. Your logins, notes, cards, documents and more sit behind one master password and are encrypted on this device — there is no account to create and no server that holds your data.' },
-    { icon: '🛡️', title: 'Zero-knowledge, end-to-end encrypted', text: 'Everything is sealed with AES-256-GCM under a random key that only your master password (or a passkey, or your recovery key) can unlock. Nothing is sent anywhere unless you choose to sync, and then only encrypted data leaves. We could not read your vault even if we wanted to.' },
-    { icon: '🧭', target: () => q('.side') || q('.dock'), before: go('home'), title: 'Find your way around', text: 'Home, All items, Favorites and Trash, then '+ Object.keys(TYPE_META).length +' categories grouped by purpose — Everyday, Accounts & access, Home & devices, Money, IDs & documents, Health, Travel & vehicles, People & emergency (contacts, phones, lens and medical info, car, crypto, memberships and more) — and the tools. Click a group name to fold it. Switch between a side bar and a dock in Settings → Dock & menu bar.' },
-    { icon: '🏠', target: () => q('.widgets'), before: go('home'), title: 'Your Home dashboard', text: 'Vault health, live one-time codes, what expires soon, favorites, recent changes, a quick password generator and sync status. Choose, resize and reorder widgets in Settings → Widgets.' },
-    { icon: '🔎', target: () => q('.topbar .search'), title: 'Search everything', text: 'Type to search names, usernames, websites, tags and every non-secret field. Press / anywhere to jump here. Secret values are never searchable.' },
-    { icon: '＋', target: () => q('.topbar .btn.primary'), title: 'Add anything', text: 'New opens the category picker. Every item — in any category — can also carry attachments (photos, PDFs, documents), custom fields, tags, a favorite star, version history you can restore, and a place in the trash for 30 days.' },
-    { icon: '⚡', target: () => q('.genout'), before: go('gen'), title: 'Password generator', text: 'Cryptographically random passwords, word passphrases or PINs, with a live strength check. Use a unique one for every account — that is the single best thing you can do for your security.' },
-    { icon: '🩺', target: () => q('.ring'), before: go('health'), title: 'Vault health', text: 'Finds weak, reused and old passwords, insecure http:// links, and passports, licences and policies that are expired or about to be — all computed on this device.' },
-    { icon: '▦', target: () => q('.page .tabs'), before: go('qr'), title: 'QR tools', text: 'Seal a secret into a password-protected QR code, scan one back with the camera, or print your whole vault as a set of QR codes for a paper backup.' },
-    { icon: '📡', target: () => q('.beam .panel'), before: go('beam'), title: 'Beam sync', text: 'Pair your PC and phone directly: start on one, join on the other by scanning a QR code, check that both show the same 6-digit number. The vaults merge — no cloud, no account.' },
-    { icon: '⇄', target: () => q('.page .tabs'), before: go('settings', 'sync'), title: 'Sync and conflicts', text: 'Sync through an encrypted file, Beam, or a secret GitHub gist. Devices merge field by field; if the same field changed on two of them, the newest wins and the other value waits under “Needs review”.' },
-    { icon: '🎨', target: () => q('.page .tabs'), before: go('settings', 'appearance'), title: 'Make it yours', text: 'Appearance, Effects, Dock & menu bar and Widgets: accent colours, nature wallpapers, icon styles and sizes, animation styles, 3D tilt, CRT scanlines, glass blur and more.' },
-    { icon: '🔐', target: () => q('.page .tabs'), before: go('settings', 'security'), title: 'Security you control', text: 'Change the master password, add a fingerprint / Windows Hello passkey, create a printable recovery key, tune the key-derivation strength — and set auto-lock and clipboard clearing in General.' },
-    { icon: '📜', target: () => q('.page .tabs'), before: go('settings', 'audit'), title: 'Audit trail & About', text: 'The audit trail records sign-ins, edits, copies, exports and syncs (never the secrets themselves). About shows the version history and data formats, and can run a self-test of your browser’s crypto.' },
-    { icon: '🔒', target: () => q('.topbar [title^="Lock"]'), before: go('home'), title: 'Lock when you leave', text: 'Press Lock (or Alt+L) to seal the vault instantly. It also locks by itself after a period of inactivity, and the clipboard is cleared shortly after you copy a password.' },
-    { icon: '❓', target: () => q('.topbar [aria-label="Help"]'), title: 'Help is one click away', text: 'The ? button replays this tour or the welcome screen and lists the keyboard shortcuts.' },
-    { icon: '✅', title: 'You are all set', text: 'Your vault, your data, your rules. Tip: start by adding a few logins on the Home page’s “＋ New”, then create a recovery key under Settings → Security.' },
+    { icon: '{{shieldlock}}', title: 'Welcome to VaultManager', text: 'A password manager that lives entirely in your browser. Your logins, notes, cards, documents and more sit behind one master password and are encrypted on this device — there is no account to create and no server that holds your data.' },
+    { icon: '{{shield}}', title: 'Zero-knowledge, end-to-end encrypted', text: 'Everything is sealed with AES-256-GCM under a random key that only your master password (or a passkey, or your recovery key) can unlock. Nothing is sent anywhere unless you choose to sync, and then only encrypted data leaves. We could not read your vault even if we wanted to.' },
+    { icon: '{{compass}}', target: () => q('.side') || q('.dock') || q('.mbar'), before: go('home'), title: 'Find your way around', text: 'Home, All items, Favorites and Trash, then '+ Object.keys(TYPE_META).length +' categories grouped by purpose — Everyday, Accounts & access, Home & devices, Money, IDs & documents, Health, Travel & vehicles, People & emergency (contacts, phones, lens and medical info, car, crypto, memberships and more) — and the tools. Click a group name to fold it. Switch between a side bar and a dock in Settings → Dock & menu bar.' },
+    { icon: '{{home}}', target: () => q('.widgets'), before: go('home'), title: 'Your Home dashboard', text: 'Vault health, live one-time codes, what expires soon, favorites, recent changes, a quick password generator and sync status. Choose, resize and reorder widgets in Settings → Widgets.' },
+    { icon: '{{search}}', target: () => q('.topbar .search'), title: 'Search everything', text: 'Type to search names, usernames, websites, tags and every non-secret field. Press / anywhere to jump here. Secret values are never searchable.' },
+    { icon: '{{plus}}', target: () => q('.topbar .btn.primary') || q('.mbar-fab'), title: 'Add anything', text: 'New opens the category picker. Every item — in any category — can also carry attachments (photos, PDFs, documents), custom fields, tags, a favorite star, version history you can restore, and a place in the trash for 30 days.' },
+    { icon: '{{bolt}}', target: () => q('.genout'), before: go('gen'), title: 'Password generator', text: 'Cryptographically random passwords, word passphrases or PINs, with a live strength check. Use a unique one for every account — that is the single best thing you can do for your security.' },
+    { icon: '{{pulse}}', target: () => q('.ring'), before: go('health'), title: 'Vault health', text: 'Finds weak, reused and old passwords, insecure http:// links, and passports, licences and policies that are expired or about to be — all computed on this device.' },
+    { icon: '{{qr}}', target: () => q('.page .tabs'), before: go('qr'), title: 'QR tools', text: 'Seal a secret into a password-protected QR code, scan one back with the camera, or print your whole vault as a set of QR codes for a paper backup.' },
+    { icon: '{{beam}}', target: () => q('.beam .panel'), before: go('beam'), title: 'Beam sync', text: 'Pair your PC and phone directly: start on one, join on the other by scanning a QR code, check that both show the same 6-digit number. The vaults merge — no cloud, no account.' },
+    { icon: '{{sync}}', target: () => q('.page .tabs'), before: go('settings', 'sync'), title: 'Sync and conflicts', text: 'Sync through an encrypted file, Beam, or a secret GitHub gist. Devices merge field by field; if the same field changed on two of them, the newest wins and the other value waits under “Needs review”.' },
+    { icon: '{{palette}}', target: () => q('.page .tabs'), before: go('settings', 'appearance'), title: 'Make it yours', text: 'Appearance, Effects, Dock & menu bar and Widgets: accent colours, nature wallpapers, icon styles and sizes, animation styles, 3D tilt, CRT scanlines, glass blur and more.' },
+    { icon: '{{shieldlock}}', target: () => q('.page .tabs'), before: go('settings', 'security'), title: 'Security you control', text: 'Change the master password, add a fingerprint / Windows Hello passkey, create a printable recovery key, tune the key-derivation strength — and set auto-lock and clipboard clearing in General.' },
+    { icon: '{{scroll}}', target: () => q('.page .tabs'), before: go('settings', 'audit'), title: 'Audit trail & About', text: 'The audit trail records sign-ins, edits, copies, exports and syncs (never the secrets themselves). About shows the version history and data formats, and can run a self-test of your browser’s crypto.' },
+    { icon: '{{lock}}', target: () => q('.topbar [title^="Lock"]'), before: go('home'), title: 'Lock when you leave', text: 'Press Lock (or Alt+L) to seal the vault instantly. It also locks by itself after a period of inactivity, and the clipboard is cleared shortly after you copy a password.' },
+    { icon: '{{help}}', target: () => q('.topbar [aria-label="Help"]'), title: 'Help is one click away', text: 'The ? button replays this tour or the welcome screen and lists the keyboard shortcuts.' },
+    { icon: '{{checkcircle}}', title: 'You are all set', text: 'Your vault, your data, your rules. Tip: start by adding a few logins on the Home page’s “＋ New”, then create a recovery key under Settings → Security.' },
   ];
 
   function stop() {
@@ -73,7 +73,7 @@ export function createTour(ctx) {
       const s = steps[i], last = i === steps.length - 1;
       try { if (s.before) s.before(); } catch { /* ignore */ }
       clear(card).append(
-        h('div', { class: 'tour-head' }, h('span', { class: 'tour-ico', 'aria-hidden': 'true', text: s.icon || 'ℹ' }), h('b', { text: s.title }), h('span', { class: 'tour-n', text: i + 1 + ' / ' + steps.length })),
+        h('div', { class: 'tour-head' }, h('span', { class: 'tour-ico', 'aria-hidden': 'true', text: s.icon || '{{info}}' }), h('b', { text: s.title }), h('span', { class: 'tour-n', text: i + 1 + ' / ' + steps.length })),
         h('p', { class: 'tour-text', text: s.text }),
         h('div', { class: 'tour-dots' }, steps.map((_, k) => h('i', { class: k === i ? 'on' : '', on: { click: () => { i = k; show(); } } }))),
         h('div', { class: 'tour-nav' }, h('button', { class: 'btn sm', on: { click: finish } }, 'Skip tour'), h('span', { class: 'grow' }),
@@ -104,7 +104,7 @@ export function createTour(ctx) {
     const always = h('input', { type: 'checkbox', checked: !!s.welcomeAlways, on: { change: () => { s.welcomeAlways = always.checked; store.save().catch(() => {}); } } });
     const enter = () => { markSeen(); closeWelcome(); };
     const feat = (ico, c1, c2, t, d) => { const fi = h('div', { class: 'wl-fi', 'aria-hidden': 'true' }, h('span', { class: 'icn', text: ico })); fi.style.background = `linear-gradient(145deg,${c1},${c2})`; return h('div', { class: 'wl-feat' }, fi, h('div', null, h('b', { text: t }), h('p', { text: d }))); };
-    const FLOAT = [['🔑', 8, 6, 0], ['📶', 64, 4, 0.5], ['💳', 34, 22, 1.1], ['✈️', 6, 36, 0.3], ['🏦', 66, 32, 0.8], ['🛡️', 36, 46, 1.4], ['🪪', 78, 18, 0.2], ['📦', 20, 12, 1.7]];
+    const FLOAT = [['{{login}}', 8, 6, 0], ['{{network}}', 64, 4, 0.5], ['{{card}}', 34, 22, 1.1], ['{{travel}}', 6, 36, 0.3], ['{{bank}}', 66, 32, 0.8], ['{{shield}}', 36, 46, 1.4], ['{{identity}}', 78, 18, 0.2], ['{{app}}', 20, 12, 1.7]];
     const name = (s.displayName || '').trim();
     const hello = h('p', { class: 'wl-hello' }, 'Hello', name ? ', ' : '', name ? h('b', { text: name }) : null, '. Everything you keep here is locked behind your master password and stays on this device.');
     const hero = h('div', { class: 'wl-hero' }, h('div', { class: 'wl-orb o1' }), h('div', { class: 'wl-orb o2' }),
@@ -114,21 +114,21 @@ export function createTour(ctx) {
     const el = h('div', { class: 'welcome', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Welcome to VaultManager' },
       h('div', { class: 'wl-card' }, hero,
         h('div', { class: 'wl-side' }, hello,
-          feat('🛡️', '#34d399', '#0ea5e9', 'Zero-knowledge', 'Encrypted on your device. No account, no server that can read your data.'),
-          feat('🌐', '#6366f1', '#a855f7', 'PC and phone', 'Works offline in any browser, and syncs between your devices.'),
-          feat('📎', '#f59e0b', '#ef4444', 'More than passwords', 'Wi-Fi, insurance, travel, IDs, bank accounts — with photos and documents attached.'),
+          feat('{{shield}}', '#34d399', '#0ea5e9', 'Zero-knowledge', 'Encrypted on your device. No account, no server that can read your data.'),
+          feat('{{internet}}', '#6366f1', '#a855f7', 'PC and phone', 'Works offline in any browser, and syncs between your devices.'),
+          feat('{{clip}}', '#f59e0b', '#ef4444', 'More than passwords', 'Wi-Fi, insurance, travel, IDs, bank accounts — with photos and documents attached.'),
           h('div', { class: 'wl-stats' }, [['AES-256', 'encrypted'], ['0', 'accounts'], ['100%', 'on-device']].map(([a, b]) => h('div', null, h('b', { text: a }), h('span', { text: b })))),
           h('div', { class: 'wl-actions' },
             h('button', { class: 'btn primary wl-go welcome-go', on: { click: enter } }, 'Open my vault →'),
-            h('button', { class: 'btn wl-tour', on: { click: () => { markSeen(); start(); } } }, '🧭 Take the tour'),
-            h('button', { class: 'btn wl-ghost', on: { click: () => { enter(); ctx.S.setTab = 'appearance'; ctx.go('settings'); } } }, '🎨 Make it yours')),
+            h('button', { class: 'btn wl-tour', on: { click: () => { markSeen(); start(); } } }, '{{compass}} Take the tour'),
+            h('button', { class: 'btn wl-ghost', on: { click: () => { enter(); ctx.S.setTab = 'appearance'; ctx.go('settings'); } } }, '{{palette}} Make it yours')),
           h('label', { class: 'chk' }, always, 'Show this welcome screen every time I unlock'),
           h('div', { class: 'hint', text: 'Press Enter to start · Esc to close · Help (?) replays the tour' }))));
     el._key = (e) => { if (e.key === 'Escape' || (e.key === 'Enter' && !(e.target.closest && e.target.closest('button,label,input')))) { e.preventDefault(); e.stopPropagation(); enter(); } };
     document.addEventListener('keydown', el._key, true);
     document.body.append(el); welcomeEl = el;
     requestAnimationFrame(() => el.classList.add('in'));
-    setTimeout(() => { const g = el.querySelector('.welcome-go'); if (g) g.focus(); }, 80);
+    setTimeout(() => { const g = el.querySelector('.welcome-go'); if (g) g.focus({ preventScroll: true }); }, 80);
   }
 
   /* show the welcome once the unlock animation and any "vault created" dialogs are finished */
@@ -148,7 +148,7 @@ export function createTour(ctx) {
   function help() {
     const row = (k, d) => h('div', { class: 'f' }, h('div', { class: 'k mono', text: k }), h('div', { class: 'v', text: d }));
     const m = modal({ title: 'Help', sub: 'VaultManager ' + APP_VERSION, wide: false, body: h('div', null,
-      h('div', { class: 'row wrap' }, h('button', { class: 'btn primary', on: { click: () => { m.close(); start(); } } }, '🧭 Guided tour'), h('button', { class: 'btn', on: { click: () => { m.close(); welcome(); } } }, '👋 Welcome screen'),
+      h('div', { class: 'row wrap' }, h('button', { class: 'btn primary', on: { click: () => { m.close(); start(); } } }, '{{compass}} Guided tour'), h('button', { class: 'btn', on: { click: () => { m.close(); welcome(); } } }, '{{wave}} Welcome screen'),
         h('button', { class: 'btn', on: { click: () => { m.close(); ctx.S.setTab = 'about'; ctx.go('settings'); } } }, 'ⓘ About & versions')),
       h('h3', { class: 'lbl', text: 'Keyboard shortcuts' }),
       row('/', 'Jump to search'), row('Alt + L', 'Lock the vault now'), row('Esc', 'Close a dialog, the tour or this screen'), row('← →  Enter', 'Move through the tour'),

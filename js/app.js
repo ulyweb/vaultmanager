@@ -1,6 +1,6 @@
 /* VaultManager — application shell: lock screen, navigation, auto-lock, routing. */
 
-import { h, clear, closeAllModals, closeTopModal, modalOpen, modal, toast, copyText } from './dom.js';
+import { h, clear, setLabel, closeAllModals, closeTopModal, modalOpen, modal, toast, copyText } from './dom.js';
 import { VaultStore } from './vault.js';
 import { available } from './crypto.js';
 import { estimate } from './strength.js';
@@ -80,7 +80,7 @@ function setLook(patch, opt = {}) {
   if (!store.unlocked) return;
   store.settings.look = normalizeLook({ ...store.settings.look, ...patch });
   applyTheme(); saveSoon();
-  if (opt.shell) { shell = null; draw(); } else if (opt.redraw) draw(); else if (shell) drawDock();
+  if (opt.shell) { shell = null; draw(); } else if (opt.redraw) draw(); else if (shell) { drawDock(); drawMbar(); }
 }
 function setTheme(v) { store.settings.theme = v; applyTheme(); saveSoon(); }
 
@@ -96,7 +96,7 @@ document.addEventListener('pointerleave', (e) => { if (e.target.classList && e.t
 /* unlock animation: a short, skippable log of what actually just happened */
 function showBoot(L, done) {
   const iter = store.session ? store.session.iterations() : 0, n = store.active().length;
-  const lines = [['VaultManager ' + APP_VERSION, ''], ['Unwrapping master key', 'PBKDF2-SHA256 · ' + fmtInt(iter) + ' rounds ✓'], ['Decrypting vault', 'AES-256-GCM ✓'], ['Verifying integrity tag', '✓'], ['Loading ' + n + ' item' + (n === 1 ? '' : 's'), '✓'], ['Audit trail & auto-lock', 'armed ✓'], ['Ready', '']];
+  const lines = [['VaultManager ' + APP_VERSION, ''], ['Unwrapping master key', 'PBKDF2-SHA256 · ' + fmtInt(iter) + ' rounds ✓'], ['Decrypting vault', 'AES-256-GCM ✓'], ['Verifying integrity tag', '{{check}}'], ['Loading ' + n + ' item' + (n === 1 ? '' : 's'), '{{check}}'], ['Audit trail & auto-lock', 'armed ✓'], ['Ready', '']];
   const el = h('div', { id: 'boot', role: 'status', 'aria-label': 'Starting' }, lines.map(([a, b], i) => { const l = h('div', { class: 'l' }, '> ', h('b', { text: a }), b ? '  ' + b : ''); l.style.animationDelay = (i * 0.12 / L.animSpeed) + 's'; return l; }), h('div', { class: 'bar' }, h('i')), h('div', { class: 'hint', text: 'Click or press any key to skip' }));
   document.body.append(el);
   let finished = false;
@@ -182,13 +182,13 @@ function armSync() {
 
 /* ---------- gate (create / unlock) ---------- */
 function trustChips() {
-  return h('div', { class: 'trust' }, ['Zero-knowledge', 'End-to-end encrypted', 'AES-256-GCM', 'Works offline', 'No account · no server'].map((t) => h('span', { class: 'chip accent', text: '✓ ' + t })));
+  return h('div', { class: 'trust' }, ['Zero-knowledge', 'End-to-end encrypted', 'AES-256-GCM', 'Works offline', 'No account · no server'].map((t) => h('span', { class: 'chip accent', text: '{{check}} ' + t })));
 }
 const brand = (sub) => h('div', { class: 'brand' }, h('img', { src: 'icons/icon.svg', alt: '', width: '44', height: '44' }), h('div', null, h('h1', null, 'Vault', h('span', { text: 'Manager' })), h('p', { text: sub })));
 
 function pwInput(id, label, auto) {
   const i = h('input', { id, type: 'password', class: 'inp mono', autocomplete: auto, spellcheck: 'false', 'aria-label': label, required: true });
-  const eye = h('button', { type: 'button', class: 'icon-btn eye', 'aria-label': 'Show or hide ' + label, title: 'Show / hide', on: { click: () => { i.type = i.type === 'password' ? 'text' : 'password'; } } }, '👁');
+  const eye = h('button', { type: 'button', class: 'icon-btn eye', 'aria-label': 'Show or hide ' + label, title: 'Show / hide', on: { click: () => { i.type = i.type === 'password' ? 'text' : 'password'; } } }, '{{eye}}');
   return { input: i, el: h('div', { class: 'pwwrap' }, i, eye) };
 }
 
@@ -198,7 +198,7 @@ function gateCreate() {
   const ack = h('input', { type: 'checkbox', id: 'ack' });
   p1.input.addEventListener('input', () => clear(m).append(meter(p1.input.value).el));
   const btn = h('button', { class: 'btn primary', type: 'submit', style: null }, 'Create my vault');
-  const suggest = h('button', { type: 'button', class: 'btn sm', on: { click: () => { const pw = generatePassphrase({ words: 6 }); p1.input.value = p2.input.value = pw; p1.input.type = p2.input.type = 'text'; p1.input.dispatchEvent(new Event('input')); } } }, '⚡ Suggest a passphrase');
+  const suggest = h('button', { type: 'button', class: 'btn sm', on: { click: () => { const pw = generatePassphrase({ words: 6 }); p1.input.value = p2.input.value = pw; p1.input.type = p2.input.type = 'text'; p1.input.dispatchEvent(new Event('input')); } } }, '{{bolt}} Suggest a passphrase');
   const form = h('form', { novalidate: true, on: { submit: async (e) => {
     e.preventDefault(); err.textContent = '';
     if (p1.input.value !== p2.input.value) { err.textContent = 'The two passwords do not match.'; return; }
@@ -245,8 +245,8 @@ function gateUnlock() {
       onUnlocked();
       return;
     } catch (x) { err.textContent = x.message === 'bad-secret' ? 'That passkey did not unlock the vault. Use your master password.' : x.message; }
-    pkBtn.disabled = false; pkBtn.textContent = '🔑 Unlock with passkey';
-  } } }, '🔑 Unlock with passkey') : null;
+    pkBtn.disabled = false; setLabel(pkBtn, '{{login}} Unlock with passkey');
+  } } }, '{{login}} Unlock with passkey') : null;
   const form = h('form', { novalidate: true, on: { submit: async (e) => {
     e.preventDefault(); err.textContent = '';
     if (store.delayLeft() > 0) { throttle(); return; }
@@ -281,8 +281,8 @@ function drawGate() {
 /* ---------- main shell ---------- */
 let shell = null;
 
-const NAV = [['home', '🏠', 'Home'], ['all', '🗂', 'All items'], ['fav', '★', 'Favorites'], ['trash', '🗑', 'Trash']];
-const TOOLS = [['health', '🩺', 'Vault health'], ['gen', '⚡', 'Generator'], ['qr', '▦', 'QR tools'], ['beam', '📡', 'Beam sync'], ['data', '⇅', 'Import & export'], ['settings', '⚙', 'Settings']];
+const NAV = [['home', '{{home}}', 'Home'], ['all', '{{vault}}', 'All items'], ['fav', '{{star}}', 'Favorites'], ['trash', '{{trash}}', 'Trash']];
+const TOOLS = [['health', '{{pulse}}', 'Vault health'], ['gen', '{{bolt}}', 'Generator'], ['qr', '{{qr}}', 'QR tools'], ['beam', '{{beam}}', 'Beam sync'], ['data', '{{swap}}', 'Import & export'], ['settings', '{{gear}}', 'Settings']];
 
 function syncSearch() { if (shell && shell.search.value !== ctx.S.q) shell.search.value = ctx.S.q; }
 
@@ -294,12 +294,38 @@ function tickClock() {
   shell.clock.lastChild.textContent = L.dateFmt === 'none' ? '' : n.toLocaleDateString([], L.dateFmt === 'long' ? { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' } : { weekday: 'short', day: 'numeric', month: 'short' });
 }
 
-const DOCK = [['home', '🏠', 'Home'], ['all', '🗂', 'All items'], ['fav', '★', 'Favorites'], ['cats', '🧩', 'Categories'], null, ['health', '🩺', 'Health'], ['gen', '⚡', 'Generator'], ['qr', '▦', 'QR tools'], ['beam', '📡', 'Beam'], null, ['settings', '⚙', 'Settings'], ['help', '❓', 'Help'], ['new', '＋', 'New item']];
+const DOCK = [['home', '{{home}}', 'Home'], ['all', '{{vault}}', 'All items'], ['fav', '{{star}}', 'Favorites'], ['cats', '{{puzzle}}', 'Categories'], null, ['health', '{{pulse}}', 'Health'], ['gen', '{{bolt}}', 'Generator'], ['qr', '{{qr}}', 'QR tools'], ['beam', '{{beam}}', 'Beam'], null, ['settings', '{{gear}}', 'Settings'], ['help', '{{help}}', 'Help'], ['new', '{{plus}}', 'New item']];
 
 function categoriesModal() {
   const cnt = (k) => store.active().filter((i) => i.type === k).length;
   modal({ title: 'Categories', wide: true, body: h('div', null, GROUPS.map(([g, keys]) => h('div', { class: 'catgroup' }, h('p', { class: 'lbl', text: g }),
     h('div', { class: 'checks cats' }, keys.map((k) => h('button', { class: 'btn', on: { click: () => { closeAllModals(); ctx.go(k); } } }, h('span', { class: 'icn', text: TYPE_META[k].icon }), ' ' + TYPE_META[k].plural + ' · ' + cnt(k))))))), actions: [{ label: 'Close' }] });
+}
+
+/* phone navigation: a bottom bar (Home · Items · New · Generator · More) and a "More" sheet with everything else */
+function moreSheet() {
+  const go = (v) => () => { closeAllModals(); ctx.go(v); };
+  const c = counts();
+  const item = (ic, label, fn, n) => h('button', { class: 'btn msheet-item', on: { click: fn } }, ic, h('span', { class: 'grow', text: label }), n !== undefined ? h('span', { class: 'n', text: String(n) }) : null);
+  const m = modal({ title: 'Menu', wide: true, body: h('div', { class: 'msheet' },
+    h('p', { class: 'lbl', text: 'Vault' }), h('div', { class: 'mgrid' }, item('{{star}}', 'Favorites', go('fav'), c.fav), item('{{trash}}', 'Trash', go('trash'), c.trash), store.conflictCount() ? item('{{alert}}', 'Needs review', go('conflicts'), store.conflictCount()) : null),
+    h('p', { class: 'lbl', text: 'Tools' }), h('div', { class: 'mgrid' }, TOOLS.map(([id, ic, l]) => item(ic, l, go(id)))),
+    GROUPS.map(([g, keys]) => h('div', null, h('p', { class: 'lbl', text: g }), h('div', { class: 'mgrid' }, keys.map((k) => item(TYPE_META[k].icon, TYPE_META[k].plural, go(k), c[k]))))),
+    h('p', { class: 'lbl', text: 'More' }), h('div', { class: 'mgrid' }, item('{{help}}', 'Help & tour', () => { closeAllModals(); tour.help(); }), item('{{lock}}', 'Lock now', () => { closeAllModals(); lock(false); }))), actions: [{ label: 'Close' }] });
+  return m;
+}
+
+function drawMbar() {
+  if (!shell || !shell.mbar) return;
+  const v = ctx.S.view, hl = health(store.items), attention = hl.weak.length + hl.reused.length + hl.expiring.length + store.conflictCount();
+  const it = (id, ic, label, on, fn, badge) => h('button', { class: 'mbar-item' + (on ? ' on' : ''), 'aria-label': label, 'aria-current': on ? 'page' : null, on: { click: fn } }, ic, h('span', { class: 'mlbl', text: label }), badge ? h('span', { class: 'badge', text: String(badge) }) : null);
+  const inMore = !['home', 'gen'].includes(v) && !isVaultView(v) ? true : (v === 'fav' || v === 'trash' || v === 'conflicts' || (v in TYPE_META));
+  clear(shell.mbar).append(
+    it('home', '{{home}}', 'Home', v === 'home', () => ctx.go('home')),
+    it('all', '{{vault}}', 'Items', ['all'].includes(v) || v.startsWith('tag:'), () => ctx.go('all')),
+    h('button', { class: 'mbar-fab', 'aria-label': 'New item', on: { click: () => newItemMenu(ctx) } }, '{{plus}}'),
+    it('gen', '{{bolt}}', 'Generator', v === 'gen', () => ctx.go('gen')),
+    it('more', '{{menu}}', 'More', inMore && v !== 'home' && v !== 'gen' && v !== 'all', () => moreSheet(), attention));
 }
 
 function drawDock() {
@@ -312,7 +338,7 @@ function drawDock() {
     return h('button', { class: 'dock-item' + (on ? ' on' : ''), title: label, 'aria-label': label, 'aria-current': on ? 'page' : null, on: { click: () => (id === 'new' ? newItemMenu(ctx) : id === 'help' ? tour.help() : id === 'cats' ? categoriesModal() : ctx.go(id)) } },
       h('span', { class: 'icn', text: ic }), L.dockLabels ? h('small', { text: label }) : null, id === 'health' && attention ? h('span', { class: 'badge', text: String(attention) }) : null);
   });
-  if (store.conflictCount()) items.splice(3, 0, h('button', { class: 'dock-item' + (ctx.S.view === 'conflicts' ? ' on' : ''), title: 'Needs review', 'aria-label': 'Needs review', on: { click: () => ctx.go('conflicts') } }, h('span', { class: 'icn', text: '⚠' }), L.dockLabels ? h('small', { text: 'Review' }) : null, h('span', { class: 'badge', text: String(store.conflictCount()) })));
+  if (store.conflictCount()) items.splice(3, 0, h('button', { class: 'dock-item' + (ctx.S.view === 'conflicts' ? ' on' : ''), title: 'Needs review', 'aria-label': 'Needs review', on: { click: () => ctx.go('conflicts') } }, h('span', { class: 'icn', text: '{{alert}}' }), L.dockLabels ? h('small', { text: 'Review' }) : null, h('span', { class: 'badge', text: String(store.conflictCount()) })));
   clear(shell.dock).append(items);
 }
 
@@ -321,15 +347,16 @@ function buildShell() {
   const search = h('input', { class: 'inp search', type: 'search', placeholder: 'Search your vault  ( / )', 'aria-label': 'Search your vault', autocomplete: 'off', spellcheck: 'false', on: { input: (e) => { ctx.S.q = e.target.value; if (!isVaultView(ctx.S.view)) ctx.S.view = 'all'; drawMain(); drawSide(); } } });
   const clock = L.clock ? h('div', { class: 'barclock', 'aria-label': 'Clock' }, h('b'), h('span')) : null;
   const top = h('header', { class: 'topbar' }, h('div', { class: 'logo' }, h('img', { src: 'icons/icon.svg', alt: '', width: '26', height: '26' }), h('b', null, 'Vault', h('span', { text: 'Manager' }))), search, clock,
-    h('button', { class: 'btn primary', on: { click: () => newItemMenu(ctx) } }, '＋', h('span', { class: 'lbl', text: ' New' })), h('button', { class: 'btn', title: 'Lock now (Alt+L)', on: { click: () => lock(false) } }, '🔒', h('span', { class: 'lbl', text: ' Lock' })), h('button', { class: 'btn icon', title: 'Help, tour and shortcuts', 'aria-label': 'Help', on: { click: () => tour.help() } }, '?'));
+    h('button', { class: 'btn primary', on: { click: () => newItemMenu(ctx) } }, '{{plus}}', h('span', { class: 'lbl', text: ' New' })), h('button', { class: 'btn', title: 'Lock now (Alt+L)', on: { click: () => lock(false) } }, '{{lock}}', h('span', { class: 'lbl', text: ' Lock' })), h('button', { class: 'btn icon', title: 'Help, tour and shortcuts', 'aria-label': 'Help', on: { click: () => tour.help() } }, '{{help}}'));
   const side = h('nav', { class: 'side', 'aria-label': 'Sections' }), main = h('main', { class: 'main' });
   const dock = h('nav', { class: 'dock', 'aria-label': 'Dock' });
+  const mbar = h('nav', { class: 'mbar', 'aria-label': 'Main navigation' });
   dock.addEventListener('pointermove', (e) => {
     const cur = curLook(); if (!cur.dockMagnify || !cur.animations) return;
     for (const it of dock.querySelectorAll('.dock-item')) { const r = it.getBoundingClientRect(), d = Math.abs(e.clientX - (r.left + r.width / 2)); it.style.setProperty('--s', (1 + 0.6 * Math.exp(-((d / 64) ** 2))).toFixed(3)); }
   });
   dock.addEventListener('pointerleave', () => dock.querySelectorAll('.dock-item').forEach((it) => it.style.setProperty('--s', '1')));
-  shell = { search, side, main, dock, clock, el: h('div', null, top, h('div', { class: 'shell' }, side, main), dock) };
+  shell = { search, side, main, dock, mbar, clock, el: h('div', null, top, h('div', { class: 'shell' }, side, main), dock, mbar) };
   clearInterval(clockTimer); tickClock(); clockTimer = setInterval(tickClock, 15000);
 }
 
@@ -343,7 +370,7 @@ function counts() {
 function groupBlock(g, keys, c, btn) {
   const closed = ctx.S.collapsed.has(g), total = keys.reduce((n, k) => n + c[k], 0);
   const head = h('button', { class: 'ngroup', 'aria-expanded': String(!closed), title: closed ? 'Expand ' + g : 'Collapse ' + g, on: { click: () => { if (ctx.S.collapsed.has(g)) ctx.S.collapsed.delete(g); else ctx.S.collapsed.add(g); drawSide(); } } },
-    h('span', { class: 'chev', text: closed ? '▸' : '▾' }), h('span', { text: g }), total ? h('span', { class: 'n', text: String(total) }) : null);
+    h('span', { class: 'chev', text: closed ? '{{chevright}}' : '{{chevdown}}' }), h('span', { text: g }), total ? h('span', { class: 'n', text: String(total) }) : null);
   return h('div', { class: 'ngroup-wrap' }, head, h('div', { class: 'nbody' + (closed ? ' collapsed' : '') }, keys.map((k) => btn(k, TYPE_META[k].icon, TYPE_META[k].plural, c[k]))));
 }
 
@@ -351,7 +378,7 @@ function drawSide() {
   const c = counts(), btn = (id, ic, label, n, dot) => h('button', { class: 'nav' + (ctx.S.view === id ? ' on' : ''), 'aria-current': ctx.S.view === id ? 'page' : null, on: { click: () => ctx.go(id) } }, h('span', { class: 'ic icn', text: ic }), label, dot ? h('span', { class: 'dot', title: 'Needs attention' }) : n !== undefined ? h('span', { class: 'n', text: String(n) }) : null);
   const hl = health(store.items);
   const attention = hl.weak.length + hl.reused.length + hl.expiring.length > 0;
-  clear(shell.side).append(h('h4', { text: 'Vault' }), NAV.map(([id, ic, l]) => btn(id, ic, l, id === 'home' ? undefined : c[id])), store.conflictCount() ? btn('conflicts', '⚠', 'Needs review', store.conflictCount()) : null, h('h4', { text: 'Categories' }), GROUPS.map(([g, keys]) => groupBlock(g, keys, c, btn)),
+  clear(shell.side).append(h('h4', { text: 'Vault' }), NAV.map(([id, ic, l]) => btn(id, ic, l, id === 'home' ? undefined : c[id])), store.conflictCount() ? btn('conflicts', '{{alert}}', 'Needs review', store.conflictCount()) : null, h('h4', { text: 'Categories' }), GROUPS.map(([g, keys]) => groupBlock(g, keys, c, btn)),
     store.tags().length ? [h('h4', { text: 'Tags' }), store.tags().map(([t, n]) => btn('tag:' + t, '#', t, n))] : null,
     h('h4', { text: 'Tools' }), TOOLS.map(([id, ic, l]) => btn(id, ic, l, undefined, id === 'health' && attention)));
 }
@@ -365,7 +392,7 @@ function drawMain() {
 function draw() {
   if (!store.unlocked) { shell = null; drawGate(); return; }
   if (!shell) { buildShell(); clear(root).append(shell.el); }
-  drawSide(); drawMain(); drawDock();
+  drawSide(); drawMain(); drawDock(); drawMbar();
 }
 
 /* ---------- keyboard ---------- */
