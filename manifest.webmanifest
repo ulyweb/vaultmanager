@@ -1,0 +1,11 @@
+{
+  "name": "VaultManager",
+  "short_name": "VaultManager",
+  "description": "Zero-knowledge, end-to-end encrypted password manager. Works offline.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#05080d",
+  "theme_color": "#05080d",
+  "icons": [{ "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}
