@@ -40,3 +40,7 @@ VaultManager runs entirely in the browser. There is no server, no account and no
 
 ## Reporting a vulnerability
 Please open a private security advisory on the GitHub repository (Security → Report a vulnerability) rather than a public issue.
+
+## Item passcode lock
+
+Any item can have a secondary passcode. Its username, password, website, one-time-code secret, notes, card details, category fields and custom fields are sealed again (PBKDF2-SHA256 → AES-256-GCM, QR Seal format) inside the vault, together with a random 256-bit item key. Attached files are sealed under that item key (inside the normal per-file vault encryption) and their names and types live only inside the passcode seal. Name, tags and favourite stay readable so the item can be found. The passcode is never stored; a forgotten passcode cannot be recovered. Opened items are held in memory for 10 minutes or until the vault locks, and wrong passcodes are slowed down.

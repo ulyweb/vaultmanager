@@ -1096,3 +1096,87 @@ test('item passcode lock: a Crypto wallet item with its own passcode stays hidde
   assert.deepEqual(problems, []);
   await ctx.close();
 });
+
+/* One feature walk-through, run on every target: served desktop, phone, tablet, and the single-file offline build (desktop and phone). */
+async function featureWalk(label, { device = null, offline = false } = {}) {
+  const opts = device ? (({ defaultBrowserType, ...d }) => ({ ...d, colorScheme: 'dark', reducedMotion: 'reduce' }))(devices[device]) : {};
+  const { ctx, page, problems } = await newPage(opts);
+  const phone = !!device && devices[device].viewport.width < 700;
+  const fits = async (what) => { const o = await page.evaluate(() => ({ sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth })); assert.ok(o.sw <= o.cw + 1, `${label} · ${what}: horizontal overflow ${o.sw}>${o.cw}`); };
+  const url = offline ? 'file://' + path.join(ROOT, 'offline/VaultManager-offline.html') : base;
+  await page.goto(url); await page.waitForSelector('#pw1');
+  await page.fill('#pname', 'Tester'); await page.fill('#pw1', MASTER); await page.fill('#pw2', MASTER); await page.check('#ack'); await page.click('button[type=submit]');
+  await page.getByRole('button', { name: 'Skip for now' }).click(); await page.waitForSelector('.welcome.in').catch(() => {}); await page.keyboard.press('Escape'); await page.waitForTimeout(250);
+  // a wallet with a file, protected by its own passcode
+  await page.getByRole('button', { name: phone ? 'New item' : /^＋ New|New$/ }).first().click();
+  await page.locator('.modal-sheet .cats .btn', { hasText: 'Crypto wallet' }).click();
+  await page.fill('#f_name', 'Cold wallet'); await page.fill('#tf_seed', 'zoo zebra zone zero zest zinc zip zigzag');
+  const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+  await page.setInputFiles('input[aria-label="Choose files"]', { name: 'seedcard.png', mimeType: 'image/png', buffer: png });
+  await page.waitForSelector('.modal-sheet .att');
+  await page.check('#f_lockon'); await page.fill('#f_lock1', 'item-code-123'); await page.fill('#f_lock2', 'item-code-123'); await fits('edit form');
+  await page.getByRole('button', { name: 'Save' }).click(); await page.waitForSelector('.detail h2:has-text("Cold wallet")', { timeout: 30000 });
+  assert.ok(await page.locator('.lockbox').count(), `${label}: locked`);
+  const closed = await page.textContent('.detail'); assert.ok(!closed.includes('seedcard') && !closed.includes('Recovery seed phrase'), `${label}: nothing readable while locked (name of the file included)`);
+  await fits('locked'); await page.getByRole('button', { name: 'Enter passcode…' }).click(); await page.fill('input[aria-label="Item passcode"]', 'item-code-123'); await fits('unlock dialog');
+  await page.locator('.modal-sheet').getByRole('button', { name: 'Unlock', exact: true }).click();
+  await page.waitForFunction(() => document.querySelector('.detail') && document.querySelector('.detail').textContent.includes('seedcard.png'), null, { timeout: 30000 });
+  assert.match(await page.textContent('.detail .sbits'), /\d+ characters · ~\d+ bits/); await fits('unlocked');
+  await page.getByRole('button', { name: /Seal Recovery seed phrase as QR/ }).click();
+  assert.match(await page.textContent('.modal-sheet .meter-label'), /\d+ characters · ~\d+ bits entropy/);
+  await page.getByRole('button', { name: 'Create QR' }).click(); await page.waitForSelector('.modal-sheet canvas', { timeout: 30000 }); await fits('QR dialog'); await page.keyboard.press('Escape');
+  // real-photo wallpaper + autosave bar
+  if (phone) { await page.getByRole('button', { name: 'More' }).click(); await page.locator('.msheet-item', { hasText: 'Settings' }).first().click(); await page.waitForSelector('.tabs'); await page.getByRole('tab', { name: /Appearance/ }).click(); }
+  else await settingsTab(page, 'Appearance');
+  await page.waitForSelector('.wall[data-group=city]'); await fits('appearance');
+  await page.locator('.wall[data-group=city]').first().click();
+  assert.match(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--wall')), /night1\.jpg|data:image\/jpeg/, `${label}: photo wallpaper applied`);
+  assert.match(await page.textContent('.savebar'), /Saved automatically to “Tester”/); await page.getByRole('button', { name: 'Save now' }).click();
+  assert.deepEqual(problems.filter((p) => !/Failed to load resource/.test(p)), [], label);
+  await ctx.close();
+}
+const WALK = [['served · desktop', {}], ['served · iPhone 13', { device: 'iPhone 13' }], ['served · iPhone SE', { device: 'iPhone SE' }], ['served · iPad Mini', { device: 'iPad Mini' }],
+  ['single file · desktop', { offline: true }], ['single file · iPhone 13', { offline: true, device: 'iPhone 13' }]];
+for (const [label, o] of WALK) test('feature walk-through: ' + label, async () => {
+  if (o.offline) execFileSync(process.execPath, [path.join(ROOT, 'tools/build-offline.mjs')], { stdio: 'pipe' });
+  await featureWalk(label, o);
+});
+
+async function roundTripWalk(label, { device = null, offline = false } = {}) {
+  const opts = device ? (({ defaultBrowserType, ...d }) => ({ ...d, colorScheme: 'dark', reducedMotion: 'reduce' }))(devices[device]) : {};
+  const phone = !!device && devices[device].viewport.width < 700;
+  const url = offline ? 'file://' + path.join(ROOT, 'offline/VaultManager-offline.html') : base;
+  const A = await newPage(opts);
+  await A.page.goto(url); await A.page.waitForSelector('#pw1');
+  await A.page.fill('#pw1', MASTER); await A.page.fill('#pw2', MASTER); await A.page.check('#ack'); await A.page.click('button[type=submit]');
+  await A.page.getByRole('button', { name: 'Skip for now' }).click(); await A.page.waitForSelector('.welcome.in').catch(() => {}); await A.page.keyboard.press('Escape'); await A.page.waitForTimeout(250);
+  await A.page.getByRole('button', { name: phone ? 'New item' : /^＋ New|New$/ }).first().click();
+  await A.page.locator('.modal-sheet .cats .btn', { hasText: 'Bank account' }).click();
+  await A.page.fill('#f_name', 'Savings'); await A.page.fill('#f_lock1', 'x').catch(() => {});
+  const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+  await A.page.setInputFiles('input[aria-label="Choose files"]', { name: 'statement.png', mimeType: 'image/png', buffer: png }); await A.page.waitForSelector('.modal-sheet .att');
+  await A.page.check('#f_lockon'); await A.page.fill('#f_lock1', 'item-code-123'); await A.page.fill('#f_lock2', 'item-code-123');
+  await A.page.getByRole('button', { name: 'Save' }).click(); await A.page.waitForSelector('.lockbox', { timeout: 90000 });
+  if (phone) { await A.page.getByRole('button', { name: 'More' }).click(); await A.page.locator('.msheet-item', { hasText: 'Settings' }).first().click(); await A.page.waitForSelector('.tabs'); } else await settingsTab(A.page, 'General');
+  await A.page.getByRole('button', { name: /Export whole profile/ }).click();
+  await A.page.fill('input[aria-label="Backup password"]', 'backup-pass-phrase-1');
+  const [dl] = await Promise.all([A.page.waitForEvent('download'), A.page.getByRole('button', { name: 'Download backup' }).click()]);
+  const text = fs.readFileSync(await dl.path(), 'utf8'); await A.ctx.close();
+
+  const B = await newPage(opts); await B.page.goto(url); await B.page.waitForSelector('#pw1');
+  await B.page.getByRole('button', { name: /Import a profile backup/ }).click();
+  await B.page.fill('textarea[aria-label="Backup text"]', text); await B.page.fill('input[aria-label="Backup password"]', 'backup-pass-phrase-1');
+  await B.page.getByRole('button', { name: 'Open backup' }).click();
+  await B.page.fill('input[aria-label="New master password"]', 'a-new-master-pass-123'); await B.page.fill('input[aria-label="Repeat new master password"]', 'a-new-master-pass-123');
+  await B.page.locator('.modal-sheet input[type=checkbox]').last().check(); await B.page.getByRole('button', { name: 'Create profile' }).click();
+  await B.page.waitForSelector('.topbar', { timeout: 90000 }); await B.page.keyboard.press('Escape'); await B.page.waitForTimeout(250);
+  await B.page.fill('.search', 'Savings'); await B.page.locator('.item', { hasText: 'Savings' }).first().click();
+  await B.page.waitForSelector('.lockbox');
+  await B.page.getByRole('button', { name: 'Enter passcode…' }).click(); await B.page.fill('input[aria-label="Item passcode"]', 'item-code-123');
+  await B.page.locator('.modal-sheet').getByRole('button', { name: 'Unlock', exact: true }).click();
+  await B.page.waitForFunction(() => document.querySelector('.detail') && document.querySelector('.detail').textContent.includes('statement.png'), null, { timeout: 90000 });
+  assert.deepEqual(B.problems.filter((p) => !/Failed to load resource/.test(p)), [], label);
+  await B.ctx.close();
+}
+for (const [label, o] of [['served · iPhone 13', { device: 'iPhone 13' }], ['single file · desktop', { offline: true }], ['single file · iPhone 13', { offline: true, device: 'iPhone 13' }]])
+  test('locked item with a file survives a whole-profile export and import: ' + label, async () => { await roundTripWalk(label, o); });

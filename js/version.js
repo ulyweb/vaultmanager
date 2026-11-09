@@ -1,6 +1,6 @@
 /* Application version, data-format versions and changelog (shown in Settings → About). */
 
-export const APP_VERSION = '0.13.0';
+export const APP_VERSION = '0.14.0';
 export const APP_NAME = 'VaultManager';
 export const REPO_URL = 'https://github.com/ulyweb/vaultmanager';
 
@@ -16,6 +16,11 @@ export const FORMATS = [
 ];
 
 export const CHANGELOG = [
+  { v: '0.14.0', date: '2026-11-09', notes: [
+    'The item passcode lock now covers attached files: file contents are sealed under a random key kept inside the passcode seal, and their names and types are hidden until you unlock the item.',
+    'Items locked with 0.13 get their existing files sealed the next time you open them.',
+    'The audit trail no longer remembers file names of locked items. Verified on desktop, iPhone, iPad and the single-file offline build.',
+  ] },
   { v: '0.13.0', date: '2026-11-09', notes: [
     'Secondary passcode lock for any item (offered for Bank, Crypto wallet, Emergency, Secure notes and every other category): its details are encrypted again with a passcode of its own, so they stay hidden even after the vault is unlocked.',
     'Add it when creating an item, or later with “Add passcode lock”. Opened items lock again after 10 minutes or when the vault locks; wrong passcodes are throttled.',

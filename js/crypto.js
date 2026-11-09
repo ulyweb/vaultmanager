@@ -137,6 +137,18 @@ const validWrap = (w) => w && typeof w.iv === 'string' && typeof w.ct === 'strin
   ((w.type === 'password' && typeof w.salt === 'string' && Number.isInteger(w.iter) && w.iter >= ITER_MIN && w.iter <= ITER_MAX) || w.type === 'recovery' ||
    (w.type === 'passkey' && typeof w.cred === 'string' && typeof w.prf === 'string'));
 
+/* Second layer for locked items: file bytes sealed under a random per-item key that lives inside the item's passcode seal. */
+const INNER_AAD = new TextEncoder().encode('VaultManager-itemlock-att-v1');
+export async function innerSeal(rawKey, bytes) {
+  const k = await subtle().importKey('raw', rawKey, 'AES-GCM', false, ['encrypt']);
+  const { iv, ct } = await gcmSeal(k, bytes, INNER_AAD);
+  const out = new Uint8Array(iv.length + ct.length); out.set(iv); out.set(ct, iv.length); return out;
+}
+export async function innerOpen(rawKey, data) {
+  const k = await subtle().importKey('raw', rawKey, 'AES-GCM', false, ['decrypt']);
+  return gcmOpen(k, data.slice(0, IV), data.slice(IV), INNER_AAD);
+}
+
 /* A session holds the unlocked secrets. lock() zeroes the raw master key. */
 export class Session {
   constructor(id, mk, dataKey, wraps) { this.id = id; this.mk = mk; this.dataKey = dataKey; this.wraps = wraps; }

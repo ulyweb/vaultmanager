@@ -192,7 +192,7 @@ function detailPanel(ctx, it0) {
   if ((nrev || nhist) && !it.lock) rows.push(h('div', { class: 'f' }, h('div', { class: 'k', text: 'History' }), h('div', { class: 'v' }, h('button', { class: 'linkbtn', on: { click: () => historyModal(ctx, it) } }, [nrev ? `${nrev} earlier version${nrev > 1 ? 's' : ''}` : null, nhist ? `${nhist} previous password${nhist > 1 ? 's' : ''}` : null].filter(Boolean).join(' · ')))));
   if (lockedClosed) {
     rows.length = 0;
-    rows.push(h('div', { class: 'note lockbox', role: 'status' }, h('b', { text: '{{lock}} This item is locked with its own passcode' }), h('p', { text: 'Its details (fields, notes, attachments) stay hidden until you enter the item’s secondary passcode — even though your vault is unlocked.' }),
+    rows.push(h('div', { class: 'note lockbox', role: 'status' }, h('b', { text: '{{lock}} This item is locked with its own passcode' }), h('p', { text: 'Its details (fields, notes and attached files) stay hidden until you enter the item’s secondary passcode — even though your vault is unlocked.' }),
       h('div', { class: 'row' }, h('button', { class: 'btn primary', on: { click: () => unlockItemDialog(ctx, it) } }, '{{lock}} Enter passcode…'))));
   } else if (it.lock) {
     rows.unshift(h('div', { class: 'note ok lockbox', role: 'status' }, h('b', { text: 'Unlocked with the item passcode' }), h('small', { text: ' — it locks again in 10 minutes, or when the vault locks.' }),
@@ -383,13 +383,14 @@ export function editItem(ctx, item, type = 'login') {
     it.name = it.name.trim(); it.totp = it.totp.trim();
     it.custom = (it.custom || []).filter((c) => c.label.trim() || c.value).map((c) => ({ label: c.label.trim(), value: c.value, secret: !!c.secret }));
     for (const k of Object.keys(it.fields || {})) if (!it.fields[k]) delete it.fields[k];
-    if (isNew) { it.created = it.updated = it.pwChanged = Date.now(); it.attachments = []; await store.add(it); if (lockOn.checked) { try { await store.lockItem(it.id, lp1.value); } catch (e) { toast(e.message, 'err', 7000); } } }
+    if (isNew) { it.created = it.updated = it.pwChanged = Date.now(); it.attachments = []; await store.add(it); }
     else if (it.lock) { const meta = { name: it.name, tags: it.tags, favorite: it.favorite }; await store.saveLocked(it.id, meta, it); }
     else { const { id, history, created, pwChanged, attachments, revisions, deleted, lock, _open, ...patch } = it; await store.update(id, patch); }
     try {
       for (const id of removed) await store.removeAttachment(it.id, id);
       for (const a of staged) await store.addAttachment(it.id, a);
     } catch (e) { toast(e.message, 'err', 7000); }
+    if (isNew && lockOn.checked) { try { await store.lockItem(it.id, lp1.value); } catch (e) { toast(e.message, 'err', 7000); } }   // after the files are attached, so they are sealed too
     ctx.showItem(it.id); toast(isNew ? 'Saved to your vault' : 'Changes saved');
   };
   modal({ title: (isNew ? 'New ' : 'Edit ') + TYPES[it.type].toLowerCase(), body: h('div', null, body), actions: [{ label: 'Cancel' }, { label: 'Save', kind: 'primary', onClick: save }], wide: false });
@@ -446,7 +447,7 @@ export function lockDialog(ctx, it, { change = false } = {}) {
     } catch (e) { err.textContent = e.message === 'bad-passcode' ? 'The current passcode is wrong.' : e.message; return false; }
   };
   modal({ title: change ? 'Change item passcode' : 'Lock “' + it.name + '”', sub: 'Secondary passcode',
-    body: h('div', null, h('p', { class: 'note warn', text: 'Its details are encrypted again with this passcode. If you forget it, nobody can recover them — not even with your master password or recovery key. Attachments stay visible only after unlocking in the app, but are protected by your master password rather than this passcode.' }),
+    body: h('div', null, h('p', { class: 'note warn', text: 'Its details are encrypted again with this passcode. If you forget it, nobody can recover them — not even with your master password or recovery key. Attached files are sealed with the passcode too, and their names are hidden.' }),
       change ? h('div', { class: 'field' }, h('label', { text: 'Current passcode' }), cur) : null,
       h('div', { class: 'field' }, h('label', { text: 'New passcode' }), p1, liveMeter(p1)), h('div', { class: 'field' }, h('label', { text: 'Repeat passcode' }), p2), err),
     actions: [{ label: 'Cancel' }, { label: change ? 'Change passcode' : 'Lock item', kind: 'primary', onClick: go }] });

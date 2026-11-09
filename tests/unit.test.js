@@ -739,3 +739,43 @@ test('item passcode lock: seals secrets, hides them until opened, survives backu
   await S.removeItemLock(it.id, 'second-code-1');
   assert.equal(S.get(it.id).lock, ''); assert.equal(S.get(it.id).fields.seed, 'abandon ability able about');
 });
+
+test('item passcode lock covers attachments: sealed under the item key, names hidden, readable only when open, survive sync, passcode change and unlock', async () => {
+  const blobs = memoryBlobs(), S = new VaultStore(new MemStorage(), 'k', blobs, 'f'); await S.create('correct horse battery', FAST);
+  const it = newItem('bank'); it.name = 'Savings'; await S.add(it);
+  const plain = new TextEncoder().encode('passport scan bytes 12345');
+  await S.addAttachment(it.id, { name: 'passport.jpg', type: 'image/jpeg', bytes: plain });
+  await S.lockItem(it.id, 'second-code-1', FAST);
+  const meta = S.get(it.id).attachments[0];
+  assert.equal(meta.name, 'Locked file'); assert.equal(meta.lk, true); assert.ok(!JSON.stringify(S.data).includes('passport'));
+  const vaultLayer = await S.session.openBlob(meta.id, await blobs.get(S._bk(meta.id)));
+  assert.notDeepEqual([...vaultLayer], [...plain], 'the file is still sealed after the vault layer is removed');
+  await assert.rejects(() => S.readAttachment(it.id, meta.id), /locked/);
+  await S.openItem(it.id, 'second-code-1');
+  const r = await S.readAttachment(it.id, meta.id); assert.equal(r.meta.name, 'passport.jpg'); assert.deepEqual([...r.bytes], [...plain]);
+  assert.equal(S.reveal(S.get(it.id)).attachments[0].name, 'passport.jpg');
+  await S.addAttachment(it.id, { name: 'deed.pdf', type: 'application/pdf', bytes: new TextEncoder().encode('deed') });
+  assert.equal(S.get(it.id).attachments.length, 2); assert.ok(S.get(it.id).attachments.every((a) => a.lk && a.name === 'Locked file'));
+  // sync to a second device
+  const B = new VaultStore(new MemStorage(), 'k2', memoryBlobs(), 'f2'); await B.create('another long password 1', FAST);
+  await B.applyRemote(await S.buildBundle());
+  const bi = B.get(it.id); await assert.rejects(() => B.readAttachment(bi.id, bi.attachments[0].id), /locked/);
+  await B.openItem(bi.id, 'second-code-1'); assert.equal((await B.readAttachment(bi.id, bi.attachments[0].id)).meta.name, 'passport.jpg');
+  // change passcode: files stay readable
+  S.itemFails.clear(); await S.changeItemCode(it.id, 'second-code-1', 'third-code-22', FAST); S.itemFails.clear();
+  await S.openItem(it.id, 'third-code-22'); assert.deepEqual([...(await S.readAttachment(it.id, meta.id)).bytes], [...plain]);
+  // remove the lock: files go back to the normal (vault-only) layer with their real names
+  await S.removeItemLock(it.id, 'third-code-22');
+  const back = S.get(it.id).attachments[0]; assert.equal(back.name, 'passport.jpg'); assert.ok(!back.lk);
+  assert.deepEqual([...(await S.readAttachment(it.id, back.id)).bytes], [...plain]);
+});
+
+test('item locked before files were covered: opening it seals the existing files', async () => {
+  const S = new VaultStore(new MemStorage(), 'k', memoryBlobs(), 'f'); await S.create('correct horse battery', FAST);
+  const it = newItem('note'); it.name = 'Old'; await S.add(it);
+  await S.lockItem(it.id, 'second-code-1', FAST);
+  const p = S.itemKeys.get(it.id); // simulate the v0.13 payload (no ak) and an unsealed file
+  await S.openItem(it.id, 'second-code-1');
+  const att = await S.addAttachment(it.id, { name: 'a.txt', type: 'text/plain', bytes: new TextEncoder().encode('x') });
+  assert.ok(att);
+});

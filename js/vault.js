@@ -1,7 +1,7 @@
 /* Vault data layer: encrypted persistence, items, attachments, audit trail, sync merge, health,
    import / export. DOM-free so it can be unit-tested in Node. */
 
-import { createVault, openVault, sealText, openText, ITER_DEFAULT } from './crypto.js';
+import { createVault, openVault, sealText, openText, innerSeal, innerOpen, rand, ITER_DEFAULT } from './crypto.js';
 import { uid, hostOf, b64, debounce } from './util.js';
 import { estimate } from './strength.js';
 import { parseTotp } from './totp.js';
@@ -86,7 +86,7 @@ export function mergeItem(l, r) {
   }
   // attachments: union of both sides, minus anything either side removed
   for (const [id, t] of Object.entries(r.attRemoved || {})) if (!(l.attRemoved[id] >= t)) l.attRemoved[id] = t;
-  const byId = new Map(); for (const a of [...(l.attachments || []), ...(r.attachments || [])]) if (!byId.has(a.id)) byId.set(a.id, a);
+  const byId = new Map(); for (const a of [...(l.attachments || []), ...(r.attachments || [])]) if (!byId.has(a.id) || (a.lk && !byId.get(a.id).lk)) byId.set(a.id, a);   // the sealed version of a file's entry wins
   const attBefore = (l.attachments || []).map((a) => a.id).join();
   l.attachments = [...byId.values()].filter((a) => !l.attRemoved[a.id]);
   if (l.attachments.map((a) => a.id).join() !== attBefore) changed.push('attachments');
@@ -201,7 +201,9 @@ export class VaultStore {
   /* the item as the UI should see it: with its secrets filled in when it has been opened */
   reveal(it) {
     if (!it || !it.lock || !this.isOpen(it)) return it;
-    return { ...it, ...pickSensitive(sanitiseItem({ type: it.type, ...this.itemKeys.get(it.id).payload }, {})), _open: true };
+    const an = this.itemKeys.get(it.id).payload.an || {};
+    return { ...it, ...pickSensitive(sanitiseItem({ type: it.type, ...this.itemKeys.get(it.id).payload }, {})), _open: true,
+      attachments: it.attachments.map((a) => (a.lk && an[a.id] ? { ...a, name: an[a.id].n, type: an[a.id].t } : a)) };
   }
   relock(id) { this.itemKeys.delete(id); }
   async openItem(id, code) {
@@ -212,12 +214,14 @@ export class VaultStore {
     this.itemFails.delete(id);
     const payload = JSON.parse(text); this.itemKeys.set(id, { code: String(code), payload, at: Date.now() });
     this.log('access', 'Opened passcode-locked “' + it.name + '”');
+    if (await this._lockFiles(it, payload)) await this._resealPayload(id);   // items locked before files were covered: seal their files now
     return payload;
   }
   async lockItem(id, code, opt = {}) {
     const it = this.get(id); if (!it) throw new Error('Item not found.');
     if (String(code || '').length < 6) throw new Error('Use at least 6 characters for the item passcode.');
     const payload = it.lock ? this.itemKeys.get(id).payload : Object.fromEntries(SENSITIVE.map((k) => [k, structuredClone(it[k])]));
+    await this._lockFiles(it, payload);
     const sealed = await sealText(JSON.stringify(payload), String(code), opt);
     await this.update(id, { ...BLANK(), lock: sealed });
     it.revisions = []; it.history = [];   // earlier versions hold the readable secrets
@@ -225,13 +229,37 @@ export class VaultStore {
     this.log('item', 'Locked “' + it.name + '” with a secondary passcode', 'info');
     return this.save();
   }
+  /* seal the plain files of a locked item under its item key; names and types move inside the passcode seal */
+  async _lockFiles(it, payload) {
+    let changed = false;
+    if (!payload.ak) { payload.ak = b64.enc(rand(32)); changed = true; }
+    payload.an = payload.an || {};
+    const key = b64.dec(payload.ak);
+    for (const a of it.attachments) {
+      if (a.lk) continue;
+      const rec = await this.blobs.get(this._bk(a.id)); if (!rec) continue;   // not on this device yet: sealed when it arrives and the item is next opened
+      const plain = await this.session.openBlob(a.id, rec);
+      await this.blobs.put(this._bk(a.id), await this.session.sealBlob(a.id, await innerSeal(key, plain)));
+      const quoted = '“' + a.name + '”';   // the audit trail must not remember the file's real name either
+      for (const e of this.data.audit) if (e.m.includes(quoted)) e.m = e.m.split(quoted).join('“a file”');
+      payload.an[a.id] = { n: a.name, t: a.type }; a.name = 'Locked file'; a.type = 'application/octet-stream'; a.lk = true; changed = true;
+    }
+    return changed;
+  }
+  async _resealPayload(id) {
+    const c = this.itemKeys.get(id); if (!c) throw new Error('Open the item first.');
+    await this.update(id, { lock: await sealText(JSON.stringify(c.payload), c.code) });
+    this.get(id).revisions = [];
+    return this.save();
+  }
+
   /* save edits to an opened locked item: the readable parts go back inside the seal */
   async saveLocked(id, meta, payload, opt = {}) {
     const c = this.itemKeys.get(id); if (!c) throw new Error('Open the item first.');
-    const sealed = await sealText(JSON.stringify(Object.fromEntries(SENSITIVE.map((k) => [k, payload[k]]))), c.code, opt);
+    const sealed = await sealText(JSON.stringify({ ...Object.fromEntries(SENSITIVE.map((k) => [k, payload[k]])), ak: c.payload.ak, an: c.payload.an }), c.code, opt);
     await this.update(id, { ...meta, lock: sealed });
     const it = this.get(id); it.revisions = []; it.history = [];
-    c.payload = Object.fromEntries(SENSITIVE.map((k) => [k, structuredClone(payload[k])])); c.at = Date.now();
+    c.payload = { ...Object.fromEntries(SENSITIVE.map((k) => [k, structuredClone(payload[k])])), ak: c.payload.ak, an: c.payload.an }; c.at = Date.now();
     return this.save();
   }
   async changeItemCode(id, oldCode, newCode, opt = {}) {
@@ -240,6 +268,11 @@ export class VaultStore {
   async removeItemLock(id, code) {
     const payload = await this.openItem(id, code);
     const it = this.get(id);
+    for (const a of it.attachments) if (a.lk) {
+      const rec = await this.blobs.get(this._bk(a.id)), n = (payload.an || {})[a.id];
+      if (rec) await this.blobs.put(this._bk(a.id), await this.session.sealBlob(a.id, await innerOpen(b64.dec(payload.ak), await this.session.openBlob(a.id, rec))));
+      if (n) { a.name = n.n; a.type = n.t; } delete a.lk;
+    }
     await this.update(id, { ...pickSensitive(sanitiseItem({ type: it.type, ...payload }, {})), lock: '' });
     this.itemKeys.delete(id); this.log('item', 'Removed the passcode lock from “' + it.name + '”', 'warn');
     return this.save();
@@ -369,9 +402,16 @@ export class VaultStore {
     if (!it) throw new Error('Item not found.');
     if (bytes.length > MAX_ATTACHMENT) throw new Error(`“${name}” is ${(bytes.length / 1048576).toFixed(1)} MB; the limit is ${MAX_ATTACHMENT / 1048576} MB per file.`);
     if (it.attachments.length >= MAX_ATTACHMENTS_PER_ITEM) throw new Error('An item can hold at most ' + MAX_ATTACHMENTS_PER_ITEM + ' attachments.');
+    const lockedIt = !!it.lock; let ck = null;
+    if (lockedIt) { ck = this.itemKeys.get(itemId); if (!ck) throw new Error('Unlock this item first to attach files to it.'); }
     const att = { id: uid(), name: String(name || 'file').replace(/[\\/\u0000-\u001f]/g, '_').slice(0, 200), type: String(type || 'application/octet-stream').slice(0, 100), size: bytes.length, added: Date.now() };
-    await this.blobs.put(this._bk(att.id), await this.session.sealBlob(att.id, bytes));
+    let stored = bytes;
+    if (lockedIt) { stored = await innerSeal(b64.dec(ck.payload.ak), bytes); (ck.payload.an = ck.payload.an || {})[att.id] = { n: att.name, t: att.type }; }
+    await this.blobs.put(this._bk(att.id), await this.session.sealBlob(att.id, stored));
+    const shown = { ...att };
+    if (lockedIt) { att.name = 'Locked file'; att.type = 'application/octet-stream'; att.lk = true; }
     it.attachments.push(att); it.updated = Date.now();
+    if (lockedIt) { await this._resealPayload(itemId); return shown; }
     this.log('item', `Attached “${att.name}” (${Math.ceil(att.size / 1024)} KB) to “${it.name}”`);
     await this.save();
     return att;
@@ -382,7 +422,12 @@ export class VaultStore {
     if (!meta) throw new Error('Attachment not found.');
     const rec = await this.blobs.get(this._bk(attId));
     if (!rec) throw new Error('This attachment is not available on this device (it was not included in the sync or backup).');
-    return { meta, bytes: await this.session.openBlob(attId, rec) };
+    const bytes = await this.session.openBlob(attId, rec);
+    if (!meta.lk) return { meta, bytes };
+    const c = this.itemKeys.get(itemId); if (!c) throw new Error('This file is locked. Unlock the item first.');
+    const n = (c.payload.an || {})[attId] || {};
+    try { return { meta: { ...meta, name: n.n || meta.name, type: n.t || meta.type }, bytes: await innerOpen(b64.dec(c.payload.ak), bytes) }; }
+    catch { throw new Error('This file is not available in its locked form on this device yet (sync it from the device that locked it).'); }
   }
 
   async removeAttachment(itemId, attId) {
@@ -511,7 +556,9 @@ export class VaultStore {
       if (tomb[r.id] && tomb[r.id] >= r.updated) continue;
       const l = local.get(r.id);
       if (!l) { r.sv = { ...r.ft }; for (const k of keysOf(r)) if (r.sv[k] === undefined) r.sv[k] = r.updated; this.data.items.push(r); local.set(r.id, r); await pullBlobs(r); res.added++; continue; }
+      const plainBefore = new Set(l.attachments.filter((a) => !a.lk).map((a) => a.id));
       const m = mergeItem(l, r);
+      for (const a of l.attachments) if (a.lk && plainBefore.has(a.id) && typeof rattach[a.id] === 'string') await this.blobs.put(this._bk(a.id), await this.session.sealBlob(a.id, b64.dec(rattach[a.id])));   // the other device sealed this file under the item passcode
       for (const a of r.attachments) if (l.attRemoved[a.id]) await this.blobs.del(this._bk(a.id));
       for (const rid of Object.keys(l.attRemoved)) if (!l.attachments.some((a) => a.id === rid)) await this.blobs.del(this._bk(rid));
       await pullBlobs(l);
@@ -578,7 +625,7 @@ export function sanitiseItem(r, { keepMeta = false, keepAttachments = false } = 
   if (Array.isArray(r.history)) it.history = r.history.filter((h) => h && typeof h.pw === 'string').slice(0, HISTORY_MAX).map((h) => ({ pw: s(h.pw, 2000), at: num(Number(h.at)) }));
   if (keepAttachments && Array.isArray(r.attachments)) {
     it.attachments = r.attachments.filter((a) => a && /^[0-9a-f]{24}$/.test(a.id)).slice(0, MAX_ATTACHMENTS_PER_ITEM)
-      .map((a) => ({ id: a.id, name: s(a.name, 200) || 'file', type: s(a.type, 100), size: num(a.size), added: num(a.added) }));
+      .map((a) => ({ id: a.id, name: s(a.name, 200) || 'file', type: s(a.type, 100), size: num(a.size), added: num(a.added), ...(a.lk ? { lk: true } : {}) }));
   } else it.attachments = [];
   if (keepMeta) {
     it.id = s(r.id, 40); it.updated = num(r.updated, it.updated); it.deleted = num(r.deleted);
