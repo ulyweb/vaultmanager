@@ -7,7 +7,7 @@ import { health, importAny, exportCSV, decryptBackup, newItem, sanitiseItem, OLD
 import { ITER_DEFAULT, sealText, openText, inspectSeal, available } from './crypto.js';
 import { drawQR, decodeFile, startScanner, chunkPayload, ChunkAssembler, parseChunk } from './qr.js';
 import { runSelfTest } from './selftest.js';
-import { meter, avatar, printNodes, showRecoveryKit } from './views.js';
+import { meter, liveMeter, avatar, printNodes, showRecoveryKit } from './views.js';
 import { fmtDate, fmtInt, hostOf } from './util.js';
 
 export const page = (title, sub, ...kids) => h('div', { class: 'page' }, h('h2', { text: title }), sub ? h('p', { class: 'sub', text: sub }) : null, ...kids);
@@ -96,7 +96,7 @@ export function renderQR(ctx) {
 
 function passwordRow(label, input, withGen = true) {
   return h('div', { class: 'field' }, h('label', { text: label }), h('div', { class: 'row' }, h('div', { class: 'grow' }, input),
-    withGen ? h('button', { class: 'btn sm', type: 'button', title: 'Generate a passphrase', on: { click: () => { input.value = generatePassphrase({ words: 5 }); input.dispatchEvent(new Event('input')); } } }, '{{bolt}}') : null));
+    withGen ? h('button', { class: 'btn sm', type: 'button', title: 'Generate a passphrase', on: { click: () => { input.value = generatePassphrase({ words: 5 }); input.dispatchEvent(new Event('input')); } } }, '{{bolt}}') : null), liveMeter(input));
 }
 
 function qrOutputs(canvas, name) {
@@ -123,7 +123,10 @@ function sealTab(ctx) {
     } catch (e) { err.textContent = e.message; }
     btn.disabled = false;
   } } }, '{{qr}} Seal into QR');
-  return h('div', { class: 'panel pad' }, field('Secret text', text), passwordRow('Password', pw), h('div', { class: 'row' }, btn), err, out);
+  const txtStats = h('p', { class: 'hint', 'aria-live': 'polite' });
+  const paintTxt = () => { const v = text.value, e = estimate(v); txtStats.textContent = v ? `Secret text: ${[...v].length} characters · ~${Math.round(e.bits)} bits entropy (${e.label})` : ''; };
+  text.addEventListener('input', paintTxt);
+  return h('div', { class: 'panel pad' }, field('Secret text', text), txtStats, passwordRow('Password', pw), h('div', { class: 'row' }, btn), err, out);
 }
 
 function openTab(ctx) {

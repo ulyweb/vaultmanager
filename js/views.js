@@ -26,7 +26,21 @@ export function meter(pw) {
   const bar = h('i', { class: 's' + e.score });
   bar.style.width = (pw ? Math.max(6, (e.score + 1) * 20) : 0) + '%';
   return { el: h('div', null, h('div', { class: 'meter', role: 'img', 'aria-label': 'Password strength: ' + e.label }, bar),
-    h('div', { class: 'meter-label' }, h('span', { text: pw ? e.label : '' }), h('span', { text: pw ? `~${Math.round(e.bits)} bits · ${crackTime(e.bits)}` : '' }))), est: e };
+    h('div', { class: 'meter-label' }, h('span', { text: pw ? e.label : '' }), h('span', { text: pw ? `${[...pw].length} characters · ~${Math.round(e.bits)} bits entropy · ${crackTime(e.bits)}` : '' }))), est: e };
+}
+
+/* A live strength / length / entropy readout under any text input. */
+export function liveMeter(input, { label = 'Length and entropy' } = {}) {
+  const box = h('div', { class: 'livemeter', 'aria-label': label });
+  const upd = () => clear(box).append(input.value ? meter(input.value).el : '');
+  input.addEventListener('input', upd); upd();
+  return box;
+}
+
+/* Compact "N characters · ~X bits" chip for a stored secret (detail view). */
+export function statChip(value) {
+  const e = estimate(value), n = [...value].length;
+  return h('small', { class: 'sbits', title: 'Estimated strength: ' + e.label, text: `${n} characters · ~${Math.round(e.bits)} bits · ${e.label}` });
 }
 
 export function pwField(initial, { id, onInput, ctx, autocomplete = 'new-password' } = {}) {
@@ -94,7 +108,10 @@ function itemRow(ctx, it) {
 
 /* ---------- detail ---------- */
 let currentItem = null;   // set while a detail panel is being built, so field() can audit copy / reveal events
-function field(label, value, { secret, copy, ctx, pre, link, extra } = {}) {
+/* Categories that always show how long and how strong their secret text is. */
+const STATS_TYPES = new Set(['bank', 'crypto', 'emergency', 'note']);
+
+function field(label, value, { secret, copy, ctx, pre, link, extra, stats } = {}) {
   const item = currentItem;
   if (!value && !extra) return null;
   let shown = !secret;
@@ -103,8 +120,9 @@ function field(label, value, { secret, copy, ctx, pre, link, extra } = {}) {
   if (value) set();
   const acts = h('div', { class: 'acts' });
   if (secret) acts.append(h('button', { class: 'icon-btn', 'aria-label': 'Show or hide ' + label, title: 'Show / hide', on: { click: () => { shown = !shown; set(); if (shown && item && ctx.store.settings.logReveal) ctx.store.log('access', 'Revealed ' + label.toLowerCase() + ' of “' + item.name + '”'); } } }, '{{eye}}'));
+  if (value && item && !item.deleted && (secret || stats) && STATS_TYPES.has(item.type)) acts.append(h('button', { class: 'icon-btn', 'aria-label': 'Seal ' + label + ' as QR', title: 'Seal just this as an encrypted QR', on: { click: () => shareItem(ctx, item, { label, value }) } }, '{{qr}}'));
   if (copy) acts.append(h('button', { class: 'icon-btn', 'aria-label': 'Copy ' + label, title: 'Copy', on: { click: () => ctx.copySecret(value, label + ' copied', item, label) } }, '{{copy}}'));
-  return h('div', { class: 'f' }, h('div', { class: 'k', text: label }), extra ? h('div', { class: 'v' }, extra) : v, acts);
+  return h('div', { class: 'f' }, h('div', { class: 'k', text: label }), extra ? h('div', { class: 'v' }, extra) : h('div', { class: 'vwrap' }, v, value && (secret || stats) ? statChip(value) : null), acts);
 }
 
 function totpField(ctx, it) {
@@ -161,7 +179,7 @@ function detailPanel(ctx, it) {
   } else if (TEMPLATES[it.type]) {
     for (const f of TEMPLATES[it.type].fields) rows.push(templateRow(ctx, it, f));
   }
-  rows.push(field('Notes', it.notes, { pre: true, copy: it.type === 'note', ctx }));
+  rows.push(field('Notes', it.notes, { pre: true, copy: it.type === 'note', ctx, stats: STATS_TYPES.has(it.type) }));
   for (const c of it.custom || []) rows.push(field(c.label || 'Custom field', c.value, { secret: c.secret, copy: true, ctx, pre: true }));
   rows.push(attachmentsField(ctx, it));
   if ((it.tags || []).length) rows.push(h('div', { class: 'f' }, h('div', { class: 'k', text: 'Tags' }), h('div', { class: 'v' }, h('div', { class: 'tags' }, it.tags.map((t) => h('button', { class: 'chip', on: { click: () => ctx.go('tag:' + t) } }, '#' + t))))));
@@ -205,7 +223,7 @@ function templateRow(ctx, it, f) {
     const d = daysUntil(value), chip = d === null ? null : d < 0 ? h('span', { class: 'chip bad', text: 'expired ' + -d + ' day' + (d === -1 ? '' : 's') + ' ago' }) : d <= 60 ? h('span', { class: 'chip warn', text: 'in ' + d + ' day' + (d === 1 ? '' : 's') }) : null;
     return field(f.l, value, { copy: true, ctx, extra: h('span', null, value + ' ', chip) });
   }
-  return field(f.l, value, { secret: isSecretField(f), copy: true, ctx, link: f.kind === 'url', pre: f.kind === 'multiline' });
+  return field(f.l, value, { secret: isSecretField(f), copy: true, ctx, link: f.kind === 'url', pre: f.kind === 'multiline', stats: STATS_TYPES.has(it.type) && (isSecretField(f) || f.kind === 'multiline') });
 }
 
 function wifiModal(ctx, it) {
@@ -385,14 +403,14 @@ export function printNodes(nodes) {
 }
 
 /* ---------- QR share (QR Seal v2 compatible) ---------- */
-export function shareItem(ctx, it) {
+export function shareItem(ctx, it, only = null) {
   const pwBox = h('input', { class: 'inp mono', value: generatePassphrase({ words: 4 }), autocomplete: 'off', spellcheck: 'false', 'aria-label': 'QR password' });
   const out = h('div'), err = h('p', { class: 'err', role: 'alert' });
   let canvas = null;
   const make = async () => {
     err.textContent = ''; clear(out);
     if (pwBox.value.length < 8) { err.textContent = 'Use at least 8 characters for the QR password.'; return false; }
-    const payload = { vm: 1, item: { type: it.type, name: it.name, username: it.username, password: it.password, url: it.url, totp: it.totp, notes: it.notes, tags: it.tags, card: it.card, fields: it.fields, custom: it.custom } };
+    const payload = only ? { vm: 1, name: it.name, field: { label: only.label, value: only.value } } : { vm: 1, item: { type: it.type, name: it.name, username: it.username, password: it.password, url: it.url, totp: it.totp, notes: it.notes, tags: it.tags, card: it.card, fields: it.fields, custom: it.custom } };
     try {
       out.append(h('p', { class: 'hint', text: 'Deriving the key (600,000 rounds) and sealing…' }));
       const sealed = await sealText(JSON.stringify(payload), pwBox.value);
@@ -401,12 +419,12 @@ export function shareItem(ctx, it) {
       clear(out).append(h('div', { class: 'qrbox' }, canvas), h('p', { class: 'hint', text: `QR version ${r.version} · ECC ${r.ecc} · AES-256-GCM · PBKDF2-SHA256 600,000 rounds. The password is NOT in the code — share it by a different channel.` }),
         h('div', { class: 'row wrap' }, h('button', { class: 'btn sm', on: { click: () => canvas.toBlob((b) => download(`vaultmanager-${it.name.replace(/\W+/g, '-').toLowerCase() || 'item'}.png`, b, 'image/png')) } }, '{{download}} PNG'),
           h('button', { class: 'btn sm', on: { click: () => { const c2 = h('canvas'); c2.width = canvas.width; c2.height = canvas.height; c2.getContext('2d').drawImage(canvas, 0, 0); printNodes([h('h1', { text: 'VaultManager — encrypted QR' }), h('div', { class: 'pq' }, c2, h('div', { text: it.name })), h('p', { text: 'Scan in VaultManager (QR tools → Open) or QR Seal and enter the password. The password is not on this page.' })]); } } }, '{{print}} Print')));
-    } catch (e) { clear(out); err.textContent = e.message; }
+    } catch (e) { clear(out); err.textContent = /too (long|large|big)|capacity|data/i.test(e.message) ? 'This item is too large for one QR code. Remove long notes or use QR tools → Backup to QR, which splits big data over several codes.' : e.message; }
     return false;
   };
-  modal({ title: 'Seal as QR code', sub: it.name, wide: true,
+  modal({ title: only ? 'Seal “' + only.label + '” as QR' : 'Seal as QR code', sub: it.name, wide: true,
     body: h('div', null, h('p', { class: 'note warn', text: 'Anyone with the QR image AND this password can read the item. Pick a password you can tell the recipient separately.' }),
-      h('div', { class: 'field' }, h('label', { text: 'QR password' }), h('div', { class: 'row' }, h('div', { class: 'grow' }, pwBox), h('button', { class: 'btn sm', on: { click: () => { pwBox.value = generatePassphrase({ words: 4 }); } } }, '{{bolt}}'))), err, out),
+      h('div', { class: 'field' }, h('label', { text: 'QR password' }), h('div', { class: 'row' }, h('div', { class: 'grow' }, pwBox), h('button', { class: 'btn sm', on: { click: () => { pwBox.value = generatePassphrase({ words: 4 }); pwBox.dispatchEvent(new Event('input')); } } }, '{{bolt}}')), liveMeter(pwBox)), err, out),
     actions: [{ label: 'Close' }, { label: 'Create QR', kind: 'primary', onClick: make, close: false }] });
 }
 

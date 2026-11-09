@@ -665,3 +665,15 @@ html[data-icons=vivid][data-fxanim=on] .ico[data-n=login] svg, html[data-icons=v
 html[data-icons=vivid][data-fxanim=on] .ico[data-n=sync] svg, html[data-icons=vivid][data-fxanim=on] .ico[data-n=settings] svg, html[data-icons=vivid][data-fxanim=on] .ico[data-n=refresh] svg { animation: vm-spin 9s linear infinite; }
 html[data-icons=vivid][data-fxanim=on] .ico[data-n=star] svg, html[data-icons=vivid][data-fxanim=on] .ico[data-n=bolt] svg, html[data-icons=vivid][data-fxanim=on] .ico[data-n=shield] svg { animation: vm-twinkle 2.2s ease-in-out infinite; animation-delay: var(--d, 0s); }
 @media (prefers-reduced-motion: reduce) { html[data-icons=vivid] .ico, html[data-icons=vivid] .ico svg, html[data-icons=vivid] .ico.cat::after { animation: none !important; } }
+
+/* ---- appearance: autosave bar, wallpaper gallery ---- */
+.savebar { position: sticky; top: 0; z-index: 5; display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; justify-content: space-between; padding: 8px 12px; margin-bottom: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--glass, var(--panel)); backdrop-filter: blur(10px); font-size: 12px; color: var(--muted); }
+.walls-wrap { display: grid; gap: 14px; margin-top: 10px; }
+.wallgroup h4 { margin: 0 0 2px; font-size: 13px; } .wallgroup .hint { margin: 0 0 6px; }
+.walls { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; }
+.wall { position: relative; aspect-ratio: 16 / 10; border: 2px solid var(--line); border-radius: 10px; background-size: cover; background-position: center; cursor: pointer; padding: 0; color: #fff; overflow: hidden; min-height: 44px; }
+.wall span { position: absolute; left: 0; right: 0; bottom: 0; padding: 14px 6px 4px; font-size: 11px; text-align: left; background: linear-gradient(transparent, rgba(0,0,0,.7)); text-shadow: 0 1px 2px #000; }
+.wall.on, .wall:focus-visible { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(var(--accent-rgb), .35); }
+.wallmine { grid-column: 1 / -1; display: grid; gap: 8px; }
+.sbits { display: block; margin-top: 2px; color: var(--muted); font-size: 11px; font-family: var(--mono); }
+.vwrap { min-width: 0; } .livemeter { margin-top: 6px; } .livemeter:empty { display: none; }

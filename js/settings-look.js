@@ -5,6 +5,7 @@ import { page, sel } from './tools.js';
 import { ACCENTS, ICON_STYLES, ANIM_STYLES, NAV_MODES, WIDGET_DEFS, LOOK_DEFAULTS, normalizeLook, randomLook } from './look.js';
 import { landscapes } from './landscapes.js';
 import { TYPE_META } from './templates.js';
+import { fmtTime } from './util.js';
 
 const panel = (title, ...kids) => h('div', { class: 'panel pad' }, title ? h('h3', { text: title }) : null, ...kids);
 const row = (title, desc, ...ctl) => h('div', { class: 'setrow' }, h('div', { class: 'tx' }, h('b', { text: title }), desc ? h('small', { text: desc }) : null), h('div', { class: 'ctl' }, ...ctl));
@@ -26,6 +27,33 @@ function ctls(ctx) {
   return { sw, range, seg, select, set, L };
 }
 
+
+/* Shrink a picked image to at most 1600px wide, JPEG — it is stored inside the encrypted profile. */
+async function downscaleImage(file) {
+  if (!/^image\//.test(file.type)) throw new Error('That file is not an image.');
+  if (file.size > 25 * 1048576) throw new Error('That image is over 25 MB.');
+  const bmp = await createImageBitmap(file).catch(() => { throw new Error('This image format cannot be read here.'); });
+  for (const [w, q] of [[1600, 0.82], [1280, 0.75], [1024, 0.7], [800, 0.65]]) {
+    const k = Math.min(1, w / bmp.width), c = document.createElement('canvas'); c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
+    c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+    const url = c.toDataURL('image/jpeg', q); if (url.length <= 780000) { bmp.close && bmp.close(); return url; }
+  }
+  throw new Error('That image is too detailed to store; try a smaller one.');
+}
+
+/* "All changes are saved automatically" + Undo changes + Save now. Undo goes back to how things were when this page was opened (or the last Save now). */
+export function saveBar(ctx) {
+  const snap = () => JSON.stringify({ look: ctx.look(), theme: ctx.store.settings.theme });
+  let base = snap(), savedAt = Date.now();
+  const status = h('span', { class: 'savestat', role: 'status' });
+  const paint = () => { const dirty = snap() !== base; undo.disabled = !dirty; clear(status).append((dirty ? 'Changes since you opened this page · ' : '') + 'Saved automatically to “' + ((ctx.profile() || {}).name || 'this profile') + '” · ' + fmtTime(savedAt)); };
+  const undo = h('button', { class: 'btn sm', type: 'button', on: { click: () => { const b = JSON.parse(base); ctx.setLook(b.look, { shell: true }); ctx.setTheme(b.theme); ctx.refresh(); toast('Changes undone'); } } }, '{{refresh}} Undo changes');
+  const now = h('button', { class: 'btn sm primary', type: 'button', on: { click: async () => { try { await ctx.store.save(); base = snap(); savedAt = Date.now(); paint(); toast('Saved to this profile'); } catch (x) { toast(x.message, 'err'); } } } }, '{{check}} Save now');
+  const bar = h('div', { class: 'savebar' }, status, h('div', { class: 'row' }, undo, now));
+  paint(); const t = setInterval(() => { if (!bar.isConnected) clearInterval(t); else { savedAt = ctx.store.lastSaved || savedAt; paint(); } }, 1500);
+  return bar;
+}
+
 /* ======================= Appearance ======================= */
 export function appearance(ctx) {
   const { sw, range, seg, select, set, L } = ctls(ctx);
@@ -34,19 +62,51 @@ export function appearance(ctx) {
   const paintSw = () => { clear(swatches).append(ACCENTS.map(([n, c]) => { const b = h('button', { class: 'swatch' + (L().accent === c ? ' on' : ''), title: n, 'aria-label': 'Accent ' + n, on: { click: () => { set('accent', c); paintSw(); } } }); b.style.background = c; b.style.color = c; return b; }),
     h('input', { type: 'color', value: L().accent, 'aria-label': 'Custom accent colour', on: { input: (e) => { set('accent', e.target.value, { live: true }); }, change: () => paintSw() } })); };
   paintSw();
-  const walls = h('div', { class: 'walls' });
+  const walls = h('div', { class: 'walls-wrap' });
+  const tile = (id, name, group) => {
+    const on = L().wallpaper === id;
+    const t = h('button', { class: 'wall' + (on ? ' on' : ''), title: name, 'aria-label': 'Wallpaper ' + name, 'aria-pressed': String(on), on: { click: () => { set('wallpaper', id); set('bg', 'wallpaper'); paintWalls(); } } }, h('span', { text: name }));
+    t.style.backgroundImage = `url("${landscapes.url(id, L())}")`; t.dataset.group = group; return t;
+  };
+  const group = (title, note, items) => h('section', { class: 'wallgroup' }, h('h4', { text: title }), note ? h('p', { class: 'hint', text: note }) : null, h('div', { class: 'walls' }, items));
+  const fileIn = h('input', { type: 'file', accept: 'image/*', class: 'offscreen', 'aria-label': 'Choose a background image from this computer', on: { change: async (e) => {
+    const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+    try { const url = await downscaleImage(f); set('wallImage', url); set('wallpaper', 'custom'); set('bg', 'wallpaper'); paintWalls(); toast('Background picture set'); } catch (x) { toast(x.message, 'err', 6000); }
+  } } });
+  const urlIn = h('input', { class: 'inp', type: 'url', placeholder: 'https://example.com/picture.jpg', 'aria-label': 'Background image URL', value: L().wallUrl || '', autocomplete: 'off' });
+  const urlErr = h('p', { class: 'err', role: 'alert' });
+  const useUrl = async () => {
+    urlErr.textContent = ''; const v = urlIn.value.trim();
+    if (!/^https:\/\/[^\s"'()<>\\]{3,1000}$/.test(v)) { urlErr.textContent = 'Enter a full https:// address of an image.'; return; }
+    const ok = await new Promise((res) => { const im = new Image(); im.onload = () => res(true); im.onerror = () => res(false); im.referrerPolicy = 'no-referrer'; im.src = v; });
+    if (!ok) { urlErr.textContent = 'That address did not load as an image (it may be blocked, offline, or not an image).'; return; }
+    set('wallUrl', v); set('wallpaper', 'remote'); set('bg', 'wallpaper'); paintWalls(); toast('Background picture set from the web');
+  };
   const paintWalls = () => {
-    clear(walls).append(landscapes.list.map(([id, name]) => { const t = h('button', { class: 'wall' + (L().wallpaper === id ? ' on' : ''), title: name, 'aria-label': 'Wallpaper ' + name, on: { click: () => { set('wallpaper', id); set('bg', 'wallpaper'); paintWalls(); } } }, h('span', { text: name })); t.style.backgroundImage = `url("${landscapes.url(id)}")`; return t; }));
+    const mine = [];
+    if (L().wallImage) mine.push(tile('custom', 'My picture', 'mine'));
+    if (L().wallUrl) mine.push(tile('remote', 'From web address', 'mine'));
+    clear(walls).append(
+      group('Real photos — NASA & public domain', 'Shipped inside the app, so they work offline.', landscapes.photos.map(([id, n]) => tile('photo:' + id, n, 'photo'))),
+      group('Cities & lights', 'The Earth at night, photographed from orbit.', landscapes.cities.map(([id, n]) => tile('photo:' + id, n, 'city'))),
+      group('Drawn landscapes', 'Painted by the app itself — tiny and offline.', landscapes.list.map(([id, n]) => tile(id, n, 'drawn'))),
+      group('Colour themes', 'Smooth gradients.', landscapes.gradients.map(([id, n]) => tile('grad:' + id, n, 'grad'))),
+      group('Your own picture', 'Pick an image from this computer (it is shrunk and stored encrypted in this profile), or paste a web address.',
+        [...mine, h('div', { class: 'wallmine' },
+          h('div', { class: 'row wrap' }, h('button', { class: 'btn', type: 'button', on: { click: () => fileIn.click() } }, '{{folder}} Choose an image from this computer…'), fileIn,
+            L().wallImage || L().wallUrl ? h('button', { class: 'btn', type: 'button', on: { click: () => { set('wallImage', ''); set('wallUrl', ''); if (['custom', 'remote'].includes(L().wallpaper)) set('wallpaper', 'forest'); paintWalls(); } } }, 'Remove my pictures') : null),
+          h('div', { class: 'row' }, h('div', { class: 'grow' }, urlIn), h('button', { class: 'btn', type: 'button', on: { click: useUrl } }, 'Use this address')), urlErr,
+          h('p', { class: 'hint', text: 'A web address is loaded live from that site each time (not stored), so it needs the internet and that site learns your IP address. Download the picture and use “Choose an image” to keep it private and offline.' }))]));
   };
   paintWalls();
   const demo = h('div', { class: 'icon-demo', 'aria-hidden': 'true' }, Object.values(TYPE_META).slice(0, 9).map((m) => h('span', { class: 'icn', text: m.icon })));
-  return h('div', null,
+  return h('div', null, saveBar(ctx),
     panel('Theme & colour',
       row('Theme', 'Dark, light, or follow your device', themeSel),
       row('Accent colour', 'Buttons, highlights, glow and the 3D look', swatches)),
     panel('Background',
-      row('Style', 'Default aurora & grid, a calm plain colour, or a drawn nature wallpaper (works offline)', seg('bg', [['default', 'Aurora'], ['plain', 'Plain'], ['wallpaper', 'Wallpaper']], { redraw: true })),
-      L().bg === 'wallpaper' ? [row('Wallpaper dimming', 'Darken / lighten the picture so text stays readable', range('bgDim', 0, 90, 5, (v) => v + '%')), walls] : null),
+      row('Style', 'Default aurora & grid, a calm plain colour, or a picture: real NASA photos, city lights, drawn landscapes or your own image', seg('bg', [['default', 'Aurora'], ['plain', 'Plain'], ['wallpaper', 'Wallpaper']], { redraw: true })),
+      L().bg === 'wallpaper' ? row('Wallpaper dimming', 'Darken / lighten the picture so text stays readable', range('bgDim', 0, 90, 5, (v) => v + '%')) : null, walls),
     panel('Icons',
       row('Icon style', 'How the category and tool icons look', select('iconStyle', ICON_STYLES, { icons: true })),
       demo,
@@ -65,7 +125,7 @@ export function appearance(ctx) {
 /* ======================= Effects ======================= */
 export function effects(ctx) {
   const { sw, range, select, L } = ctls(ctx);
-  return h('div', null,
+  return h('div', null, saveBar(ctx),
     panel('Animations',
       row('UI animations', 'Dialog open / close, boot sequence, ambient motion', sw('animations', { redraw: false })),
       row('Window animation', 'How dialogs appear — “Random” picks a style for every dialog', select('animStyle', [...ANIM_STYLES, ['random', 'Random per window']]), h('button', { class: 'btn sm', on: { click: () => modal({ title: 'Window animation', body: h('p', { text: 'This is how dialogs open with your current style and speed.' }), actions: [{ label: 'Nice' }] }) } }, 'Try')),
@@ -87,7 +147,7 @@ export function effects(ctx) {
 /* ======================= Layout: dock & menu bar ======================= */
 export function layout(ctx) {
   const { sw, range, seg, select, L } = ctls(ctx);
-  return h('div', null,
+  return h('div', null, saveBar(ctx),
     panel('Navigation',
       row('Navigation style', 'A side bar (default) or a macOS-style dock at the bottom of the screen', select('nav', NAV_MODES, { shell: true })),
       row('Start page', 'What you see right after unlocking', select('startPage', [['all', 'All items'], ['home', 'Home (widgets)']]))),
@@ -119,7 +179,7 @@ export function widgetsTab(ctx) {
     }));
   };
   draw();
-  return h('div', null,
+  return h('div', null, saveBar(ctx),
     panel('Home widgets', h('p', { class: 'hint', text: 'Choose what appears on the Home page, in what order and how big. Widgets only show information from your unlocked vault.' }), list,
       h('div', { class: 'row wrap' }, h('button', { class: 'btn primary', on: { click: () => ctx.go('home') } }, '{{home}} Open Home'), h('button', { class: 'btn', on: { click: () => { ctx.setLook({ widgets: LOOK_DEFAULTS.widgets }); draw(); } } }, 'Reset widgets'))));
 }

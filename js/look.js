@@ -24,7 +24,7 @@ export const WIDGET_DEFS = [
 
 export const LOOK_DEFAULTS = {
   // appearance
-  accent: '#2fe6d0', bg: 'default', wallpaper: 'forest', bgDim: 55, iconStyle: 'vivid', iconSize: 'medium', avatar: 'letter',
+  accent: '#2fe6d0', bg: 'default', wallpaper: 'forest', wallImage: '', wallUrl: '', bgDim: 55, iconStyle: 'vivid', iconSize: 'medium', avatar: 'letter',
   uiScale: 100, density: 'comfortable', radius: 12, widgetStyle: 'vivid',
   // effects
   animations: true, animStyle: 'scale', animSpeed: 1, bootAnim: true, fxAnim: true, fxAurora: 65, fxTilt: 0, fxGlow: 35, fxScan: false, blur: 12, glassAlpha: 0.72,
@@ -48,7 +48,9 @@ export function normalizeLook(o = {}, wallIds = null) {
   return {
     accent: /^#[0-9a-fA-F]{6}$/.test(o.accent) ? o.accent.toLowerCase() : D.accent,
     bg: oneOf(o.bg, ['default', 'plain', 'wallpaper'], D.bg),
-    wallpaper: typeof o.wallpaper === 'string' && (!wallIds || wallIds.includes(o.wallpaper)) ? o.wallpaper : D.wallpaper,
+    wallpaper: typeof o.wallpaper === 'string' && /^([a-z0-9]{2,20}|(photo|grad):[a-z0-9]{2,20})$/.test(o.wallpaper) && (!wallIds || wallIds.includes(o.wallpaper) || /^(photo|grad|custom|remote)/.test(o.wallpaper)) ? o.wallpaper : D.wallpaper,
+    wallImage: typeof o.wallImage === 'string' && o.wallImage.length <= 800000 && /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(o.wallImage) ? o.wallImage : '',
+    wallUrl: typeof o.wallUrl === 'string' && /^https:\/\/[^\s"'()<>\\]{3,1000}$/.test(o.wallUrl) ? o.wallUrl : '',
     bgDim: num(o.bgDim, 0, 90, D.bgDim),
     iconStyle: oneOf(o.iconStyle, ICON_STYLES.map((x) => x[0]), D.iconStyle), iconSize: oneOf(o.iconSize, ['small', 'medium', 'large'], D.iconSize), avatar: oneOf(o.avatar, ['letter', 'icon'], D.avatar),
     uiScale: num(o.uiScale, 85, 130, D.uiScale), density: oneOf(o.density, ['comfortable', 'compact'], D.density), radius: num(o.radius, 4, 24, D.radius), widgetStyle: oneOf(o.widgetStyle, ['vivid', 'glass'], D.widgetStyle),
@@ -91,7 +93,7 @@ export function applyLook(look, theme, landscapes = null) {
   d.theme = theme; d.icons = look.iconStyle; d.iconsize = look.iconSize; d.density = look.density; d.avatar = look.avatar;
   d.motion = look.animations ? 'on' : 'off'; d.fxanim = look.fxAnim && look.animations ? 'on' : 'off'; d.anim = look.animStyle; d.scan = look.fxScan ? 'on' : 'off';
   d.bg = look.bg === 'wallpaper' && landscapes ? 'wallpaper' : look.bg === 'plain' ? 'plain' : 'default'; d.wstyle = look.widgetStyle; d.nav = look.nav; d.dockautohide = look.dockAutoHide ? '1' : '0'; d.dockmagnify = look.dockMagnify ? '1' : '0'; d.barlabels = look.barLabels ? '1' : '0'; d.haptics = look.haptics ? '1' : '0';
-  if (landscapes && look.bg === 'wallpaper') { const u = landscapes.url(look.wallpaper) || landscapes.url('forest'); set('--wall', `url("${u}")`); } else el.style.removeProperty('--wall');
+  if (landscapes && look.bg === 'wallpaper') { const u = landscapes.url(look.wallpaper, look) || landscapes.url('forest'); set('--wall', `url("${u}")`); } else el.style.removeProperty('--wall');
 }
 
 /* a copy of the (non-secret) cosmetic settings, so the lock screen is styled before the vault is opened */
@@ -99,7 +101,7 @@ const KEY = 'vaultmanager.look';
 export function loadCosmetic(storage, key = KEY) {
   try { const j = JSON.parse(storage.getItem(key)); return j && typeof j === 'object' ? j : null; } catch { return null; }
 }
-export function saveCosmetic(storage, theme, look, key = KEY) { try { storage.setItem(key, JSON.stringify({ theme, look })); } catch { /* ignore */ } }
+export function saveCosmetic(storage, theme, look, key = KEY) { try { const { wallImage, ...rest } = look; storage.setItem(key, JSON.stringify({ theme, look: wallImage ? { ...rest, bg: 'default' } : look })); } catch { /* ignore */ } }
 
 export function randomLook(prev, wallIds = []) {
   const pick = (a) => a[Math.floor(Math.random() * a.length)];

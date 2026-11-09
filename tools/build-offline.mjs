@@ -29,10 +29,11 @@ export async function buildOffline() {
   if (/\bimport\s*\(|\bexport\s+(default|const|function|class)\b/.test(js.replace(/"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|`(?:[^`\\]|\\.)*`/g, ''))) throw new Error('bundle still contains module syntax');
   const css = rd('css/style.css');
   const vendor = { 'vendor/qrcode.js': rd('vendor/qrcode.js'), 'vendor/jsQR.js': rd('vendor/jsQR.js') };
+  for (const f of fs.readdirSync(path.join(root, 'wallpapers')).filter((n) => n.endsWith('.jpg')).sort()) vendor['wallpapers/' + f] = 'data:image/jpeg;base64,' + fs.readFileSync(path.join(root, 'wallpapers', f)).toString('base64');   // real photos travel inside the one file
   const LS = String.fromCharCode(0x2028), PS = String.fromCharCode(0x2029);   // line / paragraph separators break inline JSON in some parsers
   const embed = JSON.stringify(vendor).split('<').join('\\u003c').split(LS).join('\\u2028').split(PS).join('\\u2029');
 
-  const csp = `default-src 'none'; script-src '${sha(js)}' blob:; style-src '${sha(css)}'; img-src data: blob:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'`;
+  const csp = `default-src 'none'; script-src '${sha(js)}' blob:; style-src '${sha(css)}'; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'`;
   let html = rd('index.html');
   const swap = (re, to) => { const n = html.replace(re, to); if (n === html) throw new Error('template changed: ' + re); html = n; };
   swap(/<meta http-equiv="Content-Security-Policy"[^>]*>/, () => `<meta http-equiv="Content-Security-Policy" content="${csp}">`);

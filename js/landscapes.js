@@ -85,9 +85,31 @@
     return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="xMidYMid slice"><defs>' + defs + '</defs>' + body + '</svg>';
   }
 
+/* Real photographs (NASA, public domain — see wallpapers/CREDITS.md). Shipped inside the app so they work offline;
+   the single-file build embeds them as data: URLs. */
+const PHOTOS = [["space", "earth", "Blue Marble"], ["space", "carina", "Carina Nebula (Hubble)"], ["space", "earthrise", "Earthrise (Apollo 17)"], ["space", "aurora", "Aurora from the ISS"], ["space", "pillars", "Pillars of Creation"], ["space", "saturn", "Saturn portrait (Cassini)"], ["space", "andromeda", "Andromeda Galaxy"], ["space", "earthset", "Earthset (Artemis II)"], ["city", "night1", "City lights from orbit I"], ["city", "night2", "City lights from orbit II"], ["city", "night3", "Europe at night"], ["city", "turin", "Turin, Italy"], ["city", "nyc", "New York at night"], ["city", "cairo", "Cairo & Alexandria"], ["city", "vegas", "Night over the desert"], ["city", "night4", "City lights from orbit III"]];
+const GRADS = [['dusk', 'Dusk', ['#1a1040', '#6b2d7b', '#f0735a']], ['ocean', 'Deep ocean', ['#031a3a', '#0b5a8a', '#2fd0c8']], ['ember', 'Ember', ['#1a0a0a', '#8a1c1c', '#ff9a3c']],
+  ['aurora', 'Aurora glow', ['#04121f', '#0f7a6a', '#7c5cff']], ['graphite', 'Graphite', ['#0c0f14', '#232a36', '#4a5568']], ['rose', 'Rose quartz', ['#2a1030', '#b0467a', '#ffc2a8']],
+  ['forestg', 'Evergreen', ['#04140c', '#145a3a', '#9ad87a']], ['sky', 'Clear sky', ['#0b3d91', '#3b8fe0', '#bfe6ff']]];
+const gradSvg = (cols) => 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 9" preserveAspectRatio="none"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">' + cols.map((c, i) => '<stop offset="' + (i / (cols.length - 1)) + '" stop-color="' + c + '"/>').join('') + '</linearGradient></defs><rect width="16" height="9" fill="url(#g)"/></svg>');
+let embeddedPhotos = null;
+const embeddedPhoto = (src) => { if (embeddedPhotos === null) { embeddedPhotos = {}; try { const el = document.getElementById('vm-embed'); if (el) embeddedPhotos = JSON.parse(el.textContent) || {}; } catch { /* not embedded */ } } return embeddedPhotos[src] || null; };
+const HTTPS = /^https:\/\/[^\s"'()<>\\]{3,1000}$/;
+
 export const landscapes = {
     list: Object.keys(SPECS).map((id) => [id, SPECS[id].name]),
-    /** data: URL usable in CSS url("…") */
-    url(id) { if (!SPECS[id]) return ''; return cache[id] || (cache[id] = 'data:image/svg+xml,' + encodeURIComponent(build(id))); },
+    photos: PHOTOS.filter((p) => p[0] === 'space').map((p) => [p[1], p[2]]),
+    cities: PHOTOS.filter((p) => p[0] === 'city').map((p) => [p[1], p[2]]),
+    gradients: GRADS.map((g) => [g[0], g[1]]),
+    /** Is this a wallpaper id we know how to draw? (custom / remote depend on the look object) */
+    has(id) { return !!SPECS[id] || /^(photo|grad):[a-z0-9]+$/.test(id) && (id.startsWith('photo:') ? PHOTOS.some((p) => 'photo:' + p[1] === id) : GRADS.some((g) => 'grad:' + g[0] === id)) || id === 'custom' || id === 'remote'; },
+    /** URL usable in CSS url("…"): data: for drawn scenes / gradients / your own picture, a bundled file for photos, https for a remote picture */
+    url(id, look = {}) {
+      if (SPECS[id]) return cache[id] || (cache[id] = 'data:image/svg+xml,' + encodeURIComponent(build(id)));
+      if (id.startsWith('photo:')) { const f = 'wallpapers/' + id.slice(6) + '.jpg'; return embeddedPhoto(f) || f; }
+      if (id.startsWith('grad:')) { const g = GRADS.find((x) => 'grad:' + x[0] === id); return g ? gradSvg(g[2]) : ''; }
+      if (id === 'custom') return /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(look.wallImage || '') ? look.wallImage : '';
+      if (id === 'remote') return HTTPS.test(look.wallUrl || '') ? look.wallUrl : '';
+      return '';
+    },
   };
-

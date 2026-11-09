@@ -179,7 +179,7 @@ export class VaultStore {
       const record = await s.seal(d);
       const prev = this.storage.getItem(this.key);
       if (prev) { try { this.storage.setItem(this.key + '.bak', prev); } catch { /* quota: skip the backup copy */ } }
-      this.storage.setItem(this.key, JSON.stringify(record));
+      this.storage.setItem(this.key, JSON.stringify(record)); this.lastSaved = Date.now();
       if (this.onSaved) { try { this.onSaved(); } catch { /* ignore */ } }
     }).catch((e) => { this.lastError = e; throw e; });
     return this.chain;

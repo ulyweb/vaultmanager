@@ -753,7 +753,7 @@ test('look & feel: appearance, effects, dock & menu bar, widgets, start page, bo
   await page.locator('.setrow:has-text("Corner radius") input[type=range]').fill('20'); assert.equal(await cssv('--r'), '20px');
   await page.locator('.setrow:has-text("UI size") input[type=range]').fill('110'); assert.equal(await cssv('--ui-scale'), '1.1');
   await page.getByRole('button', { name: 'Wallpaper', exact: true }).click(); await page.waitForSelector('.wall');
-  assert.equal(await page.locator('.wall').count(), 12); assert.equal(await attr('bg'), 'wallpaper'); assert.match(await cssv('--wall'), /^url\("data:image\/svg\+xml/);
+  assert.equal(await page.locator('.wall[data-group=drawn]').count(), 12); assert.equal(await attr('bg'), 'wallpaper'); assert.match(await cssv('--wall'), /^url\("data:image\/svg\+xml/);
   await page.getByRole('button', { name: 'Wallpaper Starry peaks' }).click(); await shot(page, '23-appearance');
   await page.getByRole('button', { name: 'Category icon' }).click(); assert.equal(await attr('avatar'), 'icon');
 
@@ -1015,4 +1015,51 @@ test('profiles: export a whole profile, then import it at the initial stage into
   assert.ok(await B.page.locator('.list', { hasText: 'BankProfile' }).count(), 'the imported database is in the new profile');
   assert.ok(await B.page.evaluate(() => document.querySelector('.ico[data-n]').style.getPropertyValue('--v1')), 'icons carry their vivid colour');
   await B.ctx.close();
+});
+
+test('v0.12: crypto wallet shows length+entropy and seals a single field as QR; QR tools show length and entropy; real-photo wallpapers, own image, undo and save-now', async () => {
+  const { ctx, page, problems } = await newPage();
+  await createVault(page);
+  await page.getByRole('button', { name: '＋ New' }).click();
+  await page.locator('.modal-sheet .cats .btn', { hasText: 'Crypto wallet' }).click();
+  await page.fill('#f_name', 'Ledger Nano'); await page.fill('#tf_seed', 'abandon ability able about above absent absorb abstract absurd abuse access accident');
+  await page.getByRole('button', { name: 'Save' }).click(); await page.waitForSelector('.detail h2:has-text("Ledger Nano")');
+  assert.match(await page.textContent('.detail .sbits'), /\d+ characters · ~\d+ bits/);
+  // seal just the seed phrase
+  await page.getByRole('button', { name: /Seal Recovery seed phrase as QR/ }).click();
+  assert.match(await page.textContent('.modal-sheet .meter-label'), /\d+ characters · ~\d+ bits entropy/);
+  await page.getByRole('button', { name: 'Create QR' }).click(); await page.waitForSelector('.modal-sheet canvas', { timeout: 30000 });
+  await page.keyboard.press('Escape');
+  // the whole wallet can be sealed too
+  await page.getByRole('button', { name: /Seal as QR/ }).first().click(); await page.waitForSelector('.modal-sheet .livemeter .meter'); await page.keyboard.press('Escape');
+  // QR tools
+  await page.locator('.side .nav', { hasText: 'QR tools' }).click();
+  await page.fill('textarea[aria-label="Text to seal"]', 'wallet words here');
+  assert.match(await page.textContent('.page'), /Secret text: 17 characters · ~\d+ bits entropy/);
+  assert.match(await page.textContent('.page .meter-label'), /characters · ~\d+ bits entropy/);
+
+  // appearance
+  await settingsTab(page, 'Appearance');
+  assert.ok(await page.locator('.wallgroup h4', { hasText: 'Real photos' }).count());
+  assert.ok(await page.locator('.wallgroup h4', { hasText: 'Cities & lights' }).count());
+  assert.ok(await page.locator('.wall[data-group=city]').count() >= 6 && await page.locator('.wall[data-group=photo]').count() >= 6);
+  await page.locator('.wall[data-group=city]').first().click();
+  assert.match(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--wall')), /wallpapers\/night1\.jpg/);
+  assert.match(await page.textContent('.savebar'), /Saved automatically/);
+  await page.getByRole('button', { name: 'Undo changes' }).click(); await page.waitForSelector('.savebar');
+  assert.ok(!/night1/.test(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--wall'))), 'undo restored the previous background');
+  // your own picture (a generated PNG)
+  const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+  await page.setInputFiles('input[aria-label="Choose a background image from this computer"]', { name: 'me.png', mimeType: 'image/png', buffer: png });
+  await page.waitForSelector('.wall[data-group=mine]');
+  assert.match(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--wall')), /data:image\/jpeg;base64/);
+  await page.fill('input[aria-label="Background image URL"]', 'http://insecure.example/x.png'); await page.getByRole('button', { name: 'Use this address' }).click();
+  assert.match(await page.textContent('.wallmine .err'), /https/);
+  const t0 = await page.textContent('.savebar .savestat');
+  await page.getByRole('button', { name: 'Save now' }).click(); await page.waitForSelector('.toast, [role=status]');
+  // persists after lock + unlock
+  await page.getByRole('button', { name: /Lock/ }).first().click(); await page.fill('#upw', MASTER); await page.click('button[type=submit]'); await page.waitForSelector('.topbar');
+  assert.match(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--wall')), /data:image\/jpeg;base64/);
+  assert.deepEqual(problems.filter((p) => !/Failed to load resource/.test(p)), []);
+  await ctx.close();
 });

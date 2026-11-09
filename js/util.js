@@ -52,3 +52,4 @@ export function safeHref(url) {
   const u = /^[a-z][a-z0-9+.-]*:/i.test(url) ? url : 'https://' + url;
   try { const p = new URL(u); return p.protocol === 'https:' || p.protocol === 'http:' ? p.href : ''; } catch { return ''; }
 }
+export const fmtTime = (ts) => new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });

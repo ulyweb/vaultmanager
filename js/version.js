@@ -1,6 +1,6 @@
 /* Application version, data-format versions and changelog (shown in Settings → About). */
 
-export const APP_VERSION = '0.11.0';
+export const APP_VERSION = '0.12.0';
 export const APP_NAME = 'VaultManager';
 export const REPO_URL = 'https://github.com/ulyweb/vaultmanager';
 
@@ -16,6 +16,12 @@ export const FORMATS = [
 ];
 
 export const CHANGELOG = [
+  { v: '0.12.0', date: '2026-11-09', notes: [
+    'Every password and secret now shows its length and entropy: in QR tools, Seal-as-QR, backups and in the detail view of Bank, Crypto wallet, Emergency and Secure notes.',
+    'Seal a single secret (for example a wallet’s recovery seed phrase) as its own encrypted QR with the new QR button on the field; the whole item can still be sealed too.',
+    'Appearance: real NASA / public-domain photos, “Cities & lights” (Earth at night), drawn landscapes, colour gradients, your own image from this computer, or from a web address.',
+    'Appearance now says that changes are saved automatically to this profile, with Undo changes and Save now.',
+  ] },
   { v: '0.11.0', date: '2026-11-09', notes: [
     'Profiles: several people on one device, each with a completely separate vault, master password and picture — pick who is signing in, like ulyOS.',
     'Import a whole-profile backup (.vmprofile) right on the first screen: items, attachments, settings and audit trail come back in one step.',
