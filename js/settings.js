@@ -4,7 +4,7 @@ import { h, clear, setLabel, modal, toast, confirmDialog, askPassword, download,
 import { generatePassphrase } from './generator.js';
 import { estimate } from './strength.js';
 import { meter, fmtSize } from './views.js';
-import { page, field, sel, persist, selfTest } from './tools.js';
+import { page, field, sel, persist, selfTest, backupGuide } from './tools.js';
 import { appearance, effects, layout, widgetsTab } from './settings-look.js';
 import { supported as passkeySupported, enroll as passkeyEnroll } from './passkey.js';
 import { wipe } from './crypto.js';
@@ -13,6 +13,7 @@ import { APP_NAME, APP_VERSION, CHANGELOG, FORMATS, REPO_URL } from './version.j
 import { KEY } from './vault.js';
 import { fmtDate, fmtInt } from './util.js';
 import { canOfferCopy, saveOfflineCopy } from './offline.js';
+import { adminEmail, setAdminEmail, validEmail, openMail } from './admin.js';
 
 const TABS = [['general', '{{gear}} General'], ['appearance', '{{palette}} Appearance'], ['effects', '{{sparkles}} Effects'], ['layout', '{{compass}} Dock & menu bar'], ['widgets', '{{puzzle}} Widgets'], ['security', '{{shieldlock}} Security'], ['sync', '{{sync}} Sync'], ['audit', '{{scroll}} Audit trail'], ['about', 'ⓘ About']];
 
@@ -69,12 +70,14 @@ function general(ctx) {
     panel('Trash',
       field('Delete trashed items permanently after', sel(s.trashDays, [[7, '7 days'], [30, '30 days'], [90, '90 days'], [0, 'Never (I will empty it myself)']], (v) => set('trashDays', +v, 'Trash retention')), 'Trashed items (and their attachments) are removed for good at your next unlock after this time.')),
     installPanel(ctx),
-    panel('Welcome & help',
-      field('Profile name', h('input', { class: 'inp', value: (ctx.profile() || {}).name || '', maxlength: '40', autocomplete: 'off', 'aria-label': 'Profile name', on: { change: (e) => { const v = e.target.value.trim(); if (v) { ctx.updateProfile({ name: v }); s.displayName = v; persist(ctx); } } } })),
+    panel('Backup & profile', h('p', { class: 'hint', text: 'Two places offer exports. This one is for the WHOLE PROFILE; Tools → Import & export also has the passwords-only database backup, sync files and CSV.' }),
       h('div', { class: 'row wrap' },
         h('button', { class: 'btn sm', on: { click: () => ctx.exportProfile() } }, '{{download}} Export whole profile…'),
         h('button', { class: 'btn sm', on: { click: () => ctx.importProfile(async (p) => { toast('Imported “' + p.name + '”. Lock and pick it on the sign-in screen.'); }) } }, '{{importfile}} Import a profile…'),
         h('button', { class: 'btn sm', on: { click: () => ctx.switchProfile() } }, '{{contact}} Switch profile')),
+      h('h4', { text: 'Which one do I need?' }), backupGuide({ compact: true }), h('button', { class: 'btn', on: { click: () => ctx.go('data') } }, '{{swap}} Open Tools → Import & export')),
+    panel('Welcome & help',
+      field('Profile name', h('input', { class: 'inp', value: (ctx.profile() || {}).name || '', maxlength: '40', autocomplete: 'off', 'aria-label': 'Profile name', on: { change: (e) => { const v = e.target.value.trim(); if (v) { ctx.updateProfile({ name: v }); s.displayName = v; persist(ctx); } } } })),
       chk('Show the welcome screen every time I unlock', s.welcomeAlways, (v) => set('welcomeAlways', v, 'Welcome screen')),
       h('div', { class: 'row wrap' }, h('button', { class: 'btn', on: { click: () => ctx.tour.welcome() } }, '{{wave}} Welcome screen'), h('button', { class: 'btn', on: { click: () => ctx.tour.start() } }, '{{compass}} Guided tour'), h('button', { class: 'btn', on: { click: () => ctx.tour.help() } }, '{{help}} Help & shortcuts'))),
     panel('Look & feel', h('p', { class: 'hint', text: 'Theme, accent colour, wallpaper, icons, animations, dock and widgets have their own tabs.' }), h('div', { class: 'row wrap' }, h('button', { class: 'btn', on: { click: () => { ctx.S.setTab = 'appearance'; ctx.refresh(); } } }, '{{palette}} Appearance'), h('button', { class: 'btn', on: { click: () => { ctx.S.setTab = 'effects'; ctx.refresh(); } } }, '{{sparkles}} Effects'))),
@@ -82,6 +85,19 @@ function general(ctx) {
       h('p', { class: 'hint', text: 'Length, character sets and passphrase options are remembered as you change them on the Generator page, and used by “Generate” in the item editor.' }),
       h('button', { class: 'btn', on: { click: () => ctx.go('gen') } }, '{{bolt}} Open the generator')),
     panel('Data', h('p', { class: 'hint', text: 'Import from other managers, encrypted backups and plaintext export are on their own page.' }), h('button', { class: 'btn', on: { click: () => ctx.go('data') } }, '{{swap}} Import & export')));
+}
+
+/* Contact admin: the address comes from js/config.js, or is set per device here. It is only used to open your mail app. */
+function contactPanel(ctx) {
+  const st = ctx.env.storage, cur = adminEmail(st);
+  const inp = h('input', { class: 'inp', type: 'email', value: cur, placeholder: 'admin@example.com', autocomplete: 'off', 'aria-label': 'Administrator email' }), err = h('p', { class: 'err', role: 'alert' });
+  const msg = h('textarea', { class: 'ta', rows: '3', placeholder: 'What do you need help with? (Do not include passwords.)', 'aria-label': 'Message to the administrator' });
+  return panel('Contact admin',
+    h('p', { class: 'hint', text: 'Opens your mail app with a message to the administrator. Nothing is sent by VaultManager itself, and no vault data is included.' }),
+    field('Administrator email', inp),
+    h('div', { class: 'row wrap' }, h('button', { class: 'btn sm', on: { click: () => { err.textContent = ''; const v = inp.value.trim(); if (v && !validEmail(v)) { err.textContent = 'That does not look like an email address.'; return; } setAdminEmail(st, v); toast(v ? 'Administrator address saved on this device' : 'Administrator address cleared'); ctx.refresh(); } } }, 'Save address')), err,
+    field('Message', msg),
+    h('button', { class: 'btn primary', on: { click: () => { const to = adminEmail(st); if (!to) { err.textContent = 'Save an administrator address first.'; return; } openMail(to, APP_NAME + ' ' + APP_VERSION + ' — help', (msg.value || '') + '\n\n— ' + APP_NAME + ' ' + APP_VERSION + ', profile “' + ((ctx.profile() || {}).name || '') + '”'); } } }, '{{contact}} Email the administrator'));
 }
 
 /* ======================= Security ======================= */
@@ -275,6 +291,7 @@ function about(ctx) {
         h('button', { class: 'btn', on: { click: () => ctx.tour.start() } }, '{{compass}} Guided tour'), h('button', { class: 'btn', on: { click: () => ctx.tour.welcome() } }, '{{wave}} Welcome screen'),
         h('button', { class: 'btn', on: { click: () => selfTest() } }, '{{check}} Run crypto self-test'))),
     panel('Version history', CHANGELOG.map((r, i) => h('div', { class: 'rel' }, h('div', { class: 'row wrap' }, h('b', { class: 'mono', text: 'v' + r.v }), h('span', { class: 'chip' + (i === 0 ? ' accent' : ''), text: i === 0 ? 'current' : r.date }), i === 0 ? h('span', { class: 'hint', text: r.date }) : null), h('ul', null, r.notes.map((n) => h('li', { text: n })))))),
+    contactPanel(ctx),
     panel('Data formats', h('div', { class: 'kv' }, FORMATS.map(([k, v]) => [h('span', { text: k }), h('b', { text: v })]))),
     panel('This device', h('div', { class: 'kv' }, h('span', { text: 'Running as' }), h('b', { text: window.__TAURI__ ? 'Native app (Tauri)' : location.protocol === 'file:' ? 'Single-file offline copy' : ctx.isStandalone() ? 'Installed web app (offline-capable)' : 'Web page in a browser' }), h('span', { text: 'Vault ID' }), h('b', { text: sess.id }), h('span', { text: 'Created' }), h('b', { text: fmtDate(store.data.created) }), h('span', { text: 'Key derivation' }), h('b', { text: fmtInt(sess.iterations()) + ' PBKDF2 rounds' }), h('span', { text: 'Recovery key' }), h('b', { text: sess.hasRecovery() ? 'set' : 'not set' }), h('span', { text: 'Sync' }), h('b', { text: store.settings.sync.token ? 'gist sync configured' + (store.settings.sync.last ? ' · last ' + new Date(store.settings.sync.last.at).toLocaleString() : '') : 'file only / off' })), storage,
       h('div', { class: 'row wrap' }, navigator.storage && navigator.storage.persist ? h('button', { class: 'btn', on: { click: async () => { const ok = await navigator.storage.persist(); toast(ok ? 'Storage protected from automatic eviction' : 'The browser declined (installing the app or bookmarking often helps)'); ctx.refresh(); } } }, '{{shield}} Protect storage from eviction') : null,

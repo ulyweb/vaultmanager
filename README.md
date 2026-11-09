@@ -86,3 +86,7 @@ Version 0.10 — a complete tenth cut (this repo is the test bench for the stand
 
 ## Licences
 Code: see repository owner. EFF short wordlist: CC BY 3.0 US. `vendor/qrcode.js`: MIT (Kazuhiko Arase). `vendor/jsQR.js`: Apache-2.0 (`vendor/LICENSE-jsqr.txt`).
+
+## Contact admin
+
+Set `ADMIN_EMAIL` in `js/config.js` (or per device in Settings → About → Contact admin). A browser-only app has no server, so the "new profile" notice is an email that opens in the person's own mail app and contains only the profile name, version, date and platform. Automatic, server-side notification would need a mail service, which this app deliberately does not include.

@@ -779,3 +779,14 @@ test('item locked before files were covered: opening it seals the existing files
   const att = await S.addAttachment(it.id, { name: 'a.txt', type: 'text/plain', bytes: new TextEncoder().encode('x') });
   assert.ok(att);
 });
+
+test('contact admin helpers: validation, mailto link and a profile notice that carries no secrets; hide lists are sanitised', async () => {
+  const { validEmail, mailtoLink, newProfileMessage, adminEmail, setAdminEmail } = await import('../js/admin.js');
+  const { normalizeLook } = await import('../js/look.js');
+  assert.ok(validEmail('admin@example.com')); assert.ok(!validEmail('nope')); assert.ok(!validEmail('a b@c.de')); assert.ok(!validEmail('x@y.z"><script>'));
+  const st = new MemStorage(); assert.equal(adminEmail(st), ''); assert.equal(setAdminEmail(st, 'bad'), false); setAdminEmail(st, 'admin@example.com'); assert.equal(adminEmail(st), 'admin@example.com');
+  const m = newProfileMessage('Alex'); assert.match(m.subject, /Alex/); assert.ok(!/password|master/i.test(m.body.replace('No passwords or vault data are included in this message.', '')));
+  assert.match(mailtoLink('admin@example.com', 'Hi there', 'a&b'), /^mailto:admin@example\.com\?subject=Hi%20there&body=a%26b$/);
+  const l = normalizeLook({ hiddenCats: ['crypto', 'crypto', '<x>', 5, 'bank'], hiddenNav: ['qr', 'home', 'settings', 'tm', 'zzz'] });
+  assert.deepEqual(l.hiddenCats, ['crypto', 'bank']); assert.deepEqual(l.hiddenNav, ['qr', 'tm']);
+});

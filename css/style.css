@@ -679,3 +679,22 @@ html[data-icons=vivid][data-fxanim=on] .ico[data-n=star] svg, html[data-icons=vi
 .vwrap { min-width: 0; } .livemeter { margin-top: 6px; } .livemeter:empty { display: none; }
 .lockbox { margin: 10px 0; } .lockbox p { margin: 4px 0 8px; } .lockfields { display: grid; gap: 6px; }
 .note.ok { border-color: color-mix(in srgb, #34d399 55%, var(--line)); }
+
+/* ---- backup guide ---- */
+.bguide { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); margin-top: 8px; }
+.bcard { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; background: var(--raise, transparent); }
+.bcard p { margin: 4px 0; font-size: 12.5px; } .bcard .hint { font-size: 11px; }
+.bhead { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; } .bhead code { color: var(--muted); font-size: 11px; } .bhead .chip { margin-left: auto; }
+.bico { display: inline-grid; place-items: center; width: 1.4em; }
+.sublbl { display: block; margin: 8px 0 2px; font-size: 12px; color: var(--muted); }
+
+/* ---- task manager & show/hide ---- */
+.tmtable { width: 100%; border-collapse: collapse; font-size: 13px; } .tmtable th { text-align: left; color: var(--muted); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; padding: 4px 8px; }
+.tmtable td { padding: 8px; border-top: 1px solid var(--line); vertical-align: middle; } .tmdetail { color: var(--ink-dim); }
+.tmgrid { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); margin-bottom: 12px; }
+.tmcard { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; display: grid; gap: 4px; } .tmcard b { font-size: 20px; font-family: var(--mono); } .tmcard small { color: var(--muted); }
+.tmbar { height: 6px; border-radius: 4px; background: var(--line); overflow: hidden; } .tmbar i { display: block; height: 100%; background: var(--accent); } .tmbar.warn i { background: #fbbf24; }
+@media (max-width: 699px) { .tmtable thead { display: none; } .tmtable tr { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; padding: 8px 0; border-top: 1px solid var(--line); } .tmtable td { border: 0; padding: 0; } .tmdetail { grid-column: 1 / -1; font-size: 12px; } }
+.setrow.vis { padding: 4px 0; }
+.tm .kv span, .tm .kv b, .tmcard b, .tmcard small { min-width: 0; overflow-wrap: anywhere; }
+@media (max-width: 699px) { .tm .kv { grid-template-columns: 1fr; gap: 2px 0; } .tm .kv b { margin-bottom: 8px; } .tmgrid { grid-template-columns: 1fr 1fr; } .tmcard b { font-size: 17px; } }

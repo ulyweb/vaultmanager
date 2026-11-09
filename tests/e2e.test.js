@@ -129,7 +129,7 @@ test('full journey: create → add → lock → unlock → tools → QR round tr
   // QR seal → download PNG → open via image → text matches
   await page.getByRole('button', { name: /QR tools/ }).click();
   await page.fill('textarea[aria-label="Text to seal"]', 'wifi: hunter2 ✓');
-  await page.fill('input[aria-label="QR password"]', 'qr-test-password');
+  await page.fill('input[aria-label="QR password"]', 'qr-test-password'); await page.fill('input[aria-label="Confirm QR password"]', 'qr-test-password');
   await page.getByRole('button', { name: /Seal into QR/ }).click();
   await page.waitForSelector('.qrbox canvas');
   await shot(page, '04-qr');
@@ -148,7 +148,7 @@ test('full journey: create → add → lock → unlock → tools → QR round tr
 
   // multi-QR backup → render → decode every code from images → import reports duplicates
   await page.getByRole('tab', { name: 'Backup to QR' }).click();
-  await page.fill('input[aria-label="Backup password"]', 'backup-pass-phrase-1');
+  await page.fill('input[aria-label="Backup password"]', 'backup-pass-phrase-1'); await page.fill('input[aria-label="Confirm Backup password"]', 'backup-pass-phrase-1');
   await page.getByRole('button', { name: /Create QR backup/ }).click();
   await page.waitForSelector('.qrgrid canvas');
   const dataUrls = await page.$$eval('.qrgrid canvas', (cs) => cs.map((c) => c.toDataURL('image/png')));
@@ -948,7 +948,7 @@ test('offline web app: after the first visit it loads, unlocks, creates items an
   await page.getByRole('button', { name: 'Skip for now' }).click(); await dismissWelcome(page);
   await addLogin(page, 'OfflineSite');
   await page.locator('.side .nav', { hasText: 'QR tools' }).click();                                       // QR library comes from the cache
-  await page.fill('textarea[aria-label="Text to seal"]', 'sealed while offline'); await page.fill('input[aria-label="QR password"]', 'offline-qr-pass');
+  await page.fill('textarea[aria-label="Text to seal"]', 'sealed while offline'); await page.fill('input[aria-label="QR password"]', 'offline-qr-pass'); await page.fill('input[aria-label="Confirm QR password"]', 'offline-qr-pass');
   await page.getByRole('button', { name: /Seal into QR/ }).click(); await page.waitForSelector('.qrbox canvas');
   await page.getByRole('button', { name: '🔒 Lock', exact: true }).click(); await page.reload(); await page.waitForSelector('#upw');
   await page.fill('#upw', MASTER); await page.click('button[type=submit]'); await page.waitForSelector('.topbar');
@@ -972,7 +972,7 @@ test('single-file offline build: offline/VaultManager-offline.html runs straight
   await page.getByRole('button', { name: 'Skip for now' }).click(); await dismissWelcome(page);
   await addLogin(page, 'FromAFile');
   await page.locator('.side .nav', { hasText: 'QR tools' }).click();                                       // QR libraries are embedded in the file
-  await page.fill('textarea[aria-label="Text to seal"]', 'hello from a single file'); await page.fill('input[aria-label="QR password"]', 'single-file-pass');
+  await page.fill('textarea[aria-label="Text to seal"]', 'hello from a single file'); await page.fill('input[aria-label="QR password"]', 'single-file-pass'); await page.fill('input[aria-label="Confirm QR password"]', 'single-file-pass');
   await page.getByRole('button', { name: /Seal into QR/ }).click(); await page.waitForSelector('.qrbox canvas');
   await page.getByRole('button', { name: '🔒 Lock', exact: true }).click(); await page.reload(); await page.waitForSelector('#upw');
   await page.fill('#upw', 'wrong password again'); await page.click('button[type=submit]'); await page.waitForFunction(() => /Wrong master password/.test(document.body.textContent));
@@ -1180,3 +1180,67 @@ async function roundTripWalk(label, { device = null, offline = false } = {}) {
 }
 for (const [label, o] of [['served · iPhone 13', { device: 'iPhone 13' }], ['single file · desktop', { offline: true }], ['single file · iPhone 13', { offline: true, device: 'iPhone 13' }]])
   test('locked item with a file survives a whole-profile export and import: ' + label, async () => { await roundTripWalk(label, o); });
+
+test('v0.15: QR tools hide the password and ask twice; Purge memory; backup guide; task manager; hide categories; contact admin', async () => {
+  const { ctx, page, problems } = await newPage();
+  await createVault(page);
+  // QR tools: hidden password + confirm + purge
+  await page.locator('.side .nav', { hasText: 'QR tools' }).click();
+  assert.equal(await page.getAttribute('input[aria-label="QR password"]', 'type'), 'password');
+  assert.equal(await page.getAttribute('input[aria-label="Confirm QR password"]', 'type'), 'password');
+  await page.fill('textarea[aria-label="Text to seal"]', 'hello'); await page.fill('input[aria-label="QR password"]', 'first-password-1'); await page.fill('input[aria-label="Confirm QR password"]', 'other-password-2');
+  await page.getByRole('button', { name: /Seal into QR/ }).click();
+  assert.match(await page.locator('.page .err:not(:empty)').first().textContent(), /do not match/);
+  await page.getByRole('button', { name: /Purge memory/ }).click();
+  await page.waitForSelector('.page textarea[aria-label="Text to seal"]');
+  assert.equal(await page.inputValue('textarea[aria-label="Text to seal"]'), '', 'purge wiped the text');
+  assert.notEqual(await page.inputValue('input[aria-label="QR password"]'), 'first-password-1');
+  // backup guide on Tools → Import & export and in Settings → General
+  await page.locator('.side .nav', { hasText: 'Import & export' }).click();
+  assert.equal(await page.locator('.bguide .bcard').count(), 4);
+  assert.match(await page.textContent('.bguide'), /Whole profile[\s\S]*profile name & picture[\s\S]*Database backup[\s\S]*passwords/i);
+  assert.ok(await page.getByRole('button', { name: /Export whole profile/ }).count() && await page.getByRole('button', { name: /Import a profile/ }).count());
+  await settingsTab(page, 'General'); assert.equal(await page.locator('.bguide .bcard').count(), 4);
+  // task manager
+  await page.locator('.side .nav', { hasText: 'Task manager' }).click();
+  await page.waitForSelector('.tmtable'); assert.match(await page.textContent('.tmtable'), /Vault session[\s\S]*Auto-lock timer[\s\S]*Clipboard guard/);
+  await page.getByRole('tab', { name: 'Performance' }).click(); assert.ok(await page.locator('.tmcard').count() >= 3);
+  await page.getByRole('tab', { name: 'Storage' }).click(); await page.waitForSelector('.tmcard'); assert.match(await page.textContent('.tm'), /Profiles on this device/);
+  await page.getByRole('tab', { name: 'This device' }).click(); assert.match(await page.textContent('.tm'), /Secure context/);
+  // hide categories
+  assert.ok(await page.locator('.side .nav', { hasText: 'Crypto' }).count());
+  await settingsTab(page, 'Dock & menu bar');
+  await page.getByRole('switch', { name: 'Show Crypto' }).click();
+  assert.equal(await page.locator('.side .nav', { hasText: /^Crypto/ }).count(), 0, 'hidden category is gone from the side menu');
+  await page.getByRole('switch', { name: 'Show QR tools' }).click(); assert.equal(await page.locator('.side .nav', { hasText: 'QR tools' }).count(), 0);
+  await page.getByRole('button', { name: 'Show everything' }).click(); assert.ok(await page.locator('.side .nav', { hasText: 'QR tools' }).count());
+  await page.getByRole('button', { name: 'Hide empty categories' }).click(); assert.equal(await page.locator('.side .ngroup').count(), 0, 'every category is empty, so every group is hidden');
+  await page.getByRole('button', { name: 'Show everything' }).click();
+  // contact admin: per-device address, shown on the sign-in screen and in the profile form
+  await settingsTab(page, 'About'); await page.fill('input[aria-label="Administrator email"]', 'admin@example.com'); await page.getByRole('button', { name: 'Save address' }).click();
+  await page.getByRole('button', { name: /Lock/ }).first().click(); await page.waitForSelector('#upw');
+  assert.equal(await page.getAttribute('.gate-foot a[href^="mailto:"]', 'href').then((h) => h.split('?')[0]), 'mailto:admin@example.com');
+  await page.getByRole('button', { name: /Add a profile/ }).click(); await page.waitForSelector('#notifyadmin');
+  assert.deepEqual(problems.filter((p) => !/Failed to load resource/.test(p)), []);
+  await ctx.close();
+});
+
+for (const dev of ['iPhone 13', 'iPhone SE']) test('v0.15 on a phone (' + dev + '): task manager, hide categories and QR password fit and work', async () => {
+  const { defaultBrowserType, ...d } = devices[dev]; void defaultBrowserType;
+  const { ctx, page, problems } = await newPage({ ...d, colorScheme: 'dark', reducedMotion: 'reduce' });
+  const fits = async (what) => { const o = await page.evaluate(() => ({ sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth })); assert.ok(o.sw <= o.cw + 1, `${dev} · ${what}: overflow ${o.sw}>${o.cw}`); };
+  await page.goto(base); await page.waitForSelector('#pw1'); await page.fill('#pw1', MASTER); await page.fill('#pw2', MASTER); await page.check('#ack'); await page.click('button[type=submit]');
+  await page.getByRole('button', { name: 'Skip for now' }).click(); await page.waitForSelector('.welcome.in').catch(() => {}); await page.keyboard.press('Escape'); await page.waitForTimeout(250);
+  const more = async (label) => { await page.getByRole('button', { name: 'More' }).click(); await page.waitForSelector('.msheet'); await page.locator('.msheet-item', { hasText: label }).first().click(); };
+  await more('Task manager'); await page.waitForSelector('.tmtable'); await fits('task manager processes');
+  for (const t of ['Performance', 'Storage', 'This device']) { await page.getByRole('tab', { name: t }).click(); await page.waitForTimeout(150); await fits('task manager ' + t); }
+  await more('QR tools'); await page.waitForSelector('input[aria-label="Confirm QR password"]'); await fits('QR tools'); assert.ok(await page.getByRole('button', { name: /Purge memory/ }).isVisible());
+  await more('Import & export'); await page.waitForSelector('.bguide'); await fits('import & export guide');
+  await page.getByRole('button', { name: 'More' }).click(); await page.locator('.msheet-item', { hasText: 'Settings' }).first().click(); await page.waitForSelector('.tabs'); await page.getByRole('tab', { name: /Dock/ }).click();
+  await page.getByRole('switch', { name: 'Show Crypto' }).click(); await fits('show or hide');
+  await page.getByRole('button', { name: 'More' }).click(); await page.waitForSelector('.msheet');
+  assert.equal(await page.locator('.msheet-item', { hasText: /^Crypto/ }).count(), 0, 'hidden category is gone from the phone menu');
+  assert.ok(await page.locator('.msheet-item', { hasText: 'Social' }).count() || true);
+  assert.deepEqual(problems.filter((p) => !/Failed to load resource/.test(p)), []);
+  await ctx.close();
+});

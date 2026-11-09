@@ -1,6 +1,6 @@
 /* Application version, data-format versions and changelog (shown in Settings → About). */
 
-export const APP_VERSION = '0.14.0';
+export const APP_VERSION = '0.15.0';
 export const APP_NAME = 'VaultManager';
 export const REPO_URL = 'https://github.com/ulyweb/vaultmanager';
 
@@ -16,6 +16,13 @@ export const FORMATS = [
 ];
 
 export const CHANGELOG = [
+  { v: '0.15.0', date: '2026-11-09', notes: [
+    'Import & export explained: a “Which one do I need?” guide on Tools → Import & export and in Settings → General. Whole profile (.vmprofile) = profile + passwords + attachments + settings; Database backup (.vmvault) = passwords only. Whole-profile buttons now also live on the Tools page. Also in the guided tour and Help tips.',
+    'QR tools: passwords are hidden and must be typed twice (with show / copy / generate), also for the QR backup and the Tools backup file. New Purge memory button wipes fields, QR codes, opened locked items and the clipboard.',
+    'Task manager (Tools): processes, memory, frame rate, storage and device details, live.',
+    'Hide tools and categories from the side bar, dock and menu: Settings → Dock & menu bar → Show or hide.',
+    'Contact admin: set an administrator address (js/config.js or per device in Settings → About); it appears on the sign-in screen and, at profile creation, offers to email the admin the profile name (opens your mail app — never sends passwords).',
+  ] },
   { v: '0.14.0', date: '2026-11-09', notes: [
     'The item passcode lock now covers attached files: file contents are sealed under a random key kept inside the passcode seal, and their names and types are hidden until you unlock the item.',
     'Items locked with 0.13 get their existing files sealed the next time you open them.',

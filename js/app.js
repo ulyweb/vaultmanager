@@ -1,17 +1,19 @@
 /* VaultManager — application shell: lock screen, navigation, auto-lock, routing. */
 
-import { h, clear, setLabel, buzz, closeAllModals, closeTopModal, modalOpen, modal, toast, copyText } from './dom.js';
+import { h, clear, setLabel, clearClipboardNow, buzz, closeAllModals, closeTopModal, modalOpen, modal, toast, copyText } from './dom.js';
 import { VaultStore } from './vault.js';
 import { available } from './crypto.js';
 import { estimate } from './strength.js';
 import { generatePassphrase } from './generator.js';
 import { renderVaultView, newItemMenu, showRecoveryKit, meter } from './views.js';
 import { renderGenerator, renderHealth, renderQR, renderData } from './tools.js';
+import { renderTaskManager } from './taskman.js';
 import { renderSettings } from './settings.js';
 import { createBlobStore } from './blobs.js';
 import { Profiles, keysFor, newProfileId } from './profiles.js';
 import { profileAvatar, avatarPicker, importProfileDialog, exportProfileDialog } from './profile-ui.js';
 import { canOfferCopy, saveOfflineCopy } from './offline.js';
+import { adminEmail, newProfileMessage, openMail } from './admin.js';
 import { renderBeam } from './beam.js';
 import { TYPE_META, GROUPS } from './templates.js';
 import { syncGist } from './sync.js';
@@ -56,6 +58,15 @@ const ctx = {
   switchProfile() { lock(false); ctx.S.gate = 'picker'; draw(); },
   updateProfile(patch) { const p = env.profiles.update(ctx.S.profileId, patch); if (p && patch.name !== undefined && store.unlocked) { store.settings.displayName = p.name; saveSoon(); } return p; },
   async removeProfile(id) { const k = keysFor(id); const st = id === ctx.S.profileId && store ? store : new VaultStore(env.storage, k.vault, env.blobs, k.fails); await st.wipe(); env.profiles.remove(id); },
+  /* Purge memory: forget everything that is only held in memory — opened locked items, revealed values, QR tool fields, previews, the clipboard. Nothing stored is touched. */
+  purgeMemory() {
+    const n = store.itemKeys ? store.itemKeys.size : 0;
+    if (store.itemKeys) store.itemKeys.clear();
+    ctx.runCleanup(); closeAllModals(); clearClipboardNow(); ctx.S.q = '';
+    draw();
+    toast('Memory purged — ' + n + ' opened item' + (n === 1 ? '' : 's') + ' locked again, clipboard cleared, fields and previews wiped');
+    return n;
+  },
   exportProfile: () => exportProfileDialog(ctx),
   importProfile: (onDone) => importProfileDialog(ctx, { onDone }),
   look: () => curLook(), setLook, setTheme, newItem: () => newItemMenu(ctx),
@@ -101,7 +112,7 @@ function setLook(patch, opt = {}) {
   if (!store.unlocked) return;
   store.settings.look = normalizeLook({ ...store.settings.look, ...patch });
   applyTheme(); saveSoon();
-  if (opt.shell) { shell = null; draw(); } else if (opt.redraw) draw(); else if (shell) { drawDock(); drawMbar(); }
+  if (opt.shell) { shell = null; draw(); } else if (opt.redraw) draw(); else if (shell) { drawDock(); drawMbar(); if (opt.nav) drawSide(); }
 }
 function setTheme(v) { store.settings.theme = v; applyTheme(); saveSoon(); }
 
@@ -129,7 +140,7 @@ function showBoot(L, done) {
 
 /* the one place every successful unlock ends up */
 function onUnlocked(note) {
-  const L = curLook();
+  const L = curLook(); ctx.S.since = Date.now();
   ctx.S.view = L.startPage === 'home' ? 'home' : 'all';
   applyTheme(); armAutolock(); draw();
   const after = () => { armSync(); tour.maybeWelcome(); if (note === 'recovery') toast('Unlocked with your recovery key — set a new master password in Settings.', 'ok', 7000); };
@@ -215,7 +226,7 @@ function pwInput(id, label, auto) {
   return { input: i, el: h('div', { class: 'pwwrap' }, i, eye) };
 }
 
-const gateFoot = () => (canOfferCopy() ? h('p', { class: 'gate-foot' }, h('button', { type: 'button', class: 'linkbtn', on: { click: async () => { try { await saveOfflineCopy(); } catch (e) { toast(e.message, 'err', 7000); } } } }, '{{download}} Download the offline copy — one file, VaultManager-offline.html')) : null);
+const gateFoot = () => (canOfferCopy() || adminEmail(env.storage) ? h('p', { class: 'gate-foot' }, adminEmail(env.storage) ? h('a', { class: 'linkbtn', href: 'mailto:' + adminEmail(env.storage) + '?subject=' + encodeURIComponent('VaultManager help') }, '{{contact}} Contact admin') : null, adminEmail(env.storage) && canOfferCopy() ? ' · ' : null, canOfferCopy() ? h('button', { type: 'button', class: 'linkbtn', on: { click: async () => { try { await saveOfflineCopy(); } catch (e) { toast(e.message, 'err', 7000); } } } }, '{{download}} Download the offline copy — one file, VaultManager-offline.html') : null) : null);
 
 function profileHead(p, sub) {
   return h('div', { class: 'brand prof' }, profileAvatar(p, 52), h('div', null, h('h1', { text: p.name }), h('p', { text: sub })));
@@ -235,6 +246,7 @@ function gateCreate({ first }) {
   const p1 = pwInput('pw1', 'Master password', 'new-password'), p2 = pwInput('pw2', 'Repeat master password', 'new-password');
   const m = h('div'), err = h('p', { class: 'err', role: 'alert' });
   const ack = h('input', { type: 'checkbox', id: 'ack' });
+  const admin = adminEmail(env.storage), notify = h('input', { type: 'checkbox', id: 'notifyadmin', checked: true });
   p1.input.addEventListener('input', () => clear(m).append(meter(p1.input.value).el));
   const btn = h('button', { class: 'btn primary', type: 'submit', style: null }, first ? 'Create my vault' : 'Create profile');
   const suggest = h('button', { type: 'button', class: 'btn sm', on: { click: () => { const pw = generatePassphrase({ words: 6 }); p1.input.value = p2.input.value = pw; p1.input.type = p2.input.type = 'text'; p1.input.dispatchEvent(new Event('input')); } } }, '{{bolt}} Suggest a passphrase');
@@ -248,8 +260,9 @@ function gateCreate({ first }) {
     const id = newProfileId(), k = keysFor(id), st = new VaultStore(env.storage, k.vault, env.blobs, k.fails);
     try { await st.create(p1.input.value); st.data.settings.displayName = nm; await st.save(); } catch (x) { err.textContent = x.message; btn.disabled = false; btn.textContent = first ? 'Create my vault' : 'Create profile'; return; }
     env.profiles.add({ id, name: nm, avatar: picker.get() }); env.profiles.setLast(id);
+    if (admin && notify.checked) { const m = newProfileMessage(nm); try { openMail(admin, m.subject, m.body); } catch { /* ignore */ } }
     store = st; ctx.S.profileId = id; ctx.S.gate = null;
-    p1.input.value = p2.input.value = '';
+    p1.input.value = p2.input.value = ''; ctx.S.since = Date.now();
     ctx.S.view = curLook().startPage === 'home' ? 'home' : 'all';
     applyTheme(); armAutolock(); draw();
     tour.maybeWelcome();
@@ -262,6 +275,7 @@ function gateCreate({ first }) {
     h('div', { class: 'field' }, h('label', { for: 'pw2', text: 'Repeat master password' }), p2.el),
     h('div', { class: 'row wrap' }, suggest),
     h('label', { class: 'chk', for: 'ack' }, ack, 'I understand that if I forget this password, nobody can recover my data.'),
+    admin ? h('label', { class: 'chk', for: 'notifyadmin' }, notify, 'Email the administrator that I created this profile (opens your mail app; only the profile name is included — never passwords)') : null,
     err, h('div', { class: 'row' }, btn));
   return h('div', { class: 'panel gate-card' }, brand(first ? 'Create your profile and encrypted vault' : 'Add a profile'), form,
     h('div', { class: 'gate-links' }, h('button', { type: 'button', class: 'linkbtn', on: { click: () => ctx.importProfile(enterProfile) } }, '{{importfile}} Import a profile backup — restore a whole database'), list.length ? h('button', { type: 'button', class: 'linkbtn', on: { click: () => { ctx.S.gate = 'picker'; draw(); } } }, '← Back to profiles') : null),
@@ -359,7 +373,13 @@ function drawGate() {
 let shell = null;
 
 const NAV = [['home', '{{home}}', 'Home'], ['all', '{{vault}}', 'All items'], ['fav', '{{star}}', 'Favorites'], ['trash', '{{trash}}', 'Trash']];
-const TOOLS = [['health', '{{pulse}}', 'Vault health'], ['gen', '{{bolt}}', 'Generator'], ['qr', '{{qr}}', 'QR tools'], ['beam', '{{beam}}', 'Beam sync'], ['data', '{{swap}}', 'Import & export'], ['settings', '{{gear}}', 'Settings']];
+const TOOLS = [['health', '{{pulse}}', 'Vault health'], ['gen', '{{bolt}}', 'Generator'], ['qr', '{{qr}}', 'QR tools'], ['beam', '{{beam}}', 'Beam sync'], ['data', '{{swap}}', 'Import & export'], ['tm', '{{chip}}', 'Task manager'], ['settings', '{{gear}}', 'Settings']];
+
+/* what the user chose to hide from the side bar, dock and menu (Settings → Dock & menu bar) */
+const hid = { cat: (k) => curLook().hiddenCats.includes(k), nav: (id) => curLook().hiddenNav.includes(id) };
+const visGroups = () => GROUPS.map(([g, keys]) => [g, keys.filter((k) => !hid.cat(k))]).filter(([, keys]) => keys.length);
+const visTools = () => TOOLS.filter(([id]) => !hid.nav(id));
+const visNav = () => NAV.filter(([id]) => !hid.nav(id));
 
 function syncSearch() { if (shell && shell.search.value !== ctx.S.q) shell.search.value = ctx.S.q; }
 
@@ -371,11 +391,11 @@ function tickClock() {
   shell.clock.lastChild.textContent = L.dateFmt === 'none' ? '' : n.toLocaleDateString([], L.dateFmt === 'long' ? { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' } : { weekday: 'short', day: 'numeric', month: 'short' });
 }
 
-const DOCK = [['home', '{{home}}', 'Home'], ['all', '{{vault}}', 'All items'], ['fav', '{{star}}', 'Favorites'], ['cats', '{{puzzle}}', 'Categories'], null, ['health', '{{pulse}}', 'Health'], ['gen', '{{bolt}}', 'Generator'], ['qr', '{{qr}}', 'QR tools'], ['beam', '{{beam}}', 'Beam'], null, ['settings', '{{gear}}', 'Settings'], ['help', '{{help}}', 'Help'], ['new', '{{plus}}', 'New item']];
+const DOCK = [['home', '{{home}}', 'Home'], ['all', '{{vault}}', 'All items'], ['fav', '{{star}}', 'Favorites'], ['cats', '{{puzzle}}', 'Categories'], null, ['health', '{{pulse}}', 'Health'], ['gen', '{{bolt}}', 'Generator'], ['qr', '{{qr}}', 'QR tools'], ['beam', '{{beam}}', 'Beam'], ['tm', '{{chip}}', 'Tasks'], null, ['settings', '{{gear}}', 'Settings'], ['help', '{{help}}', 'Help'], ['new', '{{plus}}', 'New item']];
 
 function categoriesModal() {
   const cnt = (k) => store.active().filter((i) => i.type === k).length;
-  modal({ title: 'Categories', wide: true, body: h('div', null, GROUPS.map(([g, keys]) => h('div', { class: 'catgroup' }, h('p', { class: 'lbl', text: g }),
+  modal({ title: 'Categories', wide: true, body: h('div', null, visGroups().map(([g, keys]) => h('div', { class: 'catgroup' }, h('p', { class: 'lbl', text: g }),
     h('div', { class: 'checks cats' }, keys.map((k) => h('button', { class: 'btn', on: { click: () => { closeAllModals(); ctx.go(k); } } }, h('span', { class: 'icn', text: TYPE_META[k].icon }), ' ' + TYPE_META[k].plural + ' · ' + cnt(k))))))), actions: [{ label: 'Close' }] });
 }
 
@@ -385,9 +405,9 @@ function moreSheet() {
   const c = counts();
   const item = (ic, label, fn, n) => h('button', { class: 'btn msheet-item', on: { click: fn } }, ic, h('span', { class: 'grow', text: label }), n !== undefined ? h('span', { class: 'n', text: String(n) }) : null);
   const m = modal({ title: 'Menu', wide: true, body: h('div', { class: 'msheet' },
-    h('p', { class: 'lbl', text: 'Vault' }), h('div', { class: 'mgrid' }, item('{{star}}', 'Favorites', go('fav'), c.fav), item('{{trash}}', 'Trash', go('trash'), c.trash), store.conflictCount() ? item('{{alert}}', 'Needs review', go('conflicts'), store.conflictCount()) : null),
-    h('p', { class: 'lbl', text: 'Tools' }), h('div', { class: 'mgrid' }, TOOLS.map(([id, ic, l]) => item(ic, l, go(id)))),
-    GROUPS.map(([g, keys]) => h('div', null, h('p', { class: 'lbl', text: g }), h('div', { class: 'mgrid' }, keys.map((k) => item(TYPE_META[k].icon, TYPE_META[k].plural, go(k), c[k]))))),
+    h('p', { class: 'lbl', text: 'Vault' }), h('div', { class: 'mgrid' }, hid.nav('fav') ? null : item('{{star}}', 'Favorites', go('fav'), c.fav), hid.nav('trash') ? null : item('{{trash}}', 'Trash', go('trash'), c.trash), store.conflictCount() ? item('{{alert}}', 'Needs review', go('conflicts'), store.conflictCount()) : null),
+    h('p', { class: 'lbl', text: 'Tools' }), h('div', { class: 'mgrid' }, visTools().map(([id, ic, l]) => item(ic, l, go(id)))),
+    visGroups().map(([g, keys]) => h('div', null, h('p', { class: 'lbl', text: g }), h('div', { class: 'mgrid' }, keys.map((k) => item(TYPE_META[k].icon, TYPE_META[k].plural, go(k), c[k]))))),
     h('p', { class: 'lbl', text: 'More' }), h('div', { class: 'mgrid' }, item('{{help}}', 'Help & tour', () => { closeAllModals(); tour.help(); }), item('{{lock}}', 'Lock now', () => { closeAllModals(); lock(false); }))), actions: [{ label: 'Close' }] });
   return m;
 }
@@ -405,13 +425,13 @@ function drawMbar() {
     it('more', '{{menu}}', 'More', inMore && v !== 'home' && v !== 'gen' && v !== 'all', () => moreSheet(), attention));
 }
 
-const viewTitle = (v) => ({ home: 'Home', all: 'All items', fav: 'Favorites', trash: 'Trash', conflicts: 'Needs review', gen: 'Generator', health: 'Vault health', qr: 'QR tools', beam: 'Beam sync', data: 'Import & export', settings: 'Settings' })[v] || (v in TYPE_META ? TYPE_META[v].plural : v.startsWith('tag:') ? '#' + v.slice(4) : '');
+const viewTitle = (v) => ({ home: 'Home', all: 'All items', fav: 'Favorites', trash: 'Trash', conflicts: 'Needs review', gen: 'Generator', health: 'Vault health', qr: 'QR tools', beam: 'Beam sync', data: 'Import & export', tm: 'Task manager', settings: 'Settings' })[v] || (v in TYPE_META ? TYPE_META[v].plural : v.startsWith('tag:') ? '#' + v.slice(4) : '');
 function drawTitle() { if (shell && shell.title) shell.title.textContent = viewTitle(ctx.S.view); document.documentElement.dataset.detail = isVaultView(ctx.S.view) && ctx.S.sel ? '1' : '0'; }
 
 function drawDock() {
   if (!shell || !shell.dock) return;
   const L = curLook(), hl = health(store.items), attention = hl.weak.length + hl.reused.length + hl.expiring.length;
-  const items = DOCK.map((d) => {
+  const items = DOCK.filter((d) => !d || !hid.nav(d[0])).map((d) => {
     if (!d) return h('span', { class: 'dock-sep' });
     const [id, ic, label] = d;
     const on = id === 'cats' ? (ctx.S.view in TYPE_META) : ctx.S.view === id;
@@ -459,15 +479,15 @@ function drawSide() {
   const c = counts(), btn = (id, ic, label, n, dot) => h('button', { class: 'nav' + (ctx.S.view === id ? ' on' : ''), 'aria-current': ctx.S.view === id ? 'page' : null, on: { click: () => ctx.go(id) } }, h('span', { class: 'ic icn', text: ic }), label, dot ? h('span', { class: 'dot', title: 'Needs attention' }) : n !== undefined ? h('span', { class: 'n', text: String(n) }) : null);
   const hl = health(store.items);
   const attention = hl.weak.length + hl.reused.length + hl.expiring.length > 0;
-  clear(shell.side).append(h('h4', { text: 'Vault' }), NAV.map(([id, ic, l]) => btn(id, ic, l, id === 'home' ? undefined : c[id])), store.conflictCount() ? btn('conflicts', '{{alert}}', 'Needs review', store.conflictCount()) : null, h('h4', { text: 'Categories' }), GROUPS.map(([g, keys]) => groupBlock(g, keys, c, btn)),
+  clear(shell.side).append(h('h4', { text: 'Vault' }), visNav().map(([id, ic, l]) => btn(id, ic, l, id === 'home' ? undefined : c[id])), store.conflictCount() ? btn('conflicts', '{{alert}}', 'Needs review', store.conflictCount()) : null, visGroups().length ? [h('h4', { text: 'Categories' }), visGroups().map(([g, keys]) => groupBlock(g, keys, c, btn))] : null,
     store.tags().length ? [h('h4', { text: 'Tags' }), store.tags().map(([t, n]) => btn('tag:' + t, '#', t, n))] : null,
-    h('h4', { text: 'Tools' }), TOOLS.map(([id, ic, l]) => btn(id, ic, l, undefined, id === 'health' && attention)));
+    h('h4', { text: 'Tools' }), visTools().map(([id, ic, l]) => btn(id, ic, l, undefined, id === 'health' && attention)));
 }
 
 function drawMain() {
   ctx.runCleanup();
   const v = ctx.S.view;
-  clear(shell.main).append(isVaultView(v) ? renderVaultView(ctx) : v === 'gen' ? renderGenerator(ctx) : v === 'health' ? renderHealth(ctx) : v === 'home' ? renderHome(ctx) : v === 'qr' ? renderQR(ctx) : v === 'beam' ? renderBeam(ctx) : v === 'data' ? renderData(ctx) : renderSettings(ctx));
+  clear(shell.main).append(isVaultView(v) ? renderVaultView(ctx) : v === 'gen' ? renderGenerator(ctx) : v === 'health' ? renderHealth(ctx) : v === 'home' ? renderHome(ctx) : v === 'tm' ? renderTaskManager(ctx) : v === 'qr' ? renderQR(ctx) : v === 'beam' ? renderBeam(ctx) : v === 'data' ? renderData(ctx) : renderSettings(ctx));
 }
 
 function draw() {

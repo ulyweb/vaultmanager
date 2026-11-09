@@ -94,9 +94,19 @@ export function renderQR(ctx) {
   return page('QR tools', 'Seal secrets into password-protected QR codes (AES-256-GCM). Compatible with QR Seal v2 from ulyOS.', bar, body);
 }
 
+/* A hidden password field with a "confirm" field, a show / copy toggle and a generator. The generated passphrase fills both fields. */
 function passwordRow(label, input, withGen = true) {
-  return h('div', { class: 'field' }, h('label', { text: label }), h('div', { class: 'row' }, h('div', { class: 'grow' }, input),
-    withGen ? h('button', { class: 'btn sm', type: 'button', title: 'Generate a passphrase', on: { click: () => { input.value = generatePassphrase({ words: 5 }); input.dispatchEvent(new Event('input')); } } }, '{{bolt}}') : null), liveMeter(input));
+  input.type = 'password'; input.autocomplete = 'new-password';
+  const conf = h('input', { class: 'inp mono', type: 'password', autocomplete: 'new-password', spellcheck: 'false', 'aria-label': 'Confirm ' + (input.getAttribute('aria-label') || label) });
+  if (input.value) conf.value = input.value;
+  const show = (on) => { input.type = conf.type = on ? 'text' : 'password'; };
+  const eye = h('button', { class: 'btn sm', type: 'button', 'aria-label': 'Show or hide the password', title: 'Show / hide', 'aria-pressed': 'false', on: { click: () => { const on = input.type === 'password'; show(on); eye.setAttribute('aria-pressed', String(on)); } } }, '{{eye}}');
+  const copy = h('button', { class: 'btn sm', type: 'button', 'aria-label': 'Copy the password', title: 'Copy (clears itself)', on: { click: () => copyText(input.value, 'Password copied', 30) } }, '{{copy}}');
+  const gen = withGen ? h('button', { class: 'btn sm', type: 'button', title: 'Generate a passphrase', 'aria-label': 'Generate a passphrase', on: { click: () => { input.value = conf.value = generatePassphrase({ words: 5 }); input.dispatchEvent(new Event('input')); show(true); eye.setAttribute('aria-pressed', 'true'); } } }, '{{bolt}}') : null;
+  const f = h('div', { class: 'field' }, h('label', { text: label }), h('div', { class: 'row' }, h('div', { class: 'grow' }, input), eye, copy, gen),
+    h('label', { class: 'sublbl', text: 'Confirm ' + label.toLowerCase() }), conf, liveMeter(input));
+  f.match = () => input.value === conf.value;
+  return f;
 }
 
 function qrOutputs(canvas, name) {
@@ -111,6 +121,7 @@ function sealTab(ctx) {
   const btn = h('button', { class: 'btn primary', on: { click: async () => {
     err.textContent = ''; clear(out);
     if (!text.value) { err.textContent = 'Type something to seal.'; return; }
+    if (!pwRow.match()) { err.textContent = 'The two passwords do not match.'; return; }
     if (pw.value.length < 8) { err.textContent = 'Use at least 8 characters for the password.'; return; }
     btn.disabled = true; const t0 = performance.now();
     try {
@@ -126,7 +137,8 @@ function sealTab(ctx) {
   const txtStats = h('p', { class: 'hint', 'aria-live': 'polite' });
   const paintTxt = () => { const v = text.value, e = estimate(v); txtStats.textContent = v ? `Secret text: ${[...v].length} characters · ~${Math.round(e.bits)} bits entropy (${e.label})` : ''; };
   text.addEventListener('input', paintTxt);
-  return h('div', { class: 'panel pad' }, field('Secret text', text), txtStats, passwordRow('Password', pw), h('div', { class: 'row' }, btn), err, out);
+  const pwRow = passwordRow('Password', pw);
+  return h('div', { class: 'panel pad' }, field('Secret text', text), txtStats, pwRow, h('div', { class: 'row wrap' }, btn, h('button', { class: 'btn', type: 'button', title: 'Wipe the text, passwords and QR codes from this screen, close opened items and clear the clipboard', on: { click: () => ctx.purgeMemory() } }, '{{trash}} Purge memory')), err, out);
 }
 
 function openTab(ctx) {
@@ -200,8 +212,10 @@ function openTab(ctx) {
 function backupTab(ctx) {
   const pw = h('input', { class: 'inp mono', type: 'text', value: generatePassphrase({ words: 6 }), autocomplete: 'off', spellcheck: 'false', 'aria-label': 'Backup password' });
   const out = h('div'), err = h('p', { class: 'err', role: 'alert' });
+  const bkRow = passwordRow('Backup password', pw);
   const btn = h('button', { class: 'btn primary', on: { click: async () => {
     err.textContent = ''; clear(out);
+    if (!bkRow.match()) { err.textContent = 'The two passwords do not match.'; return; }
     if (pw.value.length < 10) { err.textContent = 'Use at least 10 characters for the backup password.'; return; }
     btn.disabled = true;
     try {
@@ -217,7 +231,36 @@ function backupTab(ctx) {
     } catch (e) { err.textContent = e.message; }
     btn.disabled = false;
   } } }, '{{qr}} Create QR backup');
-  return h('div', { class: 'panel pad' }, h('p', { class: 'note warn', text: 'A paper QR backup (without attachments) lets you rebuild your vault with nothing but a camera. Whoever holds the codes AND the backup password can read everything — store them apart.' }), passwordRow('Backup password', pw), h('div', { class: 'row' }, btn), err, out);
+  return h('div', { class: 'panel pad' }, h('p', { class: 'note warn', text: 'A paper QR backup (without attachments) lets you rebuild your vault with nothing but a camera. Whoever holds the codes AND the backup password can read everything — store them apart.' }), bkRow, h('div', { class: 'row' }, btn), err, out);
+}
+
+
+/* ---------- "Which export do I need?" — shown on Import & export, in Settings and in Help ---------- */
+export const BACKUP_KINDS = [
+  { k: 'profile', icon: '{{contact}}', name: 'Whole profile', ext: '.vmprofile', tag: 'Everything', cls: 'accent',
+    has: 'Profile name & picture, every item, attachments, settings & look, audit trail. Your sync token and passkeys are left out on purpose.',
+    use: 'A complete safety copy, or moving to a new device or browser. Restored as a NEW profile — also possible on the very first sign-in screen (“Import a profile backup”).',
+    where: 'Settings → General → Export whole profile' },
+  { k: 'vault', icon: '{{vault}}', name: 'Database backup', ext: '.vmvault', tag: 'Passwords only', cls: '',
+    has: 'Items and (optionally) their attachments. No profile, no settings, no look, no audit trail.',
+    use: 'Copying your passwords into a vault that already exists. Restoring merges them in; nothing is deleted.',
+    where: 'Tools → Import & export → Encrypted backup file' },
+  { k: 'sync', icon: '{{sync}}', name: 'Sync file', ext: '.vmsync', tag: 'Two devices', cls: '',
+    has: 'Items, deletions and optional attachments, encrypted with your sync passphrase.',
+    use: 'Keeping two devices in step by hand. Importing merges field by field and never wipes anything.',
+    where: 'Settings → Sync' },
+  { k: 'csv', icon: '{{alert}}', name: 'Plain CSV', ext: '.csv', tag: 'Not encrypted', cls: 'bad',
+    has: 'Every password in readable text.',
+    use: 'Only for moving to another password manager. Delete the file straight afterwards.',
+    where: 'Tools → Import & export → Export plaintext CSV' },
+];
+export function backupGuide({ compact = false } = {}) {
+  return h('div', { class: 'bguide' + (compact ? ' compact' : '') },
+    BACKUP_KINDS.map((b) => h('div', { class: 'bcard', 'data-k': b.k },
+      h('div', { class: 'bhead' }, h('span', { class: 'bico', text: b.icon }), h('b', { text: b.name }), h('code', { text: b.ext }), h('span', { class: 'chip ' + b.cls, text: b.tag })),
+      h('p', null, h('b', { text: 'Contains: ' }), b.has),
+      h('p', null, h('b', { text: 'Use it for: ' }), b.use),
+      compact ? null : h('p', { class: 'hint', text: 'Where: ' + b.where }))));
 }
 
 /* ======================= Import / export ======================= */
@@ -238,6 +281,7 @@ export function renderData(ctx) {
 
   const bkPw = h('input', { class: 'inp mono', type: 'text', value: generatePassphrase({ words: 5 }), autocomplete: 'off', spellcheck: 'false', 'aria-label': 'Backup password' });
   const bkErr = h('p', { class: 'err', role: 'alert' });
+  const bkPwRow = passwordRow('Backup password', bkPw);
   const bkAtt = h('input', { type: 'checkbox', checked: true });
   const restoreOut = h('div'), rPw = h('input', { class: 'inp mono', type: 'password', autocomplete: 'off', 'aria-label': 'Backup password to open' }), rErr = h('p', { class: 'err', role: 'alert' });
   let restoreText = '';
@@ -245,13 +289,18 @@ export function renderData(ctx) {
   const rLabel = h('span', { class: 'hint', text: 'No file chosen' });
 
   return page('Import & export', 'Move data in and out. Encrypted backups are the safe way; plaintext files are for migrating only.',
+    h('div', { class: 'panel pad' }, h('h3', { text: 'Which one do I need?' }),
+      h('p', { class: 'hint', text: 'Settings → General and this page offer different things. In short: the WHOLE PROFILE is the complete copy (profile + passwords + settings); the DATABASE BACKUP is just the passwords.' }), backupGuide()),
+    h('div', { class: 'panel pad' }, h('h3', { text: 'Whole profile (profile + passwords + settings)' }),
+      h('p', { class: 'hint', text: 'One encrypted .vmprofile file with everything. Import it on any device — even on the sign-in screen of a brand-new install — to get this profile back as a new profile.' }),
+      h('div', { class: 'row wrap' }, h('button', { class: 'btn primary', on: { click: () => ctx.exportProfile() } }, '{{download}} Export whole profile…'), h('button', { class: 'btn', on: { click: () => ctx.importProfile(async (p) => { toast('Imported “' + p.name + '”. Lock and pick it on the sign-in screen.'); }) } }, '{{importfile}} Import a profile…'))),
     h('div', { class: 'panel pad' }, h('h3', { text: 'Import from another manager' }),
       h('p', { class: 'hint', text: 'Works with Bitwarden (JSON or CSV), KeePassXC / KeePass CSV, 1Password / LastPass CSV, and Chrome / Edge / Firefox password exports.' }),
       h('div', { class: 'row wrap' }, h('button', { class: 'btn', on: { click: () => fileIn.click() } }, '{{folder}} Choose file'), fileIn, h('button', { class: 'btn', on: { click: () => paste.value && runImport(paste.value, '') } }, 'Read pasted text')), paste, importErr, importOut,
       h('p', { class: 'note warn', text: 'Those exports are readable by anyone. Delete the file (and empty the recycle bin) as soon as the import has finished.' })),
-    h('div', { class: 'panel pad' }, h('h3', { text: 'Encrypted backup file' }),
+    h('div', { class: 'panel pad' }, h('h3', { text: 'Database backup — passwords only (.vmvault)' }),
       h('p', { class: 'hint', text: 'AES-256-GCM, key from your backup password (PBKDF2-SHA256, 600,000 rounds). The file is useless without that password. Tip: for syncing between devices, see Settings → Sync.' }),
-      passwordRow('Backup password', bkPw), h('label', { class: 'chk' }, bkAtt, 'Include attachments'), h('div', { class: 'row wrap' }, h('button', { class: 'btn primary', on: { click: async () => { bkErr.textContent = ''; if (bkPw.value.length < 10) { bkErr.textContent = 'Use at least 10 characters.'; return; } try { download(`vaultmanager-${fmtDate(Date.now())}.vmvault`, await store.exportEncrypted(bkPw.value, { attachments: bkAtt.checked }), 'text/plain'); toast('Backup saved — remember the password!'); } catch (e) { bkErr.textContent = e.message; } } } }, '{{download}} Download encrypted backup')), bkErr,
+      bkPwRow, h('label', { class: 'chk' }, bkAtt, 'Include attachments'), h('div', { class: 'row wrap' }, h('button', { class: 'btn primary', on: { click: async () => { bkErr.textContent = ''; if (!bkPwRow.match()) { bkErr.textContent = 'The two passwords do not match.'; return; } if (bkPw.value.length < 10) { bkErr.textContent = 'Use at least 10 characters.'; return; } try { download(`vaultmanager-${fmtDate(Date.now())}.vmvault`, await store.exportEncrypted(bkPw.value, { attachments: bkAtt.checked }), 'text/plain'); toast('Backup saved — remember the password!'); } catch (e) { bkErr.textContent = e.message; } } } }, '{{download}} Download encrypted backup')), bkErr,
       h('hr', { class: 'sep' }), h('h3', { text: 'Restore from backup' }),
       h('div', { class: 'row wrap' }, h('button', { class: 'btn', on: { click: () => rFile.click() } }, '{{folder}} Choose .vmvault file'), rFile, rLabel), field('Backup password', rPw),
       h('div', { class: 'row' }, h('button', { class: 'btn primary', on: { click: async () => { rErr.textContent = ''; clear(restoreOut); if (!restoreText) { rErr.textContent = 'Choose a backup file first.'; return; } try { const { items, attachments } = await decryptBackup(restoreText, rPw.value); const r = store.mergeItems(items, attachments); await r.save; toast(`Restored ${r.added}, skipped ${r.skipped} duplicates`); ctx.refresh(); } catch (e) { rErr.textContent = e.message; } } } }, '{{importfile}} Restore')), rErr, restoreOut),

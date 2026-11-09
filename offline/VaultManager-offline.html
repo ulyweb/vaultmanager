@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VaultManager v0.14.0 — single-file offline build. Verify with the .sha256 file next to it. -->
+<!-- VaultManager v0.15.0 — single-file offline build. Verify with the .sha256 file next to it. -->
 <html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
@@ -11,7 +11,7 @@
 <meta name="application-name" content="VaultManager">
 <meta name="format-detection" content="telephone=no">
 <meta name="referrer" content="no-referrer">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-5B8iRqpp3p1pBraRUVVkwxRcWvgfP5rWVq0i+b3hrtE=' blob:; style-src 'sha256-HJb6DZ8dy/oMJlFmZ35WLbypV6nqL0SiJRQKzcqy/xo='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-WZS/PJvh4+f99SeHk8fBlcsXz173ZdlWxbXxEBjs9b0=' blob:; style-src 'sha256-fV7bgAUWYR9TkrhgDViUvRe4nBUIb07bdUxzIpkoF00='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
 <title>VaultManager | Zero-Knowledge Password Manager</title>
 <meta name="description" content="VaultManager: an offline-first, zero-knowledge, end-to-end encrypted password manager with a strong password generator, TOTP codes and QR-sealed sharing and backup. Runs entirely in your browser.">
 <meta name="theme-color" content="#05080d">
@@ -697,6 +697,25 @@ html[data-icons=vivid][data-fxanim=on] .ico[data-n=star] svg, html[data-icons=vi
 .vwrap { min-width: 0; } .livemeter { margin-top: 6px; } .livemeter:empty { display: none; }
 .lockbox { margin: 10px 0; } .lockbox p { margin: 4px 0 8px; } .lockfields { display: grid; gap: 6px; }
 .note.ok { border-color: color-mix(in srgb, #34d399 55%, var(--line)); }
+
+/* ---- backup guide ---- */
+.bguide { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); margin-top: 8px; }
+.bcard { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; background: var(--raise, transparent); }
+.bcard p { margin: 4px 0; font-size: 12.5px; } .bcard .hint { font-size: 11px; }
+.bhead { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; } .bhead code { color: var(--muted); font-size: 11px; } .bhead .chip { margin-left: auto; }
+.bico { display: inline-grid; place-items: center; width: 1.4em; }
+.sublbl { display: block; margin: 8px 0 2px; font-size: 12px; color: var(--muted); }
+
+/* ---- task manager & show/hide ---- */
+.tmtable { width: 100%; border-collapse: collapse; font-size: 13px; } .tmtable th { text-align: left; color: var(--muted); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; padding: 4px 8px; }
+.tmtable td { padding: 8px; border-top: 1px solid var(--line); vertical-align: middle; } .tmdetail { color: var(--ink-dim); }
+.tmgrid { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); margin-bottom: 12px; }
+.tmcard { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; display: grid; gap: 4px; } .tmcard b { font-size: 20px; font-family: var(--mono); } .tmcard small { color: var(--muted); }
+.tmbar { height: 6px; border-radius: 4px; background: var(--line); overflow: hidden; } .tmbar i { display: block; height: 100%; background: var(--accent); } .tmbar.warn i { background: #fbbf24; }
+@media (max-width: 699px) { .tmtable thead { display: none; } .tmtable tr { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; padding: 8px 0; border-top: 1px solid var(--line); } .tmtable td { border: 0; padding: 0; } .tmdetail { grid-column: 1 / -1; font-size: 12px; } }
+.setrow.vis { padding: 4px 0; }
+.tm .kv span, .tm .kv b, .tmcard b, .tmcard small { min-width: 0; overflow-wrap: anywhere; }
+@media (max-width: 699px) { .tm .kv { grid-template-columns: 1fr; gap: 2px 0; } .tm .kv b { margin-bottom: 8px; } .tmgrid { grid-template-columns: 1fr 1fr; } .tmcard b { font-size: 17px; } }
 </style>
 </head>
 <body>
@@ -757,6 +776,7 @@ html[data-icons=vivid][data-fxanim=on] .ico[data-n=star] svg, html[data-icons=vi
     unlock: ['<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 017.5-2M12 15v2"/>', "\u{1F513}"],
     shieldlock: ['<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><rect x="9" y="11" width="6" height="5" rx="1"/><path d="M10 11V9.5a2 2 0 014 0V11"/>', "\u{1F510}"],
     shield: ['<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/>', "\u{1F6E1}"],
+    chip: ['<rect x="6" y="6" width="12" height="12" rx="2"/><rect x="9.5" y="9.5" width="5" height="5"/><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3"/>', "\u{1F9E0}"],
     eye: ['<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>', "\u{1F441}"],
     copy: ['<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 012-2h9"/>', "\u29C9"],
     dup: ['<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M4 16V6a2 2 0 012-2h10M14 11v6M11 14h6"/>', "\u2398"],
@@ -1078,6 +1098,13 @@ html[data-icons=vivid][data-fxanim=on] .ico[data-n=star] svg, html[data-icons=vi
       toast((label || "Copied") + " \u2014 clipboard clears in " + clearSecs + "s");
     } else toast(label || "Copied");
     return true;
+  }
+  function clearClipboardNow() {
+    clearTimeout(clipTimer);
+    try {
+      navigator.clipboard.writeText("");
+    } catch {
+    }
   }
   function download(filename, data, type = "application/octet-stream") {
     const T2 = window.__TAURI__;
@@ -1693,7 +1720,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   }
 
   // js/version.js
-  var APP_VERSION = "0.14.0";
+  var APP_VERSION = "0.15.0";
   var APP_NAME = "VaultManager";
   var REPO_URL = "https://github.com/ulyweb/vaultmanager";
   var FORMATS = [
@@ -1707,6 +1734,13 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     ["Attachments at rest", "AES-256-GCM per file, bound to vault + file id"]
   ];
   var CHANGELOG = [
+    { v: "0.15.0", date: "2026-11-09", notes: [
+      "Import & export explained: a \u201CWhich one do I need?\u201D guide on Tools \u2192 Import & export and in Settings \u2192 General. Whole profile (.vmprofile) = profile + passwords + attachments + settings; Database backup (.vmvault) = passwords only. Whole-profile buttons now also live on the Tools page. Also in the guided tour and Help tips.",
+      "QR tools: passwords are hidden and must be typed twice (with show / copy / generate), also for the QR backup and the Tools backup file. New Purge memory button wipes fields, QR codes, opened locked items and the clipboard.",
+      "Task manager (Tools): processes, memory, frame rate, storage and device details, live.",
+      "Hide tools and categories from the side bar, dock and menu: Settings \u2192 Dock & menu bar \u2192 Show or hide.",
+      "Contact admin: set an administrator address (js/config.js or per device in Settings \u2192 About); it appears on the sign-in screen and, at profile creation, offers to email the admin the profile name (opens your mail app \u2014 never sends passwords)."
+    ] },
     { v: "0.14.0", date: "2026-11-09", notes: [
       "The item passcode lock now covers attached files: file contents are sealed under a random key kept inside the passcode seal, and their names and types are hidden until you unlock the item.",
       "Items locked with 0.13 get their existing files sealed the next time you open them.",
@@ -1811,6 +1845,8 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   var LOOK_DEFAULTS = {
     // appearance
     accent: "#2fe6d0",
+    hiddenCats: [],
+    hiddenNav: [],
     bg: "default",
     wallpaper: "forest",
     wallImage: "",
@@ -1852,12 +1888,15 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   var num = (v, lo, hi, d) => Number.isFinite(+v) ? Math.min(hi, Math.max(lo, +v)) : d;
   var oneOf = (v, list, d) => list.includes(v) ? v : d;
   var bool = (v, d) => typeof v === "boolean" ? v : d;
+  var HIDEABLE = ["fav", "trash", "health", "gen", "qr", "beam", "data", "tm", "cats"];
   function normalizeLook(o = {}, wallIds = null) {
     const D2 = LOOK_DEFAULTS;
     const widgets = [];
     for (const w of Array.isArray(o.widgets) ? o.widgets : []) if (w && WIDGET_DEFS.some((d) => d.id === w.id) && !widgets.some((x) => x.id === w.id)) widgets.push({ id: w.id, on: bool(w.on, true), size: oneOf(w.size, ["s", "m", "l"], WIDGET_DEFS.find((d) => d.id === w.id).size) });
     for (const d of WIDGET_DEFS) if (!widgets.some((x) => x.id === d.id)) widgets.push({ id: d.id, on: true, size: d.size });
     return {
+      hiddenCats: Array.isArray(o.hiddenCats) ? [...new Set(o.hiddenCats.filter((k) => typeof k === "string" && /^[a-z0-9]{2,20}$/.test(k)))].slice(0, 60) : [],
+      hiddenNav: Array.isArray(o.hiddenNav) ? [...new Set(o.hiddenNav.filter((k) => HIDEABLE.includes(k)))] : [],
       accent: /^#[0-9a-fA-F]{6}$/.test(o.accent) ? o.accent.toLowerCase() : D2.accent,
       bg: oneOf(o.bg, ["default", "plain", "wallpaper"], D2.bg),
       wallpaper: typeof o.wallpaper === "string" && /^([a-z0-9]{2,20}|(photo|grad):[a-z0-9]{2,20})$/.test(o.wallpaper) && (!wallIds || wallIds.includes(o.wallpaper) || /^(photo|grad|custom|remote)/.test(o.wallpaper)) ? o.wallpaper : D2.wallpaper,
@@ -3715,12 +3754,12 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   }
   function meter(pw) {
     const e = estimate(pw);
-    const bar = h("i", { class: "s" + e.score });
-    bar.style.width = (pw ? Math.max(6, (e.score + 1) * 20) : 0) + "%";
+    const bar2 = h("i", { class: "s" + e.score });
+    bar2.style.width = (pw ? Math.max(6, (e.score + 1) * 20) : 0) + "%";
     return { el: h(
       "div",
       null,
-      h("div", { class: "meter", role: "img", "aria-label": "Password strength: " + e.label }, bar),
+      h("div", { class: "meter", role: "img", "aria-label": "Password strength: " + e.label }, bar2),
       h("div", { class: "meter-label" }, h("span", { text: pw ? e.label : "" }), h("span", { text: pw ? `${[...pw].length} characters \xB7 ~${Math.round(e.bits)} bits entropy \xB7 ${crackTime(e.bits)}` : "" }))
     ), est: e };
   }
@@ -3864,7 +3903,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   }
   function totpField(ctx2, it) {
     if (!it.totp) return null;
-    const code = h("span", { class: "totp-code", text: "------" }), bar = h("i"), wrap2 = h("div", null, code, h("div", { class: "totp-bar" }, bar));
+    const code = h("span", { class: "totp-code", text: "------" }), bar2 = h("i"), wrap2 = h("div", null, code, h("div", { class: "totp-bar" }, bar2));
     let cfg;
     try {
       cfg = parseTotp(it.totp);
@@ -3876,7 +3915,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       const r = await totpNow(cfg);
       last = r.code;
       code.textContent = r.code.slice(0, r.code.length / 2) + " " + r.code.slice(r.code.length / 2);
-      bar.style.width = r.remaining / r.period * 100 + "%";
+      bar2.style.width = r.remaining / r.period * 100 + "%";
     };
     tick();
     const t = setInterval(tick, 1e3);
@@ -4857,23 +4896,44 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     const show = (k) => {
       ctx2.S.qrTab = k;
       ctx2.runCleanup();
-      Array.from(bar.children).forEach((b, i) => b.classList.toggle("on", tabs[i][0] === k));
+      Array.from(bar2.children).forEach((b, i) => b.classList.toggle("on", tabs[i][0] === k));
       clear(body).append(k === "seal" ? sealTab(ctx2) : k === "open" ? openTab(ctx2) : backupTab(ctx2));
     };
-    const bar = h("div", { class: "tabs", role: "tablist" }, tabs.map(([k, l]) => h("button", { role: "tab", on: { click: () => show(k) } }, l)));
+    const bar2 = h("div", { class: "tabs", role: "tablist" }, tabs.map(([k, l]) => h("button", { role: "tab", on: { click: () => show(k) } }, l)));
     show(ctx2.S.qrTab || "seal");
-    return page("QR tools", "Seal secrets into password-protected QR codes (AES-256-GCM). Compatible with QR Seal v2 from ulyOS.", bar, body);
+    return page("QR tools", "Seal secrets into password-protected QR codes (AES-256-GCM). Compatible with QR Seal v2 from ulyOS.", bar2, body);
   }
   function passwordRow(label, input, withGen = true) {
-    return h("div", { class: "field" }, h("label", { text: label }), h(
+    input.type = "password";
+    input.autocomplete = "new-password";
+    const conf = h("input", { class: "inp mono", type: "password", autocomplete: "new-password", spellcheck: "false", "aria-label": "Confirm " + (input.getAttribute("aria-label") || label) });
+    if (input.value) conf.value = input.value;
+    const show = (on) => {
+      input.type = conf.type = on ? "text" : "password";
+    };
+    const eye = h("button", { class: "btn sm", type: "button", "aria-label": "Show or hide the password", title: "Show / hide", "aria-pressed": "false", on: { click: () => {
+      const on = input.type === "password";
+      show(on);
+      eye.setAttribute("aria-pressed", String(on));
+    } } }, "{{eye}}");
+    const copy = h("button", { class: "btn sm", type: "button", "aria-label": "Copy the password", title: "Copy (clears itself)", on: { click: () => copyText(input.value, "Password copied", 30) } }, "{{copy}}");
+    const gen = withGen ? h("button", { class: "btn sm", type: "button", title: "Generate a passphrase", "aria-label": "Generate a passphrase", on: { click: () => {
+      input.value = conf.value = generatePassphrase({ words: 5 });
+      input.dispatchEvent(new Event("input"));
+      show(true);
+      eye.setAttribute("aria-pressed", "true");
+    } } }, "{{bolt}}") : null;
+    const f = h(
       "div",
-      { class: "row" },
-      h("div", { class: "grow" }, input),
-      withGen ? h("button", { class: "btn sm", type: "button", title: "Generate a passphrase", on: { click: () => {
-        input.value = generatePassphrase({ words: 5 });
-        input.dispatchEvent(new Event("input"));
-      } } }, "{{bolt}}") : null
-    ), liveMeter(input));
+      { class: "field" },
+      h("label", { text: label }),
+      h("div", { class: "row" }, h("div", { class: "grow" }, input), eye, copy, gen),
+      h("label", { class: "sublbl", text: "Confirm " + label.toLowerCase() }),
+      conf,
+      liveMeter(input)
+    );
+    f.match = () => input.value === conf.value;
+    return f;
   }
   function qrOutputs(canvas, name) {
     return h(
@@ -4900,6 +4960,10 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
         err.textContent = "Type something to seal.";
         return;
       }
+      if (!pwRow.match()) {
+        err.textContent = "The two passwords do not match.";
+        return;
+      }
       if (pw.value.length < 8) {
         err.textContent = "Use at least 8 characters for the password.";
         return;
@@ -4923,7 +4987,8 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       txtStats.textContent = v ? `Secret text: ${[...v].length} characters \xB7 ~${Math.round(e.bits)} bits entropy (${e.label})` : "";
     };
     text.addEventListener("input", paintTxt);
-    return h("div", { class: "panel pad" }, field2("Secret text", text), txtStats, passwordRow("Password", pw), h("div", { class: "row" }, btn), err, out);
+    const pwRow = passwordRow("Password", pw);
+    return h("div", { class: "panel pad" }, field2("Secret text", text), txtStats, pwRow, h("div", { class: "row wrap" }, btn, h("button", { class: "btn", type: "button", title: "Wipe the text, passwords and QR codes from this screen, close opened items and clear the clipboard", on: { click: () => ctx2.purgeMemory() } }, "{{trash}} Purge memory")), err, out);
   }
   function openTab(ctx2) {
     const payload = h("textarea", { class: "ta", rows: "4", placeholder: "Scan a QR, choose an image, or paste the sealed text (base64 or VMX1:\u2026)", "aria-label": "Sealed payload", spellcheck: "false" });
@@ -5068,9 +5133,14 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   function backupTab(ctx2) {
     const pw = h("input", { class: "inp mono", type: "text", value: generatePassphrase({ words: 6 }), autocomplete: "off", spellcheck: "false", "aria-label": "Backup password" });
     const out = h("div"), err = h("p", { class: "err", role: "alert" });
+    const bkRow = passwordRow("Backup password", pw);
     const btn = h("button", { class: "btn primary", on: { click: async () => {
       err.textContent = "";
       clear(out);
+      if (!bkRow.match()) {
+        err.textContent = "The two passwords do not match.";
+        return;
+      }
       if (pw.value.length < 10) {
         err.textContent = "Use at least 10 characters for the backup password.";
         return;
@@ -5109,7 +5179,67 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       }
       btn.disabled = false;
     } } }, "{{qr}} Create QR backup");
-    return h("div", { class: "panel pad" }, h("p", { class: "note warn", text: "A paper QR backup (without attachments) lets you rebuild your vault with nothing but a camera. Whoever holds the codes AND the backup password can read everything \u2014 store them apart." }), passwordRow("Backup password", pw), h("div", { class: "row" }, btn), err, out);
+    return h("div", { class: "panel pad" }, h("p", { class: "note warn", text: "A paper QR backup (without attachments) lets you rebuild your vault with nothing but a camera. Whoever holds the codes AND the backup password can read everything \u2014 store them apart." }), bkRow, h("div", { class: "row" }, btn), err, out);
+  }
+  var BACKUP_KINDS = [
+    {
+      k: "profile",
+      icon: "{{contact}}",
+      name: "Whole profile",
+      ext: ".vmprofile",
+      tag: "Everything",
+      cls: "accent",
+      has: "Profile name & picture, every item, attachments, settings & look, audit trail. Your sync token and passkeys are left out on purpose.",
+      use: "A complete safety copy, or moving to a new device or browser. Restored as a NEW profile \u2014 also possible on the very first sign-in screen (\u201CImport a profile backup\u201D).",
+      where: "Settings \u2192 General \u2192 Export whole profile"
+    },
+    {
+      k: "vault",
+      icon: "{{vault}}",
+      name: "Database backup",
+      ext: ".vmvault",
+      tag: "Passwords only",
+      cls: "",
+      has: "Items and (optionally) their attachments. No profile, no settings, no look, no audit trail.",
+      use: "Copying your passwords into a vault that already exists. Restoring merges them in; nothing is deleted.",
+      where: "Tools \u2192 Import & export \u2192 Encrypted backup file"
+    },
+    {
+      k: "sync",
+      icon: "{{sync}}",
+      name: "Sync file",
+      ext: ".vmsync",
+      tag: "Two devices",
+      cls: "",
+      has: "Items, deletions and optional attachments, encrypted with your sync passphrase.",
+      use: "Keeping two devices in step by hand. Importing merges field by field and never wipes anything.",
+      where: "Settings \u2192 Sync"
+    },
+    {
+      k: "csv",
+      icon: "{{alert}}",
+      name: "Plain CSV",
+      ext: ".csv",
+      tag: "Not encrypted",
+      cls: "bad",
+      has: "Every password in readable text.",
+      use: "Only for moving to another password manager. Delete the file straight afterwards.",
+      where: "Tools \u2192 Import & export \u2192 Export plaintext CSV"
+    }
+  ];
+  function backupGuide({ compact = false } = {}) {
+    return h(
+      "div",
+      { class: "bguide" + (compact ? " compact" : "") },
+      BACKUP_KINDS.map((b) => h(
+        "div",
+        { class: "bcard", "data-k": b.k },
+        h("div", { class: "bhead" }, h("span", { class: "bico", text: b.icon }), h("b", { text: b.name }), h("code", { text: b.ext }), h("span", { class: "chip " + b.cls, text: b.tag })),
+        h("p", null, h("b", { text: "Contains: " }), b.has),
+        h("p", null, h("b", { text: "Use it for: " }), b.use),
+        compact ? null : h("p", { class: "hint", text: "Where: " + b.where })
+      ))
+    );
   }
   function renderData(ctx2) {
     const { store: store2 } = ctx2;
@@ -5142,6 +5272,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     } } });
     const bkPw = h("input", { class: "inp mono", type: "text", value: generatePassphrase({ words: 5 }), autocomplete: "off", spellcheck: "false", "aria-label": "Backup password" });
     const bkErr = h("p", { class: "err", role: "alert" });
+    const bkPwRow = passwordRow("Backup password", bkPw);
     const bkAtt = h("input", { type: "checkbox", checked: true });
     const restoreOut = h("div"), rPw = h("input", { class: "inp mono", type: "password", autocomplete: "off", "aria-label": "Backup password to open" }), rErr = h("p", { class: "err", role: "alert" });
     let restoreText = "";
@@ -5160,6 +5291,22 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       h(
         "div",
         { class: "panel pad" },
+        h("h3", { text: "Which one do I need?" }),
+        h("p", { class: "hint", text: "Settings \u2192 General and this page offer different things. In short: the WHOLE PROFILE is the complete copy (profile + passwords + settings); the DATABASE BACKUP is just the passwords." }),
+        backupGuide()
+      ),
+      h(
+        "div",
+        { class: "panel pad" },
+        h("h3", { text: "Whole profile (profile + passwords + settings)" }),
+        h("p", { class: "hint", text: "One encrypted .vmprofile file with everything. Import it on any device \u2014 even on the sign-in screen of a brand-new install \u2014 to get this profile back as a new profile." }),
+        h("div", { class: "row wrap" }, h("button", { class: "btn primary", on: { click: () => ctx2.exportProfile() } }, "{{download}} Export whole profile\u2026"), h("button", { class: "btn", on: { click: () => ctx2.importProfile(async (p) => {
+          toast("Imported \u201C" + p.name + "\u201D. Lock and pick it on the sign-in screen.");
+        }) } }, "{{importfile}} Import a profile\u2026"))
+      ),
+      h(
+        "div",
+        { class: "panel pad" },
         h("h3", { text: "Import from another manager" }),
         h("p", { class: "hint", text: "Works with Bitwarden (JSON or CSV), KeePassXC / KeePass CSV, 1Password / LastPass CSV, and Chrome / Edge / Firefox password exports." }),
         h("div", { class: "row wrap" }, h("button", { class: "btn", on: { click: () => fileIn.click() } }, "{{folder}} Choose file"), fileIn, h("button", { class: "btn", on: { click: () => paste.value && runImport(paste.value, "") } }, "Read pasted text")),
@@ -5171,12 +5318,16 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       h(
         "div",
         { class: "panel pad" },
-        h("h3", { text: "Encrypted backup file" }),
+        h("h3", { text: "Database backup \u2014 passwords only (.vmvault)" }),
         h("p", { class: "hint", text: "AES-256-GCM, key from your backup password (PBKDF2-SHA256, 600,000 rounds). The file is useless without that password. Tip: for syncing between devices, see Settings \u2192 Sync." }),
-        passwordRow("Backup password", bkPw),
+        bkPwRow,
         h("label", { class: "chk" }, bkAtt, "Include attachments"),
         h("div", { class: "row wrap" }, h("button", { class: "btn primary", on: { click: async () => {
           bkErr.textContent = "";
+          if (!bkPwRow.match()) {
+            bkErr.textContent = "The two passwords do not match.";
+            return;
+          }
           if (bkPw.value.length < 10) {
             bkErr.textContent = "Use at least 10 characters.";
             return;
@@ -5229,17 +5380,202 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     );
   }
   function selfTest() {
-    const list = h("div"), bar = h("div", { class: "progress" }, h("i"));
+    const list = h("div"), bar2 = h("div", { class: "progress" }, h("i"));
     const summary = h("p", { class: "hint", text: "Running\u2026" });
-    modal({ title: "Crypto self-test", sub: "Known-answer tests run in your own browser", body: h("div", null, bar, summary, list), actions: [{ label: "Close" }] });
+    modal({ title: "Crypto self-test", sub: "Known-answer tests run in your own browser", body: h("div", null, bar2, summary, list), actions: [{ label: "Close" }] });
     runSelfTest((p, name, ok) => {
-      bar.firstChild.style.width = p * 100 + "%";
+      bar2.firstChild.style.width = p * 100 + "%";
       list.append(h("div", { class: "hl" }, h("span", { class: "chip " + (ok ? "accent" : "bad"), text: ok ? "PASS" : "FAIL" }), h("div", { class: "t", text: name })));
     }).then((r) => {
       const bad = r.filter((x) => !x.ok).length;
       summary.textContent = bad ? `${bad} test(s) FAILED \u2014 do not rely on this browser for encryption.` : `All ${r.length} tests passed. ${available() ? "" : ""}`;
       if (bad) summary.className = "err";
     });
+  }
+
+  // js/taskman.js
+  var fmtB = (n) => n >= 1073741824 ? (n / 1073741824).toFixed(2) + " GB" : n >= 1048576 ? (n / 1048576).toFixed(1) + " MB" : n >= 1024 ? (n / 1024).toFixed(1) + " KB" : Math.round(n) + " B";
+  var fmtDur = (ms) => {
+    const s = Math.max(0, Math.floor(ms / 1e3)), m = Math.floor(s / 60), hr = Math.floor(m / 60);
+    return hr ? `${hr}h ${m % 60}m` : m ? `${m}m ${s % 60}s` : `${s}s`;
+  };
+  var bar = (frac, cls = "") => {
+    const i = h("i");
+    i.style.width = Math.round(Math.min(1, Math.max(0, frac)) * 100) + "%";
+    return h("div", { class: "tmbar " + cls }, i);
+  };
+  function renderTaskManager(ctx2) {
+    const { store: store2 } = ctx2;
+    const tabs = [["proc", "Processes"], ["perf", "Performance"], ["disk", "Storage"], ["sys", "This device"]];
+    let tab = ctx2.S.tmTab || "proc", fps = 0, async = {}, timer = null;
+    const body = h("div", { class: "tm" }), bar0 = h("div", { class: "tabs", role: "tablist" }, tabs.map(([k, l]) => h("button", { role: "tab", "aria-selected": String(k === tab), class: k === tab ? "on" : "", on: { click: () => {
+      tab = k;
+      ctx2.S.tmTab = k;
+      paint();
+    } } }, l)));
+    let frames = 0, last = performance.now(), raf = 0;
+    const loop = (t) => {
+      frames++;
+      if (t - last >= 1e3) {
+        fps = Math.round(frames * 1e3 / (t - last));
+        frames = 0;
+        last = t;
+      }
+      raf = requestAnimationFrame(loop);
+    };
+    raf = requestAnimationFrame(loop);
+    const gather = async () => {
+      const o = {};
+      try {
+        if (navigator.storage && navigator.storage.estimate) o.est = await navigator.storage.estimate();
+      } catch {
+      }
+      try {
+        if (navigator.storage && navigator.storage.persisted) o.persisted = await navigator.storage.persisted();
+      } catch {
+      }
+      try {
+        o.att = await store2.attachmentStats();
+      } catch {
+        o.att = { count: 0, bytes: 0 };
+      }
+      try {
+        if (navigator.getBattery) {
+          const b = await navigator.getBattery();
+          o.battery = { level: b.level, charging: b.charging };
+        }
+      } catch {
+      }
+      try {
+        if ("serviceWorker" in navigator) {
+          const r = await navigator.serviceWorker.getRegistration();
+          o.sw = r ? navigator.serviceWorker.controller ? "active \u2014 controlling this page" : "registered" : "not registered";
+        } else o.sw = "unsupported";
+      } catch {
+        o.sw = "unknown";
+      }
+      async = o;
+    };
+    const row2 = (name, status, detail, action) => h("tr", null, h("td", null, h("b", { text: name })), h("td", null, h("span", { class: "chip " + (status === "running" ? "accent" : status === "idle" ? "" : "warn"), text: status })), h("td", { class: "tmdetail", text: detail }), h("td", null, action || ""));
+    const kv = (rows) => h("div", { class: "kv" }, rows.map(([k, v]) => [h("span", { text: k }), h("b", { text: String(v) })]));
+    const procs = () => {
+      const s = store2.settings, open = store2.itemKeys ? store2.itemKeys.size : 0, c = s.sync || {};
+      const lockedItems = store2.items.filter((i) => i.lock).length;
+      const lastAudit = store2.data.audit[0];
+      return h(
+        "div",
+        { class: "panel pad" },
+        h("table", { class: "tmtable" }, h("thead", null, h("tr", null, ["Process", "State", "Details", ""].map((t) => h("th", { text: t })))), h(
+          "tbody",
+          null,
+          row2("Vault session", "running", `${store2.active().length} items in memory, unlocked ${fmtDur(Date.now() - (ctx2.S.since || Date.now()))} ago`, h("button", { class: "btn sm", on: { click: () => ctx2.lock(false) } }, "{{lock}} Lock")),
+          row2("Auto-lock timer", s.autolock ? "running" : "off", s.autolock ? `locks after ${s.autolock} min of inactivity${s.lockOnHide ? " or when the tab is hidden" : ""}` : "never locks by itself"),
+          row2("Clipboard guard", s.clipboard ? "running" : "off", s.clipboard ? `clears copied secrets after ${s.clipboard}s` : "copied secrets stay on the clipboard"),
+          row2("Opened locked items", open ? "running" : "idle", `${open} open of ${lockedItems} passcode-locked (they re-lock after 10 min)`, open ? h("button", { class: "btn sm", on: { click: () => ctx2.purgeMemory() } }, "Close all") : ""),
+          row2("Auto-sync", c.auto ? "running" : "off", c.gistId ? "GitHub gist sync is set up" : "no gist sync set up"),
+          row2("Offline cache (service worker)", /active/.test(async.sw || "") ? "running" : "idle", async.sw || "checking\u2026"),
+          row2("Encrypted attachments", "idle", async.att ? `${async.att.count} file(s), ${fmtB(async.att.bytes)} (each sealed separately)` : "\u2026"),
+          row2("Audit logger", "running", `${store2.data.audit.length} entries${lastAudit ? "; last: " + lastAudit.m.slice(0, 60) : ""}`),
+          row2("Look & effects", "running", `animations ${ctx2.look().animations ? "on" : "off"}, icons \u201C${ctx2.look().iconStyle}\u201D, background \u201C${ctx2.look().bg}\u201D`)
+        )),
+        h(
+          "div",
+          { class: "row wrap" },
+          h("button", { class: "btn primary", title: "Wipe revealed values, opened locked items, QR fields, previews and the clipboard from memory", on: { click: () => ctx2.purgeMemory() } }, "{{trash}} Purge memory"),
+          h("span", { class: "hint", text: "Stored data is never touched \u2014 this only forgets what is held in memory." })
+        )
+      );
+    };
+    const perf = () => {
+      const m = performance.memory, nodes = document.getElementsByTagName("*").length;
+      return h(
+        "div",
+        { class: "panel pad" },
+        h(
+          "div",
+          { class: "tmgrid" },
+          h("div", { class: "tmcard" }, h("small", { text: "JS memory" }), h("b", { text: m ? fmtB(m.usedJSHeapSize) : "n/a" }), m ? bar(m.usedJSHeapSize / m.jsHeapSizeLimit) : h("small", { text: "This browser does not report it" }), m ? h("small", { text: "of " + fmtB(m.jsHeapSizeLimit) + " limit" }) : null),
+          h("div", { class: "tmcard" }, h("small", { text: "Frame rate" }), h("b", { text: fps ? fps + " fps" : "\u2026" }), bar(fps / 60, fps && fps < 24 ? "warn" : "")),
+          h("div", { class: "tmcard" }, h("small", { text: "Screen elements" }), h("b", { text: nodes.toLocaleString("en-US") }), bar(nodes / 6e3, nodes > 5e3 ? "warn" : "")),
+          h("div", { class: "tmcard" }, h("small", { text: "Opened locked items" }), h("b", { text: String(store2.itemKeys ? store2.itemKeys.size : 0) }), h("small", { text: "held in memory only" }))
+        ),
+        kv([
+          ["App", APP_NAME + " " + APP_VERSION],
+          ["Session started", ctx2.S.since ? new Date(ctx2.S.since).toLocaleTimeString() : "\u2014"],
+          ["Network", navigator.onLine ? "online" : "offline (the app works fully offline)"],
+          ["Connection", navigator.connection && navigator.connection.effectiveType + (navigator.connection.saveData ? ", data saver" : "") || "unknown"],
+          ["Battery", async.battery ? Math.round(async.battery.level * 100) + "%" + (async.battery.charging ? " (charging)" : "") : "not reported"]
+        ])
+      );
+    };
+    const disk = () => {
+      let used = 0, keys = 0;
+      try {
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (k && k.startsWith("vaultmanager.")) {
+            keys++;
+            used += (k.length + (localStorage.getItem(k) || "").length) * 2;
+          }
+        }
+      } catch {
+      }
+      const est = async.est;
+      return h(
+        "div",
+        { class: "panel pad" },
+        h(
+          "div",
+          { class: "tmgrid" },
+          h("div", { class: "tmcard" }, h("small", { text: "App storage on this device" }), h("b", { text: est ? fmtB(est.usage) : "n/a" }), est && est.quota ? bar(est.usage / est.quota) : null, est && est.quota ? h("small", { text: "of " + fmtB(est.quota) + " available" }) : null),
+          h("div", { class: "tmcard" }, h("small", { text: "Vault records (all profiles)" }), h("b", { text: fmtB(used) }), h("small", { text: keys + " stored entries, all encrypted" })),
+          h("div", { class: "tmcard" }, h("small", { text: "Attachments" }), h("b", { text: async.att ? fmtB(async.att.bytes) : "\u2026" }), h("small", { text: (async.att ? async.att.count : 0) + " file(s) in this profile" }))
+        ),
+        kv([
+          ["Profiles on this device", ctx2.env.profiles.list().length],
+          ["Items", store2.active().length + " (+ " + store2.trashed().length + " in trash)"],
+          ["Storage kept when the browser is low on space", async.persisted === void 0 ? "unknown" : async.persisted ? "yes (persistent)" : "not guaranteed"],
+          ["Last saved", store2.lastSaved ? new Date(store2.lastSaved).toLocaleTimeString() : "this session: not yet"]
+        ]),
+        h("p", { class: "hint", text: "Everything above is stored encrypted. Export a whole-profile backup regularly (Settings \u2192 General) \u2014 browser storage can be cleared by the browser." })
+      );
+    };
+    const sys = () => kv([
+      ["Platform", navigator.userAgentData && navigator.userAgentData.platform || navigator.platform || "unknown"],
+      ["Browser", (navigator.userAgent.match(/(Edg|Chrome|Firefox|Safari)\/[\d.]+/) || ["unknown"])[0]],
+      ["CPU threads", navigator.hardwareConcurrency || "unknown"],
+      ["Device memory", navigator.deviceMemory ? "\u2265 " + navigator.deviceMemory + " GB" : "not reported"],
+      ["Screen", `${screen.width}\xD7${screen.height} @ ${window.devicePixelRatio}\xD7`],
+      ["Touch", navigator.maxTouchPoints ? navigator.maxTouchPoints + " points" : "no"],
+      ["Secure context", window.isSecureContext ? "yes (WebCrypto available)" : "NO \u2014 encryption unavailable"],
+      ["Running from", location.protocol === "file:" ? "a file (single-file offline copy)" : window.__TAURI__ ? "the native app" : location.origin],
+      ["Language", navigator.language],
+      ["Time zone", Intl.DateTimeFormat().resolvedOptions().timeZone]
+    ]);
+    const paint = () => {
+      Array.from(bar0.children).forEach((b, i) => {
+        b.classList.toggle("on", tabs[i][0] === tab);
+        b.setAttribute("aria-selected", String(tabs[i][0] === tab));
+      });
+      clear(body).append(tab === "proc" ? procs() : tab === "perf" ? perf() : tab === "disk" ? disk() : h("div", { class: "panel pad" }, sys()));
+    };
+    gather().then(paint);
+    timer = setInterval(() => {
+      if (!body.isConnected) return;
+      if (tab === "perf" || tab === "proc") {
+        paint();
+      }
+    }, 1e3);
+    const slow = setInterval(() => {
+      if (body.isConnected) gather();
+    }, 5e3);
+    ctx2.cleanup.push(() => {
+      clearInterval(timer);
+      clearInterval(slow);
+      cancelAnimationFrame(raf);
+    });
+    paint();
+    return page("Task manager", "What VaultManager is holding in memory and on disk, right now. Everything is read on this device only.", bar0, body);
   }
 
   // js/landscapes.js
@@ -5547,16 +5883,16 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
         toast(x.message, "err");
       }
     } } }, "{{check}} Save now");
-    const bar = h("div", { class: "savebar" }, status, h("div", { class: "row" }, undo, now));
+    const bar2 = h("div", { class: "savebar" }, status, h("div", { class: "row" }, undo, now));
     paint();
     const t = setInterval(() => {
-      if (!bar.isConnected) clearInterval(t);
+      if (!bar2.isConnected) clearInterval(t);
       else {
         savedAt = ctx2.store.lastSaved || savedAt;
         paint();
       }
     }, 1500);
-    return bar;
+    return bar2;
   }
   function appearance(ctx2) {
     const { sw, range, seg, select, set, L } = ctls(ctx2);
@@ -5714,6 +6050,49 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       ))
     );
   }
+  var NAV_LABELS = { fav: "Favorites", trash: "Trash", health: "Vault health", gen: "Generator", qr: "QR tools", beam: "Beam sync", data: "Import & export", tm: "Task manager", cats: "Categories (dock button)" };
+  function visibilityPanel(ctx2) {
+    const L = () => ctx2.look();
+    const wrap2 = h("div");
+    const put = (key, id, on) => {
+      const cur = new Set(L()[key]);
+      if (on) cur.delete(id);
+      else cur.add(id);
+      ctx2.setLook({ [key]: [...cur] }, { nav: true });
+      paint();
+    };
+    const tog = (key, id, label, icon) => {
+      const on = !L()[key].includes(id);
+      const b = h("button", { class: "sw", role: "switch", "aria-checked": String(on), "aria-label": "Show " + label, on: { click: () => put(key, id, !(b.getAttribute("aria-checked") === "true")) } });
+      return h("div", { class: "setrow vis" }, h("div", { class: "tx" }, h("b", { text: (icon ? icon + " " : "") + label })), h("div", { class: "ctl" }, b));
+    };
+    const paint = () => {
+      const cnt = (k) => ctx2.store.active().filter((i) => i.type === k).length;
+      clear(wrap2).append(
+        h(
+          "div",
+          { class: "row wrap" },
+          h("button", { class: "btn sm", on: { click: () => {
+            ctx2.setLook({ hiddenCats: [], hiddenNav: [] }, { nav: true });
+            paint();
+            toast("Everything is visible again");
+          } } }, "Show everything"),
+          h("button", { class: "btn sm", on: { click: () => {
+            const empty2 = Object.keys(TYPE_META).filter((k) => !cnt(k));
+            ctx2.setLook({ hiddenCats: empty2 }, { nav: true });
+            paint();
+            toast(empty2.length + " empty categories hidden");
+          } } }, "Hide empty categories")
+        ),
+        h("h4", { text: "Tools & shortcuts" }),
+        HIDEABLE.map((id) => tog("hiddenNav", id, NAV_LABELS[id])),
+        h("p", { class: "hint", text: "Home, All items and Settings always stay. On a phone the bottom bar keeps Home, Items, New, Generator and More; hiding applies to the menu behind More." }),
+        GROUPS.map(([g, keys]) => h("div", null, h("h4", { text: g }), keys.map((k) => tog("hiddenCats", k, TYPE_META[k].plural + " \xB7 " + cnt(k)))))
+      );
+    };
+    paint();
+    return panel("Show or hide", h("p", { class: "hint", text: "Tidy the side bar, dock and menu. Nothing is deleted: hidden categories still appear in All items and in search, and you can still create items in them." }), wrap2);
+  }
   function effects(ctx2) {
     const { sw, range, select, L } = ctls(ctx2);
     return h(
@@ -5759,6 +6138,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
         row("Navigation style", "A side bar (default) or a macOS-style dock at the bottom of the screen", select("nav", NAV_MODES, { shell: true })),
         row("Start page", "What you see right after unlocking", select("startPage", [["all", "All items"], ["home", "Home (widgets)"]]))
       ),
+      visibilityPanel(ctx2),
       panel(
         "Dock",
         h("p", { class: "hint", text: "Only used when Navigation style is \u201CDock\u201D." }),
@@ -6038,6 +6418,60 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     return digest;
   }
 
+  // js/config.js
+  var ADMIN_EMAIL = "";
+
+  // js/admin.js
+  var KEY3 = "vaultmanager.admin";
+  var EMAIL = /^[^\s@<>"',;:\\]+@[^\s@<>"',;:\\]+\.[^\s@<>"',;:\\]{2,}$/;
+  var validEmail = (e) => EMAIL.test(String(e || "").trim()) && String(e).length <= 120;
+  function adminEmail(storage2) {
+    try {
+      const v = storage2 && storage2.getItem(KEY3);
+      if (v && validEmail(v)) return v.trim();
+    } catch {
+    }
+    return validEmail(ADMIN_EMAIL) ? ADMIN_EMAIL : "";
+  }
+  function setAdminEmail(storage2, v) {
+    try {
+      if (!v) storage2.removeItem(KEY3);
+      else if (validEmail(v)) storage2.setItem(KEY3, v.trim());
+      else return false;
+    } catch {
+    }
+    return true;
+  }
+  var platform = () => {
+    try {
+      return navigator.userAgentData && navigator.userAgentData.platform || navigator.platform || "unknown";
+    } catch {
+      return "unknown";
+    }
+  };
+  function mailtoLink(to, subject, body) {
+    return "mailto:" + encodeURIComponent(to).replace("%40", "@") + "?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(body);
+  }
+  function newProfileMessage(profileName) {
+    return { subject: `${APP_NAME}: new profile \u201C${profileName}\u201D`, body: `A new profile was created.
+
+Profile name: ${profileName}
+App: ${APP_NAME} ${APP_VERSION}
+Date: ${(/* @__PURE__ */ new Date()).toISOString()}
+Platform: ${platform()}
+
+(No passwords or vault data are included in this message.)` };
+  }
+  function openMail(to, subject, body) {
+    const a = document.createElement("a");
+    a.href = mailtoLink(to, subject, body);
+    a.rel = "noopener";
+    a.style.display = "none";
+    document.body.append(a);
+    a.click();
+    a.remove();
+  }
+
   // js/settings.js
   var TABS = [["general", "{{gear}} General"], ["appearance", "{{palette}} Appearance"], ["effects", "{{sparkles}} Effects"], ["layout", "{{compass}} Dock & menu bar"], ["widgets", "{{puzzle}} Widgets"], ["security", "{{shieldlock}} Security"], ["sync", "{{sync}} Sync"], ["audit", "{{scroll}} Audit trail"], ["about", "\u24D8 About"]];
   function renderSettings(ctx2) {
@@ -6045,15 +6479,15 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     const show = (k) => {
       ctx2.S.setTab = k;
       ctx2.runCleanup();
-      Array.from(bar.children).forEach((b, i) => {
+      Array.from(bar2.children).forEach((b, i) => {
         b.classList.toggle("on", TABS[i][0] === k);
         b.setAttribute("aria-selected", String(TABS[i][0] === k));
       });
       clear(body).append({ general, appearance, effects, layout, widgets: widgetsTab, security, sync, audit, about }[k](ctx2));
     };
-    const bar = h("div", { class: "tabs", role: "tablist" }, TABS.map(([k, l]) => h("button", { role: "tab", on: { click: () => show(k) } }, l)));
+    const bar2 = h("div", { class: "tabs", role: "tablist" }, TABS.map(([k, l]) => h("button", { role: "tab", on: { click: () => show(k) } }, l)));
     show(ctx2.S.setTab || "general");
-    return page("Settings", "Every adjustment lives here. Everything is stored encrypted on this device \u2014 there is no account and no server.", bar, body);
+    return page("Settings", "Every adjustment lives here. Everything is stored encrypted on this device \u2014 there is no account and no server.", bar2, body);
   }
   var panel2 = (title, ...kids) => h("div", { class: "panel pad" }, title ? h("h3", { text: title }) : null, ...kids);
   var chk = (label, checked, onChange) => h("label", { class: "chk" }, h("input", { type: "checkbox", checked, on: { change: (e) => onChange(e.target.checked) } }), label);
@@ -6133,15 +6567,8 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       ),
       installPanel(ctx2),
       panel2(
-        "Welcome & help",
-        field2("Profile name", h("input", { class: "inp", value: (ctx2.profile() || {}).name || "", maxlength: "40", autocomplete: "off", "aria-label": "Profile name", on: { change: (e) => {
-          const v = e.target.value.trim();
-          if (v) {
-            ctx2.updateProfile({ name: v });
-            s.displayName = v;
-            persist(ctx2);
-          }
-        } } })),
+        "Backup & profile",
+        h("p", { class: "hint", text: "Two places offer exports. This one is for the WHOLE PROFILE; Tools \u2192 Import & export also has the passwords-only database backup, sync files and CSV." }),
         h(
           "div",
           { class: "row wrap" },
@@ -6151,6 +6578,20 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
           }) } }, "{{importfile}} Import a profile\u2026"),
           h("button", { class: "btn sm", on: { click: () => ctx2.switchProfile() } }, "{{contact}} Switch profile")
         ),
+        h("h4", { text: "Which one do I need?" }),
+        backupGuide({ compact: true }),
+        h("button", { class: "btn", on: { click: () => ctx2.go("data") } }, "{{swap}} Open Tools \u2192 Import & export")
+      ),
+      panel2(
+        "Welcome & help",
+        field2("Profile name", h("input", { class: "inp", value: (ctx2.profile() || {}).name || "", maxlength: "40", autocomplete: "off", "aria-label": "Profile name", on: { change: (e) => {
+          const v = e.target.value.trim();
+          if (v) {
+            ctx2.updateProfile({ name: v });
+            s.displayName = v;
+            persist(ctx2);
+          }
+        } } })),
         chk("Show the welcome screen every time I unlock", s.welcomeAlways, (v) => set("welcomeAlways", v, "Welcome screen")),
         h("div", { class: "row wrap" }, h("button", { class: "btn", on: { click: () => ctx2.tour.welcome() } }, "{{wave}} Welcome screen"), h("button", { class: "btn", on: { click: () => ctx2.tour.start() } }, "{{compass}} Guided tour"), h("button", { class: "btn", on: { click: () => ctx2.tour.help() } }, "{{help}} Help & shortcuts"))
       ),
@@ -6167,6 +6608,37 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
         h("button", { class: "btn", on: { click: () => ctx2.go("gen") } }, "{{bolt}} Open the generator")
       ),
       panel2("Data", h("p", { class: "hint", text: "Import from other managers, encrypted backups and plaintext export are on their own page." }), h("button", { class: "btn", on: { click: () => ctx2.go("data") } }, "{{swap}} Import & export"))
+    );
+  }
+  function contactPanel(ctx2) {
+    const st = ctx2.env.storage, cur = adminEmail(st);
+    const inp = h("input", { class: "inp", type: "email", value: cur, placeholder: "admin@example.com", autocomplete: "off", "aria-label": "Administrator email" }), err = h("p", { class: "err", role: "alert" });
+    const msg = h("textarea", { class: "ta", rows: "3", placeholder: "What do you need help with? (Do not include passwords.)", "aria-label": "Message to the administrator" });
+    return panel2(
+      "Contact admin",
+      h("p", { class: "hint", text: "Opens your mail app with a message to the administrator. Nothing is sent by VaultManager itself, and no vault data is included." }),
+      field2("Administrator email", inp),
+      h("div", { class: "row wrap" }, h("button", { class: "btn sm", on: { click: () => {
+        err.textContent = "";
+        const v = inp.value.trim();
+        if (v && !validEmail(v)) {
+          err.textContent = "That does not look like an email address.";
+          return;
+        }
+        setAdminEmail(st, v);
+        toast(v ? "Administrator address saved on this device" : "Administrator address cleared");
+        ctx2.refresh();
+      } } }, "Save address")),
+      err,
+      field2("Message", msg),
+      h("button", { class: "btn primary", on: { click: () => {
+        const to = adminEmail(st);
+        if (!to) {
+          err.textContent = "Save an administrator address first.";
+          return;
+        }
+        openMail(to, APP_NAME + " " + APP_VERSION + " \u2014 help", (msg.value || "") + "\n\n\u2014 " + APP_NAME + " " + APP_VERSION + ", profile \u201C" + ((ctx2.profile() || {}).name || "") + "\u201D");
+      } } }, "{{contact}} Email the administrator")
     );
   }
   function security(ctx2) {
@@ -6578,6 +7050,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
         )
       ),
       panel2("Version history", CHANGELOG.map((r, i) => h("div", { class: "rel" }, h("div", { class: "row wrap" }, h("b", { class: "mono", text: "v" + r.v }), h("span", { class: "chip" + (i === 0 ? " accent" : ""), text: i === 0 ? "current" : r.date }), i === 0 ? h("span", { class: "hint", text: r.date }) : null), h("ul", null, r.notes.map((n) => h("li", { text: n })))))),
+      contactPanel(ctx2),
       panel2("Data formats", h("div", { class: "kv" }, FORMATS.map(([k, v]) => [h("span", { text: k }), h("b", { text: v })]))),
       panel2(
         "This device",
@@ -7623,6 +8096,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       { icon: "{{bolt}}", target: () => q(".genout"), before: go("gen"), title: "Password generator", text: "Cryptographically random passwords, word passphrases or PINs, with a live strength check. Use a unique one for every account \u2014 that is the single best thing you can do for your security." },
       { icon: "{{pulse}}", target: () => q(".ring"), before: go("health"), title: "Vault health", text: "Finds weak, reused and old passwords, insecure http:// links, and passports, licences and policies that are expired or about to be \u2014 all computed on this device." },
       { icon: "{{qr}}", target: () => q(".page .tabs"), before: go("qr"), title: "QR tools", text: "Seal a secret into a password-protected QR code, scan one back with the camera, or print your whole vault as a set of QR codes for a paper backup." },
+      { icon: "{{swap}}", target: () => q(".bguide") || q(".page .panel"), before: go("data"), title: "Which export do I need?", text: "Whole profile (.vmprofile) = profile, passwords, attachments and settings \u2014 the complete copy, restorable even on the sign-in screen. Database backup (.vmvault) = passwords only, merged into an existing vault. Sync file (.vmsync) keeps two devices in step. Plain CSV is unencrypted \u2014 migration only. Settings \u2192 General and Tools \u2192 Import & export both explain this." },
       { icon: "{{beam}}", target: () => q(".beam .panel"), before: go("beam"), title: "Beam sync", text: "Pair your PC and phone directly: start on one, join on the other by scanning a QR code, check that both show the same 6-digit number. The vaults merge \u2014 no cloud, no account." },
       { icon: "{{sync}}", target: () => q(".page .tabs"), before: go("settings", "sync"), title: "Sync and conflicts", text: "Sync through an encrypted file, Beam, or a secret GitHub gist. Devices merge field by field; if the same field changed on two of them, the newest wins and the other value waits under \u201CNeeds review\u201D." },
       { icon: "{{palette}}", target: () => q(".page .tabs"), before: go("settings", "appearance"), title: "Make it yours", text: "Appearance, Effects, Dock & menu bar and Widgets: accent colours, nature wallpapers, icon styles and sizes, animation styles, 3D tilt, CRT scanlines, glass blur and more." },
@@ -7878,6 +8352,11 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
         row2("Alt + L", "Lock the vault now"),
         row2("Esc", "Close a dialog, the tour or this screen"),
         row2("\u2190 \u2192  Enter", "Move through the tour"),
+        h("h3", { class: "lbl", text: "Tips" }),
+        row2("Backups", "Whole profile = profile + passwords + settings (Settings \u2192 General). Database backup = passwords only (Tools \u2192 Import & export)."),
+        row2("QR passwords", "QR tools hide the password and ask you to type it twice. \u201CPurge memory\u201D wipes fields, closed-again locked items and the clipboard."),
+        row2("Tidy the menu", "Settings \u2192 Dock & menu bar lets you hide tools and categories you never use."),
+        row2("Task manager", "Tools \u2192 Task manager shows what the app is holding in memory and on disk."),
         h("p", { class: "hint", text: "Stuck? Settings \u2192 About runs a crypto self-test and shows the data formats; Settings \u2192 Audit trail shows what happened and when." })
       ), actions: [{ label: "Close" }] });
     }
@@ -7967,6 +8446,18 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       await st.wipe();
       env.profiles.remove(id);
     },
+    /* Purge memory: forget everything that is only held in memory — opened locked items, revealed values, QR tool fields, previews, the clipboard. Nothing stored is touched. */
+    purgeMemory() {
+      const n = store.itemKeys ? store.itemKeys.size : 0;
+      if (store.itemKeys) store.itemKeys.clear();
+      ctx.runCleanup();
+      closeAllModals();
+      clearClipboardNow();
+      ctx.S.q = "";
+      draw();
+      toast("Memory purged \u2014 " + n + " opened item" + (n === 1 ? "" : "s") + " locked again, clipboard cleared, fields and previews wiped");
+      return n;
+    },
     exportProfile: () => exportProfileDialog(ctx),
     importProfile: (onDone) => importProfileDialog(ctx, { onDone }),
     look: () => curLook(),
@@ -8034,6 +8525,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     else if (shell) {
       drawDock();
       drawMbar();
+      if (opt.nav) drawSide();
     }
   }
   function setTheme(v) {
@@ -8083,6 +8575,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   }
   function onUnlocked(note) {
     const L = curLook();
+    ctx.S.since = Date.now();
     ctx.S.view = L.startPage === "home" ? "home" : "all";
     applyTheme();
     armAutolock();
@@ -8197,13 +8690,13 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     } } }, "{{eye}}");
     return { input: i, el: h("div", { class: "pwwrap" }, i, eye) };
   }
-  var gateFoot = () => canOfferCopy() ? h("p", { class: "gate-foot" }, h("button", { type: "button", class: "linkbtn", on: { click: async () => {
+  var gateFoot = () => canOfferCopy() || adminEmail(env.storage) ? h("p", { class: "gate-foot" }, adminEmail(env.storage) ? h("a", { class: "linkbtn", href: "mailto:" + adminEmail(env.storage) + "?subject=" + encodeURIComponent("VaultManager help") }, "{{contact}} Contact admin") : null, adminEmail(env.storage) && canOfferCopy() ? " \xB7 " : null, canOfferCopy() ? h("button", { type: "button", class: "linkbtn", on: { click: async () => {
     try {
       await saveOfflineCopy();
     } catch (e) {
       toast(e.message, "err", 7e3);
     }
-  } } }, "{{download}} Download the offline copy \u2014 one file, VaultManager-offline.html")) : null;
+  } } }, "{{download}} Download the offline copy \u2014 one file, VaultManager-offline.html") : null) : null;
   function profileHead(p, sub) {
     return h("div", { class: "brand prof" }, profileAvatar(p, 52), h("div", null, h("h1", { text: p.name }), h("p", { text: sub })));
   }
@@ -8222,6 +8715,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     const p1 = pwInput("pw1", "Master password", "new-password"), p2 = pwInput("pw2", "Repeat master password", "new-password");
     const m = h("div"), err = h("p", { class: "err", role: "alert" });
     const ack = h("input", { type: "checkbox", id: "ack" });
+    const admin = adminEmail(env.storage), notify = h("input", { type: "checkbox", id: "notifyadmin", checked: true });
     p1.input.addEventListener("input", () => clear(m).append(meter(p1.input.value).el));
     const btn = h("button", { class: "btn primary", type: "submit", style: null }, first ? "Create my vault" : "Create profile");
     const suggest = h("button", { type: "button", class: "btn sm", on: { click: () => {
@@ -8269,10 +8763,18 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
         }
         env.profiles.add({ id, name: nm, avatar: picker.get() });
         env.profiles.setLast(id);
+        if (admin && notify.checked) {
+          const m2 = newProfileMessage(nm);
+          try {
+            openMail(admin, m2.subject, m2.body);
+          } catch {
+          }
+        }
         store = st;
         ctx.S.profileId = id;
         ctx.S.gate = null;
         p1.input.value = p2.input.value = "";
+        ctx.S.since = Date.now();
         ctx.S.view = curLook().startPage === "home" ? "home" : "all";
         applyTheme();
         armAutolock();
@@ -8295,6 +8797,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       h("div", { class: "field" }, h("label", { for: "pw2", text: "Repeat master password" }), p2.el),
       h("div", { class: "row wrap" }, suggest),
       h("label", { class: "chk", for: "ack" }, ack, "I understand that if I forget this password, nobody can recover my data."),
+      admin ? h("label", { class: "chk", for: "notifyadmin" }, notify, "Email the administrator that I created this profile (opens your mail app; only the profile name is included \u2014 never passwords)") : null,
       err,
       h("div", { class: "row" }, btn)
     );
@@ -8477,7 +8980,11 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   }
   var shell = null;
   var NAV = [["home", "{{home}}", "Home"], ["all", "{{vault}}", "All items"], ["fav", "{{star}}", "Favorites"], ["trash", "{{trash}}", "Trash"]];
-  var TOOLS = [["health", "{{pulse}}", "Vault health"], ["gen", "{{bolt}}", "Generator"], ["qr", "{{qr}}", "QR tools"], ["beam", "{{beam}}", "Beam sync"], ["data", "{{swap}}", "Import & export"], ["settings", "{{gear}}", "Settings"]];
+  var TOOLS = [["health", "{{pulse}}", "Vault health"], ["gen", "{{bolt}}", "Generator"], ["qr", "{{qr}}", "QR tools"], ["beam", "{{beam}}", "Beam sync"], ["data", "{{swap}}", "Import & export"], ["tm", "{{chip}}", "Task manager"], ["settings", "{{gear}}", "Settings"]];
+  var hid = { cat: (k) => curLook().hiddenCats.includes(k), nav: (id) => curLook().hiddenNav.includes(id) };
+  var visGroups = () => GROUPS.map(([g, keys]) => [g, keys.filter((k) => !hid.cat(k))]).filter(([, keys]) => keys.length);
+  var visTools = () => TOOLS.filter(([id]) => !hid.nav(id));
+  var visNav = () => NAV.filter(([id]) => !hid.nav(id));
   function syncSearch() {
     if (shell && shell.search.value !== ctx.S.q) shell.search.value = ctx.S.q;
   }
@@ -8488,10 +8995,10 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     shell.clock.firstChild.textContent = n.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: !L.clock24 });
     shell.clock.lastChild.textContent = L.dateFmt === "none" ? "" : n.toLocaleDateString([], L.dateFmt === "long" ? { weekday: "long", day: "numeric", month: "long", year: "numeric" } : { weekday: "short", day: "numeric", month: "short" });
   }
-  var DOCK = [["home", "{{home}}", "Home"], ["all", "{{vault}}", "All items"], ["fav", "{{star}}", "Favorites"], ["cats", "{{puzzle}}", "Categories"], null, ["health", "{{pulse}}", "Health"], ["gen", "{{bolt}}", "Generator"], ["qr", "{{qr}}", "QR tools"], ["beam", "{{beam}}", "Beam"], null, ["settings", "{{gear}}", "Settings"], ["help", "{{help}}", "Help"], ["new", "{{plus}}", "New item"]];
+  var DOCK = [["home", "{{home}}", "Home"], ["all", "{{vault}}", "All items"], ["fav", "{{star}}", "Favorites"], ["cats", "{{puzzle}}", "Categories"], null, ["health", "{{pulse}}", "Health"], ["gen", "{{bolt}}", "Generator"], ["qr", "{{qr}}", "QR tools"], ["beam", "{{beam}}", "Beam"], ["tm", "{{chip}}", "Tasks"], null, ["settings", "{{gear}}", "Settings"], ["help", "{{help}}", "Help"], ["new", "{{plus}}", "New item"]];
   function categoriesModal() {
     const cnt = (k) => store.active().filter((i) => i.type === k).length;
-    modal({ title: "Categories", wide: true, body: h("div", null, GROUPS.map(([g, keys]) => h(
+    modal({ title: "Categories", wide: true, body: h("div", null, visGroups().map(([g, keys]) => h(
       "div",
       { class: "catgroup" },
       h("p", { class: "lbl", text: g }),
@@ -8512,10 +9019,10 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       "div",
       { class: "msheet" },
       h("p", { class: "lbl", text: "Vault" }),
-      h("div", { class: "mgrid" }, item("{{star}}", "Favorites", go("fav"), c.fav), item("{{trash}}", "Trash", go("trash"), c.trash), store.conflictCount() ? item("{{alert}}", "Needs review", go("conflicts"), store.conflictCount()) : null),
+      h("div", { class: "mgrid" }, hid.nav("fav") ? null : item("{{star}}", "Favorites", go("fav"), c.fav), hid.nav("trash") ? null : item("{{trash}}", "Trash", go("trash"), c.trash), store.conflictCount() ? item("{{alert}}", "Needs review", go("conflicts"), store.conflictCount()) : null),
       h("p", { class: "lbl", text: "Tools" }),
-      h("div", { class: "mgrid" }, TOOLS.map(([id, ic2, l]) => item(ic2, l, go(id)))),
-      GROUPS.map(([g, keys]) => h("div", null, h("p", { class: "lbl", text: g }), h("div", { class: "mgrid" }, keys.map((k) => item(TYPE_META[k].icon, TYPE_META[k].plural, go(k), c[k]))))),
+      h("div", { class: "mgrid" }, visTools().map(([id, ic2, l]) => item(ic2, l, go(id)))),
+      visGroups().map(([g, keys]) => h("div", null, h("p", { class: "lbl", text: g }), h("div", { class: "mgrid" }, keys.map((k) => item(TYPE_META[k].icon, TYPE_META[k].plural, go(k), c[k]))))),
       h("p", { class: "lbl", text: "More" }),
       h("div", { class: "mgrid" }, item("{{help}}", "Help & tour", () => {
         closeAllModals();
@@ -8546,7 +9053,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       it("more", "{{menu}}", "More", inMore && v !== "home" && v !== "gen" && v !== "all", () => moreSheet(), attention)
     );
   }
-  var viewTitle = (v) => ({ home: "Home", all: "All items", fav: "Favorites", trash: "Trash", conflicts: "Needs review", gen: "Generator", health: "Vault health", qr: "QR tools", beam: "Beam sync", data: "Import & export", settings: "Settings" })[v] || (v in TYPE_META ? TYPE_META[v].plural : v.startsWith("tag:") ? "#" + v.slice(4) : "");
+  var viewTitle = (v) => ({ home: "Home", all: "All items", fav: "Favorites", trash: "Trash", conflicts: "Needs review", gen: "Generator", health: "Vault health", qr: "QR tools", beam: "Beam sync", data: "Import & export", tm: "Task manager", settings: "Settings" })[v] || (v in TYPE_META ? TYPE_META[v].plural : v.startsWith("tag:") ? "#" + v.slice(4) : "");
   function drawTitle() {
     if (shell && shell.title) shell.title.textContent = viewTitle(ctx.S.view);
     document.documentElement.dataset.detail = isVaultView(ctx.S.view) && ctx.S.sel ? "1" : "0";
@@ -8554,7 +9061,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   function drawDock() {
     if (!shell || !shell.dock) return;
     const L = curLook(), hl = health(store.items), attention = hl.weak.length + hl.reused.length + hl.expiring.length;
-    const items = DOCK.map((d) => {
+    const items = DOCK.filter((d) => !d || !hid.nav(d[0])).map((d) => {
       if (!d) return h("span", { class: "dock-sep" });
       const [id, ic2, label] = d;
       const on = id === "cats" ? ctx.S.view in TYPE_META : ctx.S.view === id;
@@ -8634,19 +9141,18 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     const attention = hl.weak.length + hl.reused.length + hl.expiring.length > 0;
     clear(shell.side).append(
       h("h4", { text: "Vault" }),
-      NAV.map(([id, ic2, l]) => btn(id, ic2, l, id === "home" ? void 0 : c[id])),
+      visNav().map(([id, ic2, l]) => btn(id, ic2, l, id === "home" ? void 0 : c[id])),
       store.conflictCount() ? btn("conflicts", "{{alert}}", "Needs review", store.conflictCount()) : null,
-      h("h4", { text: "Categories" }),
-      GROUPS.map(([g, keys]) => groupBlock(g, keys, c, btn)),
+      visGroups().length ? [h("h4", { text: "Categories" }), visGroups().map(([g, keys]) => groupBlock(g, keys, c, btn))] : null,
       store.tags().length ? [h("h4", { text: "Tags" }), store.tags().map(([t, n]) => btn("tag:" + t, "#", t, n))] : null,
       h("h4", { text: "Tools" }),
-      TOOLS.map(([id, ic2, l]) => btn(id, ic2, l, void 0, id === "health" && attention))
+      visTools().map(([id, ic2, l]) => btn(id, ic2, l, void 0, id === "health" && attention))
     );
   }
   function drawMain() {
     ctx.runCleanup();
     const v = ctx.S.view;
-    clear(shell.main).append(isVaultView(v) ? renderVaultView(ctx) : v === "gen" ? renderGenerator(ctx) : v === "health" ? renderHealth(ctx) : v === "home" ? renderHome(ctx) : v === "qr" ? renderQR(ctx) : v === "beam" ? renderBeam(ctx) : v === "data" ? renderData(ctx) : renderSettings(ctx));
+    clear(shell.main).append(isVaultView(v) ? renderVaultView(ctx) : v === "gen" ? renderGenerator(ctx) : v === "health" ? renderHealth(ctx) : v === "home" ? renderHome(ctx) : v === "tm" ? renderTaskManager(ctx) : v === "qr" ? renderQR(ctx) : v === "beam" ? renderBeam(ctx) : v === "data" ? renderData(ctx) : renderSettings(ctx));
   }
   function draw() {
     if (!store.unlocked) {

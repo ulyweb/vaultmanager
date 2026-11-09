@@ -2,9 +2,9 @@
 
 import { h, clear, modal, toast, confirmDialog } from './dom.js';
 import { page, sel } from './tools.js';
-import { ACCENTS, ICON_STYLES, ANIM_STYLES, NAV_MODES, WIDGET_DEFS, LOOK_DEFAULTS, normalizeLook, randomLook } from './look.js';
+import { HIDEABLE, ACCENTS, ICON_STYLES, ANIM_STYLES, NAV_MODES, WIDGET_DEFS, LOOK_DEFAULTS, normalizeLook, randomLook } from './look.js';
 import { landscapes } from './landscapes.js';
-import { TYPE_META } from './templates.js';
+import { TYPE_META, GROUPS } from './templates.js';
 import { fmtTime } from './util.js';
 
 const panel = (title, ...kids) => h('div', { class: 'panel pad' }, title ? h('h3', { text: title }) : null, ...kids);
@@ -122,6 +122,33 @@ export function appearance(ctx) {
       h('button', { class: 'btn', on: { click: async () => { if (await confirmDialog({ title: 'Reset appearance?', text: 'Accent, background, icons and sizes go back to the defaults. Effects, layout and widgets are not touched.', okLabel: 'Reset' })) { const D = LOOK_DEFAULTS; ctx.setLook({ accent: D.accent, bg: D.bg, wallpaper: D.wallpaper, bgDim: D.bgDim, iconStyle: D.iconStyle, iconSize: D.iconSize, avatar: D.avatar, uiScale: D.uiScale, density: D.density, radius: D.radius, widgetStyle: D.widgetStyle }, { redraw: true }); } } } }, 'Reset appearance'))));
 }
 
+
+const NAV_LABELS = { fav: 'Favorites', trash: 'Trash', health: 'Vault health', gen: 'Generator', qr: 'QR tools', beam: 'Beam sync', data: 'Import & export', tm: 'Task manager', cats: 'Categories (dock button)' };
+
+/* Hide tools and categories you never use from the side bar, dock and menu. Nothing is deleted: hidden categories still show in All items and search. */
+function visibilityPanel(ctx) {
+  const L = () => ctx.look();
+  const wrap = h('div');
+  const put = (key, id, on) => { const cur = new Set(L()[key]); if (on) cur.delete(id); else cur.add(id); ctx.setLook({ [key]: [...cur] }, { nav: true }); paint(); };
+  const tog = (key, id, label, icon) => {
+    const on = !L()[key].includes(id);
+    const b = h('button', { class: 'sw', role: 'switch', 'aria-checked': String(on), 'aria-label': 'Show ' + label, on: { click: () => put(key, id, !(b.getAttribute('aria-checked') === 'true')) } });
+    return h('div', { class: 'setrow vis' }, h('div', { class: 'tx' }, h('b', { text: (icon ? icon + ' ' : '') + label })), h('div', { class: 'ctl' }, b));
+  };
+  const paint = () => {
+    const cnt = (k) => ctx.store.active().filter((i) => i.type === k).length;
+    clear(wrap).append(
+      h('div', { class: 'row wrap' },
+        h('button', { class: 'btn sm', on: { click: () => { ctx.setLook({ hiddenCats: [], hiddenNav: [] }, { nav: true }); paint(); toast('Everything is visible again'); } } }, 'Show everything'),
+        h('button', { class: 'btn sm', on: { click: () => { const empty = Object.keys(TYPE_META).filter((k) => !cnt(k)); ctx.setLook({ hiddenCats: empty }, { nav: true }); paint(); toast(empty.length + ' empty categories hidden'); } } }, 'Hide empty categories')),
+      h('h4', { text: 'Tools & shortcuts' }), HIDEABLE.map((id) => tog('hiddenNav', id, NAV_LABELS[id])),
+      h('p', { class: 'hint', text: 'Home, All items and Settings always stay. On a phone the bottom bar keeps Home, Items, New, Generator and More; hiding applies to the menu behind More.' }),
+      GROUPS.map(([g, keys]) => h('div', null, h('h4', { text: g }), keys.map((k) => tog('hiddenCats', k, TYPE_META[k].plural + ' · ' + cnt(k))))));
+  };
+  paint();
+  return panel('Show or hide', h('p', { class: 'hint', text: 'Tidy the side bar, dock and menu. Nothing is deleted: hidden categories still appear in All items and in search, and you can still create items in them.' }), wrap);
+}
+
 /* ======================= Effects ======================= */
 export function effects(ctx) {
   const { sw, range, select, L } = ctls(ctx);
@@ -151,6 +178,7 @@ export function layout(ctx) {
     panel('Navigation',
       row('Navigation style', 'A side bar (default) or a macOS-style dock at the bottom of the screen', select('nav', NAV_MODES, { shell: true })),
       row('Start page', 'What you see right after unlocking', select('startPage', [['all', 'All items'], ['home', 'Home (widgets)']]))),
+    visibilityPanel(ctx),
     panel('Dock',
       h('p', { class: 'hint', text: 'Only used when Navigation style is “Dock”.' }),
       row('Dock icon size', null, range('dockSize', 32, 72, 2, (v) => v + 'px')),

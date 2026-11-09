@@ -31,6 +31,7 @@ export function createTour(ctx) {
     { icon: '{{bolt}}', target: () => q('.genout'), before: go('gen'), title: 'Password generator', text: 'Cryptographically random passwords, word passphrases or PINs, with a live strength check. Use a unique one for every account — that is the single best thing you can do for your security.' },
     { icon: '{{pulse}}', target: () => q('.ring'), before: go('health'), title: 'Vault health', text: 'Finds weak, reused and old passwords, insecure http:// links, and passports, licences and policies that are expired or about to be — all computed on this device.' },
     { icon: '{{qr}}', target: () => q('.page .tabs'), before: go('qr'), title: 'QR tools', text: 'Seal a secret into a password-protected QR code, scan one back with the camera, or print your whole vault as a set of QR codes for a paper backup.' },
+    { icon: '{{swap}}', target: () => q('.bguide') || q('.page .panel'), before: go('data'), title: 'Which export do I need?', text: 'Whole profile (.vmprofile) = profile, passwords, attachments and settings — the complete copy, restorable even on the sign-in screen. Database backup (.vmvault) = passwords only, merged into an existing vault. Sync file (.vmsync) keeps two devices in step. Plain CSV is unencrypted — migration only. Settings → General and Tools → Import & export both explain this.' },
     { icon: '{{beam}}', target: () => q('.beam .panel'), before: go('beam'), title: 'Beam sync', text: 'Pair your PC and phone directly: start on one, join on the other by scanning a QR code, check that both show the same 6-digit number. The vaults merge — no cloud, no account.' },
     { icon: '{{sync}}', target: () => q('.page .tabs'), before: go('settings', 'sync'), title: 'Sync and conflicts', text: 'Sync through an encrypted file, Beam, or a secret GitHub gist. Devices merge field by field; if the same field changed on two of them, the newest wins and the other value waits under “Needs review”.' },
     { icon: '{{palette}}', target: () => q('.page .tabs'), before: go('settings', 'appearance'), title: 'Make it yours', text: 'Appearance, Effects, Dock & menu bar and Widgets: accent colours, nature wallpapers, icon styles and sizes, animation styles, 3D tilt, CRT scanlines, glass blur and more.' },
@@ -152,6 +153,11 @@ export function createTour(ctx) {
         h('button', { class: 'btn', on: { click: () => { m.close(); ctx.S.setTab = 'about'; ctx.go('settings'); } } }, 'ⓘ About & versions')),
       h('h3', { class: 'lbl', text: 'Keyboard shortcuts' }),
       row('/', 'Jump to search'), row('Alt + L', 'Lock the vault now'), row('Esc', 'Close a dialog, the tour or this screen'), row('← →  Enter', 'Move through the tour'),
+      h('h3', { class: 'lbl', text: 'Tips' }),
+      row('Backups', 'Whole profile = profile + passwords + settings (Settings → General). Database backup = passwords only (Tools → Import & export).'),
+      row('QR passwords', 'QR tools hide the password and ask you to type it twice. “Purge memory” wipes fields, closed-again locked items and the clipboard.'),
+      row('Tidy the menu', 'Settings → Dock & menu bar lets you hide tools and categories you never use.'),
+      row('Task manager', 'Tools → Task manager shows what the app is holding in memory and on disk.'),
       h('p', { class: 'hint', text: 'Stuck? Settings → About runs a crypto self-test and shows the data formats; Settings → Audit trail shows what happened and when.' })), actions: [{ label: 'Close' }] });
   }
 

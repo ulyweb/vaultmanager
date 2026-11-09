@@ -24,7 +24,7 @@ export const WIDGET_DEFS = [
 
 export const LOOK_DEFAULTS = {
   // appearance
-  accent: '#2fe6d0', bg: 'default', wallpaper: 'forest', wallImage: '', wallUrl: '', bgDim: 55, iconStyle: 'vivid', iconSize: 'medium', avatar: 'letter',
+  accent: '#2fe6d0', hiddenCats: [], hiddenNav: [], bg: 'default', wallpaper: 'forest', wallImage: '', wallUrl: '', bgDim: 55, iconStyle: 'vivid', iconSize: 'medium', avatar: 'letter',
   uiScale: 100, density: 'comfortable', radius: 12, widgetStyle: 'vivid',
   // effects
   animations: true, animStyle: 'scale', animSpeed: 1, bootAnim: true, fxAnim: true, fxAurora: 65, fxTilt: 0, fxGlow: 35, fxScan: false, blur: 12, glassAlpha: 0.72,
@@ -38,6 +38,8 @@ const num = (v, lo, hi, d) => (Number.isFinite(+v) ? Math.min(hi, Math.max(lo, +
 const oneOf = (v, list, d) => (list.includes(v) ? v : d);
 const bool = (v, d) => (typeof v === 'boolean' ? v : d);
 
+/* sections of the side bar / dock / menu the user may hide (Home, All items and Settings always stay) */
+export const HIDEABLE = ['fav', 'trash', 'health', 'gen', 'qr', 'beam', 'data', 'tm', 'cats'];
 export const landscapeIds = [];   // filled lazily by the UI (avoids loading the scenes before they are needed)
 
 export function normalizeLook(o = {}, wallIds = null) {
@@ -46,6 +48,8 @@ export function normalizeLook(o = {}, wallIds = null) {
   for (const w of Array.isArray(o.widgets) ? o.widgets : []) if (w && WIDGET_DEFS.some((d) => d.id === w.id) && !widgets.some((x) => x.id === w.id)) widgets.push({ id: w.id, on: bool(w.on, true), size: oneOf(w.size, ['s', 'm', 'l'], WIDGET_DEFS.find((d) => d.id === w.id).size) });
   for (const d of WIDGET_DEFS) if (!widgets.some((x) => x.id === d.id)) widgets.push({ id: d.id, on: true, size: d.size });
   return {
+    hiddenCats: Array.isArray(o.hiddenCats) ? [...new Set(o.hiddenCats.filter((k) => typeof k === 'string' && /^[a-z0-9]{2,20}$/.test(k)))].slice(0, 60) : [],
+    hiddenNav: Array.isArray(o.hiddenNav) ? [...new Set(o.hiddenNav.filter((k) => HIDEABLE.includes(k)))] : [],
     accent: /^#[0-9a-fA-F]{6}$/.test(o.accent) ? o.accent.toLowerCase() : D.accent,
     bg: oneOf(o.bg, ['default', 'plain', 'wallpaper'], D.bg),
     wallpaper: typeof o.wallpaper === 'string' && /^([a-z0-9]{2,20}|(photo|grad):[a-z0-9]{2,20})$/.test(o.wallpaper) && (!wallIds || wallIds.includes(o.wallpaper) || /^(photo|grad|custom|remote)/.test(o.wallpaper)) ? o.wallpaper : D.wallpaper,
