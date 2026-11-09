@@ -589,7 +589,9 @@ test('look settings: normalised, bounded, widgets merged, accent maths', async (
   const { normalizeLook, LOOK_DEFAULTS, accentTokens, WIDGET_DEFS } = await import('../js/look.js');
   const n = normalizeLook({ accent: 'javascript:alert(1)', uiScale: 9999, radius: -5, animSpeed: 'fast', iconStyle: 'bogus', nav: 'dock', dockSize: 1, widgets: [{ id: 'tip', on: false, size: 'xl' }, { id: 'nope' }, { id: 'tip' }] });
   assert.equal(n.accent, LOOK_DEFAULTS.accent); assert.equal(n.uiScale, 130); assert.equal(n.radius, 4); assert.equal(n.animSpeed, 1); assert.equal(n.iconStyle, 'vivid'); assert.equal(n.nav, 'dock'); assert.equal(n.dockSize, 32);
-  assert.equal(n.widgets.length, WIDGET_DEFS.length); assert.deepEqual(n.widgets[0], { id: 'tip', on: false, size: 's' });
+  assert.equal(n.widgets.length, WIDGET_DEFS.length); assert.deepEqual(n.widgets[0], { id: 'tip', on: false, size: 's', pinned: false, cw: 0, ch: 0 });
+  const w2 = normalizeLook({ widgets: [{ id: 'clock', pinned: true, cw: 9, ch: 5000 }, { id: 'health', cw: 2, ch: 20 }] }).widgets;
+  assert.deepEqual([w2[0].pinned, w2[0].cw, w2[0].ch, w2[1].cw, w2[1].ch], [true, 4, 700, 2, 100], 'pin and manual size are bounded');
   const dark = accentTokens('#2fe6d0', 'dark'), light = accentTokens('#2fe6d0', 'light');
   assert.equal(dark.accent, '#2fe6d0'); assert.notEqual(light.accent, dark.accent); assert.equal(dark.ink, '#06201d'); assert.equal(light.ink, '#ffffff');
   const { v } = await mk('look settings pass!!'); assert.equal(v.settings.look.accent, '#2fe6d0'); assert.ok(v.settings.look.widgets.length >= 10);

@@ -357,6 +357,7 @@ async function createVault(page, pw = MASTER) {
   await page.goto(base); await page.waitForSelector('#pw1');
   await page.fill('#pw1', pw); await page.fill('#pw2', pw); await page.check('#ack'); await page.click('button[type=submit]');
   await page.getByRole('button', { name: 'Skip for now' }).click(); await dismissWelcome(page); await page.waitForSelector('.topbar');
+  await page.evaluate(() => document.querySelectorAll('.ngroup[aria-expanded=false]').forEach((b) => b.click()));   // category groups start collapsed (except Everyday)
 }
 async function addLogin(page, name, extra = async () => {}) {
   await page.getByRole('button', { name: '＋ New' }).click(); await page.getByRole('button', { name: '🔑 Login', exact: true }).click();
@@ -988,7 +989,10 @@ test('profiles: export a whole profile, then import it at the initial stage into
   await addLogin(A.page, 'BankProfile');
   await settingsTab(A.page, 'General');
   await A.page.getByRole('button', { name: /Export whole profile/ }).click();
-  await A.page.fill('input[aria-label="Backup password"]', 'backup-pass-phrase-1');
+  assert.equal(await A.page.getAttribute('input[aria-label="Backup password"]', 'type'), 'password', 'the export password is hidden');
+  await A.page.fill('input[aria-label="Backup password"]', 'backup-pass-phrase-1'); await A.page.fill('input[aria-label="Confirm Backup password"]', 'different-one-xx'); await A.page.getByRole('button', { name: 'Download backup' }).click();
+  assert.match(await A.page.locator('.modal-sheet .err:not(:empty)').first().textContent(), /do not match/);
+  await A.page.fill('input[aria-label="Confirm Backup password"]', 'backup-pass-phrase-1');
   const [dl] = await Promise.all([A.page.waitForEvent('download'), A.page.getByRole('button', { name: 'Download backup' }).click()]);
   assert.match(dl.suggestedFilename(), /\.vmprofile$/);
   const text = fs.readFileSync(await dl.path(), 'utf8'); assert.ok(text.startsWith('VMP1:'));
@@ -1159,7 +1163,7 @@ async function roundTripWalk(label, { device = null, offline = false } = {}) {
   await A.page.getByRole('button', { name: 'Save' }).click(); await A.page.waitForSelector('.lockbox', { timeout: 90000 });
   if (phone) { await A.page.getByRole('button', { name: 'More' }).click(); await A.page.locator('.msheet-item', { hasText: 'Settings' }).first().click(); await A.page.waitForSelector('.tabs'); } else await settingsTab(A.page, 'General');
   await A.page.getByRole('button', { name: /Export whole profile/ }).click();
-  await A.page.fill('input[aria-label="Backup password"]', 'backup-pass-phrase-1');
+  await A.page.fill('input[aria-label="Backup password"]', 'backup-pass-phrase-1'); await A.page.fill('input[aria-label="Confirm Backup password"]', 'backup-pass-phrase-1');
   const [dl] = await Promise.all([A.page.waitForEvent('download'), A.page.getByRole('button', { name: 'Download backup' }).click()]);
   const text = fs.readFileSync(await dl.path(), 'utf8'); await A.ctx.close();
 
@@ -1241,6 +1245,40 @@ for (const dev of ['iPhone 13', 'iPhone SE']) test('v0.15 on a phone (' + dev + 
   await page.getByRole('button', { name: 'More' }).click(); await page.waitForSelector('.msheet');
   assert.equal(await page.locator('.msheet-item', { hasText: /^Crypto/ }).count(), 0, 'hidden category is gone from the phone menu');
   assert.ok(await page.locator('.msheet-item', { hasText: 'Social' }).count() || true);
+  assert.deepEqual(problems.filter((p) => !/Failed to load resource/.test(p)), []);
+  await ctx.close();
+});
+
+test('v0.16: first login lands on Home with only Everyday expanded; app-style icon tiles; widgets can be pinned and resized (drag and keyboard) and it persists', async () => {
+  const { ctx, page, problems } = await newPage();
+  await page.goto(base); await page.waitForSelector('#pw1'); await page.fill('#pw1', MASTER); await page.fill('#pw2', MASTER); await page.check('#ack'); await page.click('button[type=submit]');
+  await page.getByRole('button', { name: 'Skip for now' }).click(); await dismissWelcome(page); await page.waitForSelector('.widgets');
+  assert.equal(await page.locator('.ngroup[aria-expanded=true]').count(), 1); assert.match(await page.locator('.ngroup[aria-expanded=true]').textContent(), /Everyday/i);
+  assert.ok(await page.locator('.side .nav', { hasText: 'Logins' }).isVisible() && !(await page.locator('.side .nav', { hasText: 'Travel' }).isVisible()));
+  // real app-icon tiles in the side bar
+  const bg = await page.locator('.side .nav', { hasText: 'Favorites' }).locator('.ico').evaluate((e) => getComputedStyle(e).backgroundImage);
+  assert.match(bg, /gradient/); const sz = await page.locator('.side .nav', { hasText: 'Favorites' }).locator('.ico').boundingBox(); assert.ok(sz.width >= 26, 'tile is a real icon size, ' + sz.width);
+  const tb = await page.locator('.topbar [title^="Lock"] .ico').boundingBox(); assert.ok(tb.width >= 24, 'top bar icons are large: ' + tb.width);
+  // pin
+  const first = async () => page.locator('.widgets .widget').first().getAttribute('aria-label');
+  assert.equal(await first(), 'Clock & date');
+  await page.getByRole('button', { name: 'Pin Quick generator' }).click(); await page.waitForSelector('.widget.pinned');
+  assert.equal(await first(), 'Quick generator'); assert.equal(await page.locator('.widget.pinned').count(), 1);
+  // resize with the keyboard
+  const w = page.locator('.widget', { hasText: 'Vault health' }).first(); const grip = w.locator('.wgrip');
+  const h0 = (await w.boundingBox()).height; await grip.focus(); await page.keyboard.press('ArrowDown'); await page.keyboard.press('ArrowDown');
+  await page.waitForFunction((l) => document.querySelector(`.widget[aria-label="${l}"]`).dataset.ch, 'Vault health');
+  assert.ok((await w.boundingBox()).height >= h0 + 60, 'taller after two arrow presses');
+  // resize by dragging
+  const g = await grip.boundingBox(); const before = await w.boundingBox();
+  await page.mouse.move(g.x + 10, g.y + 10); await page.mouse.down(); await page.mouse.move(g.x + 260, g.y + 120, { steps: 8 }); await page.mouse.up();
+  const after = await w.boundingBox(); assert.ok(after.width > before.width + 100 || after.height > before.height + 40, 'dragging changed the size');
+  // persists across lock / unlock
+  await page.getByRole('button', { name: /Lock/ }).first().click(); await page.fill('#upw', MASTER); await page.click('button[type=submit]'); await page.waitForSelector('.widgets');
+  await page.waitForTimeout(1200);
+  assert.equal(await first(), 'Quick generator', 'pin persisted'); assert.ok(await page.locator('.widget[aria-label="Vault health"]').getAttribute('data-ch'), 'size persisted');
+  // double-click the grip to reset
+  await page.locator('.widget[aria-label="Vault health"] .wgrip').dblclick(); assert.equal(await page.locator('.widget[aria-label="Vault health"]').getAttribute('data-ch'), null);
   assert.deepEqual(problems.filter((p) => !/Failed to load resource/.test(p)), []);
   await ctx.close();
 });

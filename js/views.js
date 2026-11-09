@@ -43,6 +43,22 @@ export function statChip(value) {
   return h('small', { class: 'sbits', title: 'Estimated strength: ' + e.label, text: `${n} characters · ~${Math.round(e.bits)} bits · ${e.label}` });
 }
 
+/* ---------- hidden password + confirm ---------- */
+/* A hidden password field with a "confirm" field, a show / copy toggle and a generator. The generated passphrase fills both fields. */
+export function passwordRow(label, input, withGen = true) {
+  input.type = 'password'; input.autocomplete = 'new-password';
+  const conf = h('input', { class: 'inp mono', type: 'password', autocomplete: 'new-password', spellcheck: 'false', 'aria-label': 'Confirm ' + (input.getAttribute('aria-label') || label) });
+  if (input.value) conf.value = input.value;
+  const show = (on) => { input.type = conf.type = on ? 'text' : 'password'; };
+  const eye = h('button', { class: 'btn sm', type: 'button', 'aria-label': 'Show or hide the password', title: 'Show / hide', 'aria-pressed': 'false', on: { click: () => { const on = input.type === 'password'; show(on); eye.setAttribute('aria-pressed', String(on)); } } }, '{{eye}}');
+  const copy = h('button', { class: 'btn sm', type: 'button', 'aria-label': 'Copy the password', title: 'Copy (clears itself)', on: { click: () => copyText(input.value, 'Password copied', 30) } }, '{{copy}}');
+  const gen = withGen ? h('button', { class: 'btn sm', type: 'button', title: 'Generate a passphrase', 'aria-label': 'Generate a passphrase', on: { click: () => { input.value = conf.value = generatePassphrase({ words: 5 }); input.dispatchEvent(new Event('input')); show(true); eye.setAttribute('aria-pressed', 'true'); } } }, '{{bolt}}') : null;
+  const f = h('div', { class: 'field' }, h('label', { text: label }), h('div', { class: 'row' }, h('div', { class: 'grow' }, input), eye, copy, gen),
+    h('label', { class: 'sublbl', text: 'Confirm ' + label.toLowerCase() }), conf, liveMeter(input));
+  f.match = () => input.value === conf.value;
+  return f;
+}
+
 export function pwField(initial, { id, onInput, ctx, autocomplete = 'new-password' } = {}) {
   const input = h('input', { type: 'password', class: 'inp mono', value: initial || '', autocomplete, spellcheck: 'false', id, 'aria-label': 'Password' });
   const m = h('div');
@@ -467,10 +483,12 @@ export function printNodes(nodes) {
 /* ---------- QR share (QR Seal v2 compatible) ---------- */
 export function shareItem(ctx, it, only = null) {
   const pwBox = h('input', { class: 'inp mono', value: generatePassphrase({ words: 4 }), autocomplete: 'off', spellcheck: 'false', 'aria-label': 'QR password' });
+  const pwRow = passwordRow('QR password', pwBox);
   const out = h('div'), err = h('p', { class: 'err', role: 'alert' });
   let canvas = null;
   const make = async () => {
     err.textContent = ''; clear(out);
+    if (!pwRow.match()) { err.textContent = 'The two QR passwords do not match.'; return false; }
     if (pwBox.value.length < 8) { err.textContent = 'Use at least 8 characters for the QR password.'; return false; }
     const payload = only ? { vm: 1, name: it.name, field: { label: only.label, value: only.value } } : { vm: 1, item: { type: it.type, name: it.name, username: it.username, password: it.password, url: it.url, totp: it.totp, notes: it.notes, tags: it.tags, card: it.card, fields: it.fields, custom: it.custom } };
     try {
@@ -486,7 +504,7 @@ export function shareItem(ctx, it, only = null) {
   };
   modal({ title: only ? 'Seal “' + only.label + '” as QR' : 'Seal as QR code', sub: it.name, wide: true,
     body: h('div', null, h('p', { class: 'note warn', text: 'Anyone with the QR image AND this password can read the item. Pick a password you can tell the recipient separately.' }),
-      h('div', { class: 'field' }, h('label', { text: 'QR password' }), h('div', { class: 'row' }, h('div', { class: 'grow' }, pwBox), h('button', { class: 'btn sm', on: { click: () => { pwBox.value = generatePassphrase({ words: 4 }); pwBox.dispatchEvent(new Event('input')); } } }, '{{bolt}}')), liveMeter(pwBox)), err, out),
+      pwRow, err, out),
     actions: [{ label: 'Close' }, { label: 'Create QR', kind: 'primary', onClick: make, close: false }] });
 }
 

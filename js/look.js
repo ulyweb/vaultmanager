@@ -31,7 +31,7 @@ export const LOOK_DEFAULTS = {
   // layout (dock & menu bar)
   haptics: true, nav: 'sidebar', dockSize: 46, dockMagnify: true, dockLabels: false, dockAutoHide: false,
   clock: true, clock24: false, dateFmt: 'short', barLabels: true, startPage: 'home',
-  widgets: WIDGET_DEFS.map((w) => ({ id: w.id, on: true, size: w.size })),
+  widgets: WIDGET_DEFS.map((w) => ({ id: w.id, on: true, size: w.size, pinned: false, cw: 0, ch: 0 })),
 };
 
 const num = (v, lo, hi, d) => (Number.isFinite(+v) ? Math.min(hi, Math.max(lo, +v)) : d);
@@ -45,8 +45,8 @@ export const landscapeIds = [];   // filled lazily by the UI (avoids loading the
 export function normalizeLook(o = {}, wallIds = null) {
   const D = LOOK_DEFAULTS;
   const widgets = [];
-  for (const w of Array.isArray(o.widgets) ? o.widgets : []) if (w && WIDGET_DEFS.some((d) => d.id === w.id) && !widgets.some((x) => x.id === w.id)) widgets.push({ id: w.id, on: bool(w.on, true), size: oneOf(w.size, ['s', 'm', 'l'], WIDGET_DEFS.find((d) => d.id === w.id).size) });
-  for (const d of WIDGET_DEFS) if (!widgets.some((x) => x.id === d.id)) widgets.push({ id: d.id, on: true, size: d.size });
+  for (const w of Array.isArray(o.widgets) ? o.widgets : []) if (w && WIDGET_DEFS.some((d) => d.id === w.id) && !widgets.some((x) => x.id === w.id)) widgets.push({ id: w.id, on: bool(w.on, true), size: oneOf(w.size, ['s', 'm', 'l'], WIDGET_DEFS.find((d) => d.id === w.id).size), pinned: bool(w.pinned, false), cw: Math.round(num(w.cw, 0, 4, 0)), ch: w.ch ? Math.round(num(w.ch, 100, 700, 0)) : 0 });
+  for (const d of WIDGET_DEFS) if (!widgets.some((x) => x.id === d.id)) widgets.push({ id: d.id, on: true, size: d.size, pinned: false, cw: 0, ch: 0 });
   return {
     hiddenCats: Array.isArray(o.hiddenCats) ? [...new Set(o.hiddenCats.filter((k) => typeof k === 'string' && /^[a-z0-9]{2,20}$/.test(k)))].slice(0, 60) : [],
     hiddenNav: Array.isArray(o.hiddenNav) ? [...new Set(o.hiddenNav.filter((k) => HIDEABLE.includes(k)))] : [],

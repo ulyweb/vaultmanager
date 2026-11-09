@@ -47,11 +47,11 @@ function openProfile(id) {
 const ctx = {
   get store() { return store; },
   env,
-  S: { view: 'all', q: '', sel: null, qrTab: 'seal', collapsed: new Set(), profileId: null, gate: null },
+  S: { view: 'all', q: '', sel: null, qrTab: 'seal', collapsed: new Set(GROUPS.slice(1).map((g) => g[0])), profileId: null, gate: null },
   cleanup: [],
   runCleanup() { const c = ctx.cleanup.splice(0); c.forEach((f) => { try { f(); } catch { /* ignore */ } }); },
   closeModals: closeAllModals,
-  go(view) { ctx.S.view = view; if (view !== 'all' && !isVaultView(view)) ctx.S.sel = null; if (!isVaultView(view)) ctx.S.q = ''; syncSearch(); draw(); window.scrollTo(0, 0); },
+  go(view) { ctx.S.view = view; if (view in TYPE_META) { const g = GROUPS.find(([, keys]) => keys.includes(view)); if (g) ctx.S.collapsed.delete(g[0]); } if (view !== 'all' && !isVaultView(view)) ctx.S.sel = null; if (!isVaultView(view)) ctx.S.q = ''; syncSearch(); draw(); window.scrollTo(0, 0); },
   refresh() { draw(); },
   applyTheme, armAutolock, lock, armSync, syncNow,
   profile: () => env.profiles.get(ctx.S.profileId),

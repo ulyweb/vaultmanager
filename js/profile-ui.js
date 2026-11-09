@@ -4,7 +4,7 @@
 import { h, clear, modal, toast, readFileText, download } from './dom.js';
 import { decryptProfile } from './vault.js';
 import { createProfileFromImport, sanitizeAvatar } from './profiles.js';
-import { meter } from './views.js';
+import { meter, passwordRow } from './views.js';
 import { generatePassphrase } from './generator.js';
 import { fmtDate, fmtInt } from './util.js';
 
@@ -56,18 +56,20 @@ const slug = (s) => String(s || 'profile').toLowerCase().replace(/[^a-z0-9]+/g, 
 /* ---------- export the whole profile ---------- */
 export function exportProfileDialog(ctx) {
   const { store } = ctx, prof = ctx.profile();
-  const pw = h('input', { class: 'inp mono', type: 'text', value: generatePassphrase({ words: 6 }), autocomplete: 'off', spellcheck: 'false', 'aria-label': 'Backup password' });
+  const pw = h('input', { class: 'inp mono', type: 'password', value: '', autocomplete: 'new-password', spellcheck: 'false', 'aria-label': 'Backup password' });
+  const pwRow = passwordRow('Backup password', pw);
   const att = h('input', { type: 'checkbox', checked: true }), err = h('p', { class: 'err', role: 'alert' });
   (async () => { const st = await store.attachmentStats(); note.textContent = `${store.items.length} item${store.items.length === 1 ? '' : 's'} · ${st.count} attachment${st.count === 1 ? '' : 's'} (${(st.bytes / 1048576).toFixed(1)} MB)`; })();
   const note = h('p', { class: 'hint' });
   const m = modal({ title: 'Export this profile', sub: prof ? prof.name : '', wide: false,
     body: h('div', null,
       h('p', { class: 'hint', text: 'One encrypted file with your whole profile: every item (including the trash and version history), all attachments, your settings and look, and the audit trail. Import it on any device, from the first screen, to get everything back.' }), note,
-      h('div', { class: 'field' }, h('label', { text: 'Backup password' }), h('div', { class: 'row' }, h('div', { class: 'grow' }, pw), h('button', { class: 'btn sm', type: 'button', title: 'Generate a passphrase', on: { click: () => { pw.value = generatePassphrase({ words: 6 }); } } }, '{{bolt}}')), h('p', { class: 'hint', text: 'You need this password to import the file. It is not stored anywhere — write it down.' })),
+      pwRow, h('p', { class: 'hint', text: 'Type your own password (twice) or press the lightning button to generate one. You need it to import the file; it is not stored anywhere — write it down.' }),
       h('label', { class: 'chk' }, att, 'Include attachments (pictures and documents)'),
       h('p', { class: 'note', text: 'Not included, on purpose: your GitHub token and sync passphrase (set sync up again on the new device) and passkeys (they belong to one device).' }), err),
     actions: [{ label: 'Cancel' }, { label: 'Download backup', kind: 'primary', close: false, onClick: async (e) => {
       err.textContent = '';
+      if (!pwRow.match()) { err.textContent = 'The two backup passwords do not match.'; return false; }
       if (pw.value.length < 10) { err.textContent = 'Use at least 10 characters for the backup password.'; return false; }
       e.target.disabled = true;
       try { const text = await store.exportProfile(pw.value, { profile: { name: prof && prof.name, avatar: prof && prof.avatar && prof.avatar.type === 'photo' ? null : prof && prof.avatar }, attachments: att.checked }); download(`vaultmanager-profile-${slug(prof && prof.name)}-${fmtDate(Date.now())}.vmprofile`, text, 'text/plain'); toast('Profile backup saved — keep the password safe!', 'ok', 6000); m.close(); }

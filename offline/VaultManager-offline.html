@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VaultManager v0.15.0 — single-file offline build. Verify with the .sha256 file next to it. -->
+<!-- VaultManager v0.16.0 — single-file offline build. Verify with the .sha256 file next to it. -->
 <html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
@@ -11,7 +11,7 @@
 <meta name="application-name" content="VaultManager">
 <meta name="format-detection" content="telephone=no">
 <meta name="referrer" content="no-referrer">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-WZS/PJvh4+f99SeHk8fBlcsXz173ZdlWxbXxEBjs9b0=' blob:; style-src 'sha256-fV7bgAUWYR9TkrhgDViUvRe4nBUIb07bdUxzIpkoF00='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-9IHn/x/axCWSp4UlKqVbQoXvN0en2EdoFCOMtPmxMwE=' blob:; style-src 'sha256-s0ojmmp8yR+TsxhQo4cHelbOcEmbOrE6rf/AFyqKjOI='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
 <title>VaultManager | Zero-Knowledge Password Manager</title>
 <meta name="description" content="VaultManager: an offline-first, zero-knowledge, end-to-end encrypted password manager with a strong password generator, TOTP codes and QR-sealed sharing and backup. Runs entirely in your browser.">
 <meta name="theme-color" content="#05080d">
@@ -716,6 +716,42 @@ html[data-icons=vivid][data-fxanim=on] .ico[data-n=star] svg, html[data-icons=vi
 .setrow.vis { padding: 4px 0; }
 .tm .kv span, .tm .kv b, .tmcard b, .tmcard small { min-width: 0; overflow-wrap: anywhere; }
 @media (max-width: 699px) { .tm .kv { grid-template-columns: 1fr; gap: 2px 0; } .tm .kv b { margin-bottom: 8px; } .tmgrid { grid-template-columns: 1fr 1fr; } .tmcard b { font-size: 17px; } }
+
+/* ---- widgets: pin + manual size ---- */
+.widget { position: relative; }
+.widget .whead { display: flex; align-items: center; gap: 8px; } .widget .wpin { margin-left: auto; opacity: .45; } .widget:hover .wpin, .widget .wpin.on, .widget .wpin:focus-visible { opacity: 1; } .widget .wpin.on { color: var(--accent); }
+.widget.pinned { box-shadow: 0 0 0 1px var(--accent) inset, 0 16px 45px var(--shadow); }
+.widget .wbody { flex: 1; min-height: 0; overflow: auto; }
+.widget .wgrip { position: absolute; right: 2px; bottom: 2px; width: 22px; height: 22px; border: 0; padding: 0; background: linear-gradient(135deg, transparent 50%, var(--muted) 50%, var(--muted) 56%, transparent 56%, transparent 66%, var(--muted) 66%, var(--muted) 72%, transparent 72%); opacity: .35; cursor: nwse-resize; touch-action: none; border-radius: 0 0 12px 0; }
+.widget:hover .wgrip, .widget .wgrip:focus-visible, .widget.resizing .wgrip { opacity: .95; } .widget.resizing { transition: none; outline: 2px dashed var(--accent); user-select: none; }
+@media (min-width: 700px) { .widget[data-cw] { grid-column: span var(--cw); } }
+.widget[data-ch] { height: var(--ch); min-height: 0; }
+@media (max-width: 699px) { .widget .wgrip { width: 30px; height: 30px; } }
+
+/* ---- real app-icon tiles: side bar, dock and menus look like desktop icons (ulyOS style) ---- */
+html[data-icons=vivid] .nav .ico:not(.cat), html[data-icons=vivid] .dock-item .ico, html[data-icons=vivid] .msheet-item .ico, html[data-icons=vivid] .mbar-item .ico {
+  width: 1.9em; height: 1.9em; padding: .42em; border-radius: .6em; position: relative; overflow: hidden; color: #fff; filter: none; margin-right: 0;
+  background: linear-gradient(150deg, var(--v1), var(--v2)); box-shadow: 0 3px 9px color-mix(in srgb, var(--v2) 50%, transparent), inset 0 1px 0 rgba(255,255,255,.4), inset 0 -2px 4px rgba(0,0,0,.18);
+}
+html[data-icons=vivid] .nav .ico:not(.cat)::before, html[data-icons=vivid] .dock-item .ico::before, html[data-icons=vivid] .msheet-item .ico::before, html[data-icons=vivid] .mbar-item .ico::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 48%; background: linear-gradient(rgba(255,255,255,.34), rgba(255,255,255,0)); border-radius: .6em .6em 60% 60% / .6em .6em 25% 25%; pointer-events: none; }
+html[data-icons=vivid] .nav .ico:not(.cat) svg, html[data-icons=vivid] .dock-item .ico svg, html[data-icons=vivid] .msheet-item .ico svg, html[data-icons=vivid] .mbar-item .ico svg { stroke-width: 1.9; filter: drop-shadow(0 1px 1px rgba(0,0,0,.25)); }
+html[data-icons=vivid] .nav .ic { width: calc(34px * var(--icon-k)); font-size: calc(15px * var(--icon-k)); } html[data-icons=vivid] .nav { gap: 10px; }
+html[data-icons=vivid] .nav .ico.cat { width: 1.9em; height: 1.9em; }
+html[data-icons=vivid] .dock-item .ico { width: 1.7em; height: 1.7em; padding: .36em; } html[data-icons=vivid] .mbar-item .ico { width: 1.7em; height: 1.7em; padding: .34em; }
+html[data-icons=vivid] .btn.primary .ico, html[data-icons=vivid] .topbar .ico { box-shadow: none; }
+html[data-icons=vivid][data-fxanim=on] .nav .ico:not(.cat), html[data-icons=vivid][data-fxanim=on] .dock-item .ico { animation: vm-float 4s ease-in-out infinite; animation-delay: var(--d, 0s); }
+html[data-icons=vivid] .nav:hover .ico:not(.cat), html[data-icons=vivid] .dock-item:hover .ico { transform: translateY(-2px) scale(1.06); }
+
+/* ---- top bar: bigger icon buttons ---- */
+.topbar .btn { min-height: 42px; } .topbar .btn .ico { font-size: 1.35em; width: 1.35em; height: 1.35em; }
+.topbar .btn:not(:has(.lbl)) { min-width: 44px; justify-content: center; padding-inline: 10px; }
+html[data-icons=vivid] .topbar .btn .ico { width: 1.45em; height: 1.45em; padding: .2em; background: none; box-shadow: none; }
+/* top bar polish: readable labels, larger icons (lock / help get the app-tile look) */
+.topbar .btn { gap: 8px; } .topbar .btn .lbl { color: inherit; opacity: 1; letter-spacing: .06em; margin: 0; }
+.topbar .btn.primary .ico { font-size: 1.6em; width: 1.6em; height: 1.6em; padding: 0; color: inherit; }
+html[data-icons=vivid] .topbar .btn:not(.primary) .ico { width: 1.9em; height: 1.9em; padding: .4em; border-radius: .6em; color: #fff; position: relative; overflow: hidden;
+  background: linear-gradient(150deg, var(--v1), var(--v2)); box-shadow: 0 3px 9px color-mix(in srgb, var(--v2) 50%, transparent), inset 0 1px 0 rgba(255,255,255,.4); filter: none; }
+.topbar .btn:not(.primary) { padding: 6px 12px 6px 8px; }
 </style>
 </head>
 <body>
@@ -776,6 +812,7 @@ html[data-icons=vivid][data-fxanim=on] .ico[data-n=star] svg, html[data-icons=vi
     unlock: ['<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 017.5-2M12 15v2"/>', "\u{1F513}"],
     shieldlock: ['<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><rect x="9" y="11" width="6" height="5" rx="1"/><path d="M10 11V9.5a2 2 0 014 0V11"/>', "\u{1F510}"],
     shield: ['<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/>', "\u{1F6E1}"],
+    pin: ['<path d="M9 3h6l-1 6 3 3v2H7v-2l3-3z"/><path d="M12 14v7"/>', "\u{1F4CC}"],
     chip: ['<rect x="6" y="6" width="12" height="12" rx="2"/><rect x="9.5" y="9.5" width="5" height="5"/><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3"/>', "\u{1F9E0}"],
     eye: ['<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>', "\u{1F441}"],
     copy: ['<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 012-2h9"/>', "\u29C9"],
@@ -822,6 +859,30 @@ html[data-icons=vivid][data-fxanim=on] .ico[data-n=star] svg, html[data-icons=vi
   var ICON_NAMES = Object.keys(G);
   var tileColors = (n) => G[n] && G[n][2] || null;
   var EMOJI_OF = Object.fromEntries(Object.entries(G).map(([n, v]) => [n, v[1]]));
+  var UI_TILE = {
+    home: ["#2fe6d0", "#0ea5e9"],
+    vault: ["#8b7dff", "#6366f1"],
+    star: ["#fbbf24", "#f59e0b"],
+    starline: ["#fbbf24", "#f59e0b"],
+    trash: ["#fb7185", "#ef4444"],
+    pulse: ["#34d399", "#16a34a"],
+    bolt: ["#fde047", "#f97316"],
+    qr: ["#60a5fa", "#2563eb"],
+    beam: ["#c084fc", "#ec4899"],
+    swap: ["#2dd4bf", "#16a34a"],
+    chip: ["#f472b6", "#e11d48"],
+    gear: ["#94a3b8", "#475569"],
+    alert: ["#fbbf24", "#ef4444"],
+    help: ["#f59e0b", "#ea580c"],
+    lock: ["#a78bfa", "#7c3aed"],
+    plus: ["#2fe6d0", "#22c55e"],
+    menu: ["#94a3b8", "#64748b"],
+    puzzle: ["#fb923c", "#f43f5e"],
+    sync: ["#38bdf8", "#6366f1"],
+    contact: ["#38bdf8", "#2563eb"],
+    download: ["#34d399", "#0ea5e9"],
+    importfile: ["#34d399", "#0ea5e9"]
+  };
   var hash = (str) => {
     let x = 7;
     for (let i = 0; i < str.length; i++) x = x * 31 + str.charCodeAt(i) >>> 0;
@@ -852,7 +913,7 @@ html[data-icons=vivid][data-fxanim=on] .ico[data-n=star] svg, html[data-icons=vi
       span.style.setProperty("--i1", t[0]);
       span.style.setProperty("--i2", t[1]);
     }
-    const hsh = hash(name), v = VIVID[hsh % VIVID.length];
+    const hsh = hash(name), v = UI_TILE[name] || VIVID[hsh % VIVID.length];
     span.style.setProperty("--v1", v[0]);
     span.style.setProperty("--v2", v[1]);
     span.style.setProperty("--d", "-" + (hsh % 40 / 10).toFixed(1) + "s");
@@ -1720,7 +1781,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   }
 
   // js/version.js
-  var APP_VERSION = "0.15.0";
+  var APP_VERSION = "0.16.0";
   var APP_NAME = "VaultManager";
   var REPO_URL = "https://github.com/ulyweb/vaultmanager";
   var FORMATS = [
@@ -1734,6 +1795,12 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     ["Attachments at rest", "AES-256-GCM per file, bound to vault + file id"]
   ];
   var CHANGELOG = [
+    { v: "0.16.0", date: "2026-11-09", notes: [
+      "Side bar, dock and menu icons are now real app-style icon tiles (glossy, coloured, bigger), like the ulyOS desktop. Top-bar icons are larger too.",
+      "First login: Home page, and in Categories only \u201CEveryday\u201D is expanded (the other groups open with one click).",
+      "Export whole profile: the backup password is hidden, typed twice (or generated), with show / copy buttons. Seal-as-QR works the same way.",
+      "Home widgets can be pinned to the top and resized freely: drag the corner grip or use the arrow keys; double-click resets."
+    ] },
     { v: "0.15.0", date: "2026-11-09", notes: [
       "Import & export explained: a \u201CWhich one do I need?\u201D guide on Tools \u2192 Import & export and in Settings \u2192 General. Whole profile (.vmprofile) = profile + passwords + attachments + settings; Database backup (.vmvault) = passwords only. Whole-profile buttons now also live on the Tools page. Also in the guided tour and Help tips.",
       "QR tools: passwords are hidden and must be typed twice (with show / copy / generate), also for the QR backup and the Tools backup file. New Purge memory button wipes fields, QR codes, opened locked items and the clipboard.",
@@ -1883,7 +1950,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     dateFmt: "short",
     barLabels: true,
     startPage: "home",
-    widgets: WIDGET_DEFS.map((w) => ({ id: w.id, on: true, size: w.size }))
+    widgets: WIDGET_DEFS.map((w) => ({ id: w.id, on: true, size: w.size, pinned: false, cw: 0, ch: 0 }))
   };
   var num = (v, lo, hi, d) => Number.isFinite(+v) ? Math.min(hi, Math.max(lo, +v)) : d;
   var oneOf = (v, list, d) => list.includes(v) ? v : d;
@@ -1892,8 +1959,8 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   function normalizeLook(o = {}, wallIds = null) {
     const D2 = LOOK_DEFAULTS;
     const widgets = [];
-    for (const w of Array.isArray(o.widgets) ? o.widgets : []) if (w && WIDGET_DEFS.some((d) => d.id === w.id) && !widgets.some((x) => x.id === w.id)) widgets.push({ id: w.id, on: bool(w.on, true), size: oneOf(w.size, ["s", "m", "l"], WIDGET_DEFS.find((d) => d.id === w.id).size) });
-    for (const d of WIDGET_DEFS) if (!widgets.some((x) => x.id === d.id)) widgets.push({ id: d.id, on: true, size: d.size });
+    for (const w of Array.isArray(o.widgets) ? o.widgets : []) if (w && WIDGET_DEFS.some((d) => d.id === w.id) && !widgets.some((x) => x.id === w.id)) widgets.push({ id: w.id, on: bool(w.on, true), size: oneOf(w.size, ["s", "m", "l"], WIDGET_DEFS.find((d) => d.id === w.id).size), pinned: bool(w.pinned, false), cw: Math.round(num(w.cw, 0, 4, 0)), ch: w.ch ? Math.round(num(w.ch, 100, 700, 0)) : 0 });
+    for (const d of WIDGET_DEFS) if (!widgets.some((x) => x.id === d.id)) widgets.push({ id: d.id, on: true, size: d.size, pinned: false, cw: 0, ch: 0 });
     return {
       hiddenCats: Array.isArray(o.hiddenCats) ? [...new Set(o.hiddenCats.filter((k) => typeof k === "string" && /^[a-z0-9]{2,20}$/.test(k)))].slice(0, 60) : [],
       hiddenNav: Array.isArray(o.hiddenNav) ? [...new Set(o.hiddenNav.filter((k) => HIDEABLE.includes(k)))] : [],
@@ -3774,6 +3841,38 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     const e = estimate(value), n = [...value].length;
     return h("small", { class: "sbits", title: "Estimated strength: " + e.label, text: `${n} characters \xB7 ~${Math.round(e.bits)} bits \xB7 ${e.label}` });
   }
+  function passwordRow(label, input, withGen = true) {
+    input.type = "password";
+    input.autocomplete = "new-password";
+    const conf = h("input", { class: "inp mono", type: "password", autocomplete: "new-password", spellcheck: "false", "aria-label": "Confirm " + (input.getAttribute("aria-label") || label) });
+    if (input.value) conf.value = input.value;
+    const show = (on) => {
+      input.type = conf.type = on ? "text" : "password";
+    };
+    const eye = h("button", { class: "btn sm", type: "button", "aria-label": "Show or hide the password", title: "Show / hide", "aria-pressed": "false", on: { click: () => {
+      const on = input.type === "password";
+      show(on);
+      eye.setAttribute("aria-pressed", String(on));
+    } } }, "{{eye}}");
+    const copy = h("button", { class: "btn sm", type: "button", "aria-label": "Copy the password", title: "Copy (clears itself)", on: { click: () => copyText(input.value, "Password copied", 30) } }, "{{copy}}");
+    const gen = withGen ? h("button", { class: "btn sm", type: "button", title: "Generate a passphrase", "aria-label": "Generate a passphrase", on: { click: () => {
+      input.value = conf.value = generatePassphrase({ words: 5 });
+      input.dispatchEvent(new Event("input"));
+      show(true);
+      eye.setAttribute("aria-pressed", "true");
+    } } }, "{{bolt}}") : null;
+    const f = h(
+      "div",
+      { class: "field" },
+      h("label", { text: label }),
+      h("div", { class: "row" }, h("div", { class: "grow" }, input), eye, copy, gen),
+      h("label", { class: "sublbl", text: "Confirm " + label.toLowerCase() }),
+      conf,
+      liveMeter(input)
+    );
+    f.match = () => input.value === conf.value;
+    return f;
+  }
   function pwField(initial, { id, onInput, ctx: ctx2, autocomplete = "new-password" } = {}) {
     const input = h("input", { type: "password", class: "inp mono", value: initial || "", autocomplete, spellcheck: "false", id, "aria-label": "Password" });
     const m = h("div");
@@ -4567,11 +4666,16 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   }
   function shareItem(ctx2, it, only = null) {
     const pwBox = h("input", { class: "inp mono", value: generatePassphrase({ words: 4 }), autocomplete: "off", spellcheck: "false", "aria-label": "QR password" });
+    const pwRow = passwordRow("QR password", pwBox);
     const out = h("div"), err = h("p", { class: "err", role: "alert" });
     let canvas = null;
     const make = async () => {
       err.textContent = "";
       clear(out);
+      if (!pwRow.match()) {
+        err.textContent = "The two QR passwords do not match.";
+        return false;
+      }
       if (pwBox.value.length < 8) {
         err.textContent = "Use at least 8 characters for the QR password.";
         return false;
@@ -4612,10 +4716,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
         "div",
         null,
         h("p", { class: "note warn", text: "Anyone with the QR image AND this password can read the item. Pick a password you can tell the recipient separately." }),
-        h("div", { class: "field" }, h("label", { text: "QR password" }), h("div", { class: "row" }, h("div", { class: "grow" }, pwBox), h("button", { class: "btn sm", on: { click: () => {
-          pwBox.value = generatePassphrase({ words: 4 });
-          pwBox.dispatchEvent(new Event("input"));
-        } } }, "{{bolt}}")), liveMeter(pwBox)),
+        pwRow,
         err,
         out
       ),
@@ -4902,38 +5003,6 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     const bar2 = h("div", { class: "tabs", role: "tablist" }, tabs.map(([k, l]) => h("button", { role: "tab", on: { click: () => show(k) } }, l)));
     show(ctx2.S.qrTab || "seal");
     return page("QR tools", "Seal secrets into password-protected QR codes (AES-256-GCM). Compatible with QR Seal v2 from ulyOS.", bar2, body);
-  }
-  function passwordRow(label, input, withGen = true) {
-    input.type = "password";
-    input.autocomplete = "new-password";
-    const conf = h("input", { class: "inp mono", type: "password", autocomplete: "new-password", spellcheck: "false", "aria-label": "Confirm " + (input.getAttribute("aria-label") || label) });
-    if (input.value) conf.value = input.value;
-    const show = (on) => {
-      input.type = conf.type = on ? "text" : "password";
-    };
-    const eye = h("button", { class: "btn sm", type: "button", "aria-label": "Show or hide the password", title: "Show / hide", "aria-pressed": "false", on: { click: () => {
-      const on = input.type === "password";
-      show(on);
-      eye.setAttribute("aria-pressed", String(on));
-    } } }, "{{eye}}");
-    const copy = h("button", { class: "btn sm", type: "button", "aria-label": "Copy the password", title: "Copy (clears itself)", on: { click: () => copyText(input.value, "Password copied", 30) } }, "{{copy}}");
-    const gen = withGen ? h("button", { class: "btn sm", type: "button", title: "Generate a passphrase", "aria-label": "Generate a passphrase", on: { click: () => {
-      input.value = conf.value = generatePassphrase({ words: 5 });
-      input.dispatchEvent(new Event("input"));
-      show(true);
-      eye.setAttribute("aria-pressed", "true");
-    } } }, "{{bolt}}") : null;
-    const f = h(
-      "div",
-      { class: "field" },
-      h("label", { text: label }),
-      h("div", { class: "row" }, h("div", { class: "grow" }, input), eye, copy, gen),
-      h("label", { class: "sublbl", text: "Confirm " + label.toLowerCase() }),
-      conf,
-      liveMeter(input)
-    );
-    f.match = () => input.value === conf.value;
-    return f;
   }
   function qrOutputs(canvas, name) {
     return h(
@@ -7266,7 +7335,8 @@ Platform: ${platform()}
   var slug = (s) => String(s || "profile").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 30) || "profile";
   function exportProfileDialog(ctx2) {
     const { store: store2 } = ctx2, prof = ctx2.profile();
-    const pw = h("input", { class: "inp mono", type: "text", value: generatePassphrase({ words: 6 }), autocomplete: "off", spellcheck: "false", "aria-label": "Backup password" });
+    const pw = h("input", { class: "inp mono", type: "password", value: "", autocomplete: "new-password", spellcheck: "false", "aria-label": "Backup password" });
+    const pwRow = passwordRow("Backup password", pw);
     const att = h("input", { type: "checkbox", checked: true }), err = h("p", { class: "err", role: "alert" });
     (async () => {
       const st = await store2.attachmentStats();
@@ -7282,15 +7352,18 @@ Platform: ${platform()}
         null,
         h("p", { class: "hint", text: "One encrypted file with your whole profile: every item (including the trash and version history), all attachments, your settings and look, and the audit trail. Import it on any device, from the first screen, to get everything back." }),
         note,
-        h("div", { class: "field" }, h("label", { text: "Backup password" }), h("div", { class: "row" }, h("div", { class: "grow" }, pw), h("button", { class: "btn sm", type: "button", title: "Generate a passphrase", on: { click: () => {
-          pw.value = generatePassphrase({ words: 6 });
-        } } }, "{{bolt}}")), h("p", { class: "hint", text: "You need this password to import the file. It is not stored anywhere \u2014 write it down." })),
+        pwRow,
+        h("p", { class: "hint", text: "Type your own password (twice) or press the lightning button to generate one. You need it to import the file; it is not stored anywhere \u2014 write it down." }),
         h("label", { class: "chk" }, att, "Include attachments (pictures and documents)"),
         h("p", { class: "note", text: "Not included, on purpose: your GitHub token and sync passphrase (set sync up again on the new device) and passkeys (they belong to one device)." }),
         err
       ),
       actions: [{ label: "Cancel" }, { label: "Download backup", kind: "primary", close: false, onClick: async (e) => {
         err.textContent = "";
+        if (!pwRow.match()) {
+          err.textContent = "The two backup passwords do not match.";
+          return false;
+        }
         if (pw.value.length < 10) {
           err.textContent = "Use at least 10 characters for the backup password.";
           return false;
@@ -7929,9 +8002,82 @@ Platform: ${platform()}
     const hr = (/* @__PURE__ */ new Date()).getHours(), n = (name || "").trim();
     return hr < 5 ? n ? "Still up, " + n + "?" : "Still up?" : (hr < 12 ? "Good morning" : hr < 18 ? "Good afternoon" : "Good evening") + (n ? ", " + n : "");
   };
-  var wrap = (ctx2, def, size, idx, body, extra) => {
-    const el = h("section", { class: "panel widget " + size, "aria-label": def.label }, h("div", { class: "whead" }, h("span", { class: "icn", text: def.icon }), h("span", { text: def.label }), extra ? h("span", { class: "spacer" }, extra) : null), body);
+  var setW = (ctx2, id, patch, redraw) => {
+    const a = ctx2.look().widgets.map((x) => ({ ...x }));
+    const i = a.findIndex((x) => x.id === id);
+    if (i < 0) return;
+    Object.assign(a[i], patch);
+    ctx2.setLook({ widgets: a }, { redraw: !!redraw });
+  };
+  var wrap = (ctx2, def, w, idx, body, grid) => {
+    const pin = h("button", { class: "icon-btn wpin" + (w.pinned ? " on" : ""), "aria-pressed": String(!!w.pinned), "aria-label": (w.pinned ? "Unpin " : "Pin ") + def.label, title: w.pinned ? "Pinned to the top \u2014 click to unpin" : "Pin to the top of Home", on: { click: () => setW(ctx2, w.id, { pinned: !w.pinned }, true) } }, "{{pin}}");
+    const grip = h("button", { class: "wgrip", type: "button", "aria-label": "Resize " + def.label + " \u2014 drag, or use the arrow keys; double-click resets", title: "Drag to resize \xB7 double-click to reset" });
+    const el = h("section", { class: "panel widget " + w.size + (w.pinned ? " pinned" : ""), "aria-label": def.label }, h("div", { class: "whead" }, h("span", { class: "icn", text: def.icon }), h("span", { text: def.label }), pin), h("div", { class: "wbody" }, body), grip);
     el.style.setProperty("--wc", HUES[idx % HUES.length]);
+    if (w.cw) {
+      el.dataset.cw = String(w.cw);
+      el.style.setProperty("--cw", String(w.cw));
+    }
+    if (w.ch) {
+      el.dataset.ch = String(w.ch);
+      el.style.setProperty("--ch", w.ch + "px");
+    }
+    const cols = () => Math.max(1, getComputedStyle(grid).gridTemplateColumns.split(" ").length);
+    const gap = () => parseFloat(getComputedStyle(grid).columnGap) || 14;
+    const unit = () => (grid.clientWidth - gap() * (cols() - 1)) / cols();
+    const apply = (cw, ch) => {
+      if (cw) {
+        el.dataset.cw = String(cw);
+        el.style.setProperty("--cw", String(Math.min(cw, cols())));
+      } else {
+        delete el.dataset.cw;
+        el.style.removeProperty("--cw");
+      }
+      if (ch) {
+        el.dataset.ch = String(ch);
+        el.style.setProperty("--ch", ch + "px");
+      } else {
+        delete el.dataset.ch;
+        el.style.removeProperty("--ch");
+      }
+    };
+    let drag = null, cur = { cw: w.cw, ch: w.ch };
+    grip.addEventListener("pointerdown", (e) => {
+      e.preventDefault();
+      grip.setPointerCapture(e.pointerId);
+      const r = el.getBoundingClientRect();
+      drag = { x: e.clientX, y: e.clientY, w: r.width, h: r.height };
+      el.classList.add("resizing");
+    });
+    grip.addEventListener("pointermove", (e) => {
+      if (!drag) return;
+      const nw = drag.w + (e.clientX - drag.x), nh = drag.h + (e.clientY - drag.y);
+      cur = { cw: Math.min(cols(), Math.max(1, Math.round((nw + gap()) / (unit() + gap())))), ch: Math.round(Math.min(700, Math.max(100, nh))) };
+      apply(cur.cw, cur.ch);
+    });
+    const done = () => {
+      if (!drag) return;
+      drag = null;
+      el.classList.remove("resizing");
+      setW(ctx2, w.id, cur, false);
+    };
+    grip.addEventListener("pointerup", done);
+    grip.addEventListener("pointercancel", done);
+    grip.addEventListener("dblclick", () => {
+      cur = { cw: 0, ch: 0 };
+      apply(0, 0);
+      setW(ctx2, w.id, cur, false);
+    });
+    grip.addEventListener("keydown", (e) => {
+      const k = e.key;
+      if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home"].includes(k)) return;
+      e.preventDefault();
+      const curCw = cur.cw || Math.max(1, Math.round((el.getBoundingClientRect().width + gap()) / (unit() + gap()))), curCh = cur.ch || Math.round(el.getBoundingClientRect().height);
+      if (k === "Home") cur = { cw: 0, ch: 0 };
+      else cur = { cw: Math.min(cols(), Math.max(1, curCw + (k === "ArrowRight" ? 1 : k === "ArrowLeft" ? -1 : 0))), ch: Math.min(700, Math.max(100, curCh + (k === "ArrowDown" ? 40 : k === "ArrowUp" ? -40 : 0))) };
+      apply(cur.cw, cur.ch);
+      setW(ctx2, w.id, cur, false);
+    });
     return el;
   };
   var rowBtn = (ctx2, it, sub) => h("button", { class: "wrow", on: { click: () => ctx2.showItem(it.id) } }, h("span", { class: "icn", text: (TYPE_META[it.type] || {}).icon || "{{login}}" }), h("span", { class: "t" }, it.name || "(untitled)", sub ? h("small", { text: "  " + sub }) : null));
@@ -8047,12 +8193,19 @@ Platform: ${platform()}
   };
   function renderHome(ctx2) {
     const L = ctx2.look(), n = ctx2.store.active().length;
-    const list = L.widgets.filter((w) => w.on);
+    const list = L.widgets.filter((w) => w.on).sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0));
     const grid = h("div", { class: "widgets" });
     list.forEach((w, i) => {
       const def = WIDGET_DEFS.find((d) => d.id === w.id);
-      grid.append(wrap(ctx2, def, w.size, i, BUILD[w.id](ctx2)));
+      grid.append(wrap(ctx2, def, w, i, BUILD[w.id](ctx2), grid));
     });
+    const fit = () => {
+      const c = Math.max(1, getComputedStyle(grid).gridTemplateColumns.split(" ").length);
+      for (const e of grid.querySelectorAll(".widget[data-cw]")) e.style.setProperty("--cw", String(Math.min(+e.dataset.cw, c)));
+    };
+    requestAnimationFrame(fit);
+    window.addEventListener("resize", fit);
+    ctx2.cleanup.push(() => window.removeEventListener("resize", fit));
     return h(
       "div",
       { class: "page home", style: null },
@@ -8398,7 +8551,7 @@ Platform: ${platform()}
       return store;
     },
     env,
-    S: { view: "all", q: "", sel: null, qrTab: "seal", collapsed: /* @__PURE__ */ new Set(), profileId: null, gate: null },
+    S: { view: "all", q: "", sel: null, qrTab: "seal", collapsed: new Set(GROUPS.slice(1).map((g) => g[0])), profileId: null, gate: null },
     cleanup: [],
     runCleanup() {
       const c = ctx.cleanup.splice(0);
@@ -8412,6 +8565,10 @@ Platform: ${platform()}
     closeModals: closeAllModals,
     go(view) {
       ctx.S.view = view;
+      if (view in TYPE_META) {
+        const g = GROUPS.find(([, keys]) => keys.includes(view));
+        if (g) ctx.S.collapsed.delete(g[0]);
+      }
       if (view !== "all" && !isVaultView(view)) ctx.S.sel = null;
       if (!isVaultView(view)) ctx.S.q = "";
       syncSearch();

@@ -7,7 +7,7 @@ import { health, importAny, exportCSV, decryptBackup, newItem, sanitiseItem, OLD
 import { ITER_DEFAULT, sealText, openText, inspectSeal, available } from './crypto.js';
 import { drawQR, decodeFile, startScanner, chunkPayload, ChunkAssembler, parseChunk } from './qr.js';
 import { runSelfTest } from './selftest.js';
-import { meter, liveMeter, avatar, printNodes, showRecoveryKit } from './views.js';
+import { meter, liveMeter, passwordRow, avatar, printNodes, showRecoveryKit } from './views.js';
 import { fmtDate, fmtInt, hostOf } from './util.js';
 
 export const page = (title, sub, ...kids) => h('div', { class: 'page' }, h('h2', { text: title }), sub ? h('p', { class: 'sub', text: sub }) : null, ...kids);
@@ -94,20 +94,6 @@ export function renderQR(ctx) {
   return page('QR tools', 'Seal secrets into password-protected QR codes (AES-256-GCM). Compatible with QR Seal v2 from ulyOS.', bar, body);
 }
 
-/* A hidden password field with a "confirm" field, a show / copy toggle and a generator. The generated passphrase fills both fields. */
-function passwordRow(label, input, withGen = true) {
-  input.type = 'password'; input.autocomplete = 'new-password';
-  const conf = h('input', { class: 'inp mono', type: 'password', autocomplete: 'new-password', spellcheck: 'false', 'aria-label': 'Confirm ' + (input.getAttribute('aria-label') || label) });
-  if (input.value) conf.value = input.value;
-  const show = (on) => { input.type = conf.type = on ? 'text' : 'password'; };
-  const eye = h('button', { class: 'btn sm', type: 'button', 'aria-label': 'Show or hide the password', title: 'Show / hide', 'aria-pressed': 'false', on: { click: () => { const on = input.type === 'password'; show(on); eye.setAttribute('aria-pressed', String(on)); } } }, '{{eye}}');
-  const copy = h('button', { class: 'btn sm', type: 'button', 'aria-label': 'Copy the password', title: 'Copy (clears itself)', on: { click: () => copyText(input.value, 'Password copied', 30) } }, '{{copy}}');
-  const gen = withGen ? h('button', { class: 'btn sm', type: 'button', title: 'Generate a passphrase', 'aria-label': 'Generate a passphrase', on: { click: () => { input.value = conf.value = generatePassphrase({ words: 5 }); input.dispatchEvent(new Event('input')); show(true); eye.setAttribute('aria-pressed', 'true'); } } }, '{{bolt}}') : null;
-  const f = h('div', { class: 'field' }, h('label', { text: label }), h('div', { class: 'row' }, h('div', { class: 'grow' }, input), eye, copy, gen),
-    h('label', { class: 'sublbl', text: 'Confirm ' + label.toLowerCase() }), conf, liveMeter(input));
-  f.match = () => input.value === conf.value;
-  return f;
-}
 
 function qrOutputs(canvas, name) {
   return h('div', { class: 'row wrap' }, h('button', { class: 'btn sm', on: { click: () => canvas.toBlob((b) => download(name + '.png', b, 'image/png')) } }, '{{download}} PNG'),

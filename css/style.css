@@ -698,3 +698,39 @@ html[data-icons=vivid][data-fxanim=on] .ico[data-n=star] svg, html[data-icons=vi
 .setrow.vis { padding: 4px 0; }
 .tm .kv span, .tm .kv b, .tmcard b, .tmcard small { min-width: 0; overflow-wrap: anywhere; }
 @media (max-width: 699px) { .tm .kv { grid-template-columns: 1fr; gap: 2px 0; } .tm .kv b { margin-bottom: 8px; } .tmgrid { grid-template-columns: 1fr 1fr; } .tmcard b { font-size: 17px; } }
+
+/* ---- widgets: pin + manual size ---- */
+.widget { position: relative; }
+.widget .whead { display: flex; align-items: center; gap: 8px; } .widget .wpin { margin-left: auto; opacity: .45; } .widget:hover .wpin, .widget .wpin.on, .widget .wpin:focus-visible { opacity: 1; } .widget .wpin.on { color: var(--accent); }
+.widget.pinned { box-shadow: 0 0 0 1px var(--accent) inset, 0 16px 45px var(--shadow); }
+.widget .wbody { flex: 1; min-height: 0; overflow: auto; }
+.widget .wgrip { position: absolute; right: 2px; bottom: 2px; width: 22px; height: 22px; border: 0; padding: 0; background: linear-gradient(135deg, transparent 50%, var(--muted) 50%, var(--muted) 56%, transparent 56%, transparent 66%, var(--muted) 66%, var(--muted) 72%, transparent 72%); opacity: .35; cursor: nwse-resize; touch-action: none; border-radius: 0 0 12px 0; }
+.widget:hover .wgrip, .widget .wgrip:focus-visible, .widget.resizing .wgrip { opacity: .95; } .widget.resizing { transition: none; outline: 2px dashed var(--accent); user-select: none; }
+@media (min-width: 700px) { .widget[data-cw] { grid-column: span var(--cw); } }
+.widget[data-ch] { height: var(--ch); min-height: 0; }
+@media (max-width: 699px) { .widget .wgrip { width: 30px; height: 30px; } }
+
+/* ---- real app-icon tiles: side bar, dock and menus look like desktop icons (ulyOS style) ---- */
+html[data-icons=vivid] .nav .ico:not(.cat), html[data-icons=vivid] .dock-item .ico, html[data-icons=vivid] .msheet-item .ico, html[data-icons=vivid] .mbar-item .ico {
+  width: 1.9em; height: 1.9em; padding: .42em; border-radius: .6em; position: relative; overflow: hidden; color: #fff; filter: none; margin-right: 0;
+  background: linear-gradient(150deg, var(--v1), var(--v2)); box-shadow: 0 3px 9px color-mix(in srgb, var(--v2) 50%, transparent), inset 0 1px 0 rgba(255,255,255,.4), inset 0 -2px 4px rgba(0,0,0,.18);
+}
+html[data-icons=vivid] .nav .ico:not(.cat)::before, html[data-icons=vivid] .dock-item .ico::before, html[data-icons=vivid] .msheet-item .ico::before, html[data-icons=vivid] .mbar-item .ico::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 48%; background: linear-gradient(rgba(255,255,255,.34), rgba(255,255,255,0)); border-radius: .6em .6em 60% 60% / .6em .6em 25% 25%; pointer-events: none; }
+html[data-icons=vivid] .nav .ico:not(.cat) svg, html[data-icons=vivid] .dock-item .ico svg, html[data-icons=vivid] .msheet-item .ico svg, html[data-icons=vivid] .mbar-item .ico svg { stroke-width: 1.9; filter: drop-shadow(0 1px 1px rgba(0,0,0,.25)); }
+html[data-icons=vivid] .nav .ic { width: calc(34px * var(--icon-k)); font-size: calc(15px * var(--icon-k)); } html[data-icons=vivid] .nav { gap: 10px; }
+html[data-icons=vivid] .nav .ico.cat { width: 1.9em; height: 1.9em; }
+html[data-icons=vivid] .dock-item .ico { width: 1.7em; height: 1.7em; padding: .36em; } html[data-icons=vivid] .mbar-item .ico { width: 1.7em; height: 1.7em; padding: .34em; }
+html[data-icons=vivid] .btn.primary .ico, html[data-icons=vivid] .topbar .ico { box-shadow: none; }
+html[data-icons=vivid][data-fxanim=on] .nav .ico:not(.cat), html[data-icons=vivid][data-fxanim=on] .dock-item .ico { animation: vm-float 4s ease-in-out infinite; animation-delay: var(--d, 0s); }
+html[data-icons=vivid] .nav:hover .ico:not(.cat), html[data-icons=vivid] .dock-item:hover .ico { transform: translateY(-2px) scale(1.06); }
+
+/* ---- top bar: bigger icon buttons ---- */
+.topbar .btn { min-height: 42px; } .topbar .btn .ico { font-size: 1.35em; width: 1.35em; height: 1.35em; }
+.topbar .btn:not(:has(.lbl)) { min-width: 44px; justify-content: center; padding-inline: 10px; }
+html[data-icons=vivid] .topbar .btn .ico { width: 1.45em; height: 1.45em; padding: .2em; background: none; box-shadow: none; }
+/* top bar polish: readable labels, larger icons (lock / help get the app-tile look) */
+.topbar .btn { gap: 8px; } .topbar .btn .lbl { color: inherit; opacity: 1; letter-spacing: .06em; margin: 0; }
+.topbar .btn.primary .ico { font-size: 1.6em; width: 1.6em; height: 1.6em; padding: 0; color: inherit; }
+html[data-icons=vivid] .topbar .btn:not(.primary) .ico { width: 1.9em; height: 1.9em; padding: .4em; border-radius: .6em; color: #fff; position: relative; overflow: hidden;
+  background: linear-gradient(150deg, var(--v1), var(--v2)); box-shadow: 0 3px 9px color-mix(in srgb, var(--v2) 50%, transparent), inset 0 1px 0 rgba(255,255,255,.4); filter: none; }
+.topbar .btn:not(.primary) { padding: 6px 12px 6px 8px; }

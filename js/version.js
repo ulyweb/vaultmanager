@@ -1,6 +1,6 @@
 /* Application version, data-format versions and changelog (shown in Settings → About). */
 
-export const APP_VERSION = '0.15.0';
+export const APP_VERSION = '0.16.0';
 export const APP_NAME = 'VaultManager';
 export const REPO_URL = 'https://github.com/ulyweb/vaultmanager';
 
@@ -16,6 +16,12 @@ export const FORMATS = [
 ];
 
 export const CHANGELOG = [
+  { v: '0.16.0', date: '2026-11-09', notes: [
+    'Side bar, dock and menu icons are now real app-style icon tiles (glossy, coloured, bigger), like the ulyOS desktop. Top-bar icons are larger too.',
+    'First login: Home page, and in Categories only “Everyday” is expanded (the other groups open with one click).',
+    'Export whole profile: the backup password is hidden, typed twice (or generated), with show / copy buttons. Seal-as-QR works the same way.',
+    'Home widgets can be pinned to the top and resized freely: drag the corner grip or use the arrow keys; double-click resets.',
+  ] },
   { v: '0.15.0', date: '2026-11-09', notes: [
     'Import & export explained: a “Which one do I need?” guide on Tools → Import & export and in Settings → General. Whole profile (.vmprofile) = profile + passwords + attachments + settings; Database backup (.vmvault) = passwords only. Whole-profile buttons now also live on the Tools page. Also in the guided tour and Help tips.',
     'QR tools: passwords are hidden and must be typed twice (with show / copy / generate), also for the QR backup and the Tools backup file. New Purge memory button wipes fields, QR codes, opened locked items and the clipboard.',

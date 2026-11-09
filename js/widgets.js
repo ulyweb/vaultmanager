@@ -13,9 +13,40 @@ import { fmtDate, hostOf } from './util.js';
 const HUES = ['#2fe6d0', '#59b4ff', '#8b7dff', '#ff7ad9', '#ffb547', '#7dff9b', '#ff6b6b', '#ff8a4c', '#d6e2ee', '#4fd1c5', '#f6ad55'];
 const greeting = (name) => { const hr = new Date().getHours(), n = (name || '').trim(); return hr < 5 ? (n ? 'Still up, ' + n + '?' : 'Still up?') : (hr < 12 ? 'Good morning' : hr < 18 ? 'Good afternoon' : 'Good evening') + (n ? ', ' + n : ''); };
 
-const wrap = (ctx, def, size, idx, body, extra) => {
-  const el = h('section', { class: 'panel widget ' + size, 'aria-label': def.label }, h('div', { class: 'whead' }, h('span', { class: 'icn', text: def.icon }), h('span', { text: def.label }), extra ? h('span', { class: 'spacer' }, extra) : null), body);
+/* change one widget's saved settings (pinned / manual width in columns / manual height in px) */
+const setW = (ctx, id, patch, redraw) => { const a = ctx.look().widgets.map((x) => ({ ...x })); const i = a.findIndex((x) => x.id === id); if (i < 0) return; Object.assign(a[i], patch); ctx.setLook({ widgets: a }, { redraw: !!redraw }); };
+
+const wrap = (ctx, def, w, idx, body, grid) => {
+  const pin = h('button', { class: 'icon-btn wpin' + (w.pinned ? ' on' : ''), 'aria-pressed': String(!!w.pinned), 'aria-label': (w.pinned ? 'Unpin ' : 'Pin ') + def.label, title: w.pinned ? 'Pinned to the top — click to unpin' : 'Pin to the top of Home', on: { click: () => setW(ctx, w.id, { pinned: !w.pinned }, true) } }, '{{pin}}');
+  const grip = h('button', { class: 'wgrip', type: 'button', 'aria-label': 'Resize ' + def.label + ' — drag, or use the arrow keys; double-click resets', title: 'Drag to resize · double-click to reset' });
+  const el = h('section', { class: 'panel widget ' + w.size + (w.pinned ? ' pinned' : ''), 'aria-label': def.label }, h('div', { class: 'whead' }, h('span', { class: 'icn', text: def.icon }), h('span', { text: def.label }), pin), h('div', { class: 'wbody' }, body), grip);
   el.style.setProperty('--wc', HUES[idx % HUES.length]);
+  if (w.cw) { el.dataset.cw = String(w.cw); el.style.setProperty('--cw', String(w.cw)); }
+  if (w.ch) { el.dataset.ch = String(w.ch); el.style.setProperty('--ch', w.ch + 'px'); }
+  const cols = () => Math.max(1, getComputedStyle(grid).gridTemplateColumns.split(' ').length);
+  const gap = () => parseFloat(getComputedStyle(grid).columnGap) || 14;
+  const unit = () => (grid.clientWidth - gap() * (cols() - 1)) / cols();
+  const apply = (cw, ch) => {
+    if (cw) { el.dataset.cw = String(cw); el.style.setProperty('--cw', String(Math.min(cw, cols()))); } else { delete el.dataset.cw; el.style.removeProperty('--cw'); }
+    if (ch) { el.dataset.ch = String(ch); el.style.setProperty('--ch', ch + 'px'); } else { delete el.dataset.ch; el.style.removeProperty('--ch'); }
+  };
+  let drag = null, cur = { cw: w.cw, ch: w.ch };
+  grip.addEventListener('pointerdown', (e) => { e.preventDefault(); grip.setPointerCapture(e.pointerId); const r = el.getBoundingClientRect(); drag = { x: e.clientX, y: e.clientY, w: r.width, h: r.height }; el.classList.add('resizing'); });
+  grip.addEventListener('pointermove', (e) => {
+    if (!drag) return;
+    const nw = drag.w + (e.clientX - drag.x), nh = drag.h + (e.clientY - drag.y);
+    cur = { cw: Math.min(cols(), Math.max(1, Math.round((nw + gap()) / (unit() + gap())))), ch: Math.round(Math.min(700, Math.max(100, nh))) }; apply(cur.cw, cur.ch);
+  });
+  const done = () => { if (!drag) return; drag = null; el.classList.remove('resizing'); setW(ctx, w.id, cur, false); };
+  grip.addEventListener('pointerup', done); grip.addEventListener('pointercancel', done);
+  grip.addEventListener('dblclick', () => { cur = { cw: 0, ch: 0 }; apply(0, 0); setW(ctx, w.id, cur, false); });
+  grip.addEventListener('keydown', (e) => {
+    const k = e.key; if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home'].includes(k)) return; e.preventDefault();
+    const curCw = cur.cw || Math.max(1, Math.round((el.getBoundingClientRect().width + gap()) / (unit() + gap()))), curCh = cur.ch || Math.round(el.getBoundingClientRect().height);
+    if (k === 'Home') cur = { cw: 0, ch: 0 };
+    else cur = { cw: Math.min(cols(), Math.max(1, curCw + (k === 'ArrowRight' ? 1 : k === 'ArrowLeft' ? -1 : 0))), ch: Math.min(700, Math.max(100, curCh + (k === 'ArrowDown' ? 40 : k === 'ArrowUp' ? -40 : 0))) };
+    apply(cur.cw, cur.ch); setW(ctx, w.id, cur, false);
+  });
   return el;
 };
 const rowBtn = (ctx, it, sub) => h('button', { class: 'wrow', on: { click: () => ctx.showItem(it.id) } }, h('span', { class: 'icn', text: (TYPE_META[it.type] || {}).icon || '{{login}}' }), h('span', { class: 't' }, it.name || '(untitled)', sub ? h('small', { text: '  ' + sub }) : null));
@@ -83,9 +114,11 @@ const BUILD = {
 
 export function renderHome(ctx) {
   const L = ctx.look(), n = ctx.store.active().length;
-  const list = L.widgets.filter((w) => w.on);
+  const list = L.widgets.filter((w) => w.on).sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0));   // pinned widgets stay first
   const grid = h('div', { class: 'widgets' });
-  list.forEach((w, i) => { const def = WIDGET_DEFS.find((d) => d.id === w.id); grid.append(wrap(ctx, def, w.size, i, BUILD[w.id](ctx))); });
+  list.forEach((w, i) => { const def = WIDGET_DEFS.find((d) => d.id === w.id); grid.append(wrap(ctx, def, w, i, BUILD[w.id](ctx), grid)); });
+  const fit = () => { const c = Math.max(1, getComputedStyle(grid).gridTemplateColumns.split(' ').length); for (const e of grid.querySelectorAll('.widget[data-cw]')) e.style.setProperty('--cw', String(Math.min(+e.dataset.cw, c))); };
+  requestAnimationFrame(fit); window.addEventListener('resize', fit); ctx.cleanup.push(() => window.removeEventListener('resize', fit));
   return h('div', { class: 'page home', style: null }, h('h2', { text: greeting(ctx.store.settings.displayName) }), h('p', { class: 'sub', text: n ? `${n} item${n === 1 ? '' : 's'} in your vault. Customise this page in Settings → Widgets.` : 'Your vault is empty — press “＋ New” to add your first item.' }),
     list.length ? grid : h('div', { class: 'panel pad' }, h('p', { text: 'All widgets are hidden. Turn some on in Settings → Widgets.' }), h('button', { class: 'btn', on: { click: () => { ctx.S.setTab = 'widgets'; ctx.go('settings'); } } }, 'Open widget settings')));
 }

@@ -1,6 +1,6 @@
 {
   "name": "vaultmanager",
-  "version": "0.15.0",
+  "version": "0.16.0",
   "private": true,
   "type": "module",
   "description": "VaultManager \u2014 zero-knowledge, end-to-end encrypted, offline-first password manager with QR-sealed sharing and backup. No build step.",
