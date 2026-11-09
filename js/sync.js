@@ -16,8 +16,9 @@ const CHUNK = 450000;            // characters per gist file (the API truncates 
 const MAX_PAYLOAD = 24 * 1048576;
 
 export async function sealBundle(bundle, passphrase, opt = {}) {
-  const payload = PREFIX + (await sealText(JSON.stringify(bundle), passphrase, opt));
-  if (payload.length > MAX_PAYLOAD) throw new Error('The sync bundle is ' + (payload.length / 1048576).toFixed(1) + ' MB — too large. Turn off “sync attachments” or remove large files.');
+  const { maxPayload = MAX_PAYLOAD, ...sealOpt } = opt;
+  const payload = PREFIX + (await sealText(JSON.stringify(bundle), passphrase, sealOpt));
+  if (payload.length > maxPayload) throw new Error('The sync bundle is ' + (payload.length / 1048576).toFixed(1) + ' MB — too large. Turn off “sync attachments” or remove large files.');
   return payload;
 }
 

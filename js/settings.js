@@ -179,7 +179,10 @@ function sync(ctx) {
         fileErr.textContent = ''; if (!needPass()) return;
         try { download(`vaultmanager-${fmtDate(Date.now())}.vmsync`, await exportSyncFile(store, c.passphrase), 'text/plain'); toast('Sync file saved'); } catch (x) { fileErr.textContent = x.message; }
       } } }, '⬇ Export sync file'), h('button', { class: 'btn', on: { click: () => fileIn.click() } }, '⬆ Import sync file'), fileIn), fileErr),
-    panel('2b · Automatic sync through a secret GitHub gist',
+    panel('2b · Beam — device to device, no cloud, no account',
+      h('p', { class: 'hint', text: 'Pair your PC and phone directly (QR code or copy / paste, same Wi-Fi) and merge both vaults over an end-to-end encrypted connection. Nothing is uploaded anywhere. This is the ulyOS Beam engine, built into VaultManager.' }),
+      h('button', { class: 'btn primary', on: { click: () => ctx.go('beam') } }, '📡 Open Beam sync')),
+    panel('2c · Automatic sync through a secret GitHub gist',
       h('ol', { class: 'steps' },
         h('li', { text: 'On GitHub: Settings → Developer settings → Personal access tokens → create a token that has only the “gist” permission.' }),
         h('li', { text: 'Paste it below with your sync passphrase and press Sync now. The first device creates a secret gist and shows its ID.' }),

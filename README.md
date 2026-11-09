@@ -5,8 +5,10 @@ A **zero-knowledge, end-to-end encrypted password manager** that runs entirely i
 It shares its core engine and look with [ulyOS](https://github.com/ulyweb/ulyOS) (wrapped master key, PBKDF2 → AES-256-GCM, the *dashboard-telemetry* design from QR Seal / System Vault / TrustVault) and takes feature inspiration from [KeePassXC](https://keepassxc.org/) and [Bitwarden](https://github.com/bitwarden).
 
 ## What it does
-- **Encrypted vault**: logins, secure notes and payment cards, with tags, favourites, search, password history and a trash (retention configurable).
+- **13 categories**: logins, secure notes, payment cards, **apps / software licences, Wi-Fi / network, computer accounts, shopping, insurance, locker combinations, travel, ID / identity, bank accounts, servers / API keys** — each with purpose-built fields — plus **custom fields** (optionally secret) on any item. Wi-Fi items make a guest-join QR; dated items (passports, licences, policies, renewals) feed an *expiring soon* report.
+- **Encrypted vault**: tags, favourites, search, password history and a trash (retention configurable).
 - **Attachments**: add images (with preview, or snap a photo on a phone) and documents to any login, note or card. Each file is encrypted separately (AES-256-GCM, 10 MB each) and kept in IndexedDB — never in readable form.
+- **Beam sync (from ulyOS)**: pair two devices by QR or code and merge both vaults directly over an end-to-end encrypted WebRTC link — no cloud, no account, verified by a shared 6-digit number.
 - **Encrypted sync**: merge your vault between devices with a `.vmsync` file (works anywhere, no account) or automatically through a *secret GitHub gist*. Only ciphertext leaves the device; the passphrase and token never leave the encrypted vault. Newest edit per item wins, deletions propagate.
 - **Version history**: every edit keeps the previous version (last 10) with one-click restore, plus previous passwords.
 - **Audit trail**: an encrypted log of sign-ins, failed attempts, edits, copy / reveal / download, exports and sync — never the secret values.
@@ -42,6 +44,7 @@ recovery key (optional, 256-bit) ──HKDF-SHA256──────────
 See [SECURITY.md](SECURITY.md) for the threat model and, importantly, what VaultManager does **not** protect against.
 
 ## Sync in two minutes
+0. **Beam** (nothing uploaded): *Beam sync* in the sidebar → Start on one device, Join on the other, scan / paste the two codes, check the 6-digit numbers match, done.
 1. **Settings → Sync → 1**: save a sync passphrase (5+ random words; the same on every device — write it down).
 2. **File**: *Export sync file* on device A, *Import sync file* on device B. Repeat in either direction whenever you like; imports merge.
 3. **Gist (automatic)**: create a GitHub token with only the `gist` permission, paste it, press *Sync now* — device A creates a secret gist and shows its ID. On device B enter the same passphrase, a token and that ID. Syncs on unlock, every 10 minutes and shortly after changes.
@@ -51,6 +54,7 @@ See [SECURITY.md](SECURITY.md) for the threat model and, importantly, what Vault
 |---|---|
 | `index.html`, `css/`, `js/app.js` | shell, lock screen, navigation, auto-lock |
 | `js/views.js`, `js/tools.js`, `js/settings.js` | vault list / detail / editor / attachments; generator, health, QR, import-export; tabbed settings (sync, audit, about) |
+| `js/templates.js`, `js/beam.js` | category definitions (data-driven), Wi-Fi QR / expiry helpers; Beam peer-to-peer sync (the only file allowed to use WebRTC) |
 | `js/sync.js`, `js/passkey.js`, `js/blobs.js`, `js/version.js` | encrypted sync (file + gist), WebAuthn passkey glue, attachment storage, version & changelog |
 | `js/crypto.js` | key hierarchy, vault record, QR Seal v2 payloads, recovery key |
 | `js/vault.js` | store, items, import / export, health (DOM-free, unit-tested) |
@@ -67,7 +71,7 @@ npm test        # lint + unit + browser end-to-end
 The lint enforces the security posture: strict CSP whose `connect-src` may only be `'self'` and `https://api.github.com` (used solely by gist sync, in `js/sync.js` — the only file allowed to use network APIs), no inline scripts / styles / handlers, no `innerHTML`, no `eval`, no network APIs, a complete service-worker precache list, no committed secrets.
 
 ## Status
-Version 0.3 — a complete third cut (this repo is the test bench for the stand-alone PC + mobile build — see [ROADMAP.md](ROADMAP.md)), **not yet independently audited**. Treat it accordingly and keep an encrypted backup. See [ROADMAP.md](ROADMAP.md).
+Version 0.4 — a complete fourth cut (this repo is the test bench for the stand-alone PC + mobile build — see [ROADMAP.md](ROADMAP.md)), **not yet independently audited**. Treat it accordingly and keep an encrypted backup. See [ROADMAP.md](ROADMAP.md).
 
 ## Licences
 Code: see repository owner. EFF short wordlist: CC BY 3.0 US. `vendor/qrcode.js`: MIT (Kazuhiko Arase). `vendor/jsQR.js`: Apache-2.0 (`vendor/LICENSE-jsqr.txt`).

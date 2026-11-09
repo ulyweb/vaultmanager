@@ -2,6 +2,7 @@
 
 import { h, clear, modal, toast, confirmDialog, copyText, download } from './dom.js';
 import { newItem, TYPES, matches, totpValid, MAX_ATTACHMENT, MAX_ATTACHMENTS_PER_ITEM } from './vault.js';
+import { TYPE_META, TEMPLATES, isSecretField, MAX_CUSTOM, daysUntil, wifiQRString } from './templates.js';
 import { estimate, crackTime } from './strength.js';
 import { generatePassword, generatePassphrase } from './generator.js';
 import { totpNow, parseTotp } from './totp.js';
@@ -9,7 +10,7 @@ import { sealText } from './crypto.js';
 import { drawQR } from './qr.js';
 import { fmtDate, hostOf, safeHref } from './util.js';
 
-export const TYPE_ICON = { login: '🔑', note: '📝', card: '💳' };
+export const TYPE_ICON = Object.fromEntries(Object.entries(TYPE_META).map(([k, m]) => [k, m.icon]));
 
 export function avatar(name) {
   const n = (name || '?').trim() || '?';
@@ -51,13 +52,13 @@ export function filterItems(ctx) {
   let items = S.view === 'trash' ? store.trashed() : store.active();
   const v = S.view;
   if (v === 'fav') items = items.filter((i) => i.favorite);
-  else if (['login', 'note', 'card'].includes(v)) items = items.filter((i) => i.type === v);
+  else if (v in TYPE_META) items = items.filter((i) => i.type === v);
   else if (v.startsWith('tag:')) items = items.filter((i) => (i.tags || []).includes(v.slice(4)));
   if (S.q) items = items.filter((i) => matches(i, S.q));
   return items.sort((a, b) => (b.favorite - a.favorite) || a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
 }
 
-const TITLES = { all: 'All items', fav: 'Favorites', login: 'Logins', note: 'Secure notes', card: 'Payment cards', trash: 'Trash' };
+const TITLES = { all: 'All items', fav: 'Favorites', trash: 'Trash', ...Object.fromEntries(Object.entries(TYPE_META).map(([k, m]) => [k, m.plural])) };
 
 export function renderVaultView(ctx) {
   const { S, store } = ctx;
@@ -84,7 +85,7 @@ function emptyState(ctx, items) {
 }
 
 function itemRow(ctx, it) {
-  const sub = it.type === 'login' ? (it.username || hostOf(it.url)) : it.type === 'card' ? '•••• ' + (it.card.number || '').replace(/\D/g, '').slice(-4) : (it.notes || '').split('\n')[0].slice(0, 60);
+  const sub = it.type === 'login' ? (it.username || hostOf(it.url)) : it.type === 'card' ? '•••• ' + (it.card.number || '').replace(/\D/g, '').slice(-4) : TEMPLATES[it.type] ? ((it.fields || {})[TEMPLATES[it.type].sub] || (it.notes || '').split('\n')[0].slice(0, 60)) : (it.notes || '').split('\n')[0].slice(0, 60);
   return h('button', { class: 'item' + (ctx.S.sel === it.id ? ' on' : ''), role: 'option', 'aria-selected': String(ctx.S.sel === it.id), on: { click: () => { ctx.S.sel = it.id; ctx.refresh(); } } },
     avatar(it.name), h('div', { class: 't' }, h('b', { text: it.name || '(untitled)' }), h('small', { text: sub })), (it.attachments || []).length ? h('span', { class: 'clip', text: '📎', title: it.attachments.length + ' attachment(s)' }) : null, it.favorite ? h('span', { class: 'star', text: '★', 'aria-label': 'Favorite' }) : null);
 }
@@ -130,6 +131,7 @@ function detailPanel(ctx, it) {
       h('button', { class: 'btn danger sm', on: { click: async () => { if (await confirmDialog({ title: 'Delete forever?', text: `“${it.name}” will be permanently deleted.`, okLabel: 'Delete forever', danger: true })) { await store.purge(it.id); ctx.S.sel = null; ctx.refresh(); } } } }, '✕ Delete forever')] :
       [h('button', { class: 'btn sm', on: { click: () => editItem(ctx, it) } }, '✎ Edit'),
         h('button', { class: 'btn sm' + (it.favorite ? ' primary' : ''), 'aria-pressed': String(it.favorite), on: { click: async () => { await store.update(it.id, { favorite: !it.favorite }); ctx.refresh(); } } }, it.favorite ? '★ Favorite' : '☆ Favorite'),
+        it.type === 'network' && (it.fields || {}).ssid ? h('button', { class: 'btn sm', on: { click: () => wifiModal(ctx, it) } }, '📶 Wi-Fi QR') : null,
         h('button', { class: 'btn sm', on: { click: () => shareItem(ctx, it) } }, '▦ Seal as QR'),
         h('button', { class: 'btn sm', on: { click: async () => { const c = newItem(it.type, { ...structuredClone(it), id: undefined, name: it.name + ' (copy)', history: [], created: Date.now(), updated: Date.now() }); c.id = newItem().id; await store.add(c); ctx.S.sel = c.id; toast('Duplicated'); ctx.refresh(); } } }, '⎘ Duplicate'),
         h('button', { class: 'btn danger sm', on: { click: async () => { await store.trash(it.id); ctx.S.sel = null; toast('Moved to trash'); ctx.refresh(); } } }, '🗑 Delete')]);
@@ -148,8 +150,11 @@ function detailPanel(ctx, it) {
     rows.push(field('Expiry', c.expiry, { copy: true, ctx }));
     rows.push(field('CVV', c.cvv, { secret: true, copy: true, ctx }));
     rows.push(field('PIN', c.pin, { secret: true, copy: true, ctx }));
+  } else if (TEMPLATES[it.type]) {
+    for (const f of TEMPLATES[it.type].fields) rows.push(templateRow(ctx, it, f));
   }
   rows.push(field('Notes', it.notes, { pre: true, copy: it.type === 'note', ctx }));
+  for (const c of it.custom || []) rows.push(field(c.label || 'Custom field', c.value, { secret: c.secret, copy: true, ctx, pre: true }));
   rows.push(attachmentsField(ctx, it));
   if ((it.tags || []).length) rows.push(h('div', { class: 'f' }, h('div', { class: 'k', text: 'Tags' }), h('div', { class: 'v' }, h('div', { class: 'tags' }, it.tags.map((t) => h('button', { class: 'chip', on: { click: () => ctx.go('tag:' + t) } }, '#' + t))))));
   const nrev = (it.revisions || []).length, nhist = (it.history || []).length;
@@ -161,13 +166,34 @@ function detailPanel(ctx, it) {
   return out;
 }
 
+function templateRow(ctx, it, f) {
+  const value = (it.fields || {})[f.k];
+  if (!value) return null;
+  if (f.kind === 'date' && f.expiry) {
+    const d = daysUntil(value), chip = d === null ? null : d < 0 ? h('span', { class: 'chip bad', text: 'expired ' + -d + ' day' + (d === -1 ? '' : 's') + ' ago' }) : d <= 60 ? h('span', { class: 'chip warn', text: 'in ' + d + ' day' + (d === 1 ? '' : 's') }) : null;
+    return field(f.l, value, { copy: true, ctx, extra: h('span', null, value + ' ', chip) });
+  }
+  return field(f.l, value, { secret: isSecretField(f), copy: true, ctx, link: f.kind === 'url', pre: f.kind === 'multiline' });
+}
+
+function wifiModal(ctx, it) {
+  const f = it.fields, canvas = h('canvas', { role: 'img', 'aria-label': 'Wi-Fi join QR code' });
+  const pw = f.wifipw || '';
+  drawQR(canvas, wifiQRString(f.ssid, pw, f.security || 'WPA2'), { scale: 6 }).catch(() => {});
+  if (ctx.store.settings.logReveal) ctx.store.log('access', 'Showed the Wi-Fi join QR of “' + it.name + '”');
+  modal({ title: 'Join “' + f.ssid + '”', sub: 'Guests scan this with their phone camera', body: h('div', null,
+    h('div', { class: 'qrbox' }, canvas),
+    h('p', { class: 'note warn', text: 'This QR is NOT encrypted: anyone who sees it can join your network. Show it only to people you trust and close it afterwards. (For a protected code, use “Seal as QR”.)' })), actions: [{ label: 'Close' }] });
+}
+
 /* ---------- attachments ---------- */
 const IMG = /^image\/(png|jpeg|gif|webp|bmp|avif)$/;
 export const fmtSize = (n) => (n < 1024 ? n + ' B' : n < 1048576 ? (n / 1024).toFixed(n < 10240 ? 1 : 0) + ' KB' : (n / 1048576).toFixed(1) + ' MB');
 const attIcon = (t) => (IMG.test(t) ? '🖼' : t === 'application/pdf' ? '📕' : /^text\//.test(t) ? '📄' : /zip|compressed|tar/.test(t) ? '🗜' : '📎');
 
 function attachmentsField(ctx, it) {
-  if (!(it.attachments || []).length) return null;
+  const canAdd = !it.deleted;
+  if (!(it.attachments || []).length && !canAdd) return null;
   const list = h('div', { class: 'atts' });
   for (const a of it.attachments) {
     const row = h('div', { class: 'att' });
@@ -187,7 +213,17 @@ function attachmentsField(ctx, it) {
     } else ctx.store.hasBlob(a.id).then((ok) => { if (!ok) { dl.disabled = true; row.append(h('span', { class: 'chip warn', text: 'not on this device' })); } });
     list.append(row);
   }
-  return h('div', { class: 'f' }, h('div', { class: 'k', text: 'Attachments' }), h('div', { class: 'v' }, list), h('div', { class: 'acts' }));
+  const quick = (capture) => h('input', { type: 'file', class: 'offscreen', multiple: !capture, accept: capture ? 'image/*' : null, capture: capture ? 'environment' : null, 'aria-label': capture ? 'Take a photo for this item' : 'Attach files to this item', on: { change: async (e) => {
+    const files = Array.from(e.target.files || []); e.target.value = '';
+    let n = 0;
+    for (const f of files) {
+      try { await ctx.store.addAttachment(it.id, { name: f.name || 'photo.jpg', type: f.type, bytes: new Uint8Array(await f.arrayBuffer()) }); n++; } catch (x) { toast(x.message, 'err', 6000); }
+    }
+    if (n) { toast(n + ' attachment' + (n > 1 ? 's' : '') + ' added (encrypted)'); ctx.refresh(); }
+  } } });
+  const fi = quick(false), ci = quick(true);
+  const adder = canAdd ? h('div', { class: 'row wrap' }, h('button', { class: 'btn sm', on: { click: () => fi.click() } }, '📎 Add images / documents'), h('button', { class: 'btn sm', on: { click: () => ci.click() } }, '📷 Take photo'), fi, ci) : null;
+  return h('div', { class: 'f' }, h('div', { class: 'k', text: 'Attachments' }), h('div', { class: 'v' }, list, (it.attachments || []).length ? null : h('p', { class: 'hint', text: 'No attachments yet. Add pictures (ID, receipts, photos) or documents (PDF, Word…) — they are encrypted.' }), adder), h('div', { class: 'acts' }));
 }
 
 function historyModal(ctx, it) {
@@ -215,7 +251,7 @@ export function editItem(ctx, item, type = 'login') {
   const err = h('p', { class: 'err', role: 'alert' });
 
   const body = [];
-  body.push(h('div', { class: 'field' }, h('label', { for: 'f_name', text: 'Name' }), h('input', { id: 'f_name', class: 'inp', value: it.name, autofocus: true, autocomplete: 'off', placeholder: it.type === 'card' ? 'e.g. Visa ending 4242' : it.type === 'note' ? 'e.g. Wi-Fi at the cabin' : 'e.g. GitHub', on: { input: (e) => { it.name = e.target.value; } } })));
+  body.push(h('div', { class: 'field' }, h('label', { for: 'f_name', text: 'Name' }), h('input', { id: 'f_name', class: 'inp', value: it.name, autofocus: true, autocomplete: 'off', placeholder: ({ card: 'e.g. Visa ending 4242', note: 'e.g. Safe-deposit notes', network: 'e.g. Home Wi-Fi', app: 'e.g. Adobe Creative Cloud', computer: 'e.g. Work laptop', shopping: 'e.g. Amazon', insurance: 'e.g. Car insurance', locker: 'e.g. Gym locker', travel: 'e.g. Passport — Alex', identity: 'e.g. Driver licence', bank: 'e.g. Checking account', server: 'e.g. Production API' })[it.type] || 'e.g. GitHub', on: { input: (e) => { it.name = e.target.value; } } })));
   if (it.type === 'login') {
     body.push(h('div', { class: 'grid2' }, inp('username', 'Username / email'), inp('url', 'Website', { ph: 'https://' })));
     const pf = pwField(it.password, { ctx, onInput: (v) => { it.password = v; } });
@@ -226,7 +262,21 @@ export function editItem(ctx, item, type = 'login') {
     body.push(h('div', { class: 'grid2' }, inp('holder', 'Cardholder', { get: () => c.holder, set: (v) => { c.holder = v; } }), inp('number', 'Card number', { mono: true, inputmode: 'numeric', get: () => c.number, set: (v) => { c.number = v; } }),
       inp('expiry', 'Expiry (MM/YY)', { mono: true, get: () => c.expiry, set: (v) => { c.expiry = v; } }), inp('cvv', 'CVV', { mono: true, inputmode: 'numeric', get: () => c.cvv, set: (v) => { c.cvv = v; } }),
       inp('pin', 'PIN', { mono: true, inputmode: 'numeric', get: () => c.pin, set: (v) => { c.pin = v; } })));
+  } else if (TEMPLATES[it.type]) {
+    body.push(h('div', { class: 'grid2' }, TEMPLATES[it.type].fields.map((f) => tplInput(ctx, it, f))));
   }
+  /* custom fields: any extra label / value (optionally secret) on any item */
+  const customBox = h('div', { class: 'customs' });
+  const drawCustom = () => {
+    clear(customBox);
+    (it.custom = it.custom || []).forEach((c, i) => customBox.append(h('div', { class: 'cf' },
+      h('input', { class: 'inp', value: c.label, placeholder: 'Label', maxlength: '60', 'aria-label': 'Custom field label', on: { input: (e) => { c.label = e.target.value; } } }),
+      h('input', { class: 'inp mono', type: c.secret ? 'password' : 'text', value: c.value, placeholder: 'Value', autocomplete: 'off', 'aria-label': 'Custom field value', on: { input: (e) => { c.value = e.target.value; } } }),
+      h('label', { class: 'chk' }, h('input', { type: 'checkbox', checked: c.secret, on: { change: (e) => { c.secret = e.target.checked; drawCustom(); } } }), 'secret'),
+      h('button', { type: 'button', class: 'icon-btn', 'aria-label': 'Remove custom field', title: 'Remove', on: { click: () => { it.custom.splice(i, 1); drawCustom(); } } }, '✕'))));
+  };
+  drawCustom();
+  body.push(h('div', { class: 'field' }, h('label', { text: 'Custom fields' }), customBox, h('button', { type: 'button', class: 'btn sm', on: { click: () => { if (it.custom.length < MAX_CUSTOM) { it.custom.push({ label: '', value: '', secret: false }); drawCustom(); } } } }, '＋ Add a field')));
   /* attachments are staged here and applied on Save, so Cancel discards them */
   const staged = [], removed = new Set(), existing = (it.attachments || []).map((a) => ({ ...a }));
   const attList = h('div', { class: 'atts' }), attErr = h('p', { class: 'err', role: 'alert' });
@@ -257,6 +307,8 @@ export function editItem(ctx, item, type = 'login') {
     if (!it.name.trim()) { err.textContent = 'Please give this item a name.'; document.getElementById('f_name').focus(); return false; }
     if (it.type === 'login' && it.totp.trim() && !totpValid(it.totp.trim())) { err.textContent = 'That one-time code secret is not valid (expected base32 or an otpauth://totp link).'; return false; }
     it.name = it.name.trim(); it.totp = it.totp.trim();
+    it.custom = (it.custom || []).filter((c) => c.label.trim() || c.value).map((c) => ({ label: c.label.trim(), value: c.value, secret: !!c.secret }));
+    for (const k of Object.keys(it.fields || {})) if (!it.fields[k]) delete it.fields[k];
     if (isNew) { it.created = it.updated = it.pwChanged = Date.now(); it.attachments = []; await store.add(it); }
     else { const { id, history, created, pwChanged, attachments, revisions, deleted, ...patch } = it; await store.update(id, patch); }
     try {
@@ -268,8 +320,22 @@ export function editItem(ctx, item, type = 'login') {
   modal({ title: (isNew ? 'New ' : 'Edit ') + TYPES[it.type].toLowerCase(), body: h('div', null, body), actions: [{ label: 'Cancel' }, { label: 'Save', kind: 'primary', onClick: save }], wide: false });
 }
 
+function tplInput(ctx, it, f) {
+  const set = (v) => { if (v) it.fields[f.k] = v; else delete it.fields[f.k]; };
+  const val = (it.fields || {})[f.k] || '';
+  const id = 'tf_' + f.k;
+  const full = f.kind === 'multiline' || (isSecretField(f) && f.gen);
+  let control;
+  if (f.kind === 'select') control = h('select', { id, class: 'sel', on: { change: (e) => set(e.target.value) } }, h('option', { value: '', text: '— choose —' }), f.options.map((o) => h('option', { value: o, selected: o === val }, o)));
+  else if (f.kind === 'multiline') control = h('textarea', { id, class: 'ta', rows: '4', spellcheck: 'false', on: { input: (e) => set(e.target.value) } }, val);
+  else if (isSecretField(f) && f.gen) control = pwField(val, { ctx, onInput: set }).el;
+  else if (isSecretField(f)) { const i = h('input', { id, type: 'password', class: 'inp mono', value: val, autocomplete: 'off', spellcheck: 'false', on: { input: (e) => set(e.target.value) } }); control = h('div', { class: 'pwwrap' }, i, h('button', { type: 'button', class: 'icon-btn eye', 'aria-label': 'Show or hide ' + f.l, on: { click: () => { i.type = i.type === 'password' ? 'text' : 'password'; } } }, '👁')); }
+  else control = h('input', { id, class: 'inp' + (f.mono ? ' mono' : ''), type: f.kind === 'date' ? 'date' : 'text', value: val, autocomplete: 'off', spellcheck: 'false', placeholder: f.kind === 'url' ? 'https://' : null, on: { input: (e) => set(e.target.value) } });
+  return h('div', { class: 'field' + (full ? ' full' : '') }, h('label', { for: id, text: f.l }), control);
+}
+
 export function newItemMenu(ctx) {
-  modal({ title: 'Add to your vault', body: h('div', { class: 'checks' }, Object.entries(TYPES).map(([k, label]) => h('button', { class: 'btn', style: null, on: { click: () => { ctx.closeModals(); editItem(ctx, null, k); } } }, TYPE_ICON[k] + ' ' + label))), actions: [{ label: 'Cancel' }] });
+  modal({ title: 'Choose a category', sub: 'Every category can also hold attachments, notes, tags and custom fields', body: h('div', { class: 'checks cats' }, Object.entries(TYPES).map(([k, label]) => h('button', { class: 'btn', style: null, on: { click: () => { ctx.closeModals(); editItem(ctx, null, k); } } }, TYPE_ICON[k] + ' ' + label))), actions: [{ label: 'Cancel' }] });
 }
 
 /* ---------- print helper ---------- */
@@ -291,7 +357,7 @@ export function shareItem(ctx, it) {
   const make = async () => {
     err.textContent = ''; clear(out);
     if (pwBox.value.length < 8) { err.textContent = 'Use at least 8 characters for the QR password.'; return false; }
-    const payload = { vm: 1, item: { type: it.type, name: it.name, username: it.username, password: it.password, url: it.url, totp: it.totp, notes: it.notes, tags: it.tags, card: it.card } };
+    const payload = { vm: 1, item: { type: it.type, name: it.name, username: it.username, password: it.password, url: it.url, totp: it.totp, notes: it.notes, tags: it.tags, card: it.card, fields: it.fields, custom: it.custom } };
     try {
       out.append(h('p', { class: 'hint', text: 'Deriving the key (600,000 rounds) and sealing…' }));
       const sealed = await sealText(JSON.stringify(payload), pwBox.value);

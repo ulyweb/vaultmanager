@@ -10,6 +10,7 @@ VaultManager runs entirely in the browser. There is no server, no account and no
 | Master password / recovery key | Never stored. A password is right only if it unwraps the master key *and* the vault then authenticates |
 | Backups (`.vmvault`), QR codes | QR Seal v2 payload: PBKDF2-SHA256 (≥100,000, default 600,000) → AES-256-GCM, header authenticated |
 | Passkeys | WebAuthn with the PRF extension: the authenticator returns a 256-bit secret for a per-passkey salt; HKDF-SHA256 turns it into a key that wraps the master key, bound to the credential id. The secret is never stored. User verification (biometric / PIN) is required. Adding or removing a passkey requires re-entering the master password; unlock attempts with a passkey are not throttled (the authenticator enforces its own limits) |
+| Beam sync | WebRTC data channel (DTLS) between the two devices; a 6-digit number derived from both certificate fingerprints must be confirmed on both screens before any data is exchanged or applied (stops a man in the middle); the vault bundle is additionally sealed with the sync passphrase. No server is involved |
 | Attachments | Each file is a separate AES-256-GCM message under the vault data key, bound to the vault and file id (swapping or tampering is detected); stored in IndexedDB as ciphertext only |
 | Sync bundles (`.vmsync`, gist) | Encrypted on-device with a *sync passphrase* (PBKDF2-SHA256 600,000 → AES-256-GCM, header authenticated) before they leave it. The GitHub token and sync passphrase are stored only inside the encrypted vault and are never exported or synced |
 | Audit trail | Stored inside the encrypted vault; records what happened, never passwords or other secret values |
@@ -19,6 +20,7 @@ VaultManager runs entirely in the browser. There is no server, no account and no
 | Unlock attempts | Escalating delay after repeated failures (a courtesy; real protection is the KDF cost) |
 
 ## Threat model — what it does NOT protect against
+- **Beam network exposure.** WebRTC is not governed by the page's CSP. By default no STUN server is used (same-network pairing only); “Also try over the internet” contacts Google's public STUN server, which learns your public IP address. The pairing codes contain your device's network addresses — share them only with your own other device. WebRTC is allowed only in `js/beam.js` (lint-enforced).
 - **A lost or compromised authenticator.** A passkey unlocks the vault for whoever can pass its user verification. Remove passkeys of lost devices in Settings → Security. Passkeys are per device and per web address and are not synced.
 - **A weak sync passphrase.** A sync file or gist is a copy of your data that others may obtain; it is only as strong as that passphrase (≥12 characters and ≈50 bits are enforced). What GitHub can see for gist sync: that a secret gist exists, its size, change times and your IP — not its contents.
 - **A stolen GitHub token.** It can read or delete the sync gist (ciphertext), not decrypt it. Use a token with only the `gist` permission and revoke it if a device is lost.

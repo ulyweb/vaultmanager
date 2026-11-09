@@ -3,9 +3,11 @@ import assert from 'node:assert/strict';
 import { runSelfTest } from '../js/selftest.js';
 import { generatePassword, generatePassphrase, generatePin, passwordEntropy, passphraseEntropy } from '../js/generator.js';
 import { estimate } from '../js/strength.js';
-import { VaultStore, importCSV, importBitwardenJSON, exportCSV, health, decryptBackup, newItem, matches, parseCSV } from '../js/vault.js';
+import { VaultStore, sanitiseItem, importCSV, importBitwardenJSON, exportCSV, health, decryptBackup, newItem, matches, parseCSV } from '../js/vault.js';
 import { chunkPayload, ChunkAssembler, parseChunk } from '../js/qr.js';
 import { parseTotp } from '../js/totp.js';
+import { TEMPLATES, TYPE_META, wifiQRString, daysUntil } from '../js/templates.js';
+import { encode, decode, verifyCode } from '../js/beam.js';
 import { memoryBlobs } from '../js/blobs.js';
 import { sealBundle, openBundle, GistClient, syncGist, exportSyncFile, importSyncFile } from '../js/sync.js';
 import { sealText, openText, inspectSeal } from '../js/crypto.js';
@@ -410,4 +412,73 @@ test('passkey wrap: survives password change, removal works, lock-out does not b
   assert.equal(x.hasPasskeys(), false);
   await assert.rejects(() => x.unlock({ passkey: { cred, prf } }), /bad-secret/);
   await x.unlock({ password: 'passkey pw two long' });
+});
+
+/* ================= v0.4: categories, custom fields, expiry, beam codes ================= */
+test('templates: well-formed, every category round-trips, secrets never indexed or logged', async () => {
+  assert.ok(Object.keys(TEMPLATES).length >= 10);
+  for (const k of ['app', 'network', 'computer', 'shopping', 'insurance', 'locker', 'travel']) assert.ok(TEMPLATES[k], k);
+  for (const [k, t] of Object.entries(TEMPLATES)) {
+    const keys = t.fields.map((f) => f.k);
+    assert.equal(new Set(keys).size, keys.length, k + ': duplicate field keys');
+    for (const f of t.fields) { assert.ok(['text', 'secret', 'url', 'date', 'multiline', 'select'].includes(f.kind), k + '.' + f.k); if (f.kind === 'select') assert.ok(f.options.length > 1); }
+    assert.ok(keys.includes(t.sub), k + ': sub field exists');
+    assert.ok(TYPE_META[k].icon && TYPE_META[k].plural);
+  }
+  const { v } = await mk();
+  const secretBits = {};
+  for (const [k, t] of Object.entries(TEMPLATES)) {
+    const fields = {}; for (const f of t.fields) fields[f.k] = f.kind === 'select' ? f.options[0] : f.kind === 'date' ? '2031-05-06' : (f.kind === 'secret' || f.secret ? 'SECRET-' + k + '-' + f.k : 'plain-' + k + '-' + f.k);
+    secretBits[k] = fields;
+    const raw = { type: k, name: 'Item ' + k, fields: { ...fields, bogus: 'drop-me' }, custom: [{ label: 'Pin', value: 'CUSTOM-SECRET', secret: true }, { label: 'Site', value: 'custom-plain' }] };
+    const it = sanitiseItem(raw); assert.equal(it.type, k); assert.ok(!('bogus' in it.fields)); await v.add(it);
+  }
+  assert.equal(v.active().length, Object.keys(TEMPLATES).length);
+  for (const it of v.active()) {
+    assert.ok(matches(it, 'plain-' + it.type), 'plain fields are searchable');
+    assert.ok(matches(it, 'custom-plain'));
+    assert.ok(!matches(it, 'SECRET-'), 'secret fields are not searchable');
+    assert.ok(!matches(it, 'CUSTOM-SECRET'));
+  }
+  assert.ok(!JSON.stringify(v.auditLog()).includes('SECRET'));
+  const csv = exportCSV(v.active()); assert.ok(csv.includes('Wi-Fi password: SECRET-network-wifipw') && csv.includes('Pin: CUSTOM-SECRET'));
+  // revisions and restore cover template fields and custom fields
+  const net = v.active().find((i) => i.type === 'network');
+  await v.update(net.id, { fields: { ...net.fields, ssid: 'Changed' }, custom: [] });
+  assert.deepEqual(v.get(net.id).revisions[0].changed.sort(), ['custom', 'fields']);
+  await v.restoreRevision(net.id, 0); assert.equal(v.get(net.id).fields.ssid, 'plain-network-ssid'); assert.equal(v.get(net.id).custom.length, 2);
+  // sync carries the new shapes
+  const { v: B } = await mk('second device password!');
+  const PASS = 'plum orbit velvet anchor glacier'; await B.applyRemote(await openBundle(await sealBundle(await v.buildBundle(), PASS, FAST), PASS));
+  assert.equal(B.active().length, v.active().length);
+  assert.deepEqual(B.get(net.id).fields, v.get(net.id).fields); assert.deepEqual(B.get(net.id).custom, v.get(net.id).custom);
+  // hostile fields are bounded
+  const h = sanitiseItem({ type: 'travel', fields: { number: 'x'.repeat(50000), kind: 5 }, custom: Array.from({ length: 100 }, (_, i) => ({ label: 'l' + i, value: 'v' })) });
+  assert.equal(h.fields.number.length, 1000); assert.equal(h.custom.length, 30);
+});
+
+test('wifi QR string escapes special characters; expiry maths; health flags expiring items', () => {
+  assert.equal(wifiQRString('Home', 'pa:ss;w"rd', 'WPA2'), 'WIFI:T:WPA;S:Home;P:pa\\:ss\\;w\\"rd;;');
+  assert.equal(wifiQRString('Open', '', 'None'), 'WIFI:T:nopass;S:Open;;');
+  assert.equal(wifiQRString('Old', 'x', 'WEP'), 'WIFI:T:WEP;S:Old;P:x;;');
+  const now = Date.parse('2026-11-09T12:00:00');
+  assert.equal(daysUntil('2026-11-10', now), 1); assert.ok(daysUntil('2026-11-01', now) < 0); assert.equal(daysUntil('garbage', now), null);
+  const mkItem = (type, fields) => sanitiseItem({ type, name: type, fields });
+  const items = [mkItem('travel', { kind: 'Passport', expires: '2026-12-01' }), mkItem('insurance', { renews: '2027-06-01' }), mkItem('identity', { expires: '2026-01-01' }), mkItem('travel', { start: '2026-11-10' })];
+  const h = health(items, now);
+  assert.deepEqual(h.expiring.map((x) => [x.item.type, x.days < 0]), [['identity', true], ['travel', false]]);
+});
+
+test('beam: codes round-trip, malformed codes rejected, verification number is symmetric and fingerprint-bound', async () => {
+  const sdp = 'v=0\r\no=- 1 2 IN IP4 127.0.0.1\r\na=fingerprint:sha-256 AA:BB:CC\r\n';
+  const code = await encode('o', sdp);
+  assert.match(code, /^BEAM1\.[\w-]+$/);
+  assert.deepEqual(await decode(code), { t: 'o', s: sdp });
+  await assert.rejects(() => decode('hello'), /not a Beam code/);
+  await assert.rejects(() => decode('BEAM1.AAAA'), /damaged/);
+  await assert.rejects(() => decode('BEAM1.' + 'A'.repeat(30000)), /not a Beam code/);
+  const b = 'v=0\r\na=fingerprint:sha-256 11:22:33\r\n';
+  const v1 = await verifyCode(sdp, b), v2 = await verifyCode(b, sdp);
+  assert.match(v1, /^\d{3} \d{3}$/); assert.equal(v1, v2);
+  assert.notEqual(v1, await verifyCode(sdp, 'v=0\r\na=fingerprint:sha-256 99:99:99\r\n'));
 });

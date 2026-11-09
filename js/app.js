@@ -9,6 +9,8 @@ import { renderVaultView, newItemMenu, showRecoveryKit, meter } from './views.js
 import { renderGenerator, renderHealth, renderQR, renderData } from './tools.js';
 import { renderSettings } from './settings.js';
 import { createBlobStore } from './blobs.js';
+import { renderBeam } from './beam.js';
+import { TYPE_META } from './templates.js';
 import { syncGist } from './sync.js';
 import { supported as passkeySupported, authenticate as passkeyAuth } from './passkey.js';
 import { wipe } from './crypto.js';
@@ -44,7 +46,7 @@ const ctx = {
   },
 };
 
-const isVaultView = (v) => ['all', 'fav', 'login', 'note', 'card', 'trash'].includes(v) || v.startsWith('tag:');
+const isVaultView = (v) => ['all', 'fav', 'trash'].includes(v) || v in TYPE_META || v.startsWith('tag:');
 
 /* ---------- theme ---------- */
 function applyTheme() {
@@ -222,8 +224,9 @@ function drawGate() {
 /* ---------- main shell ---------- */
 let shell = null;
 
-const NAV = [['all', '🗂', 'All items'], ['fav', '★', 'Favorites'], ['login', '🔑', 'Logins'], ['note', '📝', 'Secure notes'], ['card', '💳', 'Cards'], ['trash', '🗑', 'Trash']];
-const TOOLS = [['health', '🩺', 'Vault health'], ['gen', '⚡', 'Generator'], ['qr', '▦', 'QR tools'], ['data', '⇅', 'Import & export'], ['settings', '⚙', 'Settings']];
+const NAV = [['all', '🗂', 'All items'], ['fav', '★', 'Favorites'], ['trash', '🗑', 'Trash']];
+const CATS = Object.entries(TYPE_META).map(([k, m]) => [k, m.icon, m.plural]);
+const TOOLS = [['health', '🩺', 'Vault health'], ['gen', '⚡', 'Generator'], ['qr', '▦', 'QR tools'], ['beam', '📡', 'Beam sync'], ['data', '⇅', 'Import & export'], ['settings', '⚙', 'Settings']];
 
 function syncSearch() { if (shell && shell.search.value !== ctx.S.q) shell.search.value = ctx.S.q; }
 
@@ -237,14 +240,16 @@ function buildShell() {
 
 function counts() {
   const a = store.active();
-  return { all: a.length, fav: a.filter((i) => i.favorite).length, login: a.filter((i) => i.type === 'login').length, note: a.filter((i) => i.type === 'note').length, card: a.filter((i) => i.type === 'card').length, trash: store.trashed().length };
+  const c = { all: a.length, fav: a.filter((i) => i.favorite).length, trash: store.trashed().length };
+  for (const k of Object.keys(TYPE_META)) c[k] = a.filter((i) => i.type === k).length;
+  return c;
 }
 
 function drawSide() {
   const c = counts(), btn = (id, ic, label, n, dot) => h('button', { class: 'nav' + (ctx.S.view === id ? ' on' : ''), 'aria-current': ctx.S.view === id ? 'page' : null, on: { click: () => ctx.go(id) } }, h('span', { class: 'ic', text: ic }), label, dot ? h('span', { class: 'dot', title: 'Needs attention' }) : n !== undefined ? h('span', { class: 'n', text: String(n) }) : null);
   const hl = health(store.items);
-  const attention = hl.weak.length + hl.reused.length > 0;
-  clear(shell.side).append(h('h4', { text: 'Vault' }), NAV.map(([id, ic, l]) => btn(id, ic, l, c[id])),
+  const attention = hl.weak.length + hl.reused.length + hl.expiring.length > 0;
+  clear(shell.side).append(h('h4', { text: 'Vault' }), NAV.map(([id, ic, l]) => btn(id, ic, l, c[id])), h('h4', { text: 'Categories' }), CATS.map(([id, ic, l]) => btn(id, ic, l, c[id])),
     store.tags().length ? [h('h4', { text: 'Tags' }), store.tags().map(([t, n]) => btn('tag:' + t, '#', t, n))] : null,
     h('h4', { text: 'Tools' }), TOOLS.map(([id, ic, l]) => btn(id, ic, l, undefined, id === 'health' && attention)));
 }
@@ -252,7 +257,7 @@ function drawSide() {
 function drawMain() {
   ctx.runCleanup();
   const v = ctx.S.view;
-  clear(shell.main).append(isVaultView(v) ? renderVaultView(ctx) : v === 'gen' ? renderGenerator(ctx) : v === 'health' ? renderHealth(ctx) : v === 'qr' ? renderQR(ctx) : v === 'data' ? renderData(ctx) : renderSettings(ctx));
+  clear(shell.main).append(isVaultView(v) ? renderVaultView(ctx) : v === 'gen' ? renderGenerator(ctx) : v === 'health' ? renderHealth(ctx) : v === 'qr' ? renderQR(ctx) : v === 'beam' ? renderBeam(ctx) : v === 'data' ? renderData(ctx) : renderSettings(ctx));
 }
 
 function draw() {

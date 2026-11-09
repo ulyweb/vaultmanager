@@ -7,15 +7,16 @@ import { estimate } from './strength.js';
 import { parseTotp } from './totp.js';
 import { memoryBlobs } from './blobs.js';
 import { APP_VERSION } from './version.js';
+import { TYPE_META, TYPE_KEYS, TEMPLATES, isSecretField, MAX_CUSTOM, daysUntil } from './templates.js';
 
-export const TYPES = { login: 'Login', note: 'Secure note', card: 'Payment card' };
+export const TYPES = Object.fromEntries(Object.entries(TYPE_META).map(([k, m]) => [k, m.label]));
 export const KEY = 'vaultmanager.vault';
 const FAIL_KEY = 'vaultmanager.fails';
 const HISTORY_MAX = 10, REVISIONS_MAX = 10, AUDIT_MAX = 1000, TOMBSTONE_DAYS = 90;
 export const OLD_DAYS = 365;
 export const MAX_ATTACHMENT = 10 * 1024 * 1024;
 export const MAX_ATTACHMENTS_PER_ITEM = 20;
-export const TRACKED = ['name', 'username', 'url', 'password', 'totp', 'notes', 'tags', 'card'];
+export const TRACKED = ['name', 'username', 'url', 'password', 'totp', 'notes', 'tags', 'card', 'fields', 'custom'];
 
 export const DEFAULT_SETTINGS = {
   autolock: 5, clipboard: 30, theme: 'auto', lockOnHide: false, trashDays: 30, logReveal: true,
@@ -27,7 +28,7 @@ export function newItem(type = 'login', init = {}) {
   const now = Date.now();
   return {
     id: uid(), type, name: '', username: '', password: '', url: '', totp: '', notes: '', tags: [], favorite: false,
-    card: { holder: '', number: '', expiry: '', cvv: '', pin: '' }, attachments: [], revisions: [],
+    card: { holder: '', number: '', expiry: '', cvv: '', pin: '' }, fields: {}, custom: [], attachments: [], revisions: [],
     history: [], created: now, updated: now, pwChanged: now, deleted: 0, ...init,
   };
 }
@@ -64,7 +65,7 @@ export class VaultStore {
     data.settings = { ...structuredClone(DEFAULT_SETTINGS), ...(data.settings || {}) };
     data.settings.gen = { ...DEFAULT_SETTINGS.gen, ...(data.settings.gen || {}) };
     data.settings.sync = { ...DEFAULT_SETTINGS.sync, ...(data.settings.sync || {}) };
-    for (const i of data.items) { i.attachments = i.attachments || []; i.revisions = i.revisions || []; i.history = i.history || []; }
+    for (const i of data.items) { i.attachments = i.attachments || []; i.revisions = i.revisions || []; i.history = i.history || []; i.fields = i.fields || {}; i.custom = i.custom || []; }
     return data;
   }
 
@@ -277,7 +278,7 @@ export class VaultStore {
   /* items: sanitised items (ids are regenerated); atts: { oldAttachmentId: base64 }.
      Returns { added, skipped, save } — `save` resolves when everything is persisted. */
   mergeItems(items, atts = {}) {
-    const sig = (i) => [i.type, i.name, i.username, i.url, i.password, i.notes].join('\u0001');
+    const sig = (i) => [i.type, i.name, i.username, i.url, i.password, i.notes, JSON.stringify(i.fields), JSON.stringify(i.custom)].join('\u0001');
     const have = new Set(this.active().map(sig));
     let added = 0, skipped = 0;
     const writes = [];
@@ -350,13 +351,15 @@ export async function decryptBackup(text, password) {
 export function sanitiseItem(r, { keepMeta = false, keepAttachments = false } = {}) {
   const s = (v, max = 20000) => (typeof v === 'string' ? v.slice(0, max) : v == null ? '' : String(v).slice(0, max));
   const num = (v, d = 0) => (Number.isFinite(v) ? v : d);
-  const type = ['login', 'note', 'card'].includes(r.type) ? r.type : 'login';
+  const type = TYPE_KEYS.includes(r.type) ? r.type : 'login';
   const c = r.card && typeof r.card === 'object' ? r.card : {};
   const it = newItem(type, {
     name: s(r.name, 300), username: s(r.username, 500), password: s(r.password, 2000), url: s(r.url, 2000), totp: s(r.totp, 1000), notes: s(r.notes, 50000),
     tags: Array.isArray(r.tags) ? r.tags.map((t) => s(t, 50)).filter(Boolean).slice(0, 30) : [], favorite: !!r.favorite,
     card: { holder: s(c.holder, 200), number: s(c.number, 40), expiry: s(c.expiry, 10), cvv: s(c.cvv, 10), pin: s(c.pin, 20) },
   });
+  if (TEMPLATES[type] && r.fields && typeof r.fields === 'object') for (const f of TEMPLATES[type].fields) { const v = r.fields[f.k]; if (typeof v === 'string' && v) it.fields[f.k] = v.slice(0, f.kind === 'multiline' ? 20000 : 1000); }
+  if (Array.isArray(r.custom)) it.custom = r.custom.filter((c) => c && typeof c === 'object').slice(0, MAX_CUSTOM).map((c) => ({ label: s(c.label, 60), value: s(c.value, 5000), secret: !!c.secret })).filter((c) => c.label || c.value);
   if (Number.isFinite(r.created)) it.created = r.created;
   if (Number.isFinite(r.pwChanged)) it.pwChanged = r.pwChanged;
   if (Array.isArray(r.history)) it.history = r.history.filter((h) => h && typeof h.pw === 'string').slice(0, HISTORY_MAX).map((h) => ({ pw: s(h.pw, 2000), at: num(Number(h.at)) }));
@@ -445,11 +448,13 @@ export function importBitwardenJSON(text) {
   const folders = new Map((j.folders || []).map((f) => [f.id, f.name]));
   return j.items.map((b) => {
     const l = b.login || {}, c = b.card || {};
-    const type = b.type === 2 ? 'note' : b.type === 3 ? 'card' : 'login';
+    const type = b.type === 2 ? 'note' : b.type === 3 ? 'card' : b.type === 4 ? 'identity' : 'login';
+    const idn = b.identity || {};
     return sanitiseItem({
       type, name: b.name, notes: b.notes, favorite: b.favorite, tags: b.folderId && folders.get(b.folderId) ? [folders.get(b.folderId)] : [],
       username: l.username, password: l.password, totp: l.totp, url: (l.uris && l.uris[0] && l.uris[0].uri) || '',
       card: { holder: c.cardholderName, number: c.number, expiry: [c.expMonth, c.expYear].filter(Boolean).join('/'), cvv: c.code },
+      fields: type === 'identity' ? { fullname: [idn.firstName, idn.middleName, idn.lastName].filter(Boolean).join(' '), number: idn.passportNumber || idn.licenseNumber || idn.ssn || '', country: idn.country || '' } : {},
     });
   });
 }
@@ -466,7 +471,9 @@ export function exportCSV(items) {
   const head = ['folder', 'favorite', 'type', 'name', 'notes', 'fields', 'reprompt', 'login_uri', 'login_username', 'login_password', 'login_totp'];
   const lines = [head.join(',')];
   for (const i of items) {
-    const notes = i.type === 'card' ? [i.notes, 'Card holder: ' + i.card.holder, 'Number: ' + i.card.number, 'Expiry: ' + i.card.expiry, 'CVV: ' + i.card.cvv].filter(Boolean).join('\n') : i.notes;
+    const tpl = TEMPLATES[i.type];
+    const extra = [...(tpl ? tpl.fields.map((f) => (i.fields[f.k] ? f.l + ': ' + i.fields[f.k] : '')) : []), ...(i.custom || []).map((c) => c.label + ': ' + c.value)].filter(Boolean);
+    const notes = i.type === 'card' ? [i.notes, 'Card holder: ' + i.card.holder, 'Number: ' + i.card.number, 'Expiry: ' + i.card.expiry, 'CVV: ' + i.card.cvv, ...extra].filter(Boolean).join('\n') : [i.notes, ...extra].filter(Boolean).join('\n');
     lines.push([ (i.tags || [])[0] || '', i.favorite ? 1 : '', i.type === 'note' ? 'note' : 'login', i.name, notes, '', 0, i.url, i.username, i.password, i.totp ].map((v, n) => csvCell(v, n !== 9 && n !== 10)).join(','));
   }
   return lines.join('\r\n') + '\r\n';
@@ -475,7 +482,10 @@ export function exportCSV(items) {
 /* ---------- search ---------- */
 export function matches(item, q) {
   if (!q) return true;
-  const hay = [item.name, item.username, item.url, item.notes, (item.tags || []).join(' ')].join('\n').toLowerCase();
+  const tpl = TEMPLATES[item.type];
+  const fieldText = tpl ? tpl.fields.filter((f) => !isSecretField(f)).map((f) => (item.fields || {})[f.k] || '') : [];
+  const customText = (item.custom || []).filter((c) => !c.secret).map((c) => c.label + ' ' + c.value);
+  const hay = [item.name, item.username, item.url, item.notes, (item.tags || []).join(' '), ...fieldText, ...customText].join('\n').toLowerCase();
   return q.toLowerCase().split(/\s+/).filter(Boolean).every((w) => hay.includes(w));
 }
 
@@ -492,12 +502,19 @@ export function health(items, now = Date.now()) {
     if (/^http:\/\//i.test(i.url || '')) insecure.push(i);
     (byPw.get(i.password) || byPw.set(i.password, []).get(i.password)).push(i);
   }
+  const expiring = [];
+  for (const it of items) {
+    const tpl = TEMPLATES[it.type];
+    if (it.deleted || !tpl) continue;
+    for (const f of tpl.fields) if (f.expiry && it.fields[f.k]) { const d = daysUntil(it.fields[f.k], now); if (d !== null && d <= 60) expiring.push({ item: it, label: f.l, date: it.fields[f.k], days: d }); }
+  }
+  expiring.sort((a, b) => a.days - b.days);
   const reused = [...byPw.values()].filter((g) => g.length > 1);
   const reusedCount = reused.reduce((n, g) => n + g.length, 0);
   const n = logins.length - missing.length;
   const penalty = n ? (weak.length * 2 + reusedCount * 2 + old.length * 0.5 + insecure.length) / n : 0;
   const score = n ? Math.max(0, Math.round(100 - Math.min(1, penalty / 2) * 100)) : 100;
-  return { weak, old, insecure, missing, reused, score, total: logins.length };
+  return { weak, old, insecure, missing, reused, expiring, score, total: logins.length };
 }
 
 export function totpValid(s) { try { parseTotp(s); return true; } catch { return false; } }

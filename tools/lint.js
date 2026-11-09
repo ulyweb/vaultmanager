@@ -47,6 +47,7 @@ for (const f of files.filter((f) => /^js\/.*\.js$/.test(f) || f === 'sw.js')) {
   if (/\beval\(|new Function\(/.test(s)) fail.push(f + ': eval / Function constructor');
   if (f !== 'sw.js' && f !== 'js/wordlist.js' && f !== 'js/sync.js' && /\b(fetch|XMLHttpRequest|WebSocket|EventSource|sendBeacon)\b/.test(s.replace(/'[^']*'|"[^"]*"/g, ''))) fail.push(f + ': network API used — VaultManager must make no network requests');
   if (/localStorage\.setItem\([^)]*(password|passphrase|secret|recovery)\b/i.test(s)) fail.push(f + ': secret-looking value written straight to localStorage');
+  if (f !== 'js/beam.js' && /RTCPeerConnection/.test(s)) fail.push(f + ': WebRTC is only allowed in js/beam.js');
   if (/console\.(log|debug|info)\(/.test(s)) fail.push(f + ': console logging (could leak secrets)');
 }
 

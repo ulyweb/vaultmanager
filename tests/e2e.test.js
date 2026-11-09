@@ -27,7 +27,7 @@ before(async () => {
   });
   await new Promise((r) => server.listen(0, '127.0.0.1', r));
   base = 'http://localhost:' + server.address().port + '/';
-  browser = await chromium.launch({ args: ['--no-sandbox'] });
+  browser = await chromium.launch({ args: ['--no-sandbox', '--allow-loopback-in-peer-connection', '--disable-features=WebRtcHideLocalIpsWithMdns'] });
 });
 after(async () => { await browser.close(); server.close(); });
 
@@ -93,7 +93,7 @@ test('full journey: create → add → lock → unlock → tools → QR round tr
   for (const needle of ['GitHub', 'octocat', pw, 'JBSWY3DPEHPK3PXP', 'Visa', '4111']) assert.ok(!stored.includes(needle), 'plaintext leaked: ' + needle);
 
   // lock, reload, wrong then right password
-  await page.getByRole('button', { name: /Lock/ }).click();
+  await page.getByRole('button', { name: '🔒 Lock', exact: true }).click();
   await page.waitForSelector('#upw');
   assert.equal(await page.locator('.item').count(), 0, 'no vault content may remain in the DOM when locked');
   await page.reload(); await page.waitForSelector('#upw');
@@ -173,7 +173,7 @@ test('recovery key unlocks, and master password change works', async () => {
   const key = (await page.textContent('.recovery')).trim();
   assert.match(key, /^([0-9A-Z]{4}-){12}[0-9A-Z]{4}$/);
   await page.check('.modal-sheet input[type=checkbox]'); await page.getByRole('button', { name: 'Done' }).click();
-  await page.getByRole('button', { name: /Lock/ }).click(); await page.waitForSelector('#upw');
+  await page.getByRole('button', { name: '🔒 Lock', exact: true }).click(); await page.waitForSelector('#upw');
   await page.getByRole('button', { name: /Use recovery key instead/ }).click();
   await page.fill('#urk', key.toLowerCase()); await page.click('button[type=submit]');
   await page.waitForSelector('.topbar');
@@ -184,7 +184,7 @@ test('recovery key unlocks, and master password change works', async () => {
   await page.fill('input[aria-label="Repeat new master password"]', 'new-horse-battery-staple-xylophone');
   await page.getByRole('button', { name: 'Change master password' }).click();
   await page.waitForSelector('text=Master password changed');
-  await page.getByRole('button', { name: /Lock/ }).click(); await page.waitForSelector('#upw');
+  await page.getByRole('button', { name: '🔒 Lock', exact: true }).click(); await page.waitForSelector('#upw');
   await page.fill('#upw', MASTER); await page.click('button[type=submit]');
   await page.waitForFunction(() => /Wrong master password/.test(document.body.textContent));
   await page.fill('#upw', 'new-horse-battery-staple-xylophone'); await page.click('button[type=submit]');
@@ -277,7 +277,7 @@ test('attachments: add image + document to login, note and card; preview, downlo
   assert.equal(leak, false, 'attachment bytes must be encrypted in IndexedDB');
 
   // survives lock + reload
-  await page.getByRole('button', { name: /Lock/ }).click(); await page.reload(); await page.waitForSelector('#upw');
+  await page.getByRole('button', { name: '🔒 Lock', exact: true }).click(); await page.reload(); await page.waitForSelector('#upw');
   await page.fill('#upw', MASTER); await page.click('button[type=submit]'); await page.waitForSelector('.topbar');
   await page.fill('.search', 'Bank'); await page.locator('.item').first().click();
   await page.waitForSelector('.detail .thumb img');
@@ -307,8 +307,8 @@ test('settings area: tabs, audit trail (no secrets), version history, About / ve
   await page.getByRole('tab', { name: /General/ }).click(); await page.waitForSelector('text=Locking & privacy');
   await shot(page, '07-settings-general');
   await settingsTab(page, /About/);
-  assert.ok((await page.textContent('.page')).includes('Version 0.3.0'));
-  assert.ok((await page.textContent('.page')).includes('Version history') && (await page.textContent('.page')).includes('Passkey unlock') && (await page.textContent('.page')).includes('Encrypted sync'));
+  assert.ok((await page.textContent('.page')).includes('Version ' + JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8')).version));
+  assert.ok((await page.textContent('.page')).includes('Version history') && (await page.textContent('.page')).includes('Beam sync') && (await page.textContent('.page')).includes('Encrypted sync'));
   await shot(page, '08-about');
   const [dl] = await Promise.all([page.waitForEvent('download'), (async () => { await page.getByRole('tab', { name: /Audit trail/ }).click(); await page.getByRole('button', { name: /Export log/ }).click(); })()]);
   assert.ok(JSON.parse(fs.readFileSync(await dl.path(), 'utf8')).length > 5);
@@ -423,7 +423,7 @@ test('passkey unlock: add (re-auth required), unlock with it, fall back to passw
   assert.ok((await page.textContent('.page')).includes('Test laptop'));
 
   // lock → passkey button → unlocked, no password typed
-  await page.getByRole('button', { name: /Lock/ }).click(); await page.waitForSelector('#upw');
+  await page.getByRole('button', { name: '🔒 Lock', exact: true }).click(); await page.waitForSelector('#upw');
   await page.getByRole('button', { name: /Unlock with passkey/ }).click();
   await page.waitForSelector('.topbar');
   assert.equal(await page.locator('.item').count(), 1);
@@ -441,8 +441,121 @@ test('passkey unlock: add (re-auth required), unlock with it, fall back to passw
   await page.getByRole('button', { name: 'Remove', exact: true }).first().click();
   await page.fill('.modal-sheet input[type=password]', MASTER); await page.keyboard.press('Enter');
   await page.waitForSelector('text=none');
-  await page.getByRole('button', { name: /Lock/ }).click(); await page.waitForSelector('#upw');
+  await page.getByRole('button', { name: '🔒 Lock', exact: true }).click(); await page.waitForSelector('#upw');
   assert.equal(await page.getByRole('button', { name: /Unlock with passkey/ }).count(), 0);
   assert.deepEqual(problems, []);
   await ctx.close();
+});
+
+test('categories: every template is creatable; Wi-Fi QR, custom fields, expiry, quick-add attachment, search', async () => {
+  const { ctx, page, problems } = await newPage();
+  await createVault(page);
+  const cats = [['📦 App / software', 'Photoshop', 'tf_license'], ['📶 Wi-Fi / network', 'Home Wi-Fi', 'tf_ssid'], ['💻 Computer account', 'Work laptop', 'tf_host'], ['🛒 Shopping / store', 'Amazon', 'tf_url'],
+    ['🛡️ Insurance', 'Car insurance', 'tf_policy'], ['🔢 Locker / combination', 'Gym locker', 'tf_location'], ['✈️ Travel', 'Passport', 'tf_holder'], ['🪪 ID / identity', 'Licence', 'tf_fullname'],
+    ['🏦 Bank account', 'Checking', 'tf_bank'], ['🖥️ Server / API key', 'Prod API', 'tf_host']];
+  for (const [label, name, firstField] of cats) {
+    await page.getByRole('button', { name: '＋ New' }).click();
+    await page.getByRole('button', { name: label, exact: true }).click();
+    await page.fill('#f_name', name);
+    await page.fill('#' + firstField, 'searchable-' + name.replace(/\W/g, '').toLowerCase());
+    await page.getByRole('button', { name: 'Save' }).click();
+    await page.waitForSelector(`.detail h2:has-text("${name}")`);
+  }
+  // sidebar categories with counts
+  for (const plural of ['Apps', 'Network', 'Computers', 'Shopping', 'Insurance', 'Lockers', 'Travel', 'Identity', 'Bank', 'Servers']) assert.equal(await page.locator('.side .nav', { hasText: plural }).count(), 1, plural);
+  await page.locator('.side .nav', { hasText: 'Travel' }).click(); assert.equal(await page.locator('.item').count(), 1);
+  await shot(page, '14-categories');
+  await page.locator('.side .nav', { hasText: 'All items' }).click();
+  await page.fill('.search', 'searchable-checking'); assert.equal(await page.locator('.item').count(), 1); await page.fill('.search', '');
+
+  // network: secret wifi password + Wi-Fi QR + custom secret field
+  await page.fill('.search', 'Home Wi-Fi'); await page.locator('.item').first().click();
+  await page.getByRole('button', { name: /Edit/ }).click();
+  await page.fill('#tf_ssid', 'CasaWifi'); await page.selectOption('#tf_security', 'WPA2');
+  await page.locator('.modal-sheet .field:has(label:text("Wi-Fi password")) input').first().fill('hunter2-wifi');
+  await page.getByRole('button', { name: '＋ Add a field' }).click();
+  await page.fill('input[aria-label="Custom field label"]', 'Router PIN'); await page.fill('input[aria-label="Custom field value"]', '99887766'); await page.check('.cf input[type=checkbox]');
+  await page.getByRole('button', { name: 'Save' }).click(); await page.waitForSelector('.detail .f:has-text("Router PIN")');
+  assert.ok(!(await page.textContent('.detail')).includes('99887766') && !(await page.textContent('.detail')).includes('hunter2-wifi'), 'secrets are masked');
+  await page.fill('.search', '99887766'); assert.equal(await page.locator('.item').count(), 0, 'secret custom values are not searchable');
+  await page.fill('.search', 'CasaWifi'); assert.equal(await page.locator('.item').count(), 1); await page.locator('.item').first().click();
+  await page.getByRole('button', { name: /Wi-Fi QR/ }).click(); await page.waitForSelector('.modal-sheet canvas');
+  assert.ok((await page.textContent('.modal-sheet')).includes('NOT encrypted')); await shot(page, '15-wifi-qr'); await page.keyboard.press('Escape');
+
+  // travel: expired passport is flagged on the item and in Vault health
+  await page.fill('.search', 'Passport'); await page.locator('.item').first().click();
+  await page.getByRole('button', { name: /Edit/ }).click(); await page.fill('#tf_expires', '2020-01-15'); await page.getByRole('button', { name: 'Save' }).click();
+  await page.waitForSelector('.detail .chip:has-text("expired")');
+  await page.fill('.search', ''); await page.getByRole('button', { name: /Vault health/ }).click(); await page.waitForSelector('text=Expiring or expired');
+  assert.ok((await page.textContent('.page')).includes('Expiry date: 2020-01-15 — expired'));
+  await shot(page, '16-health-expiry');
+
+  // quick-add an attachment straight from the item view (no Edit needed), in a non-login category
+  await page.locator('.side .nav', { hasText: 'Bank' }).click(); await page.locator('.item').first().click();
+  await page.waitForSelector('text=No attachments yet');
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'vm-q-')); const doc = path.join(tmp, 'statement.pdf'); fs.writeFileSync(doc, '%PDF-1.4 test');
+  await page.setInputFiles('input[aria-label="Attach files to this item"]', doc);
+  await page.waitForSelector('.detail .att:has-text("statement.pdf")');
+  await shot(page, '17-quick-attach');
+  fs.rmSync(tmp, { recursive: true });
+  assert.deepEqual(problems, []);
+  await ctx.close();
+});
+
+test('beam sync: pair two devices (real WebRTC), verify, merge both ways incl. attachments; wrong passphrase refused', async () => {
+  const A = await newPage(), B = await newPage();
+  await createVault(A.page, MASTER); await createVault(B.page, 'a-totally-different-master-pass-9');
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'vm-beam-')); const png = path.join(tmp, 'pic.png'); fs.writeFileSync(png, PNG);
+  await addLogin(A.page, 'OnLaptop', async () => { await A.page.setInputFiles('input[aria-label="Choose files"]', png); });
+  await addLogin(B.page, 'OnPhone');
+
+  const openBeam = async (P) => { await P.page.locator('.side .nav', { hasText: 'Beam sync' }).click(); await P.page.waitForSelector('h2:has-text("Beam sync")'); };
+  await openBeam(A); await openBeam(B);
+  // passphrase is required first
+  for (const P of [A, B]) { await P.page.fill('input[aria-label="Sync passphrase"]', SYNC_PASS); await P.page.getByRole('button', { name: 'Save passphrase' }).click(); await P.page.waitForSelector('button:has-text("Start")'); }
+  await shot(A.page, '18-beam-home');
+
+  // bad codes
+  await B.page.getByRole('button', { name: /Join/ }).click();
+  await B.page.fill('textarea[aria-label="Code from the other device"]', 'hello'); await B.page.getByRole('button', { name: 'Continue' }).click();
+  await B.page.waitForSelector('text=not a Beam code');
+
+  await A.page.getByRole('button', { name: /Start/ }).click();
+  await A.page.waitForSelector('canvas.beamqr');
+  const first = await A.page.inputValue('textarea[aria-label="Your code"]');
+  assert.match(first, /^BEAM1\.[\w-]+$/);
+  await B.page.fill('textarea[aria-label="Code from the other device"]', first); await B.page.getByRole('button', { name: 'Continue' }).click();
+  await B.page.waitForSelector('textarea[aria-label="Reply code"][readonly]');
+  const reply = await B.page.inputValue('textarea[aria-label="Reply code"][readonly]');
+  await A.page.fill('textarea[aria-label="Reply code"]', first); await A.page.getByRole('button', { name: 'Connect' }).click();
+  await A.page.waitForSelector('text=That is a first code');
+  await A.page.fill('textarea[aria-label="Reply code"]', reply); await A.page.getByRole('button', { name: 'Connect' }).click();
+  await A.page.waitForSelector('.bverify', { timeout: 30000 }); await B.page.waitForSelector('.bverify', { timeout: 30000 });
+  const va = (await A.page.textContent('.bverify')).trim(), vb = (await B.page.textContent('.bverify')).trim();
+  assert.match(va, /^\d{3} \d{3}$/); assert.equal(va, vb);
+  await shot(A.page, '19-beam-verify');
+  await A.page.getByRole('button', { name: /Numbers match/ }).click();
+  await B.page.getByRole('button', { name: /Numbers match/ }).click();
+  await A.page.waitForSelector('text=Sync complete', { timeout: 30000 }); await B.page.waitForSelector('text=Sync complete', { timeout: 30000 });
+  await A.page.getByRole('button', { name: 'Done' }).click(); await B.page.getByRole('button', { name: 'Done' }).click();
+  for (const P of [A, B]) { await P.page.waitForSelector('.item'); assert.equal(await P.page.locator('.item').count(), 2); }
+  await B.page.locator('.item', { hasText: 'OnLaptop' }).click(); await B.page.waitForSelector('.detail .thumb img');
+  await settingsTab(A.page, /Audit trail/); assert.ok((await A.page.textContent('.page')).includes('Beam sync completed'));
+
+  // wrong passphrase on one side → refused with a clear message, nothing merged
+  await settingsTab(B.page, /Sync/); await B.page.fill('input[aria-label="Sync passphrase"]', 'silver-lantern-orbit-maple-quiet-river'); await B.page.getByRole('button', { name: 'Save passphrase' }).click();
+  await A.page.getByRole('button', { name: /All items/ }).click(); await addLogin(A.page, 'ThirdItem');
+  await openBeam(A); await openBeam(B);
+  await A.page.getByRole('button', { name: /Start/ }).click(); await A.page.waitForSelector('canvas.beamqr');
+  const c2 = await A.page.inputValue('textarea[aria-label="Your code"]');
+  await B.page.getByRole('button', { name: /Join/ }).click(); await B.page.fill('textarea[aria-label="Code from the other device"]', c2); await B.page.getByRole('button', { name: 'Continue' }).click();
+  await B.page.waitForSelector('textarea[aria-label="Reply code"][readonly]');
+  await A.page.fill('textarea[aria-label="Reply code"]', await B.page.inputValue('textarea[aria-label="Reply code"][readonly]')); await A.page.getByRole('button', { name: 'Connect' }).click();
+  await A.page.waitForSelector('.bverify', { timeout: 30000 }); await B.page.waitForSelector('.bverify', { timeout: 30000 });
+  await A.page.getByRole('button', { name: /Numbers match/ }).click(); await B.page.getByRole('button', { name: /Numbers match/ }).click();
+  await B.page.waitForSelector('text=Wrong sync passphrase', { timeout: 30000 });
+  await B.page.getByRole('button', { name: /All items/ }).click(); assert.equal(await B.page.locator('.item').count(), 2, 'nothing merged on the failing device');
+  fs.rmSync(tmp, { recursive: true });
+  assert.deepEqual(A.problems, []); assert.deepEqual(B.problems, []);
+  await A.ctx.close(); await B.ctx.close();
 });
