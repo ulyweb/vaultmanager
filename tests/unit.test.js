@@ -372,3 +372,42 @@ test('sync file export / import', async () => {
   await assert.rejects(() => importSyncFile(B, file, 'nope nope nope nope'), /Wrong sync passphrase/);
   assert.ok(B.auditLog().some((e) => e.k === 'sync'));
 });
+
+/* ================= v0.3: passkey wraps ================= */
+test('passkey wrap: unlocks with the right PRF secret only, bound to the credential, per-device, not throttled', async () => {
+  const { v, st, blobs } = await mk('passkey device password');
+  const prf = crypto.getRandomValues(new Uint8Array(32)), cred = Buffer.from('credential-one').toString('base64');
+  await v.session.addPasskey(cred, Buffer.from('salt').toString('base64'), prf, 'Laptop');
+  await v.add(newItem('login', { name: 'X', password: 'p' })); v.lock();
+  assert.ok(new VaultStore(st).hasPasskeys()); assert.equal(new VaultStore(st).passkeyWraps()[0].label, 'Laptop');
+
+  const w = new VaultStore(st, undefined, blobs);
+  await assert.rejects(() => w.unlock({ passkey: { cred, prf: crypto.getRandomValues(new Uint8Array(32)) } }), /bad-secret/);
+  await assert.rejects(() => w.unlock({ passkey: { cred: 'unknown', prf } }), /bad-secret/);
+  await w.unlock({ passkey: { cred, prf } });
+  assert.equal(w.active()[0].name, 'X');
+  assert.ok(w.auditLog().some((e) => /unlocked with a passkey/.test(e.m)));
+  assert.ok(JSON.stringify(st.getItem('vaultmanager.vault')).indexOf(Buffer.from(prf).toString('base64')) < 0, 'PRF output is never stored');
+
+  // a wrap copied under a different credential id must not open (bound via additional data)
+  const rec = JSON.parse(st.getItem('vaultmanager.vault')); const pk = rec.wraps.find((x) => x.type === 'passkey');
+  const other = Buffer.from('credential-two').toString('base64'); pk.cred = other; st.setItem('vaultmanager.vault', JSON.stringify(rec));
+  w.lock(); await assert.rejects(() => new VaultStore(st, undefined, blobs).unlock({ passkey: { cred: other, prf } }), /bad-secret/);
+});
+
+test('passkey wrap: survives password change, removal works, lock-out does not block passkeys, password remains', async () => {
+  const { v, st, blobs } = await mk('passkey pw one long');
+  const prf = crypto.getRandomValues(new Uint8Array(32)), cred = 'Y3JlZA==';
+  await v.session.addPasskey(cred, 'c2FsdA==', prf, 'Phone');
+  await v.changePassword('passkey pw one long', 'passkey pw two long'); v.lock();
+  const w = new VaultStore(st, undefined, blobs);
+  for (let i = 0; i < 4; i++) await assert.rejects(() => w.unlock({ password: 'nope' }), /bad-secret|locked-out/);
+  assert.ok(w.delayLeft() > 0);
+  await assert.rejects(() => w.unlock({ password: 'passkey pw two long' }), /locked-out/);
+  await w.unlock({ passkey: { cred, prf } });                         // passkeys are not throttled
+  w.session.removePasskey(cred); await w.save(); w.lock();
+  const x = new VaultStore(st, undefined, blobs);
+  assert.equal(x.hasPasskeys(), false);
+  await assert.rejects(() => x.unlock({ passkey: { cred, prf } }), /bad-secret/);
+  await x.unlock({ password: 'passkey pw two long' });
+});

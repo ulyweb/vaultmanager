@@ -17,6 +17,7 @@ It shares its core engine and look with [ulyOS](https://github.com/ulyweb/ulyOS)
 - **TOTP**: one-time codes (RFC 6238; SHA-1/256/512; 6–8 digits) from a base32 secret or `otpauth://` link.
 - **Vault health**: weak, reused, old and `http://` passwords — computed locally; nothing is looked up online.
 - **Import / export**: Bitwarden (JSON, CSV), KeePassXC / KeePass CSV, 1Password / LastPass / Chrome / Edge / Firefox CSV; encrypted `.vmvault` backups; plaintext CSV (with a re-authentication and warnings).
+- **Passkey unlock**: fingerprint, face, Windows Hello, a phone or a security key (WebAuthn PRF) wraps the vault key; per device, master password stays as fallback.
 - **Recovery key** (optional, printable "Emergency Kit"), auto-lock, clipboard auto-clear, escalating delay after wrong passwords, light/dark theme, installable offline PWA.
 
 ## Run it
@@ -50,7 +51,7 @@ See [SECURITY.md](SECURITY.md) for the threat model and, importantly, what Vault
 |---|---|
 | `index.html`, `css/`, `js/app.js` | shell, lock screen, navigation, auto-lock |
 | `js/views.js`, `js/tools.js`, `js/settings.js` | vault list / detail / editor / attachments; generator, health, QR, import-export; tabbed settings (sync, audit, about) |
-| `js/sync.js`, `js/blobs.js`, `js/version.js` | encrypted sync (file + gist), attachment storage, version & changelog |
+| `js/sync.js`, `js/passkey.js`, `js/blobs.js`, `js/version.js` | encrypted sync (file + gist), WebAuthn passkey glue, attachment storage, version & changelog |
 | `js/crypto.js` | key hierarchy, vault record, QR Seal v2 payloads, recovery key |
 | `js/vault.js` | store, items, import / export, health (DOM-free, unit-tested) |
 | `js/generator.js`, `strength.js`, `totp.js`, `qr.js` | generator, strength estimate, TOTP, QR + multi-QR chunking |
@@ -66,7 +67,7 @@ npm test        # lint + unit + browser end-to-end
 The lint enforces the security posture: strict CSP whose `connect-src` may only be `'self'` and `https://api.github.com` (used solely by gist sync, in `js/sync.js` — the only file allowed to use network APIs), no inline scripts / styles / handlers, no `innerHTML`, no `eval`, no network APIs, a complete service-worker precache list, no committed secrets.
 
 ## Status
-Version 0.2 — a complete second cut, **not yet independently audited**. Treat it accordingly and keep an encrypted backup. Roadmap ideas: passkey (WebAuthn PRF) unlock, a browser-extension autofill, shared vaults, sync to a user-chosen cloud folder.
+Version 0.3 — a complete third cut (this repo is the test bench for the stand-alone PC + mobile build — see [ROADMAP.md](ROADMAP.md)), **not yet independently audited**. Treat it accordingly and keep an encrypted backup. See [ROADMAP.md](ROADMAP.md).
 
 ## Licences
 Code: see repository owner. EFF short wordlist: CC BY 3.0 US. `vendor/qrcode.js`: MIT (Kazuhiko Arase). `vendor/jsQR.js`: Apache-2.0 (`vendor/LICENSE-jsqr.txt`).

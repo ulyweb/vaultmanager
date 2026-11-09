@@ -307,8 +307,8 @@ test('settings area: tabs, audit trail (no secrets), version history, About / ve
   await page.getByRole('tab', { name: /General/ }).click(); await page.waitForSelector('text=Locking & privacy');
   await shot(page, '07-settings-general');
   await settingsTab(page, /About/);
-  assert.ok((await page.textContent('.page')).includes('Version 0.2.0'));
-  assert.ok((await page.textContent('.page')).includes('Version history') && (await page.textContent('.page')).includes('Encrypted sync'));
+  assert.ok((await page.textContent('.page')).includes('Version 0.3.0'));
+  assert.ok((await page.textContent('.page')).includes('Version history') && (await page.textContent('.page')).includes('Passkey unlock') && (await page.textContent('.page')).includes('Encrypted sync'));
   await shot(page, '08-about');
   const [dl] = await Promise.all([page.waitForEvent('download'), (async () => { await page.getByRole('tab', { name: /Audit trail/ }).click(); await page.getByRole('button', { name: /Export log/ }).click(); })()]);
   assert.ok(JSON.parse(fs.readFileSync(await dl.path(), 'utf8')).length > 5);
@@ -401,4 +401,48 @@ test('gist sync (mocked GitHub API): two devices converge; only ciphertext leave
   await A.page.waitForFunction(() => /edited-on-B/.test(document.querySelector('.detail').textContent));
   assert.deepEqual(A.problems.filter((p) => !/401|Failed to load resource/.test(p)), []); assert.deepEqual(B.problems.filter((p) => !/401|Failed to load resource/.test(p)), []);
   await A.ctx.close(); await B.ctx.close();
+});
+
+test('passkey unlock: add (re-auth required), unlock with it, fall back to password, remove', async () => {
+  const { ctx, page, problems } = await newPage();
+  const cdp = await ctx.newCDPSession(page);
+  await cdp.send('WebAuthn.enable');
+  await cdp.send('WebAuthn.addVirtualAuthenticator', { options: { protocol: 'ctap2', ctap2Version: 'ctap2_1', transport: 'internal', hasResidentKey: true, hasUserVerification: true, isUserVerified: true, hasPrf: true, automaticPresenceSimulation: true } });
+  await createVault(page);
+  await addLogin(page, 'Keyed');
+
+  await settingsTab(page, /Security/);
+  await page.waitForSelector('text=Passkeys');
+  await shot(page, '12-passkeys');
+  await page.fill('input[aria-label="Passkey name"]', 'Test laptop');
+  await page.getByRole('button', { name: /Add a passkey/ }).click();
+  await page.fill('.modal-sheet input[type=password]', 'wrong password!!'); await page.keyboard.press('Enter');
+  await page.waitForSelector('text=That is not your master password');
+  await page.fill('.modal-sheet input[type=password]', MASTER); await page.keyboard.press('Enter');
+  await page.waitForSelector('text=1 registered');
+  assert.ok((await page.textContent('.page')).includes('Test laptop'));
+
+  // lock → passkey button → unlocked, no password typed
+  await page.getByRole('button', { name: /Lock/ }).click(); await page.waitForSelector('#upw');
+  await page.getByRole('button', { name: /Unlock with passkey/ }).click();
+  await page.waitForSelector('.topbar');
+  assert.equal(await page.locator('.item').count(), 1);
+  await settingsTab(page, /Audit trail/);
+  assert.ok((await page.textContent('.page')).includes('unlocked with a passkey') && (await page.textContent('.page')).includes('Passkey added: Test laptop'));
+
+  // master password still works, and the passkey survives a reload
+  await page.reload(); await page.waitForSelector('#upw');
+  assert.ok(await page.getByRole('button', { name: /Unlock with passkey/ }).isVisible());
+  await shot(page, '13-unlock-passkey');
+  await page.fill('#upw', MASTER); await page.click('button[type=submit]'); await page.waitForSelector('.topbar');
+
+  // removing it removes the button
+  await settingsTab(page, /Security/);
+  await page.getByRole('button', { name: 'Remove', exact: true }).first().click();
+  await page.fill('.modal-sheet input[type=password]', MASTER); await page.keyboard.press('Enter');
+  await page.waitForSelector('text=none');
+  await page.getByRole('button', { name: /Lock/ }).click(); await page.waitForSelector('#upw');
+  assert.equal(await page.getByRole('button', { name: /Unlock with passkey/ }).count(), 0);
+  assert.deepEqual(problems, []);
+  await ctx.close();
 });

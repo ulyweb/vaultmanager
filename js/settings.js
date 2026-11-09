@@ -5,6 +5,8 @@ import { generatePassphrase } from './generator.js';
 import { estimate } from './strength.js';
 import { meter, fmtSize } from './views.js';
 import { page, field, sel, persist, selfTest } from './tools.js';
+import { supported as passkeySupported, enroll as passkeyEnroll } from './passkey.js';
+import { wipe } from './crypto.js';
 import { exportSyncFile, importSyncFile, validateSyncPassphrase } from './sync.js';
 import { APP_NAME, APP_VERSION, CHANGELOG, FORMATS, REPO_URL } from './version.js';
 import { KEY } from './vault.js';
@@ -67,6 +69,7 @@ function security(ctx) {
         try { await store.changePassword(pw0.value, pw1.value); pw0.value = pw1.value = pw2.value = ''; clear(pwM); toast('Master password changed'); } catch (x) { pwErr.textContent = x.message; }
         e.target.disabled = false;
       } } }, 'Change master password'), h('button', { class: 'btn', on: { click: () => { pw1.type = pw2.type = 'text'; pw1.value = pw2.value = generatePassphrase({ words: 6 }); pw1.dispatchEvent(new Event('input')); } } }, '⚡ Suggest a passphrase')), pwErr),
+    passkeys(ctx),
     panel('Key derivation',
       h('div', { class: 'kv' }, h('span', { text: 'Encryption' }), h('b', { text: 'AES-256-GCM, fresh 96-bit IV per write' }), h('span', { text: 'Key derivation' }), h('b', { text: `PBKDF2-HMAC-SHA256 · ${fmtInt(sess.iterations())} rounds` }), h('span', { text: 'Master key' }), h('b', { text: 'random 256-bit, stored only wrapped' })),
       field('Strength', sel(sess.iterations(), [[600000, '600,000 rounds (default)'], [1000000, '1,000,000 rounds'], [2000000, '2,000,000 rounds (slow on phones)'], [5000000, '5,000,000 rounds (very slow)']], async (v) => {
@@ -87,6 +90,40 @@ function security(ctx) {
         const ok = await askPassword({ title: 'Erase vault', text: 'Enter your master password to erase this vault.', okLabel: 'Erase forever', verify: (p) => sess.verifyPassword(p) });
         if (ok) { await store.wipe(); ctx.lock(true); toast('Vault erased'); }
       } } }, '🗑 Erase vault from this device…')));
+}
+
+function passkeys(ctx) {
+  const { store } = ctx, sess = store.session, list = sess.passkeys();
+  const label = h('input', { class: 'inp', value: guessDevice(), maxlength: '40', 'aria-label': 'Passkey name', autocomplete: 'off' });
+  const err = h('p', { class: 'err', role: 'alert' });
+  const verify = (p) => sess.verifyPassword(p);
+  return panel(null, h('h3', null, 'Passkeys ', h('span', { class: 'chip ' + (list.length ? 'accent' : ''), text: list.length ? list.length + ' registered' : 'none' })),
+    h('p', { class: 'hint', text: 'Unlock with your fingerprint, face, Windows Hello, a phone or a security key instead of typing the master password. The authenticator releases a 256-bit secret that wraps the vault key, so it cannot be guessed offline. Your master password always keeps working as the fallback.' }),
+    !passkeySupported() ? h('p', { class: 'note warn', text: 'Passkeys are not available here. They need HTTPS (or localhost) and a recent browser: Chrome / Edge 116+, Safari 18+.' }) : null,
+    list.map((w) => h('div', { class: 'hl' }, h('span', { class: 'ic', text: '🔑' }), h('div', { class: 't' }, h('b', { text: w.label }), h('small', { text: 'added ' + fmtDate(w.added) })),
+      h('button', { class: 'btn sm danger', on: { click: async () => {
+        const ok = await askPassword({ title: 'Remove passkey', text: 'Enter your master password to remove “' + w.label + '”.', okLabel: 'Remove', verify });
+        if (!ok) return; sess.removePasskey(w.cred); store.log('security', 'Passkey removed: ' + w.label, 'warn'); await store.save(); toast('Passkey removed'); ctx.refresh();
+      } } }, 'Remove'))),
+    passkeySupported() ? [field('Name for the new passkey', label, 'Passkeys belong to this device and this web address only — add one on each device you use.'),
+      h('button', { class: 'btn primary', on: { click: async (e) => {
+        err.textContent = '';
+        const ok = await askPassword({ title: 'Add a passkey', text: 'Enter your master password to authorise this.', okLabel: 'Continue', verify });
+        if (!ok) return;
+        e.target.disabled = true;
+        try {
+          const r = await passkeyEnroll(label.value.trim() || 'Passkey', sess.id);
+          await sess.addPasskey(r.cred, r.salt, r.prf, label.value.trim() || 'Passkey'); wipe(r.prf);
+          store.log('security', 'Passkey added: ' + (label.value.trim() || 'Passkey'), 'warn'); await store.save(); toast('Passkey added — you can now unlock with it'); ctx.refresh(); return;
+        } catch (x) { err.textContent = x.message; }
+        e.target.disabled = false;
+      } } }, '＋ Add a passkey'), err] : null);
+}
+function guessDevice() {
+  const ua = navigator.userAgent || '';
+  const os = /Windows/.test(ua) ? 'Windows' : /iPhone|iPad/.test(ua) ? 'iOS' : /Android/.test(ua) ? 'Android' : /Mac OS X/.test(ua) ? 'Mac' : /Linux/.test(ua) ? 'Linux' : 'This device';
+  const br = /Edg\//.test(ua) ? 'Edge' : /Chrome\//.test(ua) ? 'Chrome' : /Firefox\//.test(ua) ? 'Firefox' : /Safari\//.test(ua) ? 'Safari' : 'browser';
+  return os + ' · ' + br;
 }
 
 /* ======================= Sync ======================= */

@@ -260,3 +260,7 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 .rel { padding: 10px 0; border-top: 1px solid var(--line); } .rel:first-of-type { border-top: 0; } .rel ul { margin: 6px 0 0; padding-left: 20px; color: var(--ink-dim); font-size: 13px; }
 .page .brand { margin-bottom: 8px; }
 .panel .note { margin-top: 10px; }
+
+.or { text-align: center; color: var(--muted); font-size: 12px; margin: 12px 0 10px; display: flex; align-items: center; gap: 10px; }
+.or::before, .or::after { content: ''; flex: 1; border-top: 1px solid var(--line); }
+.hl .ic { font-size: 18px; }

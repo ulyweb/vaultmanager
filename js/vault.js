@@ -80,7 +80,7 @@ export class VaultStore {
 
   /* secret: { password } | { recovery }. Throws Error('bad-secret' | 'locked-out' | message). */
   async unlock(secret) {
-    if (this.delayLeft() > 0) throw new Error('locked-out');
+    if (!secret.passkey && this.delayLeft() > 0) throw new Error('locked-out');   // a passkey needs the authenticator + user verification, so it is not throttled
     const raw = this.storage.getItem(this.key);
     if (!raw) throw new Error('There is no vault on this device yet.');
     let record;
@@ -91,7 +91,7 @@ export class VaultStore {
     this._clearFails();
     this.session = opened.session; this.data = this._prepare(opened.data);
     if (fails.times && fails.times.length) this.log('security', `${fails.times.length} failed unlock attempt${fails.times.length > 1 ? 's' : ''} before this sign-in (latest ${new Date(fails.times[fails.times.length - 1]).toISOString().replace('T', ' ').slice(0, 19)} UTC)`, 'warn');
-    this.log('security', 'Vault unlocked with ' + (secret.recovery ? 'the recovery key' : 'the master password'), secret.recovery ? 'warn' : 'info');
+    this.log('security', 'Vault unlocked with ' + (secret.recovery ? 'the recovery key' : secret.passkey ? 'a passkey' : 'the master password'), secret.recovery ? 'warn' : 'info');
     this._purgeTrash();
     await this._gcBlobs();
   }
@@ -189,6 +189,10 @@ export class VaultStore {
     this.log('security', 'Master password changed (new salt, master key re-wrapped)', 'warn');
     return this.save();
   }
+
+  /* passkey wraps live in the vault record (not in synced data), so passkeys are per device */
+  hasPasskeys() { try { const r = JSON.parse(this.storage.getItem(this.key)); return !!(r && r.wraps.some((w) => w.type === 'passkey')); } catch { return false; } }
+  passkeyWraps() { try { return JSON.parse(this.storage.getItem(this.key)).wraps.filter((w) => w.type === 'passkey'); } catch { return []; } }
 
   async wipe() {
     const s = this.session;

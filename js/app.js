@@ -10,6 +10,8 @@ import { renderGenerator, renderHealth, renderQR, renderData } from './tools.js'
 import { renderSettings } from './settings.js';
 import { createBlobStore } from './blobs.js';
 import { syncGist } from './sync.js';
+import { supported as passkeySupported, authenticate as passkeyAuth } from './passkey.js';
+import { wipe } from './crypto.js';
 import { health } from './vault.js';
 
 const root = document.getElementById('app');
@@ -175,6 +177,16 @@ function gateUnlock() {
     else { btn.disabled = false; if (/Too many/.test(err.textContent)) err.textContent = ''; }
   };
   ctx.cleanup.push(() => clearTimeout(tick));
+  const pkBtn = store.hasPasskeys() && passkeySupported() ? h('button', { type: 'button', class: 'btn primary', on: { click: async () => {
+    err.textContent = ''; pkBtn.disabled = true; pkBtn.textContent = 'Waiting for your passkey…';
+    try {
+      const pk = await passkeyAuth(store.passkeyWraps());
+      await store.unlock({ passkey: pk }); wipe(pk.prf);
+      applyTheme(); armAutolock(); draw(); armSync();
+      return;
+    } catch (x) { err.textContent = x.message === 'bad-secret' ? 'That passkey did not unlock the vault. Use your master password.' : x.message; }
+    pkBtn.disabled = false; pkBtn.textContent = '🔑 Unlock with passkey';
+  } } }, '🔑 Unlock with passkey') : null;
   const form = h('form', { novalidate: true, on: { submit: async (e) => {
     e.preventDefault(); err.textContent = '';
     if (store.delayLeft() > 0) { throttle(); return; }
@@ -192,7 +204,7 @@ function gateUnlock() {
     btn.textContent = 'Unlock'; throttle();
   } } }, pwBox, rkBox, err, h('div', { class: 'row' }, btn), h('p', { style: null }, toggle));
   setTimeout(throttle, 0);
-  return h('div', { class: 'panel gate-card' }, brand('Your vault is locked'), form, trustChips());
+  return h('div', { class: 'panel gate-card' }, brand('Your vault is locked'), pkBtn, pkBtn ? h('p', { class: 'or', text: 'or use your master password' }) : null, form, trustChips());
 }
 
 function drawGate() {
