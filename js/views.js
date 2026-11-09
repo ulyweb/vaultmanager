@@ -1,7 +1,7 @@
 /* Vault views: item list, detail panel, editor, QR share, recovery kit. */
 
 import { h, clear, modal, toast, confirmDialog, copyText, download } from './dom.js';
-import { newItem, TYPES, matches, totpValid, MAX_ATTACHMENT, MAX_ATTACHMENTS_PER_ITEM, keyLabel, keyIsSecret, describeValue, currentValue } from './vault.js';
+import { newItem, SENSITIVE, TYPES, matches, totpValid, MAX_ATTACHMENT, MAX_ATTACHMENTS_PER_ITEM, keyLabel, keyIsSecret, describeValue, currentValue } from './vault.js';
 import { TYPE_META, TEMPLATES, GROUPS, isSecretField, MAX_CUSTOM, daysUntil, wifiQRString } from './templates.js';
 import { estimate, crackTime } from './strength.js';
 import { generatePassword, generatePassphrase } from './generator.js';
@@ -103,7 +103,7 @@ function emptyState(ctx, items) {
 function itemRow(ctx, it) {
   const sub = it.type === 'login' ? (it.username || hostOf(it.url)) : it.type === 'card' ? '•••• ' + (it.card.number || '').replace(/\D/g, '').slice(-4) : TEMPLATES[it.type] ? ((it.fields || {})[TEMPLATES[it.type].sub] || (it.notes || '').split('\n')[0].slice(0, 60)) : (it.notes || '').split('\n')[0].slice(0, 60);
   return h('button', { class: 'item' + (ctx.S.sel === it.id ? ' on' : ''), role: 'option', 'aria-selected': String(ctx.S.sel === it.id), on: { click: () => { ctx.S.sel = it.id; ctx.refresh(); } } },
-    avatar(it.name, it.type), h('div', { class: 't' }, h('b', { text: it.name || '(untitled)' }), h('small', { text: sub })), (it.attachments || []).length ? h('span', { class: 'clip', text: '{{clip}}', title: it.attachments.length + ' attachment(s)' }) : null, it.favorite ? h('span', { class: 'star', text: '{{star}}', 'aria-label': 'Favorite' }) : null, h('span', { class: 'disc', 'aria-hidden': 'true', text: '{{chevright}}' }));
+    avatar(it.name, it.type), h('div', { class: 't' }, h('b', { text: it.name || '(untitled)' }), h('small', { text: it.lock ? '🔒 Locked — passcode required' : sub })), (it.attachments || []).length ? h('span', { class: 'clip', text: '{{clip}}', title: it.attachments.length + ' attachment(s)' }) : null, it.favorite ? h('span', { class: 'star', text: '{{star}}', 'aria-label': 'Favorite' }) : null, h('span', { class: 'disc', 'aria-hidden': 'true', text: '{{chevright}}' }));
 }
 
 /* ---------- detail ---------- */
@@ -141,26 +141,31 @@ function totpField(ctx, it) {
   return f;
 }
 
-function detailPanel(ctx, it) {
+function detailPanel(ctx, it0) {
   const { store } = ctx;
+  const it = store.reveal(it0);
+  const lockedClosed = !!it.lock && !it._open;
   currentItem = it;
   const trashed = !!it.deleted;
   const actions = h('div', { class: 'detail-actions' },
     h('button', { class: 'btn back sm', on: { click: () => { ctx.S.sel = null; ctx.refresh(); } } }, '{{chevleft}} Back'),
     trashed ? [h('button', { class: 'btn primary sm', on: { click: async () => { await store.restore(it.id); toast('Restored'); ctx.refresh(); } } }, '{{undo}} Restore'),
       h('button', { class: 'btn danger sm', on: { click: async () => { if (await confirmDialog({ title: 'Delete forever?', text: `“${it.name}” will be permanently deleted.`, okLabel: 'Delete forever', danger: true })) { await store.purge(it.id); ctx.S.sel = null; ctx.refresh(); } } } }, '{{close}} Delete forever')] :
+      lockedClosed ? [h('button', { class: 'btn primary sm', on: { click: () => unlockItemDialog(ctx, it) } }, '{{lock}} Unlock this item'),
+        h('button', { class: 'btn danger sm', on: { click: async () => { await store.trash(it.id); ctx.S.sel = null; toast('Moved to trash'); ctx.refresh(); } } }, '{{trash}} Delete')] :
       [h('button', { class: 'btn sm act-edit', on: { click: () => editItem(ctx, it) } }, '{{edit}} Edit'),
         h('button', { class: 'btn sm' + (it.favorite ? ' primary' : ''), 'aria-pressed': String(it.favorite), on: { click: async () => { await store.update(it.id, { favorite: !it.favorite }); ctx.refresh(); } } }, it.favorite ? '{{star}} Favorite' : '{{starline}} Favorite'),
         it.type === 'network' && (it.fields || {}).ssid ? h('button', { class: 'btn sm', on: { click: () => wifiModal(ctx, it) } }, '{{network}} Wi-Fi QR') : null,
         h('button', { class: 'btn sm', on: { click: () => shareItem(ctx, it) } }, '{{qr}} Seal as QR'),
-        h('button', { class: 'btn sm', on: { click: async () => { const c = newItem(it.type, { ...structuredClone(it), id: undefined, name: it.name + ' (copy)', history: [], created: Date.now(), updated: Date.now() }); c.id = newItem().id; await store.add(c); ctx.showItem(c.id); toast('Duplicated'); } } }, '{{dup}} Duplicate'),
+        it.lock ? null : h('button', { class: 'btn sm', on: { click: async () => { const c = newItem(it.type, { ...structuredClone(it), id: undefined, name: it.name + ' (copy)', history: [], created: Date.now(), updated: Date.now() }); c.id = newItem().id; await store.add(c); ctx.showItem(c.id); toast('Duplicated'); } } }, '{{dup}} Duplicate'),
+        it.lock ? h('button', { class: 'btn sm', on: { click: () => { store.relock(it.id); ctx.refresh(); toast('Locked again'); } } }, '{{lock}} Lock now') : h('button', { class: 'btn sm', on: { click: () => lockDialog(ctx, it) } }, '{{lock}} Add passcode lock'),
         h('button', { class: 'btn danger sm', on: { click: async () => { await store.trash(it.id); ctx.S.sel = null; toast('Moved to trash'); ctx.refresh(); } } }, '{{trash}} Delete')]);
 
   const backTo = TITLES[ctx.S.view] || (ctx.S.view.startsWith('tag:') ? '#' + ctx.S.view.slice(4) : 'Items');
   const navbar = h('div', { class: 'detail-nav' },
     h('button', { class: 'navback', 'aria-label': 'Back', on: { click: () => { ctx.S.sel = null; ctx.refresh(); } } }, '{{chevleft}}', h('span', { text: backTo })),
     h('span', { class: 'navtitle', text: it.name || '' }),
-    trashed ? h('span') : h('button', { class: 'navedit', on: { click: () => editItem(ctx, it) } }, 'Edit'));
+    trashed ? h('span') : lockedClosed ? h('button', { class: 'navedit', on: { click: () => unlockItemDialog(ctx, it) } }, 'Unlock') : h('button', { class: 'navedit', on: { click: () => editItem(ctx, it) } }, 'Edit'));
   const rows = [];
   if ((it.conflicts || []).length && !trashed) rows.push(h('div', { class: 'note warn conflict-banner', role: 'alert' }, '{{alert}} Edited on two devices: ' + it.conflicts.length + ' value' + (it.conflicts.length > 1 ? 's' : '') + ' differ. The newest was kept and the other is saved. ', h('button', { class: 'linkbtn', on: { click: () => conflictModal(ctx, it) } }, 'Review')));
   if (it.type === 'login') {
@@ -184,7 +189,16 @@ function detailPanel(ctx, it) {
   rows.push(attachmentsField(ctx, it));
   if ((it.tags || []).length) rows.push(h('div', { class: 'f' }, h('div', { class: 'k', text: 'Tags' }), h('div', { class: 'v' }, h('div', { class: 'tags' }, it.tags.map((t) => h('button', { class: 'chip', on: { click: () => ctx.go('tag:' + t) } }, '#' + t))))));
   const nrev = (it.revisions || []).length, nhist = (it.history || []).length;
-  if (nrev || nhist) rows.push(h('div', { class: 'f' }, h('div', { class: 'k', text: 'History' }), h('div', { class: 'v' }, h('button', { class: 'linkbtn', on: { click: () => historyModal(ctx, it) } }, [nrev ? `${nrev} earlier version${nrev > 1 ? 's' : ''}` : null, nhist ? `${nhist} previous password${nhist > 1 ? 's' : ''}` : null].filter(Boolean).join(' · ')))));
+  if ((nrev || nhist) && !it.lock) rows.push(h('div', { class: 'f' }, h('div', { class: 'k', text: 'History' }), h('div', { class: 'v' }, h('button', { class: 'linkbtn', on: { click: () => historyModal(ctx, it) } }, [nrev ? `${nrev} earlier version${nrev > 1 ? 's' : ''}` : null, nhist ? `${nhist} previous password${nhist > 1 ? 's' : ''}` : null].filter(Boolean).join(' · ')))));
+  if (lockedClosed) {
+    rows.length = 0;
+    rows.push(h('div', { class: 'note lockbox', role: 'status' }, h('b', { text: '{{lock}} This item is locked with its own passcode' }), h('p', { text: 'Its details (fields, notes, attachments) stay hidden until you enter the item’s secondary passcode — even though your vault is unlocked.' }),
+      h('div', { class: 'row' }, h('button', { class: 'btn primary', on: { click: () => unlockItemDialog(ctx, it) } }, '{{lock}} Enter passcode…'))));
+  } else if (it.lock) {
+    rows.unshift(h('div', { class: 'note ok lockbox', role: 'status' }, h('b', { text: 'Unlocked with the item passcode' }), h('small', { text: ' — it locks again in 10 minutes, or when the vault locks.' }),
+      h('div', { class: 'row wrap' }, h('button', { class: 'btn sm', on: { click: () => lockDialog(ctx, it, { change: true }) } }, 'Change passcode'),
+        h('button', { class: 'btn sm danger', on: { click: async () => { if (await confirmDialog({ title: 'Remove the passcode lock?', text: 'The details go back to being protected by your master password only.', okLabel: 'Remove lock', danger: true })) { try { await store.removeItemLock(it.id, store.itemKeys.get(it.id).code); toast('Lock removed'); ctx.refresh(); } catch (e) { toast(e.message, 'err'); } } } } }, 'Remove lock'))));
+  }
   rows.push(h('div', { class: 'f' }, h('div', { class: 'k', text: 'Updated' }), h('div', { class: 'v hint', text: `${fmtDate(it.updated)} · created ${fmtDate(it.created)}${it.type === 'login' && it.password ? ' · password changed ' + fmtDate(it.pwChanged) : ''}` })));
 
   const out = h('div', null, navbar, h('div', { class: 'detail-head' }, avatar(it.name, it.type), h('div', null, h('h2', { text: it.name || '(untitled)' }), h('span', { class: 'chip' }, h('span', { class: 'icn', text: TYPE_ICON[it.type] }), ' ' + TYPES[it.type]))), actions, h('div', { class: 'fgroup' }, rows));
@@ -294,6 +308,8 @@ function historyModal(ctx, it) {
 /* ---------- editor ---------- */
 export function editItem(ctx, item, type = 'login') {
   const { store } = ctx;
+  if (item && item.lock && !store.isOpen(item)) { unlockItemDialog(ctx, item); return; }
+  if (item) item = store.reveal(item);
   const isNew = !item;
   const it = item ? structuredClone(item) : newItem(type, ctx.S.view.startsWith('tag:') ? { tags: [ctx.S.view.slice(4)] } : {});
   const inp = (key, label, opts = {}) => h('div', { class: 'field' }, h('label', { for: 'f_' + key, text: label }),
@@ -352,16 +368,24 @@ export function editItem(ctx, item, type = 'login') {
   body.push(h('div', { class: 'field' }, h('label', { for: 'f_notes', text: it.type === 'note' ? 'Note' : 'Notes' }), h('textarea', { id: 'f_notes', class: 'ta', rows: it.type === 'note' ? '10' : '4', on: { input: (e) => { it.notes = e.target.value; } } }, it.notes)));
   body.push(inp('tags', 'Tags (comma separated)', { get: () => (it.tags || []).join(', '), set: (v) => { it.tags = v.split(',').map((t) => t.trim().replace(/^#/, '')).filter(Boolean).slice(0, 30); }, ph: 'work, finance' }));
   body.push(h('label', { class: 'chk' }, h('input', { type: 'checkbox', checked: it.favorite, on: { change: (e) => { it.favorite = e.target.checked; } } }), 'Favorite'));
+  /* optional secondary passcode (new items; existing ones use the Lock button on the detail page) */
+  const lockOn = h('input', { type: 'checkbox', id: 'f_lockon' }), lp1 = h('input', { type: 'password', class: 'inp mono', id: 'f_lock1', autocomplete: 'new-password', 'aria-label': 'Item passcode' }), lp2 = h('input', { type: 'password', class: 'inp mono', id: 'f_lock2', autocomplete: 'new-password', 'aria-label': 'Repeat item passcode' });
+  const lockBox = h('div', { class: 'field lockfields', hidden: true }, h('label', { for: 'f_lock1', text: 'Item passcode' }), lp1, liveMeter(lp1), h('label', { for: 'f_lock2', text: 'Repeat passcode' }), lp2,
+    h('p', { class: 'hint', text: 'Encrypts this item’s details again with this passcode. If you forget it, nobody can recover them.' }));
+  lockOn.addEventListener('change', () => { lockBox.hidden = !lockOn.checked; if (lockOn.checked) lp1.focus(); });
+  if (isNew) body.push(h('label', { class: 'chk', for: 'f_lockon' }, lockOn, '{{lock}} Protect this item with a secondary passcode'), lockBox);
   body.push(err);
 
   const save = async () => {
     if (!it.name.trim()) { err.textContent = 'Please give this item a name.'; document.getElementById('f_name').focus(); return false; }
     if (it.type === 'login' && it.totp.trim() && !totpValid(it.totp.trim())) { err.textContent = 'That one-time code secret is not valid (expected base32 or an otpauth://totp link).'; return false; }
+    if (isNew && lockOn.checked) { if (lp1.value !== lp2.value) { err.textContent = 'The two item passcodes do not match.'; return false; } if (lp1.value.length < 6) { err.textContent = 'Use at least 6 characters for the item passcode.'; return false; } }
     it.name = it.name.trim(); it.totp = it.totp.trim();
     it.custom = (it.custom || []).filter((c) => c.label.trim() || c.value).map((c) => ({ label: c.label.trim(), value: c.value, secret: !!c.secret }));
     for (const k of Object.keys(it.fields || {})) if (!it.fields[k]) delete it.fields[k];
-    if (isNew) { it.created = it.updated = it.pwChanged = Date.now(); it.attachments = []; await store.add(it); }
-    else { const { id, history, created, pwChanged, attachments, revisions, deleted, ...patch } = it; await store.update(id, patch); }
+    if (isNew) { it.created = it.updated = it.pwChanged = Date.now(); it.attachments = []; await store.add(it); if (lockOn.checked) { try { await store.lockItem(it.id, lp1.value); } catch (e) { toast(e.message, 'err', 7000); } } }
+    else if (it.lock) { const meta = { name: it.name, tags: it.tags, favorite: it.favorite }; await store.saveLocked(it.id, meta, it); }
+    else { const { id, history, created, pwChanged, attachments, revisions, deleted, lock, _open, ...patch } = it; await store.update(id, patch); }
     try {
       for (const id of removed) await store.removeAttachment(it.id, id);
       for (const a of staged) await store.addAttachment(it.id, a);
@@ -389,6 +413,43 @@ export function newItemMenu(ctx) {
   const pick = (k) => h('button', { class: 'btn', on: { click: () => { ctx.closeModals(); editItem(ctx, null, k); } } }, h('span', { class: 'icn', text: TYPE_ICON[k] }), ' ' + TYPES[k]);
   modal({ title: 'Choose a category', sub: Object.keys(TYPES).length + ' categories. Every one can also hold attachments, notes, tags and custom fields', wide: true,
     body: h('div', null, GROUPS.map(([g, keys]) => h('div', { class: 'catgroup' }, h('p', { class: 'lbl', text: g }), h('div', { class: 'checks cats' }, keys.map(pick))))), actions: [{ label: 'Cancel' }] });
+}
+
+
+/* ---------- secondary passcode lock (per item) ---------- */
+export function unlockItemDialog(ctx, it) {
+  const input = h('input', { type: 'password', class: 'inp mono', autocomplete: 'off', 'aria-label': 'Item passcode' }), err = h('p', { class: 'err', role: 'alert' });
+  let m;
+  const go = async () => {
+    err.textContent = ''; const b = m && m.el && m.el.querySelector('.btn.primary'); if (b) b.disabled = true;
+    try { await ctx.store.openItem(it.id, input.value); m.close(); ctx.refresh(); } catch (e) { err.textContent = e.message === 'bad-passcode' ? 'That is not the passcode for this item.' : e.message; input.select(); if (b) b.disabled = false; }
+    return false;
+  };
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); go(); } });
+  m = modal({ title: 'Unlock “' + it.name + '”', sub: 'Secondary passcode', body: h('div', null, h('p', { text: 'This item has its own passcode on top of your master password.' }), input, err),
+    actions: [{ label: 'Cancel' }, { label: 'Unlock', kind: 'primary', onClick: go, close: false }] });
+  setTimeout(() => input.focus(), 50);
+}
+
+export function lockDialog(ctx, it, { change = false } = {}) {
+  const store = ctx.store;
+  const cur = h('input', { type: 'password', class: 'inp mono', autocomplete: 'off', 'aria-label': 'Current item passcode' });
+  const p1 = h('input', { type: 'password', class: 'inp mono', autocomplete: 'new-password', 'aria-label': 'New item passcode' }), p2 = h('input', { type: 'password', class: 'inp mono', autocomplete: 'new-password', 'aria-label': 'Repeat item passcode' });
+  const err = h('p', { class: 'err', role: 'alert' });
+  const go = async () => {
+    err.textContent = '';
+    if (p1.value !== p2.value) { err.textContent = 'The two passcodes do not match.'; return false; }
+    if (p1.value.length < 6) { err.textContent = 'Use at least 6 characters.'; return false; }
+    try {
+      if (change) await store.changeItemCode(it.id, cur.value, p1.value); else await store.lockItem(it.id, p1.value);
+      toast(change ? 'Passcode changed' : 'Item locked'); ctx.refresh(); return true;
+    } catch (e) { err.textContent = e.message === 'bad-passcode' ? 'The current passcode is wrong.' : e.message; return false; }
+  };
+  modal({ title: change ? 'Change item passcode' : 'Lock “' + it.name + '”', sub: 'Secondary passcode',
+    body: h('div', null, h('p', { class: 'note warn', text: 'Its details are encrypted again with this passcode. If you forget it, nobody can recover them — not even with your master password or recovery key. Attachments stay visible only after unlocking in the app, but are protected by your master password rather than this passcode.' }),
+      change ? h('div', { class: 'field' }, h('label', { text: 'Current passcode' }), cur) : null,
+      h('div', { class: 'field' }, h('label', { text: 'New passcode' }), p1, liveMeter(p1)), h('div', { class: 'field' }, h('label', { text: 'Repeat passcode' }), p2), err),
+    actions: [{ label: 'Cancel' }, { label: change ? 'Change passcode' : 'Lock item', kind: 'primary', onClick: go }] });
 }
 
 /* ---------- print helper ---------- */

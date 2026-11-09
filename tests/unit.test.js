@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { runSelfTest } from '../js/selftest.js';
 import { generatePassword, generatePassphrase, generatePin, passwordEntropy, passphraseEntropy } from '../js/generator.js';
 import { estimate } from '../js/strength.js';
-import { VaultStore, sanitiseItem, importCSV, importBitwardenJSON, exportCSV, health, decryptBackup, newItem, matches, parseCSV } from '../js/vault.js';
+import { VaultStore, mergeItem, sanitiseItem, importCSV, importBitwardenJSON, exportCSV, health, decryptBackup, newItem, matches, parseCSV } from '../js/vault.js';
 import { chunkPayload, ChunkAssembler, parseChunk } from '../js/qr.js';
 import { parseTotp } from '../js/totp.js';
 import { TEMPLATES, TYPE_META, GROUPS, TYPE_KEYS, RESERVED_VIEWS, wifiQRString, daysUntil } from '../js/templates.js';
@@ -715,4 +715,27 @@ test('whole-profile backup round-trips items, attachments and settings; secrets 
   assert.equal(new TextDecoder().decode((await B.readAttachment(got.id, got.attachments[0].id)).bytes), 'hello attachment');
   assert.equal(B.data.settings.look.accent, '#ff00aa'); assert.ok(!(B.data.settings.sync || {}).token);
   assert.notEqual(B.session.id, A.session.id, 'a fresh vault id, so blobs of both coexist');
+});
+
+test('item passcode lock: seals secrets, hides them until opened, survives backup/sync, wrong passcode refused, merge never leaks', async () => {
+  const S = new VaultStore(new MemStorage(), 'k', memoryBlobs(), 'f'); await S.create('correct horse battery', FAST);
+  const it = newItem('crypto'); it.name = 'Ledger'; it.fields = { seed: 'abandon ability able about', pin: '4821' }; it.notes = 'secret note'; await S.add(it);
+  await S.lockItem(it.id, 'second-code-1', FAST);
+  const got = S.get(it.id);
+  assert.ok(got.lock && got.notes === '' && !got.fields.seed && !JSON.stringify(S.data).includes('abandon ability'), 'readable secrets are gone from the stored data');
+  assert.equal(got.revisions.length, 0); assert.equal(got.history.length, 0);
+  S.itemKeys.clear();                                           // closed again
+  assert.equal(S.reveal(S.get(it.id)).fields.seed, undefined);
+  await assert.rejects(() => S.openItem(it.id, 'wrong-code-xx'), /bad-passcode/);
+  await assert.rejects(() => S.openItem(it.id, 'second-code-1'), /Too many/, 'throttled right after a failure');
+  S.itemFails.clear();
+  await S.openItem(it.id, 'second-code-1');
+  assert.equal(S.reveal(S.get(it.id)).fields.seed, 'abandon ability able about');
+  await S.saveLocked(it.id, { name: 'Ledger 2' }, { ...S.reveal(S.get(it.id)), notes: 'changed' }, FAST);
+  assert.equal(S.get(it.id).name, 'Ledger 2'); assert.equal(S.reveal(S.get(it.id)).notes, 'changed'); assert.equal(S.get(it.id).notes, '');
+  // a merge from a device that still has the readable copy must not bring secrets back
+  const stale = { ...structuredClone(S.get(it.id)), lock: '', notes: 'LEAK', ft: { notes: Date.now() + 99999 } };
+  mergeItem(S.get(it.id), stale); assert.equal(S.get(it.id).notes, '');
+  await S.removeItemLock(it.id, 'second-code-1');
+  assert.equal(S.get(it.id).lock, ''); assert.equal(S.get(it.id).fields.seed, 'abandon ability able about');
 });

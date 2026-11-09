@@ -17,7 +17,12 @@ const HISTORY_MAX = 10, REVISIONS_MAX = 10, AUDIT_MAX = 1000, TOMBSTONE_DAYS = 9
 export const OLD_DAYS = 365;
 export const MAX_ATTACHMENT = 10 * 1024 * 1024;
 export const MAX_ATTACHMENTS_PER_ITEM = 20;
-export const TRACKED = ['name', 'username', 'url', 'password', 'totp', 'notes', 'tags', 'card', 'fields', 'custom'];
+export const TRACKED = ['name', 'username', 'url', 'password', 'totp', 'notes', 'tags', 'card', 'fields', 'custom', 'lock'];
+/* What the optional per-item "secondary passcode" seals away (name, tags and favourite stay visible so the item can be found). */
+export const SENSITIVE = ['username', 'password', 'url', 'totp', 'notes', 'card', 'fields', 'custom'];
+const pickSensitive = (o) => Object.fromEntries(SENSITIVE.map((k) => [k, o[k]]));
+const BLANK = () => ({ username: '', password: '', url: '', totp: '', notes: '', card: { holder: '', number: '', expiry: '', cvv: '', pin: '' }, fields: {}, custom: [] });
+export const LOCK_UNLOCK_MS = 10 * 60 * 1000;
 
 export const DEFAULT_SETTINGS = {
   autolock: 5, clipboard: 30, theme: 'auto', lockOnHide: false, trashDays: 30, logReveal: true, displayName: '', tourSeen: false, welcomeAlways: false,
@@ -31,7 +36,7 @@ export function newItem(type = 'login', init = {}) {
   return {
     id: uid(), type, name: '', username: '', password: '', url: '', totp: '', notes: '', tags: [], favorite: false,
     card: { holder: '', number: '', expiry: '', cvv: '', pin: '' }, fields: {}, custom: [], attachments: [], revisions: [], ft: {}, sv: {}, attRemoved: {}, conflicts: [], cr: {},
-    history: [], created: now, updated: now, pwChanged: now, deleted: 0, ...init,
+    history: [], created: now, updated: now, pwChanged: now, deleted: 0, lock: '', ...init,
   };
 }
 
@@ -42,7 +47,7 @@ const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
    Two devices that edit DIFFERENT fields of one item both keep their changes. If both edited the SAME field
    since they last merged, the newest wins deterministically (both devices pick the same winner) and the other
    value is kept as a conflict for the user to review. */
-const MERGE_KEYS = ['name', 'username', 'url', 'password', 'totp', 'notes', 'tags', 'card', 'custom', 'favorite', 'deleted'];
+const MERGE_KEYS = ['name', 'username', 'url', 'password', 'totp', 'notes', 'tags', 'card', 'custom', 'lock', 'favorite', 'deleted'];
 const NO_CONFLICT = new Set(['favorite', 'deleted']);
 const keysOf = (it) => [...MERGE_KEYS, ...Object.keys(it.fields || {}).map((k) => 'f:' + k)];
 const getKey = (it, k) => (k.startsWith('f:') ? (it.fields || {})[k.slice(2)] ?? '' : it[k]);
@@ -51,10 +56,10 @@ const ftOf = (it, k) => (it.ft && it.ft[k] !== undefined ? it.ft[k] : it.sv && i
 const svOf = (it, k) => (it.sv && it.sv[k] !== undefined ? it.sv[k] : null);   // null: never merged, so nothing counts as "edited since"
 export function keyLabel(it, k) {
   if (k.startsWith('f:')) { const f = ((TEMPLATES[it.type] || {}).fields || []).find((x) => x.k === k.slice(2)); return f ? f.l : k.slice(2); }
-  return ({ name: 'Name', username: 'Username', url: 'Website', password: 'Password', totp: 'One-time code secret', notes: 'Notes', tags: 'Tags', card: 'Card details', custom: 'Custom fields' })[k] || k;
+  return ({ name: 'Name', username: 'Username', url: 'Website', password: 'Password', totp: 'One-time code secret', notes: 'Notes', tags: 'Tags', card: 'Card details', custom: 'Custom fields', lock: 'Secondary passcode lock' })[k] || k;
 }
 export function keyIsSecret(it, k) {
-  if (['password', 'totp', 'card'].includes(k)) return true;
+  if (['password', 'totp', 'card', 'lock'].includes(k)) return true;
   if (k.startsWith('f:')) { const f = ((TEMPLATES[it.type] || {}).fields || []).find((x) => x.k === k.slice(2)); return !!f && isSecretField(f); }
   return false;
 }
@@ -94,6 +99,7 @@ export function mergeItem(l, r) {
     const keysChanged = [...new Set(changed.map((k) => (k.startsWith('f:') ? 'fields' : k)).filter((k) => TRACKED.includes(k)))];
     if (keysChanged.length) l.revisions = [{ at: l.updated, changed: keysChanged, snap: before }, ...(l.revisions || [])].slice(0, REVISIONS_MAX);
   }
+  if (l.lock) Object.assign(l, BLANK());   // a locked item never keeps readable secrets, even if another device edited them meanwhile
   l.updated = Math.max(l.updated || 0, r.updated || 0);
   for (const k of new Set([...keysOf(l), ...keysOf(r)])) l.sv[k] = l.ft[k] !== undefined ? l.ft[k] : ftOf(l, k);
   return { changed, newConflicts: l.conflicts.map((c) => c.id).sort().join() !== prevConf ? found.length : 0 };
@@ -103,6 +109,7 @@ export class VaultStore {
   constructor(storage, key = KEY, blobs = memoryBlobs(), failKey = FAIL_KEY) {
     this.storage = storage; this.key = key; this.blobs = blobs; this.failKey = failKey;
     this.session = null; this.data = null; this.chain = Promise.resolve();
+    this.itemKeys = new Map(); this.itemFails = new Map();   // opened locked items (memory only) / wrong-passcode counters
     this.onSaved = null; this._auditDirty = false;
     this._auditSave = debounce(() => { if (this._auditDirty && this.session) { this._auditDirty = false; this.save().catch(() => {}); } }, 1500);
   }
@@ -167,7 +174,7 @@ export class VaultStore {
     if (!s) return;
     this._auditSave.cancel();
     if (this._auditDirty) { this._auditDirty = false; this.save().catch(() => {}); }
-    this.session = null; this.data = null;
+    this.session = null; this.data = null; this.itemKeys.clear();
     this.chain = this.chain.then(() => s.lock(), () => s.lock());
   }
 
@@ -183,6 +190,59 @@ export class VaultStore {
       if (this.onSaved) { try { this.onSaved(); } catch { /* ignore */ } }
     }).catch((e) => { this.lastError = e; throw e; });
     return this.chain;
+  }
+
+  /* ----- per-item secondary passcode -----
+     The sensitive fields of an item are sealed again (PBKDF2 → AES-256-GCM, the same format as QR Seal) under a passcode
+     of its own, inside the already-encrypted vault. Without that passcode even someone who knows the master password
+     sees only the name and tags. The passcode is never stored; an opened item is kept in memory for a few minutes only. */
+  isLocked(it) { return !!(it && it.lock); }
+  isOpen(it) { const c = it && this.itemKeys.get(it.id); if (!c) return false; if (Date.now() - c.at > LOCK_UNLOCK_MS) { this.itemKeys.delete(it.id); return false; } return true; }
+  /* the item as the UI should see it: with its secrets filled in when it has been opened */
+  reveal(it) {
+    if (!it || !it.lock || !this.isOpen(it)) return it;
+    return { ...it, ...pickSensitive(sanitiseItem({ type: it.type, ...this.itemKeys.get(it.id).payload }, {})), _open: true };
+  }
+  relock(id) { this.itemKeys.delete(id); }
+  async openItem(id, code) {
+    const it = this.get(id); if (!it || !it.lock) throw new Error('This item has no passcode lock.');
+    const f = this.itemFails.get(id) || { n: 0, until: 0 };
+    if (Date.now() < f.until) throw new Error('Too many wrong passcodes. Wait ' + Math.ceil((f.until - Date.now()) / 1000) + 's.');
+    let text; try { text = await openText(it.lock, String(code || '')); } catch { f.n++; f.until = Date.now() + Math.min(60000, 1000 * 2 ** Math.min(f.n, 6)); this.itemFails.set(id, f); throw new Error('bad-passcode'); }
+    this.itemFails.delete(id);
+    const payload = JSON.parse(text); this.itemKeys.set(id, { code: String(code), payload, at: Date.now() });
+    this.log('access', 'Opened passcode-locked “' + it.name + '”');
+    return payload;
+  }
+  async lockItem(id, code, opt = {}) {
+    const it = this.get(id); if (!it) throw new Error('Item not found.');
+    if (String(code || '').length < 6) throw new Error('Use at least 6 characters for the item passcode.');
+    const payload = it.lock ? this.itemKeys.get(id).payload : Object.fromEntries(SENSITIVE.map((k) => [k, structuredClone(it[k])]));
+    const sealed = await sealText(JSON.stringify(payload), String(code), opt);
+    await this.update(id, { ...BLANK(), lock: sealed });
+    it.revisions = []; it.history = [];   // earlier versions hold the readable secrets
+    this.itemKeys.delete(id);   // a freshly locked item starts closed
+    this.log('item', 'Locked “' + it.name + '” with a secondary passcode', 'info');
+    return this.save();
+  }
+  /* save edits to an opened locked item: the readable parts go back inside the seal */
+  async saveLocked(id, meta, payload, opt = {}) {
+    const c = this.itemKeys.get(id); if (!c) throw new Error('Open the item first.');
+    const sealed = await sealText(JSON.stringify(Object.fromEntries(SENSITIVE.map((k) => [k, payload[k]]))), c.code, opt);
+    await this.update(id, { ...meta, lock: sealed });
+    const it = this.get(id); it.revisions = []; it.history = [];
+    c.payload = Object.fromEntries(SENSITIVE.map((k) => [k, structuredClone(payload[k])])); c.at = Date.now();
+    return this.save();
+  }
+  async changeItemCode(id, oldCode, newCode, opt = {}) {
+    await this.openItem(id, oldCode); return this.lockItem(id, newCode, opt);
+  }
+  async removeItemLock(id, code) {
+    const payload = await this.openItem(id, code);
+    const it = this.get(id);
+    await this.update(id, { ...pickSensitive(sanitiseItem({ type: it.type, ...payload }, {})), lock: '' });
+    this.itemKeys.delete(id); this.log('item', 'Removed the passcode lock from “' + it.name + '”', 'warn');
+    return this.save();
   }
 
   /* ----- audit trail (inside the encrypted vault; never contains secret values) ----- */
@@ -512,6 +572,7 @@ export function sanitiseItem(r, { keepMeta = false, keepAttachments = false } = 
   });
   if (TEMPLATES[type] && r.fields && typeof r.fields === 'object') for (const f of TEMPLATES[type].fields) { const v = r.fields[f.k]; if (typeof v === 'string' && v) it.fields[f.k] = v.slice(0, f.kind === 'multiline' ? 20000 : 1000); }
   if (Array.isArray(r.custom)) it.custom = r.custom.filter((c) => c && typeof c === 'object').slice(0, MAX_CUSTOM).map((c) => ({ label: s(c.label, 60), value: s(c.value, 5000), secret: !!c.secret })).filter((c) => c.label || c.value);
+  if (typeof r.lock === 'string' && r.lock.length <= 400000 && /^[A-Za-z0-9+/=]+$/.test(r.lock)) { it.lock = r.lock; Object.assign(it, BLANK()); }
   if (Number.isFinite(r.created)) it.created = r.created;
   if (Number.isFinite(r.pwChanged)) it.pwChanged = r.pwChanged;
   if (Array.isArray(r.history)) it.history = r.history.filter((h) => h && typeof h.pw === 'string').slice(0, HISTORY_MAX).map((h) => ({ pw: s(h.pw, 2000), at: num(Number(h.at)) }));

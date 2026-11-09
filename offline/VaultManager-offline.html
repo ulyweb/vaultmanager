@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VaultManager v0.12.0 — single-file offline build. Verify with the .sha256 file next to it. -->
+<!-- VaultManager v0.13.0 — single-file offline build. Verify with the .sha256 file next to it. -->
 <html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
@@ -11,7 +11,7 @@
 <meta name="application-name" content="VaultManager">
 <meta name="format-detection" content="telephone=no">
 <meta name="referrer" content="no-referrer">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-OltnCBX3lMpC99JOTW6XxrRTWzM7p+vU9FHBkMODPns=' blob:; style-src 'sha256-opZPynkp5LmfcldAJQU0b8xvT8ixfYnWxFVjeHTQVeQ='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-EqB65tExx/oMzz3RiHSPSJs1lgAIdHUgT3YZJGlNKak=' blob:; style-src 'sha256-HJb6DZ8dy/oMJlFmZ35WLbypV6nqL0SiJRQKzcqy/xo='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
 <title>VaultManager | Zero-Knowledge Password Manager</title>
 <meta name="description" content="VaultManager: an offline-first, zero-knowledge, end-to-end encrypted password manager with a strong password generator, TOTP codes and QR-sealed sharing and backup. Runs entirely in your browser.">
 <meta name="theme-color" content="#05080d">
@@ -695,6 +695,8 @@ html[data-icons=vivid][data-fxanim=on] .ico[data-n=star] svg, html[data-icons=vi
 .wallmine { grid-column: 1 / -1; display: grid; gap: 8px; }
 .sbits { display: block; margin-top: 2px; color: var(--muted); font-size: 11px; font-family: var(--mono); }
 .vwrap { min-width: 0; } .livemeter { margin-top: 6px; } .livemeter:empty { display: none; }
+.lockbox { margin: 10px 0; } .lockbox p { margin: 4px 0 8px; } .lockfields { display: grid; gap: 6px; }
+.note.ok { border-color: color-mix(in srgb, #34d399 55%, var(--line)); }
 </style>
 </head>
 <body>
@@ -1678,7 +1680,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   }
 
   // js/version.js
-  var APP_VERSION = "0.12.0";
+  var APP_VERSION = "0.13.0";
   var APP_NAME = "VaultManager";
   var REPO_URL = "https://github.com/ulyweb/vaultmanager";
   var FORMATS = [
@@ -1692,6 +1694,11 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     ["Attachments at rest", "AES-256-GCM per file, bound to vault + file id"]
   ];
   var CHANGELOG = [
+    { v: "0.13.0", date: "2026-11-09", notes: [
+      "Secondary passcode lock for any item (offered for Bank, Crypto wallet, Emergency, Secure notes and every other category): its details are encrypted again with a passcode of its own, so they stay hidden even after the vault is unlocked.",
+      "Add it when creating an item, or later with \u201CAdd passcode lock\u201D. Opened items lock again after 10 minutes or when the vault locks; wrong passcodes are throttled.",
+      "Locked items never keep readable copies in history or revisions, and a sync from another device cannot bring the secrets back in the clear."
+    ] },
     { v: "0.12.0", date: "2026-11-09", notes: [
       "Every password and secret now shows its length and entropy: in QR tools, Seal-as-QR, backups and in the detail view of Bank, Crypto wallet, Emergency and Secure notes.",
       "Seal a single secret (for example a wallet\u2019s recovery seed phrase) as its own encrypted QR with the new QR button on the field; the whole item can still be sealed too.",
@@ -2332,7 +2339,11 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   var OLD_DAYS = 365;
   var MAX_ATTACHMENT = 10 * 1024 * 1024;
   var MAX_ATTACHMENTS_PER_ITEM = 20;
-  var TRACKED = ["name", "username", "url", "password", "totp", "notes", "tags", "card", "fields", "custom"];
+  var TRACKED = ["name", "username", "url", "password", "totp", "notes", "tags", "card", "fields", "custom", "lock"];
+  var SENSITIVE = ["username", "password", "url", "totp", "notes", "card", "fields", "custom"];
+  var pickSensitive = (o) => Object.fromEntries(SENSITIVE.map((k) => [k, o[k]]));
+  var BLANK = () => ({ username: "", password: "", url: "", totp: "", notes: "", card: { holder: "", number: "", expiry: "", cvv: "", pin: "" }, fields: {}, custom: [] });
+  var LOCK_UNLOCK_MS = 10 * 60 * 1e3;
   var DEFAULT_SETTINGS = {
     autolock: 5,
     clipboard: 30,
@@ -2375,11 +2386,12 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       updated: now,
       pwChanged: now,
       deleted: 0,
+      lock: "",
       ...init
     };
   }
   var same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
-  var MERGE_KEYS = ["name", "username", "url", "password", "totp", "notes", "tags", "card", "custom", "favorite", "deleted"];
+  var MERGE_KEYS = ["name", "username", "url", "password", "totp", "notes", "tags", "card", "custom", "lock", "favorite", "deleted"];
   var NO_CONFLICT = /* @__PURE__ */ new Set(["favorite", "deleted"]);
   var keysOf = (it) => [...MERGE_KEYS, ...Object.keys(it.fields || {}).map((k) => "f:" + k)];
   var getKey = (it, k) => k.startsWith("f:") ? (it.fields || {})[k.slice(2)] ?? "" : it[k];
@@ -2397,10 +2409,10 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       const f = ((TEMPLATES[it.type] || {}).fields || []).find((x) => x.k === k.slice(2));
       return f ? f.l : k.slice(2);
     }
-    return { name: "Name", username: "Username", url: "Website", password: "Password", totp: "One-time code secret", notes: "Notes", tags: "Tags", card: "Card details", custom: "Custom fields" }[k] || k;
+    return { name: "Name", username: "Username", url: "Website", password: "Password", totp: "One-time code secret", notes: "Notes", tags: "Tags", card: "Card details", custom: "Custom fields", lock: "Secondary passcode lock" }[k] || k;
   }
   function keyIsSecret(it, k) {
-    if (["password", "totp", "card"].includes(k)) return true;
+    if (["password", "totp", "card", "lock"].includes(k)) return true;
     if (k.startsWith("f:")) {
       const f = ((TEMPLATES[it.type] || {}).fields || []).find((x) => x.k === k.slice(2));
       return !!f && isSecretField(f);
@@ -2462,6 +2474,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       const keysChanged = [...new Set(changed.map((k) => k.startsWith("f:") ? "fields" : k).filter((k) => TRACKED.includes(k)))];
       if (keysChanged.length) l.revisions = [{ at: l.updated, changed: keysChanged, snap: before }, ...l.revisions || []].slice(0, REVISIONS_MAX);
     }
+    if (l.lock) Object.assign(l, BLANK());
     l.updated = Math.max(l.updated || 0, r.updated || 0);
     for (const k of /* @__PURE__ */ new Set([...keysOf(l), ...keysOf(r)])) l.sv[k] = l.ft[k] !== void 0 ? l.ft[k] : ftOf(l, k);
     return { changed, newConflicts: l.conflicts.map((c) => c.id).sort().join() !== prevConf ? found.length : 0 };
@@ -2475,6 +2488,8 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       this.session = null;
       this.data = null;
       this.chain = Promise.resolve();
+      this.itemKeys = /* @__PURE__ */ new Map();
+      this.itemFails = /* @__PURE__ */ new Map();
       this.onSaved = null;
       this._auditDirty = false;
       this._auditSave = debounce(() => {
@@ -2588,6 +2603,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       }
       this.session = null;
       this.data = null;
+      this.itemKeys.clear();
       this.chain = this.chain.then(() => s.lock(), () => s.lock());
     }
     /* Serialised, atomic-ish write: previous record is kept as a .bak until the next successful write. */
@@ -2616,6 +2632,88 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
         throw e;
       });
       return this.chain;
+    }
+    /* ----- per-item secondary passcode -----
+       The sensitive fields of an item are sealed again (PBKDF2 → AES-256-GCM, the same format as QR Seal) under a passcode
+       of its own, inside the already-encrypted vault. Without that passcode even someone who knows the master password
+       sees only the name and tags. The passcode is never stored; an opened item is kept in memory for a few minutes only. */
+    isLocked(it) {
+      return !!(it && it.lock);
+    }
+    isOpen(it) {
+      const c = it && this.itemKeys.get(it.id);
+      if (!c) return false;
+      if (Date.now() - c.at > LOCK_UNLOCK_MS) {
+        this.itemKeys.delete(it.id);
+        return false;
+      }
+      return true;
+    }
+    /* the item as the UI should see it: with its secrets filled in when it has been opened */
+    reveal(it) {
+      if (!it || !it.lock || !this.isOpen(it)) return it;
+      return { ...it, ...pickSensitive(sanitiseItem({ type: it.type, ...this.itemKeys.get(it.id).payload }, {})), _open: true };
+    }
+    relock(id) {
+      this.itemKeys.delete(id);
+    }
+    async openItem(id, code) {
+      const it = this.get(id);
+      if (!it || !it.lock) throw new Error("This item has no passcode lock.");
+      const f = this.itemFails.get(id) || { n: 0, until: 0 };
+      if (Date.now() < f.until) throw new Error("Too many wrong passcodes. Wait " + Math.ceil((f.until - Date.now()) / 1e3) + "s.");
+      let text;
+      try {
+        text = await openText(it.lock, String(code || ""));
+      } catch {
+        f.n++;
+        f.until = Date.now() + Math.min(6e4, 1e3 * 2 ** Math.min(f.n, 6));
+        this.itemFails.set(id, f);
+        throw new Error("bad-passcode");
+      }
+      this.itemFails.delete(id);
+      const payload = JSON.parse(text);
+      this.itemKeys.set(id, { code: String(code), payload, at: Date.now() });
+      this.log("access", "Opened passcode-locked \u201C" + it.name + "\u201D");
+      return payload;
+    }
+    async lockItem(id, code, opt = {}) {
+      const it = this.get(id);
+      if (!it) throw new Error("Item not found.");
+      if (String(code || "").length < 6) throw new Error("Use at least 6 characters for the item passcode.");
+      const payload = it.lock ? this.itemKeys.get(id).payload : Object.fromEntries(SENSITIVE.map((k) => [k, structuredClone(it[k])]));
+      const sealed = await sealText(JSON.stringify(payload), String(code), opt);
+      await this.update(id, { ...BLANK(), lock: sealed });
+      it.revisions = [];
+      it.history = [];
+      this.itemKeys.delete(id);
+      this.log("item", "Locked \u201C" + it.name + "\u201D with a secondary passcode", "info");
+      return this.save();
+    }
+    /* save edits to an opened locked item: the readable parts go back inside the seal */
+    async saveLocked(id, meta, payload, opt = {}) {
+      const c = this.itemKeys.get(id);
+      if (!c) throw new Error("Open the item first.");
+      const sealed = await sealText(JSON.stringify(Object.fromEntries(SENSITIVE.map((k) => [k, payload[k]]))), c.code, opt);
+      await this.update(id, { ...meta, lock: sealed });
+      const it = this.get(id);
+      it.revisions = [];
+      it.history = [];
+      c.payload = Object.fromEntries(SENSITIVE.map((k) => [k, structuredClone(payload[k])]));
+      c.at = Date.now();
+      return this.save();
+    }
+    async changeItemCode(id, oldCode, newCode, opt = {}) {
+      await this.openItem(id, oldCode);
+      return this.lockItem(id, newCode, opt);
+    }
+    async removeItemLock(id, code) {
+      const payload = await this.openItem(id, code);
+      const it = this.get(id);
+      await this.update(id, { ...pickSensitive(sanitiseItem({ type: it.type, ...payload }, {})), lock: "" });
+      this.itemKeys.delete(id);
+      this.log("item", "Removed the passcode lock from \u201C" + it.name + "\u201D", "warn");
+      return this.save();
     }
     /* ----- audit trail (inside the encrypted vault; never contains secret values) ----- */
     log(kind, message, level = "info") {
@@ -3094,6 +3192,10 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       if (typeof v === "string" && v) it.fields[f.k] = v.slice(0, f.kind === "multiline" ? 2e4 : 1e3);
     }
     if (Array.isArray(r.custom)) it.custom = r.custom.filter((c2) => c2 && typeof c2 === "object").slice(0, MAX_CUSTOM).map((c2) => ({ label: s(c2.label, 60), value: s(c2.value, 5e3), secret: !!c2.secret })).filter((c2) => c2.label || c2.value);
+    if (typeof r.lock === "string" && r.lock.length <= 4e5 && /^[A-Za-z0-9+/=]+$/.test(r.lock)) {
+      it.lock = r.lock;
+      Object.assign(it, BLANK());
+    }
     if (Number.isFinite(r.created)) it.created = r.created;
     if (Number.isFinite(r.pwChanged)) it.pwChanged = r.pwChanged;
     if (Array.isArray(r.history)) it.history = r.history.filter((h2) => h2 && typeof h2.pw === "string").slice(0, HISTORY_MAX).map((h2) => ({ pw: s(h2.pw, 2e3), at: num2(Number(h2.at)) }));
@@ -3632,7 +3734,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
         ctx2.refresh();
       } } },
       avatar(it.name, it.type),
-      h("div", { class: "t" }, h("b", { text: it.name || "(untitled)" }), h("small", { text: sub })),
+      h("div", { class: "t" }, h("b", { text: it.name || "(untitled)" }), h("small", { text: it.lock ? "\u{1F512} Locked \u2014 passcode required" : sub })),
       (it.attachments || []).length ? h("span", { class: "clip", text: "{{clip}}", title: it.attachments.length + " attachment(s)" }) : null,
       it.favorite ? h("span", { class: "star", text: "{{star}}", "aria-label": "Favorite" }) : null,
       h("span", { class: "disc", "aria-hidden": "true", text: "{{chevright}}" })
@@ -3689,8 +3791,10 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     );
     return f;
   }
-  function detailPanel(ctx2, it) {
+  function detailPanel(ctx2, it0) {
     const { store: store2 } = ctx2;
+    const it = store2.reveal(it0);
+    const lockedClosed = !!it.lock && !it._open;
     currentItem = it;
     const trashed = !!it.deleted;
     const actions = h(
@@ -3713,6 +3817,14 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
             ctx2.refresh();
           }
         } } }, "{{close}} Delete forever")
+      ] : lockedClosed ? [
+        h("button", { class: "btn primary sm", on: { click: () => unlockItemDialog(ctx2, it) } }, "{{lock}} Unlock this item"),
+        h("button", { class: "btn danger sm", on: { click: async () => {
+          await store2.trash(it.id);
+          ctx2.S.sel = null;
+          toast("Moved to trash");
+          ctx2.refresh();
+        } } }, "{{trash}} Delete")
       ] : [
         h("button", { class: "btn sm act-edit", on: { click: () => editItem(ctx2, it) } }, "{{edit}} Edit"),
         h("button", { class: "btn sm" + (it.favorite ? " primary" : ""), "aria-pressed": String(it.favorite), on: { click: async () => {
@@ -3721,13 +3833,18 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
         } } }, it.favorite ? "{{star}} Favorite" : "{{starline}} Favorite"),
         it.type === "network" && (it.fields || {}).ssid ? h("button", { class: "btn sm", on: { click: () => wifiModal(ctx2, it) } }, "{{network}} Wi-Fi QR") : null,
         h("button", { class: "btn sm", on: { click: () => shareItem(ctx2, it) } }, "{{qr}} Seal as QR"),
-        h("button", { class: "btn sm", on: { click: async () => {
+        it.lock ? null : h("button", { class: "btn sm", on: { click: async () => {
           const c = newItem(it.type, { ...structuredClone(it), id: void 0, name: it.name + " (copy)", history: [], created: Date.now(), updated: Date.now() });
           c.id = newItem().id;
           await store2.add(c);
           ctx2.showItem(c.id);
           toast("Duplicated");
         } } }, "{{dup}} Duplicate"),
+        it.lock ? h("button", { class: "btn sm", on: { click: () => {
+          store2.relock(it.id);
+          ctx2.refresh();
+          toast("Locked again");
+        } } }, "{{lock}} Lock now") : h("button", { class: "btn sm", on: { click: () => lockDialog(ctx2, it) } }, "{{lock}} Add passcode lock"),
         h("button", { class: "btn danger sm", on: { click: async () => {
           await store2.trash(it.id);
           ctx2.S.sel = null;
@@ -3745,7 +3862,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
         ctx2.refresh();
       } } }, "{{chevleft}}", h("span", { text: backTo })),
       h("span", { class: "navtitle", text: it.name || "" }),
-      trashed ? h("span") : h("button", { class: "navedit", on: { click: () => editItem(ctx2, it) } }, "Edit")
+      trashed ? h("span") : lockedClosed ? h("button", { class: "navedit", on: { click: () => unlockItemDialog(ctx2, it) } }, "Unlock") : h("button", { class: "navedit", on: { click: () => editItem(ctx2, it) } }, "Edit")
     );
     const rows = [];
     if ((it.conflicts || []).length && !trashed) rows.push(h("div", { class: "note warn conflict-banner", role: "alert" }, "{{alert}} Edited on two devices: " + it.conflicts.length + " value" + (it.conflicts.length > 1 ? "s" : "") + " differ. The newest was kept and the other is saved. ", h("button", { class: "linkbtn", on: { click: () => conflictModal(ctx2, it) } }, "Review")));
@@ -3773,7 +3890,40 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     rows.push(attachmentsField(ctx2, it));
     if ((it.tags || []).length) rows.push(h("div", { class: "f" }, h("div", { class: "k", text: "Tags" }), h("div", { class: "v" }, h("div", { class: "tags" }, it.tags.map((t) => h("button", { class: "chip", on: { click: () => ctx2.go("tag:" + t) } }, "#" + t))))));
     const nrev = (it.revisions || []).length, nhist = (it.history || []).length;
-    if (nrev || nhist) rows.push(h("div", { class: "f" }, h("div", { class: "k", text: "History" }), h("div", { class: "v" }, h("button", { class: "linkbtn", on: { click: () => historyModal(ctx2, it) } }, [nrev ? `${nrev} earlier version${nrev > 1 ? "s" : ""}` : null, nhist ? `${nhist} previous password${nhist > 1 ? "s" : ""}` : null].filter(Boolean).join(" \xB7 ")))));
+    if ((nrev || nhist) && !it.lock) rows.push(h("div", { class: "f" }, h("div", { class: "k", text: "History" }), h("div", { class: "v" }, h("button", { class: "linkbtn", on: { click: () => historyModal(ctx2, it) } }, [nrev ? `${nrev} earlier version${nrev > 1 ? "s" : ""}` : null, nhist ? `${nhist} previous password${nhist > 1 ? "s" : ""}` : null].filter(Boolean).join(" \xB7 ")))));
+    if (lockedClosed) {
+      rows.length = 0;
+      rows.push(h(
+        "div",
+        { class: "note lockbox", role: "status" },
+        h("b", { text: "{{lock}} This item is locked with its own passcode" }),
+        h("p", { text: "Its details (fields, notes, attachments) stay hidden until you enter the item\u2019s secondary passcode \u2014 even though your vault is unlocked." }),
+        h("div", { class: "row" }, h("button", { class: "btn primary", on: { click: () => unlockItemDialog(ctx2, it) } }, "{{lock}} Enter passcode\u2026"))
+      ));
+    } else if (it.lock) {
+      rows.unshift(h(
+        "div",
+        { class: "note ok lockbox", role: "status" },
+        h("b", { text: "Unlocked with the item passcode" }),
+        h("small", { text: " \u2014 it locks again in 10 minutes, or when the vault locks." }),
+        h(
+          "div",
+          { class: "row wrap" },
+          h("button", { class: "btn sm", on: { click: () => lockDialog(ctx2, it, { change: true }) } }, "Change passcode"),
+          h("button", { class: "btn sm danger", on: { click: async () => {
+            if (await confirmDialog({ title: "Remove the passcode lock?", text: "The details go back to being protected by your master password only.", okLabel: "Remove lock", danger: true })) {
+              try {
+                await store2.removeItemLock(it.id, store2.itemKeys.get(it.id).code);
+                toast("Lock removed");
+                ctx2.refresh();
+              } catch (e) {
+                toast(e.message, "err");
+              }
+            }
+          } } }, "Remove lock")
+        )
+      ));
+    }
     rows.push(h("div", { class: "f" }, h("div", { class: "k", text: "Updated" }), h("div", { class: "v hint", text: `${fmtDate(it.updated)} \xB7 created ${fmtDate(it.created)}${it.type === "login" && it.password ? " \xB7 password changed " + fmtDate(it.pwChanged) : ""}` })));
     const out = h("div", null, navbar, h("div", { class: "detail-head" }, avatar(it.name, it.type), h("div", null, h("h2", { text: it.name || "(untitled)" }), h("span", { class: "chip" }, h("span", { class: "icn", text: TYPE_ICON[it.type] }), " " + TYPES[it.type]))), actions, h("div", { class: "fgroup" }, rows));
     currentItem = null;
@@ -3959,6 +4109,11 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   }
   function editItem(ctx2, item, type = "login") {
     const { store: store2 } = ctx2;
+    if (item && item.lock && !store2.isOpen(item)) {
+      unlockItemDialog(ctx2, item);
+      return;
+    }
+    if (item) item = store2.reveal(item);
     const isNew = !item;
     const it = item ? structuredClone(item) : newItem(type, ctx2.S.view.startsWith("tag:") ? { tags: [ctx2.S.view.slice(4)] } : {});
     const inp = (key, label, opts = {}) => h(
@@ -4083,6 +4238,22 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     body.push(h("label", { class: "chk" }, h("input", { type: "checkbox", checked: it.favorite, on: { change: (e) => {
       it.favorite = e.target.checked;
     } } }), "Favorite"));
+    const lockOn = h("input", { type: "checkbox", id: "f_lockon" }), lp1 = h("input", { type: "password", class: "inp mono", id: "f_lock1", autocomplete: "new-password", "aria-label": "Item passcode" }), lp2 = h("input", { type: "password", class: "inp mono", id: "f_lock2", autocomplete: "new-password", "aria-label": "Repeat item passcode" });
+    const lockBox = h(
+      "div",
+      { class: "field lockfields", hidden: true },
+      h("label", { for: "f_lock1", text: "Item passcode" }),
+      lp1,
+      liveMeter(lp1),
+      h("label", { for: "f_lock2", text: "Repeat passcode" }),
+      lp2,
+      h("p", { class: "hint", text: "Encrypts this item\u2019s details again with this passcode. If you forget it, nobody can recover them." })
+    );
+    lockOn.addEventListener("change", () => {
+      lockBox.hidden = !lockOn.checked;
+      if (lockOn.checked) lp1.focus();
+    });
+    if (isNew) body.push(h("label", { class: "chk", for: "f_lockon" }, lockOn, "{{lock}} Protect this item with a secondary passcode"), lockBox);
     body.push(err);
     const save = async () => {
       if (!it.name.trim()) {
@@ -4094,6 +4265,16 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
         err.textContent = "That one-time code secret is not valid (expected base32 or an otpauth://totp link).";
         return false;
       }
+      if (isNew && lockOn.checked) {
+        if (lp1.value !== lp2.value) {
+          err.textContent = "The two item passcodes do not match.";
+          return false;
+        }
+        if (lp1.value.length < 6) {
+          err.textContent = "Use at least 6 characters for the item passcode.";
+          return false;
+        }
+      }
       it.name = it.name.trim();
       it.totp = it.totp.trim();
       it.custom = (it.custom || []).filter((c) => c.label.trim() || c.value).map((c) => ({ label: c.label.trim(), value: c.value, secret: !!c.secret }));
@@ -4102,8 +4283,18 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
         it.created = it.updated = it.pwChanged = Date.now();
         it.attachments = [];
         await store2.add(it);
+        if (lockOn.checked) {
+          try {
+            await store2.lockItem(it.id, lp1.value);
+          } catch (e) {
+            toast(e.message, "err", 7e3);
+          }
+        }
+      } else if (it.lock) {
+        const meta = { name: it.name, tags: it.tags, favorite: it.favorite };
+        await store2.saveLocked(it.id, meta, it);
       } else {
-        const { id, history, created, pwChanged, attachments, revisions, deleted, ...patch } = it;
+        const { id, history, created, pwChanged, attachments, revisions, deleted, lock: lock2, _open, ...patch } = it;
         await store2.update(id, patch);
       }
       try {
@@ -4148,6 +4339,79 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       wide: true,
       body: h("div", null, GROUPS.map(([g, keys]) => h("div", { class: "catgroup" }, h("p", { class: "lbl", text: g }), h("div", { class: "checks cats" }, keys.map(pick))))),
       actions: [{ label: "Cancel" }]
+    });
+  }
+  function unlockItemDialog(ctx2, it) {
+    const input = h("input", { type: "password", class: "inp mono", autocomplete: "off", "aria-label": "Item passcode" }), err = h("p", { class: "err", role: "alert" });
+    let m;
+    const go = async () => {
+      err.textContent = "";
+      const b = m && m.el && m.el.querySelector(".btn.primary");
+      if (b) b.disabled = true;
+      try {
+        await ctx2.store.openItem(it.id, input.value);
+        m.close();
+        ctx2.refresh();
+      } catch (e) {
+        err.textContent = e.message === "bad-passcode" ? "That is not the passcode for this item." : e.message;
+        input.select();
+        if (b) b.disabled = false;
+      }
+      return false;
+    };
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        go();
+      }
+    });
+    m = modal({
+      title: "Unlock \u201C" + it.name + "\u201D",
+      sub: "Secondary passcode",
+      body: h("div", null, h("p", { text: "This item has its own passcode on top of your master password." }), input, err),
+      actions: [{ label: "Cancel" }, { label: "Unlock", kind: "primary", onClick: go, close: false }]
+    });
+    setTimeout(() => input.focus(), 50);
+  }
+  function lockDialog(ctx2, it, { change = false } = {}) {
+    const store2 = ctx2.store;
+    const cur = h("input", { type: "password", class: "inp mono", autocomplete: "off", "aria-label": "Current item passcode" });
+    const p1 = h("input", { type: "password", class: "inp mono", autocomplete: "new-password", "aria-label": "New item passcode" }), p2 = h("input", { type: "password", class: "inp mono", autocomplete: "new-password", "aria-label": "Repeat item passcode" });
+    const err = h("p", { class: "err", role: "alert" });
+    const go = async () => {
+      err.textContent = "";
+      if (p1.value !== p2.value) {
+        err.textContent = "The two passcodes do not match.";
+        return false;
+      }
+      if (p1.value.length < 6) {
+        err.textContent = "Use at least 6 characters.";
+        return false;
+      }
+      try {
+        if (change) await store2.changeItemCode(it.id, cur.value, p1.value);
+        else await store2.lockItem(it.id, p1.value);
+        toast(change ? "Passcode changed" : "Item locked");
+        ctx2.refresh();
+        return true;
+      } catch (e) {
+        err.textContent = e.message === "bad-passcode" ? "The current passcode is wrong." : e.message;
+        return false;
+      }
+    };
+    modal({
+      title: change ? "Change item passcode" : "Lock \u201C" + it.name + "\u201D",
+      sub: "Secondary passcode",
+      body: h(
+        "div",
+        null,
+        h("p", { class: "note warn", text: "Its details are encrypted again with this passcode. If you forget it, nobody can recover them \u2014 not even with your master password or recovery key. Attachments stay visible only after unlocking in the app, but are protected by your master password rather than this passcode." }),
+        change ? h("div", { class: "field" }, h("label", { text: "Current passcode" }), cur) : null,
+        h("div", { class: "field" }, h("label", { text: "New passcode" }), p1, liveMeter(p1)),
+        h("div", { class: "field" }, h("label", { text: "Repeat passcode" }), p2),
+        err
+      ),
+      actions: [{ label: "Cancel" }, { label: change ? "Change passcode" : "Lock item", kind: "primary", onClick: go }]
     });
   }
   function printNodes(nodes) {

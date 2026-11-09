@@ -1063,3 +1063,36 @@ test('v0.12: crypto wallet shows length+entropy and seals a single field as QR; 
   assert.deepEqual(problems.filter((p) => !/Failed to load resource/.test(p)), []);
   await ctx.close();
 });
+
+test('item passcode lock: a Crypto wallet item with its own passcode stays hidden after the vault is unlocked, until the item passcode is entered', async () => {
+  const { ctx, page, problems } = await newPage();
+  await createVault(page);
+  await page.getByRole('button', { name: '＋ New' }).click();
+  await page.locator('.modal-sheet .cats .btn', { hasText: 'Crypto wallet' }).click();
+  await page.fill('#f_name', 'Cold wallet'); await page.fill('#tf_seed', 'zoo zebra zone zero zest zinc zip zigzag');
+  await page.check('#f_lockon'); await page.fill('#f_lock1', 'item-code-123'); await page.fill('#f_lock2', 'item-code-XYZ');
+  await page.getByRole('button', { name: 'Save' }).click();
+  await page.waitForSelector('.modal-sheet .err:not(:empty)'); assert.match(await page.locator('.modal-sheet .err:not(:empty)').first().textContent(), /do not match/);
+  await page.fill('#f_lock2', 'item-code-123'); await page.getByRole('button', { name: 'Save' }).click();
+  await page.waitForSelector('.detail h2:has-text("Cold wallet")');
+  assert.ok(await page.locator('.lockbox').count(), 'shows the locked panel');
+  assert.ok(!(await page.textContent('.detail')).includes('zebra'), 'the seed phrase is not in the page');
+  assert.ok(!(await page.textContent('.list')).includes('zebra') && /Locked/.test(await page.textContent('.list')));
+  await page.getByRole('button', { name: 'Enter passcode…' }).click();
+  await page.fill('input[aria-label="Item passcode"]', 'wrong-passcode'); await page.getByRole('button', { name: 'Unlock', exact: true }).click();
+  await page.waitForFunction(() => /not the passcode/.test(document.querySelector('.modal-sheet').textContent), null, { timeout: 30000 });
+  await page.waitForTimeout(2200);                                             // the retry delay after a wrong try
+  await page.fill('input[aria-label="Item passcode"]', 'item-code-123'); await page.getByRole('button', { name: 'Unlock', exact: true }).click();
+  await page.waitForFunction(() => document.querySelector('.detail') && document.querySelector('.detail').textContent.includes('Recovery seed phrase'), null, { timeout: 30000 });
+  assert.match(await page.textContent('.detail'), /Unlocked with the item passcode/);
+  await page.getByRole('button', { name: /Lock now/ }).click();
+  assert.ok(!(await page.textContent('.detail')).includes('Recovery seed phrase'));
+  // locking the vault also closes the item
+  await page.getByRole('button', { name: 'Enter passcode…' }).click(); await page.fill('input[aria-label="Item passcode"]', 'item-code-123'); await page.getByRole('button', { name: 'Unlock', exact: true }).click();
+  await page.waitForFunction(() => document.querySelector('.detail').textContent.includes('Recovery seed phrase'), null, { timeout: 30000 });
+  await page.getByRole('button', { name: /Lock/ }).first().click(); await page.fill('#upw', MASTER); await page.click('button[type=submit]'); await page.waitForSelector('.topbar');
+  await openAll(page); await page.locator('.item', { hasText: 'Cold wallet' }).click();
+  assert.ok(!(await page.textContent('.detail')).includes('Recovery seed phrase') && await page.locator('.lockbox').count());
+  assert.deepEqual(problems, []);
+  await ctx.close();
+});

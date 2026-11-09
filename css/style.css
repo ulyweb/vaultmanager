@@ -677,3 +677,5 @@ html[data-icons=vivid][data-fxanim=on] .ico[data-n=star] svg, html[data-icons=vi
 .wallmine { grid-column: 1 / -1; display: grid; gap: 8px; }
 .sbits { display: block; margin-top: 2px; color: var(--muted); font-size: 11px; font-family: var(--mono); }
 .vwrap { min-width: 0; } .livemeter { margin-top: 6px; } .livemeter:empty { display: none; }
+.lockbox { margin: 10px 0; } .lockbox p { margin: 4px 0 8px; } .lockfields { display: grid; gap: 6px; }
+.note.ok { border-color: color-mix(in srgb, #34d399 55%, var(--line)); }

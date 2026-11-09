@@ -1,6 +1,6 @@
 /* Application version, data-format versions and changelog (shown in Settings → About). */
 
-export const APP_VERSION = '0.12.0';
+export const APP_VERSION = '0.13.0';
 export const APP_NAME = 'VaultManager';
 export const REPO_URL = 'https://github.com/ulyweb/vaultmanager';
 
@@ -16,6 +16,11 @@ export const FORMATS = [
 ];
 
 export const CHANGELOG = [
+  { v: '0.13.0', date: '2026-11-09', notes: [
+    'Secondary passcode lock for any item (offered for Bank, Crypto wallet, Emergency, Secure notes and every other category): its details are encrypted again with a passcode of its own, so they stay hidden even after the vault is unlocked.',
+    'Add it when creating an item, or later with “Add passcode lock”. Opened items lock again after 10 minutes or when the vault locks; wrong passcodes are throttled.',
+    'Locked items never keep readable copies in history or revisions, and a sync from another device cannot bring the secrets back in the clear.',
+  ] },
   { v: '0.12.0', date: '2026-11-09', notes: [
     'Every password and secret now shows its length and entropy: in QR tools, Seal-as-QR, backups and in the detail view of Bank, Crypto wallet, Emergency and Secure notes.',
     'Seal a single secret (for example a wallet’s recovery seed phrase) as its own encrypted QR with the new QR button on the field; the whole item can still be sealed too.',
