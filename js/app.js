@@ -9,6 +9,9 @@ import { renderVaultView, newItemMenu, showRecoveryKit, meter } from './views.js
 import { renderGenerator, renderHealth, renderQR, renderData } from './tools.js';
 import { renderSettings } from './settings.js';
 import { createBlobStore } from './blobs.js';
+import { Profiles, keysFor, newProfileId } from './profiles.js';
+import { profileAvatar, avatarPicker, importProfileDialog, exportProfileDialog } from './profile-ui.js';
+import { canOfferCopy, saveOfflineCopy } from './offline.js';
 import { renderBeam } from './beam.js';
 import { TYPE_META, GROUPS } from './templates.js';
 import { syncGist } from './sync.js';
@@ -20,23 +23,41 @@ import { landscapes } from './landscapes.js';
 import { renderHome } from './widgets.js';
 import { createTour } from './tour.js';
 import { APP_VERSION } from './version.js';
-import { fmtInt } from './util.js';
+import { fmtInt, fmtDate } from './util.js';
 
 const root = document.getElementById('app');
 let storage;
 try { storage = window.localStorage; storage.getItem('x'); } catch { storage = null; }
 
-const store = new VaultStore(storage || { _m: new Map(), getItem(k) { return this._m.get(k) ?? null; }, setItem(k, v) { this._m.set(k, v); }, removeItem(k) { this._m.delete(k); } }, undefined, createBlobStore());
+const memoryStorage = () => ({ _m: new Map(), getItem(k) { return this._m.get(k) ?? null; }, setItem(k, v) { this._m.set(k, v); }, removeItem(k) { this._m.delete(k); } });
+const env = { storage: storage || memoryStorage(), blobs: createBlobStore(), profiles: null };
+env.profiles = new Profiles(env.storage);
+let store = null;   // the CURRENT profile's vault (one profile = one completely separate vault)
+/* Point the app at a profile (or at an empty placeholder when none exists yet). Nothing is decrypted here. */
+function openProfile(id) {
+  const k = id ? keysFor(id) : null;
+  store = new VaultStore(env.storage, k ? k.vault : 'vaultmanager.vault.new', env.blobs, k ? k.fails : 'vaultmanager.fails.new');
+  ctx.S.profileId = id || null;
+  const cos = loadCosmetic(env.storage, keysFor(id || 'main').look);
+  bootLook = normalizeLook((cos && cos.look) || {}); bootTheme = (cos && cos.theme) || 'auto';
+}
 
 const ctx = {
-  store,
-  S: { view: 'all', q: '', sel: null, qrTab: 'seal', collapsed: new Set() },
+  get store() { return store; },
+  env,
+  S: { view: 'all', q: '', sel: null, qrTab: 'seal', collapsed: new Set(), profileId: null, gate: null },
   cleanup: [],
   runCleanup() { const c = ctx.cleanup.splice(0); c.forEach((f) => { try { f(); } catch { /* ignore */ } }); },
   closeModals: closeAllModals,
   go(view) { ctx.S.view = view; if (view !== 'all' && !isVaultView(view)) ctx.S.sel = null; if (!isVaultView(view)) ctx.S.q = ''; syncSearch(); draw(); window.scrollTo(0, 0); },
   refresh() { draw(); },
   applyTheme, armAutolock, lock, armSync, syncNow,
+  profile: () => env.profiles.get(ctx.S.profileId),
+  switchProfile() { lock(false); ctx.S.gate = 'picker'; draw(); },
+  updateProfile(patch) { const p = env.profiles.update(ctx.S.profileId, patch); if (p && patch.name !== undefined && store.unlocked) { store.settings.displayName = p.name; saveSoon(); } return p; },
+  async removeProfile(id) { const k = keysFor(id); const st = id === ctx.S.profileId && store ? store : new VaultStore(env.storage, k.vault, env.blobs, k.fails); await st.wipe(); env.profiles.remove(id); },
+  exportProfile: () => exportProfileDialog(ctx),
+  importProfile: (onDone) => importProfileDialog(ctx, { onDone }),
   look: () => curLook(), setLook, setTheme, newItem: () => newItemMenu(ctx),
   showItem(id) { ctx.S.sel = id; if (!isVaultView(ctx.S.view)) ctx.S.view = 'all'; syncSearch(); draw(); },
   showRecoveryKit(key) { return showRecoveryKit(ctx, key); },
@@ -59,8 +80,8 @@ ctx.tour = tour;
 const isVaultView = (v) => ['all', 'fav', 'trash', 'conflicts'].includes(v) || v in TYPE_META || v.startsWith('tag:');
 
 /* ---------- look & feel (theme, accent, effects, layout) ---------- */
-const cosmetic = storage ? loadCosmetic(storage) : null;
-let bootLook = normalizeLook((cosmetic && cosmetic.look) || {}), bootTheme = (cosmetic && cosmetic.theme) || 'auto';   // what the lock screen uses
+let bootLook = normalizeLook({}), bootTheme = 'auto';   // what the sign-in screen uses (the last profile's look)
+const cosKey = () => keysFor(ctx.S.profileId || 'main').look;
 const lightMQ = window.matchMedia('(prefers-color-scheme: light)');
 const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 function curLook() { return store.unlocked ? normalizeLook(store.settings.look) : bootLook; }
@@ -68,7 +89,7 @@ function applyTheme() {
   const setting = store.unlocked ? store.settings.theme : bootTheme, lk = curLook();
   const theme = resolveTheme(setting, lightMQ.matches);
   applyLook(lk, theme, landscapes);
-  if (storage) saveCosmetic(storage, setting, lk);
+  if (storage) saveCosmetic(storage, setting, lk, cosKey());
   bootLook = lk; bootTheme = setting;
   const m = document.querySelector('meta[name=theme-color]'); if (m) m.content = theme === 'dark' ? '#05080d' : '#eef2f6';
 }
@@ -133,6 +154,7 @@ function lock(erased, why) {
   clear(document.getElementById('printArea'));
   store.lock();
   Object.assign(ctx.S, { view: 'all', q: '', sel: null });
+  if (erased && !env.profiles.get(ctx.S.profileId)) { const next = env.profiles.last(); openProfile(next ? next.id : null); ctx.S.gate = next ? 'picker' : null; }
   document.documentElement.dataset.detail = '0';
   shell = null;
   applyTheme();
@@ -193,20 +215,40 @@ function pwInput(id, label, auto) {
   return { input: i, el: h('div', { class: 'pwwrap' }, i, eye) };
 }
 
-function gateCreate() {
+const gateFoot = () => (canOfferCopy() ? h('p', { class: 'gate-foot' }, h('button', { type: 'button', class: 'linkbtn', on: { click: async () => { try { await saveOfflineCopy(); } catch (e) { toast(e.message, 'err', 7000); } } } }, '{{download}} Download the offline copy — one file, VaultManager-offline.html')) : null);
+
+function profileHead(p, sub) {
+  return h('div', { class: 'brand prof' }, profileAvatar(p, 52), h('div', null, h('h1', { text: p.name }), h('p', { text: sub })));
+}
+
+/* After a profile has been created or imported on the sign-in screen: open it and go straight in. */
+async function enterProfile(profile, masterPassword) {
+  env.profiles.setLast(profile.id); openProfile(profile.id); ctx.S.gate = null;
+  await store.unlock({ password: masterPassword });
+  onUnlocked();
+}
+
+function gateCreate({ first }) {
+  const list = env.profiles.list();
+  const name = h('input', { id: 'pname', class: 'inp', value: first ? 'My vault' : '', maxlength: '40', autocomplete: 'off', placeholder: 'e.g. Alex, Family, Work', 'aria-label': 'Profile name' });
+  const picker = avatarPicker(null, () => name.value); name.addEventListener('input', () => picker.refresh());
   const p1 = pwInput('pw1', 'Master password', 'new-password'), p2 = pwInput('pw2', 'Repeat master password', 'new-password');
   const m = h('div'), err = h('p', { class: 'err', role: 'alert' });
   const ack = h('input', { type: 'checkbox', id: 'ack' });
   p1.input.addEventListener('input', () => clear(m).append(meter(p1.input.value).el));
-  const btn = h('button', { class: 'btn primary', type: 'submit', style: null }, 'Create my vault');
+  const btn = h('button', { class: 'btn primary', type: 'submit', style: null }, first ? 'Create my vault' : 'Create profile');
   const suggest = h('button', { type: 'button', class: 'btn sm', on: { click: () => { const pw = generatePassphrase({ words: 6 }); p1.input.value = p2.input.value = pw; p1.input.type = p2.input.type = 'text'; p1.input.dispatchEvent(new Event('input')); } } }, '{{bolt}} Suggest a passphrase');
   const form = h('form', { novalidate: true, on: { submit: async (e) => {
     e.preventDefault(); err.textContent = '';
+    const nm = name.value.trim(); if (!nm) { err.textContent = 'Give this profile a name.'; name.focus(); return; }
     if (p1.input.value !== p2.input.value) { err.textContent = 'The two passwords do not match.'; return; }
     const pol = ctx.passwordPolicy(p1.input.value); if (pol) { err.textContent = pol; return; }
     if (!ack.checked) { err.textContent = 'Please confirm that you understand there is no password recovery.'; return; }
     btn.disabled = true; btn.textContent = 'Deriving key (600,000 rounds)…';
-    try { await store.create(p1.input.value); } catch (x) { err.textContent = x.message; btn.disabled = false; btn.textContent = 'Create my vault'; return; }
+    const id = newProfileId(), k = keysFor(id), st = new VaultStore(env.storage, k.vault, env.blobs, k.fails);
+    try { await st.create(p1.input.value); st.data.settings.displayName = nm; await st.save(); } catch (x) { err.textContent = x.message; btn.disabled = false; btn.textContent = first ? 'Create my vault' : 'Create profile'; return; }
+    env.profiles.add({ id, name: nm, avatar: picker.get() }); env.profiles.setLast(id);
+    store = st; ctx.S.profileId = id; ctx.S.gate = null;
     p1.input.value = p2.input.value = '';
     ctx.S.view = curLook().startPage === 'home' ? 'home' : 'all';
     applyTheme(); armAutolock(); draw();
@@ -214,15 +256,27 @@ function gateCreate() {
     modal({ title: 'Vault created 🎉', sub: 'One more thing', body: h('div', null, h('p', { text: 'Your master password never leaves this device and cannot be reset. A recovery key is a printable backup way in if you ever forget it.' })),
       actions: [{ label: 'Skip for now' }, { label: 'Create recovery key', kind: 'primary', onClick: async () => { const key = await store.session.createRecovery(); await store.save(); showRecoveryKit(ctx, key); } }] });
   } } },
+    h('div', { class: 'field' }, h('label', { for: 'pname', text: 'Profile name' }), name, h('p', { class: 'hint', text: first ? 'One profile per person — each has its own master password and its own completely separate vault.' : 'This profile gets its own master password and its own separate vault.' })),
+    picker.el,
     h('div', { class: 'field' }, h('label', { for: 'pw1', text: 'Master password' }), p1.el, m, h('p', { class: 'hint', text: '12+ characters. A passphrase of 5+ random words is easy to remember and hard to crack.' })),
     h('div', { class: 'field' }, h('label', { for: 'pw2', text: 'Repeat master password' }), p2.el),
     h('div', { class: 'row wrap' }, suggest),
     h('label', { class: 'chk', for: 'ack' }, ack, 'I understand that if I forget this password, nobody can recover my data.'),
     err, h('div', { class: 'row' }, btn));
-  return h('div', { class: 'panel gate-card' }, brand('Create your encrypted vault'), form, trustChips());
+  return h('div', { class: 'panel gate-card' }, brand(first ? 'Create your profile and encrypted vault' : 'Add a profile'), form,
+    h('div', { class: 'gate-links' }, h('button', { type: 'button', class: 'linkbtn', on: { click: () => ctx.importProfile(enterProfile) } }, '{{importfile}} Import a profile backup — restore a whole database'), list.length ? h('button', { type: 'button', class: 'linkbtn', on: { click: () => { ctx.S.gate = 'picker'; draw(); } } }, '← Back to profiles') : null),
+    trustChips(), gateFoot());
 }
 
-function gateUnlock() {
+function gatePicker(list) {
+  const card = (p) => h('button', { class: 'profcard', 'aria-label': 'Sign in as ' + p.name, on: { click: () => { openProfile(p.id); ctx.S.gate = null; applyTheme(); draw(); } } }, profileAvatar(p, 72), h('b', { text: p.name }), h('small', { text: p.last ? 'Last used ' + fmtDate(p.last) : 'Never opened' }));
+  const add = h('button', { class: 'profcard add', 'aria-label': 'Add a profile', on: { click: () => { ctx.S.gate = 'create'; draw(); } } }, h('div', { class: 'pav addpav', 'aria-hidden': 'true' }, '{{plus}}'), h('b', { text: 'Add profile' }), h('small', { text: 'A new, separate vault' }));
+  return h('div', { class: 'panel gate-card wide' }, brand('Who is signing in?'), h('div', { class: 'profgrid' }, list.map(card), add),
+    h('div', { class: 'gate-links' }, h('button', { type: 'button', class: 'linkbtn', on: { click: () => ctx.importProfile(enterProfile) } }, '{{importfile}} Import a profile backup')), trustChips(), gateFoot());
+}
+
+function gateUnlock(profile) {
+  const list = env.profiles.list();
   let mode = 'password';
   const p1 = pwInput('upw', 'Master password', 'current-password');
   const rk = h('input', { id: 'urk', class: 'inp mono', autocomplete: 'off', spellcheck: 'false', placeholder: 'XXXX-XXXX-XXXX-…', 'aria-label': 'Recovery key' });
@@ -243,6 +297,7 @@ function gateUnlock() {
     try {
       const pk = await passkeyAuth(store.passkeyWraps());
       await store.unlock({ passkey: pk }); wipe(pk.prf);
+      env.profiles.setLast(profile.id);
       onUnlocked();
       return;
     } catch (x) { err.textContent = x.message === 'bad-secret' ? 'That passkey did not unlock the vault. Use your master password.' : x.message; }
@@ -255,6 +310,7 @@ function gateUnlock() {
     try {
       await store.unlock(mode === 'password' ? { password: p1.input.value } : { recovery: rk.value });
       p1.input.value = ''; rk.value = '';
+      env.profiles.setLast(profile.id);
       onUnlocked(mode === 'recovery' ? 'recovery' : '');
       return;
     } catch (x) {
@@ -264,7 +320,21 @@ function gateUnlock() {
     btn.textContent = 'Unlock'; throttle();
   } } }, pwBox, rkBox, err, h('div', { class: 'row' }, btn), h('p', { style: null }, toggle));
   setTimeout(throttle, 0);
-  return h('div', { class: 'panel gate-card' }, brand('Your vault is locked'), pkBtn, pkBtn ? h('p', { class: 'or', text: 'or use your master password' }) : null, form, trustChips());
+  const removeBtn = h('button', { type: 'button', class: 'linkbtn danger', on: { click: () => removeProfileFromGate(profile) } }, 'Remove this profile…');
+  return h('div', { class: 'panel gate-card' }, profileHead(profile, 'Your vault is locked'), pkBtn, pkBtn ? h('p', { class: 'or', text: 'or use your master password' }) : null, form,
+    h('div', { class: 'gate-links' }, list.length > 1 ? h('button', { type: 'button', class: 'linkbtn', on: { click: () => { ctx.S.gate = 'picker'; draw(); } } }, '{{contact}} Switch profile') : null,
+      h('button', { type: 'button', class: 'linkbtn', on: { click: () => { ctx.S.gate = 'create'; draw(); } } }, '{{plus}} Add a profile'), h('button', { type: 'button', class: 'linkbtn', on: { click: () => ctx.importProfile(enterProfile) } }, '{{importfile}} Import a profile backup'), removeBtn),
+    trustChips(), gateFoot());
+}
+
+/* Deleting a profile from the sign-in screen: it cannot be undone, so the name must be typed. */
+function removeProfileFromGate(profile) {
+  const t = h('input', { class: 'inp', autocomplete: 'off', 'aria-label': 'Type the profile name to confirm', placeholder: profile.name }), err = h('p', { class: 'err', role: 'alert' });
+  modal({ title: 'Remove “' + profile.name + '”?', body: h('div', null, h('p', { class: 'note danger', text: 'This permanently deletes this profile’s vault and all its attachments from this device. Backups and synced copies are not touched, but without one of them the data is gone.' }), h('p', { text: 'Type the profile name to confirm:' }), t, err),
+    actions: [{ label: 'Cancel' }, { label: 'Remove forever', kind: 'danger', onClick: async () => {
+      if (t.value.trim() !== profile.name) { err.textContent = 'The name does not match.'; return false; }
+      await ctx.removeProfile(profile.id); const next = env.profiles.last(); openProfile(next ? next.id : null); ctx.S.gate = next && env.profiles.list().length > 1 ? 'picker' : null; applyTheme(); draw(); toast('Profile removed');
+    } }] });
 }
 
 function drawGate() {
@@ -275,7 +345,13 @@ function drawGate() {
     return;
   }
   const storageWarn = storage ? null : h('p', { class: 'note warn', text: 'Browser storage is blocked, so this vault will disappear when you close the tab. Allow site data to keep it.' });
-  root.append(h('div', { class: 'gate' }, h('div', null, storageWarn, store.exists() ? gateUnlock() : gateCreate())));
+  const list = env.profiles.list();
+  let card;
+  if (!list.length) card = gateCreate({ first: true });
+  else if (ctx.S.gate === 'create') card = gateCreate({ first: false });
+  else if (ctx.S.gate === 'picker' && list.length > 0) card = gatePicker(list);
+  else { let p = env.profiles.get(ctx.S.profileId); if (!p) { p = list[0]; openProfile(p.id); applyTheme(); } card = gateUnlock(p); }
+  root.append(h('div', { class: 'gate' }, h('div', null, storageWarn, card)));
   const f = root.querySelector('input'); if (f) f.focus();
 }
 
@@ -418,6 +494,7 @@ ctx.isStandalone = standalone;
 ctx.installApp = async () => { const e = ctx.installEvent; if (!e) return false; e.prompt(); const r = await e.userChoice; ctx.installEvent = null; return r && r.outcome === 'accepted'; };
 
 /* ---------- boot ---------- */
+{ const last = env.profiles.last(); openProfile(last ? last.id : null); }
 applyTheme();
 draw();
 if ('serviceWorker' in navigator && location.protocol !== 'file:' && !window.__TAURI__) {

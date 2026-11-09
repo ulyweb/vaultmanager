@@ -11,6 +11,8 @@ import { encode, decode, verifyCode } from '../js/beam.js';
 import { memoryBlobs } from '../js/blobs.js';
 import { sealBundle, openBundle, GistClient, syncGist, exportSyncFile, importSyncFile } from '../js/sync.js';
 import { sealText, openText, inspectSeal } from '../js/crypto.js';
+import { Profiles, keysFor, sanitizeAvatar, createProfileFromImport } from '../js/profiles.js';
+import { decryptProfile } from '../js/vault.js';
 
 class MemStorage { constructor() { this.m = new Map(); } getItem(k) { return this.m.has(k) ? this.m.get(k) : null; } setItem(k, v) { this.m.set(k, String(v)); } removeItem(k) { this.m.delete(k); } }
 const FAST = { iterations: 100000 };
@@ -668,7 +670,7 @@ test('web and single-file builds: complete, hash-pinned, self-contained; native 
   assert.equal(nat.replace(/ ipc: http:\/\/ipc\.localhost/, ''), webHtml, 'the native build differs only by the IPC origins');
 
   execFileSync(process.execPath, [path.join(ROOT, 'tools/build-offline.mjs')], { stdio: 'pipe' });
-  const one = fs.readFileSync(path.join(ROOT, 'dist/VaultManager-offline.html'), 'utf8');
+  const one = fs.readFileSync(path.join(ROOT, 'offline/VaultManager-offline.html'), 'utf8');
   const csp = one.match(/Content-Security-Policy" content="([^"]*)"/)[1];
   assert.ok(/script-src 'sha256-[A-Za-z0-9+/=]+' blob:/.test(csp) && /style-src 'sha256-/.test(csp) && !/unsafe-/.test(csp) && /connect-src https:\/\/api\.github\.com;/.test(csp));
   const crypto = awaitableCrypto();
@@ -681,3 +683,36 @@ test('web and single-file builds: complete, hash-pinned, self-contained; native 
 });
 import nodeCrypto from 'node:crypto';
 function awaitableCrypto() { return nodeCrypto; }
+
+test('profiles: registry, legacy migration, avatar sanitising, per-profile storage keys', () => {
+  const st = new MemStorage(); st.setItem('vaultmanager.vault', '{}');
+  const P = new Profiles(st);
+  assert.deepEqual(P.list().map((p) => [p.id, p.name]), [['main', 'My vault']], 'the pre-profile vault is adopted untouched');
+  const a = P.add({ name: '  Alex<b> ', avatar: { type: 'emoji', value: '🦊' } });
+  assert.equal(a.name, 'Alexb'); assert.deepEqual(a.avatar, { type: 'emoji', value: '🦊' });
+  assert.notEqual(keysFor(a.id).vault, keysFor('main').vault);
+  assert.deepEqual(sanitizeAvatar({ type: 'photo', value: 'javascript:alert(1)' }), { type: 'letter' });
+  assert.deepEqual(sanitizeAvatar({ type: 'emoji', value: '<img>' }), { type: 'letter' });
+  P.remove(a.id); assert.equal(P.get(a.id), null);
+});
+
+test('whole-profile backup round-trips items, attachments and settings; secrets stay out; wrong password fails', async () => {
+  const blobs = memoryBlobs(), storage = new MemStorage(), profiles = new Profiles(storage);
+  const A = new VaultStore(new MemStorage(), 'k', blobs, 'f'); await A.create('correct horse battery', FAST);
+  A.data.settings.sync = { token: 'ghp_SECRET', passphrase: 'pp-secret', gistId: 'g1', auto: true };
+  A.data.settings.look = { accent: '#ff00aa' };
+  const it = newItem('login'); it.name = 'Bank'; await A.add(it);
+  await A.addAttachment(it.id, { name: 'scan.txt', type: 'text/plain', bytes: new TextEncoder().encode('hello attachment') });
+  const text = await A.exportProfile('backup-password-1', { profile: { name: 'Alex', avatar: { type: 'letter' } }, ...FAST });
+  assert.ok(text.startsWith('VMP1:')); assert.ok(!text.includes('ghp_SECRET'));
+  await assert.rejects(() => decryptProfile(text, 'wrong-password-xx'));
+  const d = await decryptProfile(text, 'backup-password-1'); assert.equal(d.kind, 'profile'); assert.equal(d.name, 'Alex');
+  const r = await createProfileFromImport({ storage, blobs, profiles }, d, { name: 'Alex', avatar: { type: 'letter' }, masterPassword: 'a-brand-new-master-pw', iterations: 100000 });
+  assert.equal(r.items, 1); assert.equal(r.attachments, 1);
+  const B = new VaultStore(storage, keysFor(r.profile.id).vault, blobs, keysFor(r.profile.id).fails);
+  await B.unlock({ password: 'a-brand-new-master-pw' });
+  const got = B.active()[0]; assert.equal(got.name, 'Bank');
+  assert.equal(new TextDecoder().decode((await B.readAttachment(got.id, got.attachments[0].id)).bytes), 'hello attachment');
+  assert.equal(B.data.settings.look.accent, '#ff00aa'); assert.ok(!(B.data.settings.sync || {}).token);
+  assert.notEqual(B.session.id, A.session.id, 'a fresh vault id, so blobs of both coexist');
+});

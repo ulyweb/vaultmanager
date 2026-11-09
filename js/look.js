@@ -96,10 +96,10 @@ export function applyLook(look, theme, landscapes = null) {
 
 /* a copy of the (non-secret) cosmetic settings, so the lock screen is styled before the vault is opened */
 const KEY = 'vaultmanager.look';
-export function loadCosmetic(storage) {
-  try { const j = JSON.parse(storage.getItem(KEY)); return j && typeof j === 'object' ? j : null; } catch { return null; }
+export function loadCosmetic(storage, key = KEY) {
+  try { const j = JSON.parse(storage.getItem(key)); return j && typeof j === 'object' ? j : null; } catch { return null; }
 }
-export function saveCosmetic(storage, theme, look) { try { storage.setItem(KEY, JSON.stringify({ theme, look })); } catch { /* ignore */ } }
+export function saveCosmetic(storage, theme, look, key = KEY) { try { storage.setItem(key, JSON.stringify({ theme, look })); } catch { /* ignore */ } }
 
 export function randomLook(prev, wallIds = []) {
   const pick = (a) => a[Math.floor(Math.random() * a.length)];

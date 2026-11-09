@@ -12,6 +12,7 @@ import { exportSyncFile, importSyncFile, validateSyncPassphrase } from './sync.j
 import { APP_NAME, APP_VERSION, CHANGELOG, FORMATS, REPO_URL } from './version.js';
 import { KEY } from './vault.js';
 import { fmtDate, fmtInt } from './util.js';
+import { canOfferCopy, saveOfflineCopy } from './offline.js';
 
 const TABS = [['general', '{{gear}} General'], ['appearance', '{{palette}} Appearance'], ['effects', '{{sparkles}} Effects'], ['layout', '{{compass}} Dock & menu bar'], ['widgets', '{{puzzle}} Widgets'], ['security', '{{shieldlock}} Security'], ['sync', '{{sync}} Sync'], ['audit', '{{scroll}} Audit trail'], ['about', 'ⓘ About']];
 
@@ -48,6 +49,9 @@ function installPanel(ctx) {
   return panel('Install as an app & work offline',
     h('p', { class: 'hint', text: 'Installed, VaultManager opens like any other app — its own window, its own icon, no browser bars — and keeps working with no internet at all. Your vault is stored on this device either way.' }),
     ctx.isStandalone() ? h('div', { class: 'note', text: '✓ You are running the installed app.' }) : [ctx.installEvent ? h('button', { class: 'btn primary', on: { click: async () => { const ok = await ctx.installApp(); toast(ok ? 'Installing…' : 'Installation cancelled'); ctx.refresh(); } } }, '{{download}} Install VaultManager') : h('p', { class: 'hint', text: how })],
+    canOfferCopy() ? h('div', { class: 'usb' }, h('h4', { text: 'Keep one file on a USB stick' }),
+      h('p', { class: 'hint', text: 'One single file — VaultManager-offline.html — that contains the whole app. Copy it to a USB stick, e-mail it to yourself or put it on any device; double-click it and it opens in the browser with no internet, no install and no server. (This is different from “installing” the app, which creates a browser app entry instead of a file.)' }),
+      (() => { const note = h('p', { class: 'hint', 'aria-live': 'polite' }); return h('div', null, h('button', { class: 'btn primary', on: { click: async (e) => { e.target.disabled = true; try { const d = await saveOfflineCopy(); note.textContent = '✓ Saved. SHA-256 ' + d; } catch (x) { note.textContent = x.message; } e.target.disabled = false; } } }, '{{download}} Download VaultManager-offline.html'), note); })()) : null,
     status);
 }
 
@@ -66,7 +70,11 @@ function general(ctx) {
       field('Delete trashed items permanently after', sel(s.trashDays, [[7, '7 days'], [30, '30 days'], [90, '90 days'], [0, 'Never (I will empty it myself)']], (v) => set('trashDays', +v, 'Trash retention')), 'Trashed items (and their attachments) are removed for good at your next unlock after this time.')),
     installPanel(ctx),
     panel('Welcome & help',
-      field('Your name', h('input', { class: 'inp', value: s.displayName || '', maxlength: '40', placeholder: 'Used in greetings (optional)', autocomplete: 'off', 'aria-label': 'Your name', on: { change: (e) => { s.displayName = e.target.value.trim(); persist(ctx); } } })),
+      field('Profile name', h('input', { class: 'inp', value: (ctx.profile() || {}).name || '', maxlength: '40', autocomplete: 'off', 'aria-label': 'Profile name', on: { change: (e) => { const v = e.target.value.trim(); if (v) { ctx.updateProfile({ name: v }); s.displayName = v; persist(ctx); } } } })),
+      h('div', { class: 'row wrap' },
+        h('button', { class: 'btn sm', on: { click: () => ctx.exportProfile() } }, '{{download}} Export whole profile…'),
+        h('button', { class: 'btn sm', on: { click: () => ctx.importProfile(async (p) => { toast('Imported “' + p.name + '”. Lock and pick it on the sign-in screen.'); }) } }, '{{importfile}} Import a profile…'),
+        h('button', { class: 'btn sm', on: { click: () => ctx.switchProfile() } }, '{{contact}} Switch profile')),
       chk('Show the welcome screen every time I unlock', s.welcomeAlways, (v) => set('welcomeAlways', v, 'Welcome screen')),
       h('div', { class: 'row wrap' }, h('button', { class: 'btn', on: { click: () => ctx.tour.welcome() } }, '{{wave}} Welcome screen'), h('button', { class: 'btn', on: { click: () => ctx.tour.start() } }, '{{compass}} Guided tour'), h('button', { class: 'btn', on: { click: () => ctx.tour.help() } }, '{{help}} Help & shortcuts'))),
     panel('Look & feel', h('p', { class: 'hint', text: 'Theme, accent colour, wallpaper, icons, animations, dock and widgets have their own tabs.' }), h('div', { class: 'row wrap' }, h('button', { class: 'btn', on: { click: () => { ctx.S.setTab = 'appearance'; ctx.refresh(); } } }, '{{palette}} Appearance'), h('button', { class: 'btn', on: { click: () => { ctx.S.setTab = 'effects'; ctx.refresh(); } } }, '{{sparkles}} Effects'))),
@@ -113,10 +121,10 @@ function security(ctx) {
       sess.hasRecovery() ? h('button', { class: 'btn danger', on: { click: async () => { if (await confirmDialog({ title: 'Remove recovery key?', text: 'The printed key will stop working.', okLabel: 'Remove', danger: true })) { sess.removeRecovery(); store.log('security', 'Recovery key removed', 'warn'); await store.save(); toast('Recovery key removed'); ctx.refresh(); } } } }, 'Remove') : null)),
     panel('Danger zone', h('p', { class: 'hint', text: 'Erasing deletes the encrypted vault and all attachments from this device. Synced copies and backups are not touched.' }),
       h('button', { class: 'btn danger', on: { click: async () => {
-        if (!(await confirmDialog({ title: 'Erase everything?', text: 'This permanently deletes the encrypted vault from this device. Make sure you have a backup.', okLabel: 'Continue', danger: true }))) return;
-        const ok = await askPassword({ title: 'Erase vault', text: 'Enter your master password to erase this vault.', okLabel: 'Erase forever', verify: (p) => sess.verifyPassword(p) });
-        if (ok) { await store.wipe(); ctx.lock(true); toast('Vault erased'); }
-      } } }, '{{trash}} Erase vault from this device…')));
+        if (!(await confirmDialog({ title: 'Remove this profile?', text: 'This permanently deletes this profile’s encrypted vault from this device. Make sure you have a backup.', okLabel: 'Continue', danger: true }))) return;
+        const ok = await askPassword({ title: 'Remove profile', text: 'Enter your master password to remove this profile.', okLabel: 'Remove forever', verify: (p) => sess.verifyPassword(p) });
+        if (ok) { await ctx.removeProfile(ctx.S.profileId); ctx.lock(true); toast('Profile removed'); }
+      } } }, '{{trash}} Remove this profile from this device…')));
 }
 
 function passkeys(ctx) {

@@ -15,7 +15,7 @@ const navItem = (label) => visible(Array.from(document.querySelectorAll('.side .
 const clamp = (v, a, b) => Math.min(Math.max(v, a), b);
 
 export function createTour(ctx) {
-  const { store } = ctx;
+  const store = new Proxy({}, { get: (_, k) => ctx.store[k], set: (_, k, v) => { ctx.store[k] = v; return true; } });   // the current profile's store
   let active = null, welcomeEl = null;
 
   const markSeen = () => { if (store.unlocked && !store.settings.tourSeen) { store.settings.tourSeen = true; store.save().catch(() => {}); } };

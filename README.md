@@ -26,7 +26,7 @@ It shares its core engine and look with [ulyOS](https://github.com/ulyweb/ulyOS)
 Install it as an app (works with no internet), keep a single `VaultManager-offline.html` file, or build native installers for Windows, macOS, Linux, Android and iOS from the same code. See **[docs/OFFLINE-APPS.md](docs/OFFLINE-APPS.md)** — including exactly what is tested and what still needs a first run on real devices.
 
 ```bash
-npm run build:offline     # dist/VaultManager-offline.html — one self-contained file
+npm run build:offline     # offline/VaultManager-offline.html — one self-contained file
 npm run build:web         # dist/web — the static app (host it anywhere / wrapped by the native apps)
 ```
 

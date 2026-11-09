@@ -60,10 +60,10 @@ test('full journey: create → add → lock → unlock → tools → QR round tr
   // weak and mismatched passwords are refused
   await page.fill('#pw1', 'password1234'); await page.fill('#pw2', 'password1234'); await page.check('#ack');
   await page.click('button[type=submit]');
-  assert.match(await page.textContent('.err'), /too easy|easy to guess/i);
+  assert.match(await page.textContent('.err:not(.photo-err)'), /too easy|easy to guess/i);
   await page.fill('#pw1', MASTER); await page.fill('#pw2', MASTER + 'x');
   await page.click('button[type=submit]');
-  assert.match(await page.textContent('.err'), /do not match/);
+  assert.match(await page.textContent('.err:not(.photo-err)'), /do not match/);
   await page.fill('#pw2', MASTER);
   await page.click('button[type=submit]');
   await page.getByRole('button', { name: 'Skip for now' }).click(); await dismissWelcome(page);
@@ -98,7 +98,7 @@ test('full journey: create → add → lock → unlock → tools → QR round tr
   await page.fill('.search', '');
 
   // nothing readable in storage
-  const stored = await page.evaluate(() => localStorage.getItem('vaultmanager.vault'));
+  const stored = await page.evaluate(() => localStorage.getItem(Object.keys(localStorage).find((k) => k.startsWith('vaultmanager.vault'))));
   for (const needle of ['GitHub', 'octocat', pw, 'JBSWY3DPEHPK3PXP', 'Visa', '4111']) assert.ok(!stored.includes(needle), 'plaintext leaked: ' + needle);
 
   // lock, reload, wrong then right password
@@ -399,7 +399,7 @@ test('attachments: add image + document to login, note and card; preview, downlo
   await page.getByRole('button', { name: /Edit/ }).click();
   const big = path.join(tmp, 'big.bin'); fs.writeFileSync(big, Buffer.alloc(10 * 1024 * 1024 + 1));
   await page.setInputFiles('input[aria-label="Choose files"]', big);
-  assert.match(await page.textContent('.modal-sheet .err'), /limit/); await page.keyboard.press('Escape');
+  assert.match(await page.textContent('.modal-sheet .err:not(.photo-err)'), /limit/); await page.keyboard.press('Escape');
 
   // IndexedDB holds only ciphertext
   const leak = await page.evaluate(async () => new Promise((res) => { const r = indexedDB.open('vaultmanager-blobs'); r.onsuccess = () => { const t = r.result.transaction('blobs'); const q = t.objectStore('blobs').getAll(); q.onsuccess = () => { const hay = q.result.map((x) => Array.from(new Uint8Array(x.ct)).map((b) => String.fromCharCode(b)).join('')).join(''); res(hay.includes('IHDR') || hay.includes('code-1')); }; }; }));
@@ -455,7 +455,7 @@ test('sync file: export from one device, import on another (items + attachments)
 
   await settingsTab(A.page, /Sync/);
   await A.page.fill('input[aria-label="Sync passphrase"]', 'short'); await A.page.getByRole('button', { name: 'Save passphrase' }).click();
-  assert.match(await A.page.textContent('.err'), /at least 12/);
+  assert.match(await A.page.textContent('.err:not(.photo-err)'), /at least 12/);
   await A.page.fill('input[aria-label="Sync passphrase"]', SYNC_PASS); await A.page.getByRole('button', { name: 'Save passphrase' }).click();
   await shot(A.page, '09-sync');
   const [dl] = await Promise.all([A.page.waitForEvent('download'), A.page.getByRole('button', { name: /Export sync file/ }).click()]);
@@ -863,7 +863,7 @@ test('welcome splash + guided tour + help: first-run experience, replay, dock mo
 
   // preferences: display name + "show every time"
   await page.getByRole('tab', { name: /General/ }).click();
-  await page.fill('input[aria-label="Your name"]', 'Alex'); await page.locator('input[aria-label="Your name"]').blur();
+  await page.fill('input[aria-label="Profile name"]', 'Alex'); await page.locator('input[aria-label="Profile name"]').blur();
   await page.getByLabel('Show the welcome screen every time I unlock').check();
   await page.locator('.side .nav', { hasText: 'Home' }).click(); await page.waitForSelector('h2:has-text("Alex")');
   await page.getByRole('button', { name: '🔒 Lock', exact: true }).click(); await page.waitForSelector('#upw');
@@ -959,9 +959,9 @@ test('offline web app: after the first visit it loads, unlocks, creates items an
   await ctx.close();
 });
 
-test('single-file offline build: dist/VaultManager-offline.html runs straight from disk (file://) with no server', async () => {
+test('single-file offline build: offline/VaultManager-offline.html runs straight from disk (file://) with no server', async () => {
   execFileSync(process.execPath, [path.join(ROOT, 'tools/build-offline.mjs')], { stdio: 'pipe' });
-  const file = path.join(ROOT, 'dist/VaultManager-offline.html'); const html = fs.readFileSync(file, 'utf8');
+  const file = path.join(ROOT, 'offline/VaultManager-offline.html'); const html = fs.readFileSync(file, 'utf8');
   assert.ok(html.length > 300000 && !/<script[^>]+src=/.test(html) && !/<link[^>]+rel="stylesheet"/.test(html), 'one self-contained file');
   assert.ok(!/unsafe-inline|unsafe-eval/.test(html.match(/Content-Security-Policy"\s+content="([^"]*)"/)[1]), 'the inline blocks are allowed by hash, never unsafe-inline');
   assert.ok(/^[0-9a-f]{64}  VaultManager-offline\.html/.test(fs.readFileSync(file + '.sha256', 'utf8')));
@@ -981,4 +981,38 @@ test('single-file offline build: dist/VaultManager-offline.html runs straight fr
   assert.ok(await page.evaluate(() => navigator.serviceWorker && !navigator.serviceWorker.controller), 'no service worker is used from file://');
   assert.deepEqual(problems, []);
   await ctx.close();
+});
+
+test('profiles: export a whole profile, then import it at the initial stage into a fresh browser; USB download is VaultManager-offline.html', async () => {
+  const A = await newPage(); await createVault(A.page);
+  await addLogin(A.page, 'BankProfile');
+  await settingsTab(A.page, 'General');
+  await A.page.getByRole('button', { name: /Export whole profile/ }).click();
+  await A.page.fill('input[aria-label="Backup password"]', 'backup-pass-phrase-1');
+  const [dl] = await Promise.all([A.page.waitForEvent('download'), A.page.getByRole('button', { name: 'Download backup' }).click()]);
+  assert.match(dl.suggestedFilename(), /\.vmprofile$/);
+  const text = fs.readFileSync(await dl.path(), 'utf8'); assert.ok(text.startsWith('VMP1:'));
+  assert.ok(!text.includes('BankProfile'), 'the backup is encrypted');
+  // the USB option downloads the single file
+  const usb = A.page.getByRole('button', { name: /Download VaultManager-offline\.html/ });
+  if (await usb.count()) { const [d2] = await Promise.all([A.page.waitForEvent('download'), usb.first().click()]); assert.equal(d2.suggestedFilename(), 'VaultManager-offline.html'); }
+  await A.ctx.close();
+
+  const B = await newPage(); await B.page.goto(base); await B.page.waitForSelector('#pw1');
+  await B.page.getByRole('button', { name: /Import a profile backup/ }).click();
+  await B.page.fill('textarea[aria-label="Backup text"]', text);
+  await B.page.fill('input[aria-label="Backup password"]', 'wrong-backup-password');
+  await B.page.getByRole('button', { name: 'Open backup' }).click();
+  await B.page.waitForFunction(() => [...document.querySelectorAll('.modal-sheet .err')].some((e) => e.textContent.trim()), null, { timeout: 30000 });
+  await B.page.fill('input[aria-label="Backup password"]', 'backup-pass-phrase-1');
+  await B.page.getByRole('button', { name: 'Open backup' }).click();
+  await B.page.fill('input[aria-label="New master password"]', 'a-new-master-pass-123'); await B.page.fill('input[aria-label="Repeat new master password"]', 'a-new-master-pass-123');
+  await B.page.locator('.modal-sheet input[type=checkbox]').last().check();
+  await B.page.getByRole('button', { name: 'Create profile' }).click();
+  await B.page.waitForSelector('.topbar', { timeout: 30000 });
+  await dismissWelcome(B.page).catch(() => {});
+  await openAll(B.page);
+  assert.ok(await B.page.locator('.list', { hasText: 'BankProfile' }).count(), 'the imported database is in the new profile');
+  assert.ok(await B.page.evaluate(() => document.querySelector('.ico[data-n]').style.getPropertyValue('--v1')), 'icons carry their vivid colour');
+  await B.ctx.close();
 });

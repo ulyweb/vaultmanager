@@ -104,6 +104,8 @@ export const tileColors = (n) => (G[n] && G[n][2]) || null;
 const EMOJI_OF = Object.fromEntries(Object.entries(G).map(([n, v]) => [n, v[1]]));
 export const emojiOf = (n) => EMOJI_OF[n] || '';
 
+const hash = (str) => { let x = 7; for (let i = 0; i < str.length; i++) x = (x * 31 + str.charCodeAt(i)) >>> 0; return x; };
+const VIVID = [['#ff7a59', '#ffb347'], ['#2fe6d0', '#0ea5e9'], ['#a78bfa', '#6366f1'], ['#f472b6', '#fb7185'], ['#34d399', '#22c55e'], ['#fbbf24', '#f59e0b'], ['#60a5fa', '#3b82f6'], ['#f87171', '#ef4444']];
 const cache = new Map();
 function parse(n) {
   if (cache.has(n)) return cache.get(n);
@@ -123,6 +125,9 @@ export function ic(name, { label = true } = {}) {
   span.append(svg);
   const t = tileColors(name);
   if (t) { span.style.setProperty('--i1', t[0]); span.style.setProperty('--i2', t[1]); }
+  // "Colourful & animated": every icon gets its own vivid colour pair and a staggered animation phase (CSS does the rest)
+  const hsh = hash(name), v = VIVID[hsh % VIVID.length];
+  span.style.setProperty('--v1', v[0]); span.style.setProperty('--v2', v[1]); span.style.setProperty('--d', '-' + ((hsh % 40) / 10).toFixed(1) + 's');
   return span;
 }
 

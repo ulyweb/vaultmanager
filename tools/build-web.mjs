@@ -14,6 +14,7 @@ fs.rmSync(out, { recursive: true, force: true });
 fs.mkdirSync(out, { recursive: true });
 const copy = (rel) => fs.cpSync(path.join(root, rel), path.join(out, rel), { recursive: true, filter: (src) => !/icon-1024\.png$/.test(src) });
 for (const rel of ['index.html', 'manifest.webmanifest', 'sw.js', 'css', 'js', 'vendor', 'icons']) copy(rel);
+if (!native && fs.existsSync(path.join(root, 'offline'))) copy('offline');   // the downloadable single-file copy is part of the hosted site
 
 if (native) {
   const f = path.join(out, 'index.html');

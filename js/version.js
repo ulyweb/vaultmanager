@@ -1,6 +1,6 @@
 /* Application version, data-format versions and changelog (shown in Settings → About). */
 
-export const APP_VERSION = '0.10.0';
+export const APP_VERSION = '0.11.0';
 export const APP_NAME = 'VaultManager';
 export const REPO_URL = 'https://github.com/ulyweb/vaultmanager';
 
@@ -8,6 +8,7 @@ export const FORMATS = [
   ['Vault record', 'v1 — AES-256-GCM, wrapped master key'],
   ['QR / backup payload', 'v2 — QR Seal v2 compatible (PBKDF2-SHA256 → AES-256-GCM)'],
   ['Encrypted backup file', 'VMX1 (.vmvault) — items + optional attachments'],
+  ['Whole-profile backup', 'VMP1 (.vmprofile) — items, attachments, settings, audit trail'],
   ['Sync bundle', 'VMS1 (.vmsync / gist / Beam) — items, tombstones, optional attachments'],
   ['Beam pairing code', 'BEAM1 — compressed WebRTC offer / answer, DTLS peer to peer'],
   ['Passkey wrap', 'WebAuthn PRF → HKDF-SHA256 → AES-256-GCM, bound to credential id'],
@@ -15,6 +16,13 @@ export const FORMATS = [
 ];
 
 export const CHANGELOG = [
+  { v: '0.11.0', date: '2026-11-09', notes: [
+    'Profiles: several people on one device, each with a completely separate vault, master password and picture — pick who is signing in, like ulyOS.',
+    'Import a whole-profile backup (.vmprofile) right on the first screen: items, attachments, settings and audit trail come back in one step.',
+    'Export whole profile… in Settings; your sync token and passkeys are deliberately left out.',
+    'Download VaultManager-offline.html — one file for a USB stick, from Settings and from the sign-in screen (installing the web app is not the same thing).',
+    'The colourful, animated icon style is back: duotone glyphs on vivid tiles, each with its own colour and motion (respects reduced-motion).',
+  ] },
   { v: '0.10.0', date: '2026-11-09', notes: [
     'Offline apps for PC and mobile: the installable web app keeps working with no internet (tested with the network cut), a single-file copy (VaultManager-offline.html) runs straight from disk, and a Tauri project builds native Windows, macOS, Linux, Android and iOS apps from the same code.',
     'Update prompt for the installed app, a “Running as” line in About, and a native Save-as dialog for exports when running inside the native app.',

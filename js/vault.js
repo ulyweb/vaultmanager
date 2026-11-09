@@ -100,8 +100,8 @@ export function mergeItem(l, r) {
 }
 
 export class VaultStore {
-  constructor(storage, key = KEY, blobs = memoryBlobs()) {
-    this.storage = storage; this.key = key; this.blobs = blobs;
+  constructor(storage, key = KEY, blobs = memoryBlobs(), failKey = FAIL_KEY) {
+    this.storage = storage; this.key = key; this.blobs = blobs; this.failKey = failKey;
     this.session = null; this.data = null; this.chain = Promise.resolve();
     this.onSaved = null; this._auditDirty = false;
     this._auditSave = debounce(() => { if (this._auditDirty && this.session) { this._auditDirty = false; this.save().catch(() => {}); } }, 1500);
@@ -113,14 +113,14 @@ export class VaultStore {
   get settings() { return this.data.settings; }
 
   /* ----- unlock throttling (a courtesy against typos / casual guessing; real protection is PBKDF2) ----- */
-  failState() { try { return JSON.parse(this.storage.getItem(FAIL_KEY)) || { n: 0, until: 0, times: [] }; } catch { return { n: 0, until: 0, times: [] }; } }
+  failState() { try { return JSON.parse(this.storage.getItem(this.failKey)) || { n: 0, until: 0, times: [] }; } catch { return { n: 0, until: 0, times: [] }; } }
   delayLeft() { return Math.max(0, this.failState().until - Date.now()); }
   _fail() {
     const s = this.failState(); s.n++; s.times = [...(s.times || []), Date.now()].slice(-20);
     s.until = s.n >= 3 ? Date.now() + Math.min(300, 2 ** (s.n - 2)) * 1000 : 0;
-    this.storage.setItem(FAIL_KEY, JSON.stringify(s));
+    this.storage.setItem(this.failKey, JSON.stringify(s));
   }
-  _clearFails() { this.storage.removeItem(FAIL_KEY); }
+  _clearFails() { this.storage.removeItem(this.failKey); }
 
   _prepare(data) {
     data.items = data.items || [];
@@ -291,11 +291,14 @@ export class VaultStore {
   hasPasskeys() { try { const r = JSON.parse(this.storage.getItem(this.key)); return !!(r && r.wraps.some((w) => w.type === 'passkey')); } catch { return false; } }
   passkeyWraps() { try { return JSON.parse(this.storage.getItem(this.key)).wraps.filter((w) => w.type === 'passkey'); } catch { return []; } }
 
+  /* Deletes this vault, its attachments and its bookkeeping — works whether it is unlocked or not
+     (the vault id is stored in plain text in the record, so the ciphertext blobs can be found). */
   async wipe() {
-    const s = this.session;
-    if (s) { const keys = await this.blobs.keys(); for (const k of keys) if (k.startsWith(s.id + ':')) await this.blobs.del(k); }
+    let id = this.session ? this.session.id : null;
+    if (!id) { try { id = (JSON.parse(this.storage.getItem(this.key) || 'null') || {}).id || null; } catch { id = null; } }
+    if (id) { for (const k of await this.blobs.keys()) if (k.startsWith(id + ':')) await this.blobs.del(k); }
     this.lock();
-    this.storage.removeItem(this.key); this.storage.removeItem(this.key + '.bak'); this.storage.removeItem(FAIL_KEY);
+    this.storage.removeItem(this.key); this.storage.removeItem(this.key + '.bak'); this.storage.removeItem(this.failKey);
   }
 
   /* ----- attachments (encrypted per file, stored in IndexedDB) ----- */
@@ -372,6 +375,34 @@ export class VaultStore {
     return 'VMX1:' + (await sealText(body, password, opt));
   }
 
+  /* ----- whole-profile backup: the entire database, not just the items ----- */
+  async exportProfile(password, { profile = {}, attachments = true, ...opt } = {}) {
+    const all = this.data.items;
+    const att = attachments ? await this._attachmentMap(all) : { map: {} };
+    const body = JSON.stringify({ format: 'VaultManager-profile', v: 1, app: APP_VERSION, exported: Date.now(),
+      profile: { name: String(profile.name || '').slice(0, 60), avatar: profile.avatar || null },
+      items: attachments ? all : all.map((i) => ({ ...i, attachments: [] })), attachments: att.map,
+      settings: portableSettings(this.data.settings), audit: this.data.audit, tombstones: this.data.tombstones, created: this.data.created });
+    this.log('data', `Exported the whole profile (${all.length} items${attachments ? ', with attachments' : ''})`);
+    this._auditSave();
+    return 'VMP1:' + (await sealText(body, password, opt));
+  }
+
+  /* Fill a freshly created (empty) vault from a decrypted profile export. */
+  async restoreProfileData(d) {
+    this.data.items = (d.items || []).map((i) => sanitiseItem(i, { keepMeta: true, keepAttachments: true })).filter((i) => /^[0-9a-f]{24}$/.test(i.id));
+    for (const it of this.data.items) for (const a of it.attachments) { const b = d.attachments && d.attachments[a.id]; if (typeof b === 'string') await this.blobs.put(this._bk(a.id), await this.session.sealBlob(a.id, b64.dec(b))); }
+    for (const it of this.data.items) it.attachments = it.attachments.filter((a) => d.attachments && typeof d.attachments[a.id] === 'string');
+    const ts = {}; for (const [k, v] of Object.entries(d.tombstones || {})) if (/^[0-9a-f]{24}$/.test(k) && Number.isFinite(v)) ts[k] = v;
+    this.data.tombstones = ts;
+    const set = portableSettings(d.settings || {});
+    this.data.settings = { ...this.data.settings, ...set, gen: { ...this.data.settings.gen, ...(set.gen || {}) }, look: normalizeLook({ ...this.data.settings.look, ...(set.look || {}) }) };
+    if (Array.isArray(d.audit)) this.data.audit = d.audit.filter((e) => e && typeof e.m === 'string').slice(0, AUDIT_MAX).map((e) => ({ t: Number(e.t) || 0, k: String(e.k || '').slice(0, 20), m: e.m.slice(0, 300), l: e.l === 'warn' ? 'warn' : 'info' }));
+    if (Number.isFinite(d.created)) this.data.created = d.created;
+    this.log('data', `Profile restored from a backup (${this.data.items.length} items)`, 'warn');
+    await this.save();
+  }
+
   /* items: sanitised items (ids are regenerated); atts: { oldAttachmentId: base64 }.
      Returns { added, skipped, save } — `save` resolves when everything is persisted. */
   mergeItems(items, atts = {}) {
@@ -434,6 +465,29 @@ export class VaultStore {
     await this.save();
     return res;
   }
+}
+
+/* Settings that travel in a profile backup. Deliberately NOT included: the GitHub token, the sync passphrase and the
+   gist id (secrets / device-specific) — set up sync again on the new device. */
+export function portableSettings(st = {}) {
+  const out = {};
+  for (const k of ['autolock', 'clipboard', 'theme', 'lockOnHide', 'trashDays', 'logReveal', 'displayName', 'tourSeen', 'welcomeAlways']) if (st[k] !== undefined) out[k] = st[k];
+  if (st.gen && typeof st.gen === 'object') out.gen = st.gen;
+  if (st.look && typeof st.look === 'object') out.look = normalizeLook(st.look);
+  if (st.sync && typeof st.sync === 'object') out.sync = { auto: !!st.sync.auto, attachments: st.sync.attachments !== false };
+  return out;
+}
+
+/* Opens a profile backup (VMP1) or an items-only backup (VMX1). */
+export async function decryptProfile(text, password) {
+  const t = String(text).trim();
+  if (t.startsWith('VMP1:')) {
+    const j = JSON.parse(await openText(t.slice(5), password));
+    if (j.format !== 'VaultManager-profile' || !Array.isArray(j.items)) throw new Error('Unrecognised profile backup contents.');
+    return { kind: 'profile', name: (j.profile && j.profile.name) || '', avatar: (j.profile && j.profile.avatar) || null, ...j };
+  }
+  if (t.startsWith('VMX1:')) { const b = await decryptBackup(t, password); return { kind: 'items', name: '', avatar: null, items: b.items, attachments: b.attachments }; }
+  throw new Error('This is not a VaultManager backup (it should start with VMP1: or VMX1:).');
 }
 
 export async function decryptBackup(text, password) {

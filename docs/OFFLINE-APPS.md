@@ -31,7 +31,7 @@ Build it (or take it from a release):
 
 ```bash
 npm install
-npm run build:offline        # → dist/VaultManager-offline.html  (+ .sha256)
+npm run build:offline        # → offline/VaultManager-offline.html  (+ .sha256)
 ```
 
 - Double-click the file; it opens in your browser and works with no internet and no server.
@@ -85,3 +85,18 @@ Verified here (automated tests, every change): the web app itself, the offline b
 
 ### Roadmap for native
 Move the security core (key derivation, vault, merge) into the Rust crate with Argon2id and memory zeroisation, store the wrapping key in the OS keystore (Windows Hello / Secure Enclave / Android Keystore), add autofill services. The data formats stay the same, so nothing has to be re-exported.
+
+## The one-file copy for a USB stick
+
+`offline/VaultManager-offline.html` is committed to the repository and is also offered as a download:
+
+* Settings → General → **Keep one file on a USB stick** → *Download VaultManager-offline.html* (the button also appears on the sign-in screen).
+* Or download the file directly from GitHub.
+
+Open it by double-clicking; it runs from `file://` with no server and no network. Its SHA-256 is shown after the download and stored in `VaultManager-offline.html.sha256`.
+
+Note: browser **"Install app"** (PWA) is a different thing — it creates a browser profile, an app id and an app URL, not a file. Use the download button for the file.
+
+## Profiles
+
+Every person on a device gets their own profile (own master password, own vault). The sign-in screen lists them; **Import a profile backup** restores a whole `.vmprofile` (items, attachments, settings, audit) on the very first screen.
