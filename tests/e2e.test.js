@@ -241,7 +241,8 @@ async function phoneFlow(name) {
   await page.getByRole('button', { name: 'New item' }).click();
   await page.locator('.modal-sheet .cats .btn', { hasText: 'Wi-Fi / network' }).first().click(); await page.fill('#f_name', 'Home Wi-Fi'); await page.fill('#tf_ssid', 'Casa'); await page.getByRole('button', { name: 'Save' }).click();
   await page.waitForSelector('.detail h2:has-text("Home Wi-Fi")'); await fits('detail 2');
-  await page.getByRole('button', { name: '← Back' }).click(); await page.waitForSelector('.list'); assert.ok(await page.locator('.detail').isHidden());
+  assert.ok(await page.locator('.detail-nav .navback').isVisible() && await page.locator('.detail-head').isVisible(), 'app-style detail screen has a nav bar');
+  await page.getByRole('button', { name: 'Back' }).click(); await page.waitForSelector('.list'); assert.ok(await page.locator('.detail').isHidden());
   await fits('list'); await tall('.item', 56, 'list rows');
 
   // More sheet: everything is reachable, nothing overflows
@@ -266,9 +267,67 @@ async function phoneFlow(name) {
   return loginSvg;
 }
 
-for (const dev of ['iPhone SE', 'Pixel 7', 'iPad Mini']) {
+for (const dev of ['iPhone SE', 'iPhone 13', 'Pixel 7']) {
   test(`mobile: ${dev} — bottom bar, full-width search, bottom sheets, no overflow, 44px touch targets, SVG icons`, async () => { await phoneFlow(dev); });
 }
+
+async function tabletFlow(name) {
+  const { defaultBrowserType, ...dev } = devices[name]; void defaultBrowserType;
+  const { ctx, page, problems } = await newPage({ ...dev, colorScheme: 'dark', reducedMotion: 'reduce' });
+  const vw = dev.viewport.width, portrait = vw < 1024;
+  const fits = async (label) => { const o = await page.evaluate(() => ({ sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth })); assert.ok(o.sw <= o.cw + 1, `${name} · ${label}: horizontal overflow ${o.sw}>${o.cw}`); };
+  await page.goto(base); await page.waitForSelector('#pw1');
+  await page.fill('#pw1', MASTER); await page.fill('#pw2', MASTER); await page.check('#ack'); await page.click('button[type=submit]');
+  await page.getByRole('button', { name: 'Skip for now' }).click(); await dismissWelcome(page); await page.waitForSelector('.widgets'); await fits('home');
+  // tablets keep a persistent side menu (no phone bottom bar); it is the app-style sidebar with grouped categories
+  assert.ok(await page.locator('.side').isVisible(), `${name}: side menu visible`); assert.ok(await page.locator('.mbar').isHidden(), `${name}: no phone bottom bar`);
+  const side = await page.locator('.side').boundingBox(); assert.ok(side.width >= 180 && side.width <= 260, `${name}: side menu width ${side.width}`);
+  assert.equal(await page.locator('.side .ngroup').count(), 8); await fits('sidebar');
+  const nav = await page.$$eval('.side .nav', (els) => els.slice(0, 6).map((e) => Math.round(e.getBoundingClientRect().height))); assert.ok(nav.every((h) => h >= 40), `${name}: side menu rows are touch-sized ${nav}`);
+  await page.getByRole('button', { name: /^＋ New|New$/ }).first().click(); await page.waitForSelector('.modal-sheet .catgroup'); await fits('picker');
+  const sheet = await page.locator('.modal-sheet').boundingBox(); assert.ok(sheet.y > 8 && sheet.y + sheet.height < dev.viewport.height - 8, `${name}: dialogs are floating cards on a tablet (inset from the screen edges), not bottom sheets`);
+  await page.locator('.modal-sheet .cats .btn', { hasText: 'Login' }).first().click(); await page.fill('#f_name', 'GitHub'); await page.fill('#f_username', 'octocat'); await page.getByRole('button', { name: 'Save' }).click();
+  await page.waitForSelector('.detail h2:has-text("GitHub")'); await fits('detail');
+  if (portrait) {                                   // portrait tablet: drill-down, one pane at a time, with the nav bar
+    assert.ok(await page.locator('.list').isHidden() && await page.locator('.detail-nav').isVisible());
+    await page.getByRole('button', { name: 'Back' }).click(); await page.waitForSelector('.list'); assert.ok(await page.locator('.detail').isHidden());
+  } else {                                          // landscape tablet: list and detail side by side
+    assert.ok(await page.locator('.list').isVisible() && await page.locator('.detail').isVisible(), `${name}: two panes in landscape`);
+  }
+  for (const label of ['Generator', 'QR tools', 'Beam sync', 'Settings']) { await page.locator('.side .nav', { hasText: label }).click(); await page.waitForTimeout(120); await fits(label); }
+  await page.getByRole('tab', { name: /Appearance/ }).click().catch(() => {});
+  assert.deepEqual(problems, []); await ctx.close();
+}
+for (const dev of ['iPad Mini', 'iPad (gen 7)', 'iPad Pro 11 landscape', 'iPhone 13 landscape']) {
+  test(`tablet: ${dev} — side menu, drill-down or two panes, centred dialogs, no overflow`, async () => { await tabletFlow(dev); });
+}
+
+test('app style: grouped lists, large titles, sheet handle, install panel, PWA metadata', async () => {
+  const { defaultBrowserType, ...dev } = devices['iPhone 13']; void defaultBrowserType;
+  const { ctx, page, problems } = await newPage({ ...dev, colorScheme: 'dark', reducedMotion: 'reduce' });
+  await createVault(page);
+  assert.equal((await page.textContent('.apptitle')).trim(), 'Home'); assert.ok(await page.locator('.apptitle').isVisible() && await page.locator('.topbar .logo').isHidden());
+  const fs0 = await page.evaluate(() => parseFloat(getComputedStyle(document.querySelector('.apptitle')).fontSize)); assert.ok(fs0 >= 28, 'large title');
+  await page.getByRole('button', { name: 'Items' }).click(); assert.equal((await page.textContent('.apptitle')).trim(), 'All items');
+  await page.getByRole('button', { name: 'New item' }).click(); await page.locator('.modal-sheet .cats .btn', { hasText: 'Login' }).first().click(); await page.fill('#f_name', 'Mail'); await page.getByRole('button', { name: 'Save' }).click(); await page.waitForSelector('.detail h2');
+  await page.getByRole('button', { name: 'Back' }).click(); await page.waitForSelector('.item');
+  const r = await page.evaluate(() => { const it = document.querySelector('.item'), items = document.querySelector('.items'); return { radius: parseFloat(getComputedStyle(items).borderTopLeftRadius), disc: getComputedStyle(it.querySelector('.disc')).display, h: Math.round(it.getBoundingClientRect().height) }; });
+  assert.ok(r.radius >= 14 && r.disc !== 'none' && r.h >= 60, 'inset grouped list with disclosure chevrons ' + JSON.stringify(r));
+  // sheets: grab handle, and dragging it down dismisses
+  await page.getByRole('button', { name: 'New item' }).click(); await page.waitForSelector('.modal-sheet .grabber');
+  const g = await page.locator('.modal-sheet .grabber').boundingBox();
+  await page.mouse.move(g.x + g.width / 2, g.y + 10); await page.mouse.down(); await page.mouse.move(g.x + g.width / 2, g.y + 260, { steps: 6 }); await page.mouse.up();
+  await page.waitForSelector('.modal-sheet', { state: 'detached' });
+  // install panel + PWA metadata
+  await page.getByRole('button', { name: 'More' }).click(); await page.locator('.msheet-item', { hasText: 'Settings' }).first().click(); await page.getByRole('tab', { name: /General/ }).click();
+  await page.waitForSelector('text=Install as an app'); assert.ok((await page.textContent('.page')).includes('Add to Home Screen') || (await page.textContent('.page')).includes('Install'));
+  const meta = await page.evaluate(() => ({ cap: document.querySelector('meta[name=apple-mobile-web-app-capable]').content, icon: document.querySelector('link[rel=apple-touch-icon]').getAttribute('href'), man: document.querySelector('link[rel=manifest]').getAttribute('href') }));
+  assert.deepEqual(meta, { cap: 'yes', icon: 'icons/apple-touch-icon.png', man: 'manifest.webmanifest' });
+  const man = await (await page.request.get(base + 'manifest.webmanifest')).json();
+  assert.ok(man.icons.some((i) => i.sizes === '512x512' && i.purpose === 'maskable') && man.icons.some((i) => i.sizes === '192x192') && man.display === 'standalone');
+  for (const i of man.icons.filter((x) => x.src.endsWith('.png'))) assert.equal((await page.request.get(base + i.src)).status(), 200);
+  assert.deepEqual(problems, []); await ctx.close();
+});
 
 test('icons are identical on desktop and phone (one SVG set, no emoji)', async () => {
   const grab = async (opts) => {

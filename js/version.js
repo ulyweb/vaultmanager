@@ -1,6 +1,6 @@
 /* Application version, data-format versions and changelog (shown in Settings → About). */
 
-export const APP_VERSION = '0.8.0';
+export const APP_VERSION = '0.9.0';
 export const APP_NAME = 'VaultManager';
 export const REPO_URL = 'https://github.com/ulyweb/vaultmanager';
 
@@ -15,6 +15,12 @@ export const FORMATS = [
 ];
 
 export const CHANGELOG = [
+  { v: '0.9.0', date: '2026-11-09', notes: [
+    'Tablets (700–1023 px, e.g. iPad portrait) get a persistent side menu with grouped categories and single-pane drill-down; landscape tablets and PCs get the two-pane layout; phones keep the bottom bar.',
+    'App-style look on phones and tablets: large titles, inset grouped lists with disclosure chevrons, a native-style navigation bar (‹ back · Edit) on item screens, grouped field cards, bottom sheets with a grab handle you can swipe down, slide transitions, haptic taps (Android) and no tap-highlight or text-selection on controls.',
+    'Installable app: PNG icons (including a maskable Android icon and the iPhone home-screen icon), standalone display, status-bar styling, an Install button and offline-status panel in Settings → General.',
+    'Fixed: widgets could overflow the page on tablet widths; long generated passwords now wrap.',
+  ] },
   { v: '0.8.0', date: '2026-11-09', notes: [
     'Built for phones as well as PCs: a bottom navigation bar with a centre “New” button, a More sheet that reaches every category and tool, a two-row top bar with a full-width search, bottom-sheet dialogs, scrolling settings tabs, 44-pixel touch targets and safe-area support for notched phones.',
     'One icon set everywhere: every icon is now a built-in SVG drawn identically on Windows, iPhone, Android and Mac (emoji looked different on every device). Category icons are coloured tiles that follow Settings → Appearance → Icon style.',

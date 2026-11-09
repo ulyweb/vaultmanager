@@ -1,6 +1,6 @@
 /* VaultManager — application shell: lock screen, navigation, auto-lock, routing. */
 
-import { h, clear, setLabel, closeAllModals, closeTopModal, modalOpen, modal, toast, copyText } from './dom.js';
+import { h, clear, setLabel, buzz, closeAllModals, closeTopModal, modalOpen, modal, toast, copyText } from './dom.js';
 import { VaultStore } from './vault.js';
 import { available } from './crypto.js';
 import { estimate } from './strength.js';
@@ -133,6 +133,7 @@ function lock(erased, why) {
   clear(document.getElementById('printArea'));
   store.lock();
   Object.assign(ctx.S, { view: 'all', q: '', sel: null });
+  document.documentElement.dataset.detail = '0';
   shell = null;
   applyTheme();
   draw();
@@ -318,15 +319,18 @@ function moreSheet() {
 function drawMbar() {
   if (!shell || !shell.mbar) return;
   const v = ctx.S.view, hl = health(store.items), attention = hl.weak.length + hl.reused.length + hl.expiring.length + store.conflictCount();
-  const it = (id, ic, label, on, fn, badge) => h('button', { class: 'mbar-item' + (on ? ' on' : ''), 'aria-label': label, 'aria-current': on ? 'page' : null, on: { click: fn } }, ic, h('span', { class: 'mlbl', text: label }), badge ? h('span', { class: 'badge', text: String(badge) }) : null);
+  const it = (id, ic, label, on, fn, badge) => h('button', { class: 'mbar-item' + (on ? ' on' : ''), 'aria-label': label, 'aria-current': on ? 'page' : null, on: { click: () => { buzz(); fn(); } } }, ic, h('span', { class: 'mlbl', text: label }), badge ? h('span', { class: 'badge', text: String(badge) }) : null);
   const inMore = !['home', 'gen'].includes(v) && !isVaultView(v) ? true : (v === 'fav' || v === 'trash' || v === 'conflicts' || (v in TYPE_META));
   clear(shell.mbar).append(
     it('home', '{{home}}', 'Home', v === 'home', () => ctx.go('home')),
     it('all', '{{vault}}', 'Items', ['all'].includes(v) || v.startsWith('tag:'), () => ctx.go('all')),
-    h('button', { class: 'mbar-fab', 'aria-label': 'New item', on: { click: () => newItemMenu(ctx) } }, '{{plus}}'),
+    h('button', { class: 'mbar-fab', 'aria-label': 'New item', on: { click: () => { buzz(12); newItemMenu(ctx); } } }, '{{plus}}'),
     it('gen', '{{bolt}}', 'Generator', v === 'gen', () => ctx.go('gen')),
     it('more', '{{menu}}', 'More', inMore && v !== 'home' && v !== 'gen' && v !== 'all', () => moreSheet(), attention));
 }
+
+const viewTitle = (v) => ({ home: 'Home', all: 'All items', fav: 'Favorites', trash: 'Trash', conflicts: 'Needs review', gen: 'Generator', health: 'Vault health', qr: 'QR tools', beam: 'Beam sync', data: 'Import & export', settings: 'Settings' })[v] || (v in TYPE_META ? TYPE_META[v].plural : v.startsWith('tag:') ? '#' + v.slice(4) : '');
+function drawTitle() { if (shell && shell.title) shell.title.textContent = viewTitle(ctx.S.view); document.documentElement.dataset.detail = isVaultView(ctx.S.view) && ctx.S.sel ? '1' : '0'; }
 
 function drawDock() {
   if (!shell || !shell.dock) return;
@@ -346,7 +350,8 @@ function buildShell() {
   const L = curLook();
   const search = h('input', { class: 'inp search', type: 'search', placeholder: 'Search your vault  ( / )', 'aria-label': 'Search your vault', autocomplete: 'off', spellcheck: 'false', on: { input: (e) => { ctx.S.q = e.target.value; if (!isVaultView(ctx.S.view)) ctx.S.view = 'all'; drawMain(); drawSide(); } } });
   const clock = L.clock ? h('div', { class: 'barclock', 'aria-label': 'Clock' }, h('b'), h('span')) : null;
-  const top = h('header', { class: 'topbar' }, h('div', { class: 'logo' }, h('img', { src: 'icons/icon.svg', alt: '', width: '26', height: '26' }), h('b', null, 'Vault', h('span', { text: 'Manager' }))), search, clock,
+  const title = h('div', { class: 'apptitle', role: 'heading', 'aria-level': '1' });
+  const top = h('header', { class: 'topbar' }, title, h('div', { class: 'logo' }, h('img', { src: 'icons/icon.svg', alt: '', width: '26', height: '26' }), h('b', null, 'Vault', h('span', { text: 'Manager' }))), search, clock,
     h('button', { class: 'btn primary', on: { click: () => newItemMenu(ctx) } }, '{{plus}}', h('span', { class: 'lbl', text: ' New' })), h('button', { class: 'btn', title: 'Lock now (Alt+L)', on: { click: () => lock(false) } }, '{{lock}}', h('span', { class: 'lbl', text: ' Lock' })), h('button', { class: 'btn icon', title: 'Help, tour and shortcuts', 'aria-label': 'Help', on: { click: () => tour.help() } }, '{{help}}'));
   const side = h('nav', { class: 'side', 'aria-label': 'Sections' }), main = h('main', { class: 'main' });
   const dock = h('nav', { class: 'dock', 'aria-label': 'Dock' });
@@ -356,7 +361,7 @@ function buildShell() {
     for (const it of dock.querySelectorAll('.dock-item')) { const r = it.getBoundingClientRect(), d = Math.abs(e.clientX - (r.left + r.width / 2)); it.style.setProperty('--s', (1 + 0.6 * Math.exp(-((d / 64) ** 2))).toFixed(3)); }
   });
   dock.addEventListener('pointerleave', () => dock.querySelectorAll('.dock-item').forEach((it) => it.style.setProperty('--s', '1')));
-  shell = { search, side, main, dock, mbar, clock, el: h('div', null, top, h('div', { class: 'shell' }, side, main), dock, mbar) };
+  shell = { search, side, main, dock, mbar, title, clock, el: h('div', null, top, h('div', { class: 'shell' }, side, main), dock, mbar) };
   clearInterval(clockTimer); tickClock(); clockTimer = setInterval(tickClock, 15000);
 }
 
@@ -392,7 +397,7 @@ function drawMain() {
 function draw() {
   if (!store.unlocked) { shell = null; drawGate(); return; }
   if (!shell) { buildShell(); clear(root).append(shell.el); }
-  drawSide(); drawMain(); drawDock(); drawMbar();
+  drawSide(); drawMain(); drawDock(); drawMbar(); drawTitle();
 }
 
 /* ---------- keyboard ---------- */
@@ -403,6 +408,14 @@ document.addEventListener('keydown', (e) => {
   if (e.altKey && (e.key === 'l' || e.key === 'L')) { e.preventDefault(); lock(false); }
   else if (e.key === '/' && !typing) { e.preventDefault(); if (!isVaultView(ctx.S.view)) ctx.go('all'); shell.search.focus(); }
 });
+
+/* ---------- installable app (PWA) ---------- */
+const standalone = () => window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+document.documentElement.dataset.standalone = standalone() ? '1' : '0';
+window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); ctx.installEvent = e; if (shell && ctx.S.view === 'settings') draw(); });
+window.addEventListener('appinstalled', () => { ctx.installEvent = null; document.documentElement.dataset.standalone = '1'; toast('VaultManager is installed — find it on your home screen or app list.'); });
+ctx.isStandalone = standalone;
+ctx.installApp = async () => { const e = ctx.installEvent; if (!e) return false; e.prompt(); const r = await e.userChoice; ctx.installEvent = null; return r && r.outcome === 'accepted'; };
 
 /* ---------- boot ---------- */
 applyTheme();

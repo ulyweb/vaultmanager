@@ -54,6 +54,9 @@ export function toast(msg, kind = 'ok', ms = 3200) {
   setTimeout(() => { t.classList.add('out'); setTimeout(() => t.remove(), 250); }, ms);
 }
 
+/* ---------- haptics (Android; harmless elsewhere) ---------- */
+export const buzz = (ms = 8) => { try { if (document.documentElement.dataset.haptics === '1' && navigator.vibrate) navigator.vibrate(ms); } catch { /* ignore */ } };
+
 /* ---------- modal ---------- */
 const stack = [];
 export function modal({ title, sub, body, actions = [], wide = false, onClose }) {
@@ -64,16 +67,24 @@ export function modal({ title, sub, body, actions = [], wide = false, onClose })
     if (prev && prev.focus && document.contains(prev)) prev.focus();
     if (onClose) onClose();
   };
+  const grabber = h('div', { class: 'grabber', 'aria-hidden': 'true' }, h('i'));
   const head = h('div', { class: 'modal-header' },
     h('div', null, h('h2', { text: title }), sub ? h('p', { class: 'sub', text: sub }) : null),
     h('button', { class: 'modal-close', 'aria-label': 'Close', on: { click: close } }, '✕'));
   const foot = actions.length ? h('div', { class: 'modal-footer' }, actions.map((a) => h('button', {
     class: 'btn ' + (a.kind || ''), disabled: a.disabled, on: { click: async (e) => { if (a.onClick) { const r = await a.onClick(e, api); if (r !== false && a.close !== false) close(); } else close(); } },
   }, a.label))) : null;
-  const sheet = h('div', { class: 'modal-sheet' + (wide ? ' wide' : ''), role: 'dialog', 'aria-modal': 'true', 'aria-label': title }, head, h('div', { class: 'modal-body' }, body), foot);
+  const sheet = h('div', { class: 'modal-sheet' + (wide ? ' wide' : ''), role: 'dialog', 'aria-modal': 'true', 'aria-label': title }, grabber, head, h('div', { class: 'modal-body' }, body), foot);
   const styles = ['scale', 'slide', 'fade', 'zoom', 'bounce', 'blur', 'flip'], cur = document.documentElement.dataset.anim || 'scale';
   sheet.dataset.anim = cur === 'random' ? styles[Math.floor(Math.random() * styles.length)] : cur;
   const overlay = h('div', { class: 'modal-overlay', on: { mousedown: (e) => { if (e.target === overlay) close(); } } }, sheet);
+  /* phone layout: drag the handle / header down to dismiss, like a native bottom sheet */
+  const sheetMode = () => window.matchMedia('(max-width: 699px)').matches;
+  let drag = null;
+  const down = (e) => { if (!sheetMode() || e.target.closest('.modal-close')) return; drag = { y: e.clientY, dy: 0 }; try { grabber.setPointerCapture(e.pointerId); head.setPointerCapture(e.pointerId); } catch { /* ignore */ } sheet.style.transition = 'none'; };
+  const move = (e) => { if (!drag) return; drag.dy = Math.max(0, e.clientY - drag.y); sheet.style.transform = `translateY(${drag.dy}px)`; };
+  const up = () => { if (!drag) return; const d = drag.dy; drag = null; sheet.style.transition = 'transform .2s ease'; if (d > 90) { sheet.style.transform = 'translateY(100%)'; setTimeout(close, 160); } else sheet.style.transform = ''; };
+  for (const el of [grabber, head]) { el.addEventListener('pointerdown', down); el.addEventListener('pointermove', move); el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up); }
   const api = { close, el: sheet, overlay };
   stack.push(api);
   document.body.append(overlay);

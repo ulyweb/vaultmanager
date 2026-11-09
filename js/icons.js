@@ -94,6 +94,7 @@ const G = {
   menu: ['<path d="M4 6h16M4 12h16M4 18h16"/>', '☰'],
   chevdown: ['<path d="M6 9l6 6 6-6"/>', ''],
   chevright: ['<path d="M9 6l6 6-6 6"/>', ''],
+  chevleft: ['<path d="M15 6l-6 6 6 6"/>', ''],
   info: ['<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/>', 'ℹ'],
 };
 

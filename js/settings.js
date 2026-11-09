@@ -30,6 +30,27 @@ export function renderSettings(ctx) {
 const panel = (title, ...kids) => h('div', { class: 'panel pad' }, title ? h('h3', { text: title }) : null, ...kids);
 const chk = (label, checked, onChange) => h('label', { class: 'chk' }, h('input', { type: 'checkbox', checked, on: { change: (e) => onChange(e.target.checked) } }), label);
 
+/* ======================= Install & offline ======================= */
+async function offlineInfo() {
+  if (!('serviceWorker' in navigator) || !window.caches) return 'Offline caching is not available in this browser, but the vault itself is always stored on this device.';
+  try {
+    const reg = await navigator.serviceWorker.getRegistration(), keys = await caches.keys(), vm = keys.find((k) => k.startsWith('vm-'));
+    const n = vm ? (await (await caches.open(vm)).keys()).length : 0;
+    return reg && reg.active && vm ? `✓ Ready to work offline — ${n} app files are cached on this device (${vm}). ${navigator.onLine ? 'You are online right now.' : 'You are offline right now.'}` : 'The offline files are still being saved. Keep the page open for a moment, then check again.';
+  } catch { return 'Could not read the offline cache.'; }
+}
+
+function installPanel(ctx) {
+  const ua = navigator.userAgent || '', ios = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1), android = /Android/.test(ua);
+  const status = h('p', { class: 'hint', 'aria-live': 'polite', text: 'Checking offline files…' });
+  offlineInfo().then((t) => { status.textContent = t; });
+  const how = ios ? 'On iPhone / iPad: tap the Share button in Safari, then “Add to Home Screen”.' : android ? 'On Android: open the browser menu (⋮) and choose “Install app” or “Add to Home screen”.' : 'On a PC: use the install icon in the address bar of Chrome or Edge (or the browser menu → “Install VaultManager”).';
+  return panel('Install as an app & work offline',
+    h('p', { class: 'hint', text: 'Installed, VaultManager opens like any other app — its own window, its own icon, no browser bars — and keeps working with no internet at all. Your vault is stored on this device either way.' }),
+    ctx.isStandalone() ? h('div', { class: 'note', text: '✓ You are running the installed app.' }) : [ctx.installEvent ? h('button', { class: 'btn primary', on: { click: async () => { const ok = await ctx.installApp(); toast(ok ? 'Installing…' : 'Installation cancelled'); ctx.refresh(); } } }, '{{download}} Install VaultManager') : h('p', { class: 'hint', text: how })],
+    status);
+}
+
 /* ======================= General ======================= */
 function general(ctx) {
   const { store } = ctx, s = store.settings;
@@ -43,6 +64,7 @@ function general(ctx) {
       chk('Record copy / reveal / download events in the audit trail (never the values)', s.logReveal, (v) => set('logReveal', v, 'Access logging'))),
     panel('Trash',
       field('Delete trashed items permanently after', sel(s.trashDays, [[7, '7 days'], [30, '30 days'], [90, '90 days'], [0, 'Never (I will empty it myself)']], (v) => set('trashDays', +v, 'Trash retention')), 'Trashed items (and their attachments) are removed for good at your next unlock after this time.')),
+    installPanel(ctx),
     panel('Welcome & help',
       field('Your name', h('input', { class: 'inp', value: s.displayName || '', maxlength: '40', placeholder: 'Used in greetings (optional)', autocomplete: 'off', 'aria-label': 'Your name', on: { change: (e) => { s.displayName = e.target.value.trim(); persist(ctx); } } })),
       chk('Show the welcome screen every time I unlock', s.welcomeAlways, (v) => set('welcomeAlways', v, 'Welcome screen')),
