@@ -1,19 +1,22 @@
 /* VaultManager — application shell: lock screen, navigation, auto-lock, routing. */
 
-import { h, clear, $, closeAllModals, closeTopModal, modalOpen, modal, toast, clearClipboardNow } from './dom.js';
+import { h, clear, closeAllModals, closeTopModal, modalOpen, modal, toast, copyText } from './dom.js';
 import { VaultStore } from './vault.js';
 import { available } from './crypto.js';
 import { estimate } from './strength.js';
 import { generatePassphrase } from './generator.js';
 import { renderVaultView, newItemMenu, showRecoveryKit, meter } from './views.js';
-import { renderGenerator, renderHealth, renderQR, renderData, renderSettings } from './tools.js';
+import { renderGenerator, renderHealth, renderQR, renderData } from './tools.js';
+import { renderSettings } from './settings.js';
+import { createBlobStore } from './blobs.js';
+import { syncGist } from './sync.js';
 import { health } from './vault.js';
 
 const root = document.getElementById('app');
 let storage;
 try { storage = window.localStorage; storage.getItem('x'); } catch { storage = null; }
 
-const store = new VaultStore(storage || { _m: new Map(), getItem(k) { return this._m.get(k) ?? null; }, setItem(k, v) { this._m.set(k, v); }, removeItem(k) { this._m.delete(k); } });
+const store = new VaultStore(storage || { _m: new Map(), getItem(k) { return this._m.get(k) ?? null; }, setItem(k, v) { this._m.set(k, v); }, removeItem(k) { this._m.delete(k); } }, undefined, createBlobStore());
 const THEME_KEY = 'vaultmanager.theme';
 
 const ctx = {
@@ -24,7 +27,13 @@ const ctx = {
   closeModals: closeAllModals,
   go(view) { ctx.S.view = view; if (view !== 'all' && !isVaultView(view)) ctx.S.sel = null; if (!isVaultView(view)) ctx.S.q = ''; syncSearch(); draw(); window.scrollTo(0, 0); },
   refresh() { draw(); },
-  applyTheme, armAutolock, lock,
+  applyTheme, armAutolock, lock, armSync, syncNow,
+  showRecoveryKit(key) { return showRecoveryKit(ctx, key); },
+  /* copy a secret, honouring the clipboard-clear setting, and note it (never the value) in the audit trail */
+  copySecret(text, label, item, what) {
+    if (item && store.settings.logReveal) store.log('access', 'Copied ' + (what || 'value').toLowerCase() + ' of “' + item.name + '”');
+    return copyText(text, label, store.settings.clipboard);
+  },
   passwordPolicy(pw) {
     if (pw.length < 12) return 'Use at least 12 characters.';
     const e = estimate(pw);
@@ -58,7 +67,8 @@ function armAutolock() {
 document.addEventListener('visibilitychange', () => { if (document.hidden && store.unlocked && store.settings.lockOnHide) lock(false, 'Locked because the tab was hidden'); });
 
 function lock(erased, why) {
-  clearTimeout(idleTimer);
+  clearTimeout(idleTimer); stopSync();
+  if (store.unlocked && !erased) store.log('security', why || 'Vault locked');
   ctx.runCleanup(); closeAllModals();
   clear(document.getElementById('printArea'));
   store.lock();
@@ -67,6 +77,47 @@ function lock(erased, why) {
   applyTheme();
   draw();
   if (why) toast(why);
+}
+
+/* ---------- sync scheduler (gist method only; the file method is manual) ---------- */
+let syncing = false, syncTimer = null, soonTimer = null, lastFp = '', warned = false;
+const fingerprint = () => {
+  const items = store.data.items;
+  return [items.length, items.reduce((m, i) => Math.max(m, i.updated || 0), 0), Object.keys(store.data.tombstones).length, items.reduce((n, i) => n + (i.attachments || []).length, 0)].join(':');
+};
+const syncReady = () => { const c = store.unlocked && store.settings.sync; return !!(c && c.token && c.passphrase); };
+
+async function syncNow(manual = false) {
+  if (!syncReady()) return { ok: false, error: 'Sync is not set up (token and passphrase needed).' };
+  if (syncing) return { ok: false, error: 'A sync is already running.' };
+  syncing = true;
+  const c = store.settings.sync;
+  try {
+    const r = await syncGist(store);
+    lastFp = fingerprint(); warned = false;
+    if (r.pulled && (r.pulled.added || r.pulled.updated || r.pulled.removed)) draw();
+    if (manual) toast('Synced ✓');
+    return { ok: true, summary: r };
+  } catch (e) {
+    c.last = { at: Date.now(), ok: false, msg: e.message };
+    store.log('sync', 'Sync failed — ' + e.message, 'warn'); store.save().catch(() => {});
+    if (manual || !warned) toast('Sync failed: ' + e.message, 'err', 6000);
+    warned = true;
+    return { ok: false, error: e.message };
+  } finally { syncing = false; }
+}
+
+function stopSync() { clearInterval(syncTimer); clearTimeout(soonTimer); syncTimer = soonTimer = null; store.onSaved = null; }
+function armSync() {
+  stopSync();
+  if (!syncReady() || !store.settings.sync.auto) return;
+  lastFp = fingerprint();
+  syncNow(false);
+  syncTimer = setInterval(() => syncNow(false), 10 * 60000);
+  store.onSaved = () => {
+    if (syncing || fingerprint() === lastFp) return;
+    clearTimeout(soonTimer); soonTimer = setTimeout(() => syncNow(false), 30000);
+  };
 }
 
 /* ---------- gate (create / unlock) ---------- */
@@ -131,7 +182,7 @@ function gateUnlock() {
     try {
       await store.unlock(mode === 'password' ? { password: p1.input.value } : { recovery: rk.value });
       p1.input.value = ''; rk.value = '';
-      applyTheme(); armAutolock(); draw();
+      applyTheme(); armAutolock(); draw(); armSync();
       if (mode === 'recovery') toast('Unlocked with your recovery key — set a new master password in Settings.', 'ok', 7000);
       return;
     } catch (x) {

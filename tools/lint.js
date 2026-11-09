@@ -32,7 +32,8 @@ for (const f of files.filter((f) => f.endsWith('.html'))) {
   if (!csp) fail.push(f + ': no Content-Security-Policy');
   if (/unsafe-inline|unsafe-eval/.test(csp)) fail.push(f + ': CSP allows unsafe-inline / unsafe-eval');
   if (!/default-src 'none'/.test(csp)) fail.push(f + ': CSP must start from default-src \'none\'');
-  if (/connect-src[^;]*(https?:|\*)/.test(csp)) fail.push(f + ': CSP connect-src must stay same-origin — a password manager must not phone home');
+  const conn = (csp.match(/connect-src ([^;]*)/) || [])[1] || '';
+  if (conn.split(/\s+/).some((t) => t && t !== "'self'" && t !== 'https://api.github.com')) fail.push(f + ': CSP connect-src may only allow \'self\' and https://api.github.com (gist sync) — a password manager must not phone home');
   for (const m of html.matchAll(/<script(?![^>]*\bsrc=)[^>]*>/g)) fail.push(f + ': inline <script>');
   if (/\son[a-z]+=["']/.test(html)) fail.push(f + ': inline event handler');
   if (/<style[\s>]/.test(html) || /\sstyle=["']/.test(html)) fail.push(f + ': inline style');
@@ -44,7 +45,7 @@ for (const f of files.filter((f) => /^js\/.*\.js$/.test(f) || f === 'sw.js')) {
   const s = rd(f).replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
   if (/\.(innerHTML|outerHTML)\s*=|insertAdjacentHTML|document\.write/.test(s)) fail.push(f + ': HTML string injection API');
   if (/\beval\(|new Function\(/.test(s)) fail.push(f + ': eval / Function constructor');
-  if (f !== 'sw.js' && f !== 'js/wordlist.js' && /\b(fetch|XMLHttpRequest|WebSocket|EventSource|sendBeacon)\b/.test(s.replace(/'[^']*'|"[^"]*"/g, ''))) fail.push(f + ': network API used — VaultManager must make no network requests');
+  if (f !== 'sw.js' && f !== 'js/wordlist.js' && f !== 'js/sync.js' && /\b(fetch|XMLHttpRequest|WebSocket|EventSource|sendBeacon)\b/.test(s.replace(/'[^']*'|"[^"]*"/g, ''))) fail.push(f + ': network API used — VaultManager must make no network requests');
   if (/localStorage\.setItem\([^)]*(password|passphrase|secret|recovery)\b/i.test(s)) fail.push(f + ': secret-looking value written straight to localStorage');
   if (/console\.(log|debug|info)\(/.test(s)) fail.push(f + ': console logging (could leak secrets)');
 }

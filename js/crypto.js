@@ -146,6 +146,15 @@ export class Session {
     return { v: 1, id: this.id, wraps: this.wraps, iv: b64.enc(iv), ct: b64.enc(ct) };
   }
 
+  /* Attachments: each file is its own AES-GCM message under the data key, bound to this vault and file id. */
+  async sealBlob(attId, bytes) {
+    const { iv, ct } = await gcmSeal(this.dataKey, bytes, te.encode('VaultManager-att-v1:' + this.id + ':' + attId));
+    return { iv, ct };
+  }
+  async openBlob(attId, rec) {
+    return gcmOpen(this.dataKey, rec.iv, rec.ct, te.encode('VaultManager-att-v1:' + this.id + ':' + attId));
+  }
+
   async verifyPassword(password) {
     const w = this.wraps.find((x) => x.type === 'password');
     try { await unwrap(await passwordKey(password, b64.dec(w.salt), w.iter, ['decrypt']), w, this.id, 'password'); return true; } catch { return false; }

@@ -10,10 +10,10 @@ import { runSelfTest } from './selftest.js';
 import { meter, avatar, printNodes, showRecoveryKit } from './views.js';
 import { fmtDate, fmtInt, hostOf } from './util.js';
 
-const page = (title, sub, ...kids) => h('div', { class: 'page' }, h('h2', { text: title }), sub ? h('p', { class: 'sub', text: sub }) : null, ...kids);
-const field = (label, control, hint) => h('div', { class: 'field' }, h('label', { text: label }), control, hint ? h('p', { class: 'hint', text: hint }) : null);
-const sel = (value, opts, onChange) => h('select', { class: 'sel', on: { change: (e) => onChange(e.target.value) } }, opts.map(([v, l]) => h('option', { value: String(v), selected: String(v) === String(value) }, l)));
-const persist = (ctx) => ctx.store.save().catch((e) => toast('Could not save: ' + e.message, 'err'));
+export const page = (title, sub, ...kids) => h('div', { class: 'page' }, h('h2', { text: title }), sub ? h('p', { class: 'sub', text: sub }) : null, ...kids);
+export const field = (label, control, hint) => h('div', { class: 'field' }, h('label', { text: label }), control, hint ? h('p', { class: 'hint', text: hint }) : null);
+export const sel = (value, opts, onChange) => h('select', { class: 'sel', on: { change: (e) => onChange(e.target.value) } }, opts.map(([v, l]) => h('option', { value: String(v), selected: String(v) === String(value) }, l)));
+export const persist = (ctx) => ctx.store.save().catch((e) => toast('Could not save: ' + e.message, 'err'));
 
 /* ======================= Generator ======================= */
 function colourise(pw) {
@@ -168,8 +168,8 @@ function openTab(ctx) {
     open.disabled = true; status.textContent = 'Deriving the key…';
     try {
       if (p.startsWith('VMX1:')) {
-        const items = await decryptBackup(p, pw.value);
-        out.append(h('div', { class: 'note', text: `Backup opened: ${items.length} item${items.length === 1 ? '' : 's'}.` }), h('button', { class: 'btn primary', on: { click: async () => { const r = ctx.store.mergeItems(items); await r.save; toast(`Imported ${r.added}, skipped ${r.skipped} duplicates`); ctx.refresh(); } } }, `⇪ Import into my vault`));
+        const { items, attachments } = await decryptBackup(p, pw.value);
+        out.append(h('div', { class: 'note', text: `Backup opened: ${items.length} item${items.length === 1 ? '' : 's'}.` }), h('button', { class: 'btn primary', on: { click: async () => { const r = ctx.store.mergeItems(items, attachments); await r.save; toast(`Imported ${r.added}, skipped ${r.skipped} duplicates`); ctx.refresh(); } } }, `⇪ Import into my vault`));
       } else {
         const info = inspectSeal(p);
         if (!info.ok) throw new Error(info.why);
@@ -213,7 +213,7 @@ function backupTab(ctx) {
     } catch (e) { err.textContent = e.message; }
     btn.disabled = false;
   } } }, '▦ Create QR backup');
-  return h('div', { class: 'panel pad' }, h('p', { class: 'note warn', text: 'A paper QR backup lets you rebuild your vault with nothing but a camera. Whoever holds the codes AND the backup password can read everything — store them apart.' }), passwordRow('Backup password', pw), h('div', { class: 'row' }, btn), err, out);
+  return h('div', { class: 'panel pad' }, h('p', { class: 'note warn', text: 'A paper QR backup (without attachments) lets you rebuild your vault with nothing but a camera. Whoever holds the codes AND the backup password can read everything — store them apart.' }), passwordRow('Backup password', pw), h('div', { class: 'row' }, btn), err, out);
 }
 
 /* ======================= Import / export ======================= */
@@ -227,13 +227,14 @@ export function renderData(ctx) {
       const items = importAny(text, name);
       if (!items.length) throw new Error('No usable entries found.');
       importOut.append(h('div', { class: 'note', text: `Found ${items.length} entr${items.length === 1 ? 'y' : 'ies'} (${items.filter((i) => i.type === 'login').length} logins). Duplicates are skipped.` }),
-        h('button', { class: 'btn primary', on: { click: async () => { const r = store.mergeItems(items); await r.save; toast(`Imported ${r.added}, skipped ${r.skipped}`); paste.value = ''; clear(importOut).append(h('div', { class: 'note', text: `Done: ${r.added} added, ${r.skipped} duplicates skipped. Now delete the plaintext file you imported from.` })); } } }, `⇪ Import ${items.length}`));
+        h('button', { class: 'btn primary', on: { click: async () => { const r = store.mergeItems(items, {}); await r.save; toast(`Imported ${r.added}, skipped ${r.skipped}`); paste.value = ''; clear(importOut).append(h('div', { class: 'note', text: `Done: ${r.added} added, ${r.skipped} duplicates skipped. Now delete the plaintext file you imported from.` })); } } }, `⇪ Import ${items.length}`));
     } catch (e) { importErr.textContent = e.message; }
   };
   const fileIn = h('input', { type: 'file', accept: '.csv,.json,.txt,text/csv,application/json', class: 'offscreen', 'aria-label': 'Import file', on: { change: async (e) => { const f = e.target.files[0]; if (f) runImport(await readFileText(f), f.name); e.target.value = ''; } } });
 
   const bkPw = h('input', { class: 'inp mono', type: 'text', value: generatePassphrase({ words: 5 }), autocomplete: 'off', spellcheck: 'false', 'aria-label': 'Backup password' });
   const bkErr = h('p', { class: 'err', role: 'alert' });
+  const bkAtt = h('input', { type: 'checkbox', checked: true });
   const restoreOut = h('div'), rPw = h('input', { class: 'inp mono', type: 'password', autocomplete: 'off', 'aria-label': 'Backup password to open' }), rErr = h('p', { class: 'err', role: 'alert' });
   let restoreText = '';
   const rFile = h('input', { type: 'file', accept: '.vmvault,.txt', class: 'offscreen', 'aria-label': 'Backup file', on: { change: async (e) => { const f = e.target.files[0]; if (f) { restoreText = (await readFileText(f)).trim(); rLabel.textContent = f.name; } e.target.value = ''; } } });
@@ -245,11 +246,11 @@ export function renderData(ctx) {
       h('div', { class: 'row wrap' }, h('button', { class: 'btn', on: { click: () => fileIn.click() } }, '📂 Choose file'), fileIn, h('button', { class: 'btn', on: { click: () => paste.value && runImport(paste.value, '') } }, 'Read pasted text')), paste, importErr, importOut,
       h('p', { class: 'note warn', text: 'Those exports are readable by anyone. Delete the file (and empty the recycle bin) as soon as the import has finished.' })),
     h('div', { class: 'panel pad' }, h('h3', { text: 'Encrypted backup file' }),
-      h('p', { class: 'hint', text: 'AES-256-GCM, key from your backup password (PBKDF2-SHA256, 600,000 rounds). The file is useless without that password.' }),
-      passwordRow('Backup password', bkPw), h('div', { class: 'row wrap' }, h('button', { class: 'btn primary', on: { click: async () => { bkErr.textContent = ''; if (bkPw.value.length < 10) { bkErr.textContent = 'Use at least 10 characters.'; return; } try { download(`vaultmanager-${fmtDate(Date.now())}.vmvault`, await store.exportEncrypted(bkPw.value), 'text/plain'); toast('Backup saved — remember the password!'); } catch (e) { bkErr.textContent = e.message; } } } }, '⬇ Download encrypted backup')), bkErr,
+      h('p', { class: 'hint', text: 'AES-256-GCM, key from your backup password (PBKDF2-SHA256, 600,000 rounds). The file is useless without that password. Tip: for syncing between devices, see Settings → Sync.' }),
+      passwordRow('Backup password', bkPw), h('label', { class: 'chk' }, bkAtt, 'Include attachments'), h('div', { class: 'row wrap' }, h('button', { class: 'btn primary', on: { click: async () => { bkErr.textContent = ''; if (bkPw.value.length < 10) { bkErr.textContent = 'Use at least 10 characters.'; return; } try { download(`vaultmanager-${fmtDate(Date.now())}.vmvault`, await store.exportEncrypted(bkPw.value, { attachments: bkAtt.checked }), 'text/plain'); toast('Backup saved — remember the password!'); } catch (e) { bkErr.textContent = e.message; } } } }, '⬇ Download encrypted backup')), bkErr,
       h('hr', { class: 'sep' }), h('h3', { text: 'Restore from backup' }),
       h('div', { class: 'row wrap' }, h('button', { class: 'btn', on: { click: () => rFile.click() } }, '📂 Choose .vmvault file'), rFile, rLabel), field('Backup password', rPw),
-      h('div', { class: 'row' }, h('button', { class: 'btn primary', on: { click: async () => { rErr.textContent = ''; clear(restoreOut); if (!restoreText) { rErr.textContent = 'Choose a backup file first.'; return; } try { const items = await decryptBackup(restoreText, rPw.value); const r = store.mergeItems(items); await r.save; toast(`Restored ${r.added}, skipped ${r.skipped} duplicates`); ctx.refresh(); } catch (e) { rErr.textContent = e.message; } } } }, '⇩ Restore')), rErr, restoreOut),
+      h('div', { class: 'row' }, h('button', { class: 'btn primary', on: { click: async () => { rErr.textContent = ''; clear(restoreOut); if (!restoreText) { rErr.textContent = 'Choose a backup file first.'; return; } try { const { items, attachments } = await decryptBackup(restoreText, rPw.value); const r = store.mergeItems(items, attachments); await r.save; toast(`Restored ${r.added}, skipped ${r.skipped} duplicates`); ctx.refresh(); } catch (e) { rErr.textContent = e.message; } } } }, '⇩ Restore')), rErr, restoreOut),
     h('div', { class: 'panel pad' }, h('h3', { text: 'Export plaintext CSV' }),
       h('p', { class: 'note danger', text: 'Unencrypted: every password in readable text. Only for moving to another manager. Delete the file right after.' }),
       h('button', { class: 'btn danger', on: { click: async () => {
@@ -258,60 +259,7 @@ export function renderData(ctx) {
       } } }, '⚠ Export CSV…')));
 }
 
-/* ======================= Settings ======================= */
-export function renderSettings(ctx) {
-  const { store } = ctx, s = store.settings, sess = store.session;
-  const set = (k, v) => { s[k] = v; persist(ctx); if (k === 'theme') ctx.applyTheme(); if (k === 'autolock' || k === 'lockOnHide') ctx.armAutolock(); };
-
-  const pw0 = h('input', { class: 'inp mono', type: 'password', autocomplete: 'current-password', 'aria-label': 'Current master password' });
-  const pw1 = h('input', { class: 'inp mono', type: 'password', autocomplete: 'new-password', 'aria-label': 'New master password' });
-  const pw2 = h('input', { class: 'inp mono', type: 'password', autocomplete: 'new-password', 'aria-label': 'Repeat new master password' });
-  const pwM = h('div'); pw1.addEventListener('input', () => clear(pwM).append(meter(pw1.value).el));
-  const pwErr = h('p', { class: 'err', role: 'alert' });
-
-  const recStatus = h('span', { class: 'chip ' + (sess.hasRecovery() ? 'accent' : 'warn'), text: sess.hasRecovery() ? '✓ recovery key set' : 'no recovery key' });
-
-  return page('Settings', 'Everything is stored encrypted on this device. There is no account and no server.',
-    h('div', { class: 'panel pad' }, h('h3', { text: 'Security' }),
-      h('div', { class: 'grid2' },
-        field('Auto-lock after inactivity', sel(s.autolock, [[1, '1 minute'], [5, '5 minutes'], [15, '15 minutes'], [30, '30 minutes'], [60, '1 hour'], [0, 'Never (not recommended)']], (v) => set('autolock', +v))),
-        field('Clear clipboard after copying', sel(s.clipboard, [[15, '15 seconds'], [30, '30 seconds'], [60, '1 minute'], [120, '2 minutes'], [0, 'Never']], (v) => set('clipboard', +v)))),
-      h('label', { class: 'chk' }, h('input', { type: 'checkbox', checked: s.lockOnHide, on: { change: (e) => set('lockOnHide', e.target.checked) } }), 'Lock immediately when this tab is hidden or the window is minimised'),
-      h('hr', { class: 'sep' }),
-      h('div', { class: 'kv' }, h('span', { text: 'Encryption' }), h('b', { text: 'AES-256-GCM, fresh 96-bit IV per write' }), h('span', { text: 'Key derivation' }), h('b', { text: `PBKDF2-HMAC-SHA256 · ${fmtInt(sess.iterations())} rounds` }), h('span', { text: 'Master key' }), h('b', { text: 'random 256-bit, stored only wrapped' }), h('span', { text: 'Vault ID' }), h('b', { text: sess.id })),
-      field('Key-derivation strength', sel(sess.iterations(), [[600000, '600,000 rounds (default)'], [1000000, '1,000,000 rounds'], [2000000, '2,000,000 rounds (slow on phones)'], [5000000, '5,000,000 rounds (very slow)']], async (v) => {
-        const ok = await askPassword({ title: 'Change key-derivation strength', text: 'Enter your master password to re-wrap the vault key.', okLabel: 'Apply', verify: (p) => sess.verifyPassword(p) });
-        if (!ok) { ctx.refresh(); return; }
-        try { await sess.changePassword(ok, +v); await store.save(); toast('Key derivation updated'); } catch (e) { toast(e.message, 'err'); } ctx.refresh();
-      }), 'Higher is slower to unlock but makes offline guessing of your master password slower, too.')),
-    h('div', { class: 'panel pad' }, h('h3', { text: 'Master password' }),
-      field('Current password', pw0), field('New password', h('div', null, h('div', { class: 'pwwrap' }, pw1), pwM), 'At least 12 characters. A passphrase of 5+ random words is ideal.'), field('Repeat new password', pw2),
-      h('div', { class: 'row wrap' }, h('button', { class: 'btn primary', on: { click: async (e) => {
-        pwErr.textContent = '';
-        if (pw1.value !== pw2.value) { pwErr.textContent = 'The new passwords do not match.'; return; }
-        const pol = ctx.passwordPolicy(pw1.value); if (pol) { pwErr.textContent = pol; return; }
-        e.target.disabled = true;
-        try { await store.changePassword(pw0.value, pw1.value); pw0.value = pw1.value = pw2.value = ''; clear(pwM); toast('Master password changed'); } catch (x) { pwErr.textContent = x.message; }
-        e.target.disabled = false;
-      } } }, 'Change master password'), h('button', { class: 'btn', on: { click: () => { pw1.type = pw2.type = 'text'; pw1.value = pw2.value = generatePassphrase({ words: 6 }); pw1.dispatchEvent(new Event('input')); } } }, '⚡ Suggest a passphrase')), pwErr),
-    h('div', { class: 'panel pad' }, h('h3', null, 'Recovery key ', recStatus),
-      h('p', { class: 'hint', text: 'A 256-bit key that can unlock the vault if you forget your master password. Creating a new one invalidates the old one.' }),
-      h('div', { class: 'row wrap' }, h('button', { class: 'btn', on: { click: async () => {
-        const ok = await askPassword({ title: 'Create recovery key', text: 'Enter your master password to continue.', okLabel: 'Create', verify: (p) => sess.verifyPassword(p) });
-        if (!ok) return; const key = await sess.createRecovery(); await store.save(); showRecoveryKit(ctx, key); ctx.refresh();
-      } } }, sess.hasRecovery() ? '⟳ Replace recovery key' : '＋ Create recovery key'),
-      sess.hasRecovery() ? h('button', { class: 'btn danger', on: { click: async () => { if (await confirmDialog({ title: 'Remove recovery key?', text: 'The printed key will stop working.', okLabel: 'Remove', danger: true })) { sess.removeRecovery(); await store.save(); toast('Recovery key removed'); ctx.refresh(); } } } }, 'Remove') : null)),
-    h('div', { class: 'panel pad' }, h('h3', { text: 'Appearance' }), field('Theme', sel(s.theme, [['auto', 'Match my device'], ['dark', 'Dark'], ['light', 'Light']], (v) => set('theme', v)))),
-    h('div', { class: 'panel pad' }, h('h3', { text: 'Verify & maintain' }),
-      h('div', { class: 'row wrap' }, h('button', { class: 'btn', on: { click: () => selfTest() } }, '✓ Run crypto self-test'),
-        h('button', { class: 'btn danger', on: { click: async () => {
-          if (!(await confirmDialog({ title: 'Erase everything?', text: 'This permanently deletes the encrypted vault from this device. Make sure you have a backup.', okLabel: 'Continue', danger: true }))) return;
-          const ok = await askPassword({ title: 'Erase vault', text: 'Enter your master password to erase this vault.', okLabel: 'Erase forever', verify: (p) => sess.verifyPassword(p) });
-          if (ok) { await store.wipe(); ctx.lock(true); toast('Vault erased'); }
-        } } }, '🗑 Erase vault from this device…')),
-      h('p', { class: 'hint', text: 'VaultManager 0.1.0 · open source · no analytics, no trackers, no network requests after the page loads.' })));
-}
-
+/* ======================= Self-test ======================= */
 export function selfTest() {
   const list = h('div'), bar = h('div', { class: 'progress' }, h('i'));
   const summary = h('p', { class: 'hint', text: 'Running…' });

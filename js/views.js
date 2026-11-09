@@ -1,7 +1,7 @@
 /* Vault views: item list, detail panel, editor, QR share, recovery kit. */
 
 import { h, clear, modal, toast, confirmDialog, copyText, download } from './dom.js';
-import { newItem, TYPES, matches, totpValid } from './vault.js';
+import { newItem, TYPES, matches, totpValid, MAX_ATTACHMENT, MAX_ATTACHMENTS_PER_ITEM } from './vault.js';
 import { estimate, crackTime } from './strength.js';
 import { generatePassword, generatePassphrase } from './generator.js';
 import { totpNow, parseTotp } from './totp.js';
@@ -86,19 +86,21 @@ function emptyState(ctx, items) {
 function itemRow(ctx, it) {
   const sub = it.type === 'login' ? (it.username || hostOf(it.url)) : it.type === 'card' ? '•••• ' + (it.card.number || '').replace(/\D/g, '').slice(-4) : (it.notes || '').split('\n')[0].slice(0, 60);
   return h('button', { class: 'item' + (ctx.S.sel === it.id ? ' on' : ''), role: 'option', 'aria-selected': String(ctx.S.sel === it.id), on: { click: () => { ctx.S.sel = it.id; ctx.refresh(); } } },
-    avatar(it.name), h('div', { class: 't' }, h('b', { text: it.name || '(untitled)' }), h('small', { text: sub })), it.favorite ? h('span', { class: 'star', text: '★', 'aria-label': 'Favorite' }) : null);
+    avatar(it.name), h('div', { class: 't' }, h('b', { text: it.name || '(untitled)' }), h('small', { text: sub })), (it.attachments || []).length ? h('span', { class: 'clip', text: '📎', title: it.attachments.length + ' attachment(s)' }) : null, it.favorite ? h('span', { class: 'star', text: '★', 'aria-label': 'Favorite' }) : null);
 }
 
 /* ---------- detail ---------- */
+let currentItem = null;   // set while a detail panel is being built, so field() can audit copy / reveal events
 function field(label, value, { secret, copy, ctx, pre, link, extra } = {}) {
+  const item = currentItem;
   if (!value && !extra) return null;
   let shown = !secret;
   const v = h('div', { class: 'v' + (secret ? ' secret' : '') + (pre ? ' pre' : '') });
   const set = () => { clear(v); if (link && safeHref(value)) v.append(h('a', { href: safeHref(value), target: '_blank', rel: 'noopener noreferrer nofollow' }, value)); else v.append(shown ? value : '•'.repeat(Math.min(16, Math.max(8, value.length)))); };
   if (value) set();
   const acts = h('div', { class: 'acts' });
-  if (secret) acts.append(h('button', { class: 'icon-btn', 'aria-label': 'Show or hide ' + label, title: 'Show / hide', on: { click: () => { shown = !shown; set(); } } }, '👁'));
-  if (copy) acts.append(h('button', { class: 'icon-btn', 'aria-label': 'Copy ' + label, title: 'Copy', on: { click: () => copyText(value, label + ' copied', ctx.store.settings.clipboard) } }, '⧉'));
+  if (secret) acts.append(h('button', { class: 'icon-btn', 'aria-label': 'Show or hide ' + label, title: 'Show / hide', on: { click: () => { shown = !shown; set(); if (shown && item && ctx.store.settings.logReveal) ctx.store.log('access', 'Revealed ' + label.toLowerCase() + ' of “' + item.name + '”'); } } }, '👁'));
+  if (copy) acts.append(h('button', { class: 'icon-btn', 'aria-label': 'Copy ' + label, title: 'Copy', on: { click: () => ctx.copySecret(value, label + ' copied', item, label) } }, '⧉'));
   return h('div', { class: 'f' }, h('div', { class: 'k', text: label }), extra ? h('div', { class: 'v' }, extra) : v, acts);
 }
 
@@ -114,12 +116,13 @@ function totpField(ctx, it) {
   };
   tick(); const t = setInterval(tick, 1000); ctx.cleanup.push(() => clearInterval(t));
   const f = h('div', { class: 'f' }, h('div', { class: 'k', text: 'One-time code' }), h('div', { class: 'v' }, wrap),
-    h('div', { class: 'acts' }, h('button', { class: 'icon-btn', 'aria-label': 'Copy one-time code', on: { click: () => copyText(last, 'Code copied', ctx.store.settings.clipboard) } }, '⧉')));
+    h('div', { class: 'acts' }, h('button', { class: 'icon-btn', 'aria-label': 'Copy one-time code', on: { click: () => ctx.copySecret(last, 'Code copied', it, 'one-time code') } }, '⧉')));
   return f;
 }
 
 function detailPanel(ctx, it) {
   const { store } = ctx;
+  currentItem = it;
   const trashed = !!it.deleted;
   const actions = h('div', { class: 'detail-actions' },
     h('button', { class: 'btn back sm', on: { click: () => { ctx.S.sel = null; ctx.refresh(); } } }, '← Back'),
@@ -147,17 +150,59 @@ function detailPanel(ctx, it) {
     rows.push(field('PIN', c.pin, { secret: true, copy: true, ctx }));
   }
   rows.push(field('Notes', it.notes, { pre: true, copy: it.type === 'note', ctx }));
+  rows.push(attachmentsField(ctx, it));
   if ((it.tags || []).length) rows.push(h('div', { class: 'f' }, h('div', { class: 'k', text: 'Tags' }), h('div', { class: 'v' }, h('div', { class: 'tags' }, it.tags.map((t) => h('button', { class: 'chip', on: { click: () => ctx.go('tag:' + t) } }, '#' + t))))));
-  if ((it.history || []).length) rows.push(h('div', { class: 'f' }, h('div', { class: 'k', text: 'History' }), h('div', { class: 'v' }, h('button', { class: 'linkbtn', on: { click: () => historyModal(ctx, it) } }, `${it.history.length} previous password${it.history.length > 1 ? 's' : ''}`))));
+  const nrev = (it.revisions || []).length, nhist = (it.history || []).length;
+  if (nrev || nhist) rows.push(h('div', { class: 'f' }, h('div', { class: 'k', text: 'History' }), h('div', { class: 'v' }, h('button', { class: 'linkbtn', on: { click: () => historyModal(ctx, it) } }, [nrev ? `${nrev} earlier version${nrev > 1 ? 's' : ''}` : null, nhist ? `${nhist} previous password${nhist > 1 ? 's' : ''}` : null].filter(Boolean).join(' · ')))));
   rows.push(h('div', { class: 'f' }, h('div', { class: 'k', text: 'Updated' }), h('div', { class: 'v hint', text: `${fmtDate(it.updated)} · created ${fmtDate(it.created)}${it.type === 'login' && it.password ? ' · password changed ' + fmtDate(it.pwChanged) : ''}` })));
 
-  return h('div', null, h('div', { class: 'detail-head' }, avatar(it.name), h('div', null, h('h2', { text: it.name || '(untitled)' }), h('span', { class: 'chip', text: TYPE_ICON[it.type] + ' ' + TYPES[it.type] }))), actions, rows);
+  const out = h('div', null, h('div', { class: 'detail-head' }, avatar(it.name), h('div', null, h('h2', { text: it.name || '(untitled)' }), h('span', { class: 'chip', text: TYPE_ICON[it.type] + ' ' + TYPES[it.type] }))), actions, rows);
+  currentItem = null;
+  return out;
+}
+
+/* ---------- attachments ---------- */
+const IMG = /^image\/(png|jpeg|gif|webp|bmp|avif)$/;
+export const fmtSize = (n) => (n < 1024 ? n + ' B' : n < 1048576 ? (n / 1024).toFixed(n < 10240 ? 1 : 0) + ' KB' : (n / 1048576).toFixed(1) + ' MB');
+const attIcon = (t) => (IMG.test(t) ? '🖼' : t === 'application/pdf' ? '📕' : /^text\//.test(t) ? '📄' : /zip|compressed|tar/.test(t) ? '🗜' : '📎');
+
+function attachmentsField(ctx, it) {
+  if (!(it.attachments || []).length) return null;
+  const list = h('div', { class: 'atts' });
+  for (const a of it.attachments) {
+    const row = h('div', { class: 'att' });
+    const thumb = h('div', { class: 'thumb' });
+    const dl = h('button', { class: 'icon-btn', 'aria-label': 'Download ' + a.name, title: 'Download', on: { click: async () => {
+      try { const { bytes } = await ctx.store.readAttachment(it.id, a.id); download(a.name, bytes, 'application/octet-stream'); if (ctx.store.settings.logReveal) ctx.store.log('access', `Downloaded attachment “${a.name}” of “${it.name}”`); } catch (e) { toast(e.message, 'err', 6000); }
+    } } }, '⬇');
+    row.append(thumb, h('div', { class: 'meta' }, h('b', { text: a.name }), h('small', { text: fmtSize(a.size) + ' · ' + (a.type || 'file') })), dl);
+    thumb.append(h('span', { text: attIcon(a.type) }));
+    if (IMG.test(a.type)) {
+      ctx.store.readAttachment(it.id, a.id).then(({ bytes }) => {
+        const url = URL.createObjectURL(new Blob([bytes], { type: a.type })); ctx.cleanup.push(() => URL.revokeObjectURL(url));
+        const img = h('img', { src: url, alt: a.name, loading: 'lazy' });
+        img.addEventListener('click', () => { if (ctx.store.settings.logReveal) ctx.store.log('access', `Viewed image “${a.name}” of “${it.name}”`); modal({ title: a.name, sub: fmtSize(a.size), wide: true, body: h('div', { class: 'qrbox' }, h('img', { src: url, alt: a.name, class: 'bigimg' })), actions: [{ label: 'Close' }] }); });
+        clear(thumb).append(img); thumb.classList.add('img');
+      }).catch(() => { thumb.append(h('span', { class: 'chip warn', text: 'unavailable' })); });
+    } else ctx.store.hasBlob(a.id).then((ok) => { if (!ok) { dl.disabled = true; row.append(h('span', { class: 'chip warn', text: 'not on this device' })); } });
+    list.append(row);
+  }
+  return h('div', { class: 'f' }, h('div', { class: 'k', text: 'Attachments' }), h('div', { class: 'v' }, list), h('div', { class: 'acts' }));
 }
 
 function historyModal(ctx, it) {
-  modal({ title: 'Password history', sub: it.name, body: h('div', null, it.history.map((x) => h('div', { class: 'f' }, h('div', { class: 'k', text: fmtDate(x.at) }), h('div', { class: 'v secret', text: x.pw }),
-    h('div', { class: 'acts' }, h('button', { class: 'icon-btn', 'aria-label': 'Copy', on: { click: () => copyText(x.pw, 'Old password copied', ctx.store.settings.clipboard) } }, '⧉'))))),
-  actions: [{ label: 'Close' }] });
+  const trashed = !!it.deleted;
+  const secretFields = new Set(['password', 'totp', 'card']);
+  const revs = (it.revisions || []).map((r, idx) => h('div', { class: 'hl' }, h('div', { class: 't' }, h('b', { text: fmtDate(r.at) + ' — before this edit' }),
+    h('small', { text: 'changed: ' + r.changed.join(', ') + (r.changed.some((c) => secretFields.has(c)) ? ' (secret values are not shown here)' : '') })),
+    trashed ? null : h('button', { class: 'btn sm', on: { click: async () => { await ctx.store.restoreRevision(it.id, idx); toast('Earlier version restored'); ctx.closeModals(); ctx.refresh(); } } }, '↩ Restore')));
+  const pws = (it.history || []).map((x) => h('div', { class: 'f' }, h('div', { class: 'k', text: fmtDate(x.at) }), h('div', { class: 'v secret', text: x.pw }),
+    h('div', { class: 'acts' }, h('button', { class: 'icon-btn', 'aria-label': 'Copy', on: { click: () => ctx.copySecret(x.pw, 'Old password copied', it, 'previous password') } }, '⧉'))));
+  modal({ title: 'Version history', sub: it.name, body: h('div', null,
+    revs.length ? [h('p', { class: 'lbl', text: 'Earlier versions (last 10 edits)' }), revs] : null,
+    pws.length ? [h('p', { class: 'lbl', text: 'Previous passwords' }), h('p', { class: 'hint', text: 'Shown in readable form. Opening this list is recorded in the audit trail.' }), pws] : null),
+    actions: [{ label: 'Close' }] });
+  if (pws.length && ctx.store.settings.logReveal) ctx.store.log('access', 'Viewed previous passwords of “' + it.name + '”');
 }
 
 /* ---------- editor ---------- */
@@ -182,6 +227,27 @@ export function editItem(ctx, item, type = 'login') {
       inp('expiry', 'Expiry (MM/YY)', { mono: true, get: () => c.expiry, set: (v) => { c.expiry = v; } }), inp('cvv', 'CVV', { mono: true, inputmode: 'numeric', get: () => c.cvv, set: (v) => { c.cvv = v; } }),
       inp('pin', 'PIN', { mono: true, inputmode: 'numeric', get: () => c.pin, set: (v) => { c.pin = v; } })));
   }
+  /* attachments are staged here and applied on Save, so Cancel discards them */
+  const staged = [], removed = new Set(), existing = (it.attachments || []).map((a) => ({ ...a }));
+  const attList = h('div', { class: 'atts' }), attErr = h('p', { class: 'err', role: 'alert' });
+  const drawAtt = () => {
+    clear(attList);
+    for (const a of existing) if (!removed.has(a.id)) attList.append(h('div', { class: 'att' }, h('div', { class: 'thumb' }, h('span', { text: attIcon(a.type) })), h('div', { class: 'meta' }, h('b', { text: a.name }), h('small', { text: fmtSize(a.size) })), h('button', { type: 'button', class: 'icon-btn', 'aria-label': 'Remove ' + a.name, title: 'Remove', on: { click: () => { removed.add(a.id); drawAtt(); } } }, '✕')));
+    for (const a of staged) attList.append(h('div', { class: 'att' }, h('div', { class: 'thumb' }, h('span', { text: attIcon(a.type) })), h('div', { class: 'meta' }, h('b', { text: a.name }), h('small', { text: fmtSize(a.bytes.length) + ' · will be added on save' })), h('button', { type: 'button', class: 'icon-btn', 'aria-label': 'Remove ' + a.name, title: 'Remove', on: { click: () => { staged.splice(staged.indexOf(a), 1); drawAtt(); } } }, '✕')));
+  };
+  const pick = (capture) => h('input', { type: 'file', class: 'offscreen', multiple: !capture, accept: capture ? 'image/*' : null, capture: capture ? 'environment' : null, 'aria-label': capture ? 'Take a photo' : 'Choose files', on: { change: async (e) => {
+    attErr.textContent = '';
+    for (const f of Array.from(e.target.files || [])) {
+      if (f.size > MAX_ATTACHMENT) { attErr.textContent = `“${f.name}” is ${fmtSize(f.size)}; the limit is ${fmtSize(MAX_ATTACHMENT)} per file.`; continue; }
+      if (existing.length - removed.size + staged.length >= MAX_ATTACHMENTS_PER_ITEM) { attErr.textContent = 'At most ' + MAX_ATTACHMENTS_PER_ITEM + ' attachments per item.'; break; }
+      staged.push({ name: f.name || 'photo.jpg', type: f.type, bytes: new Uint8Array(await f.arrayBuffer()) });
+    }
+    e.target.value = ''; drawAtt();
+  } } });
+  const fileIn = pick(false), camIn = pick(true);
+  drawAtt();
+  body.push(h('div', { class: 'field' }, h('label', { text: 'Attachments (images, documents — encrypted, up to ' + fmtSize(MAX_ATTACHMENT) + ' each)' }), attList,
+    h('div', { class: 'row wrap' }, h('button', { type: 'button', class: 'btn sm', on: { click: () => fileIn.click() } }, '📎 Add files'), h('button', { type: 'button', class: 'btn sm', on: { click: () => camIn.click() } }, '📷 Take photo'), fileIn, camIn), attErr));
   body.push(h('div', { class: 'field' }, h('label', { for: 'f_notes', text: it.type === 'note' ? 'Note' : 'Notes' }), h('textarea', { id: 'f_notes', class: 'ta', rows: it.type === 'note' ? '10' : '4', on: { input: (e) => { it.notes = e.target.value; } } }, it.notes)));
   body.push(inp('tags', 'Tags (comma separated)', { get: () => (it.tags || []).join(', '), set: (v) => { it.tags = v.split(',').map((t) => t.trim().replace(/^#/, '')).filter(Boolean).slice(0, 30); }, ph: 'work, finance' }));
   body.push(h('label', { class: 'chk' }, h('input', { type: 'checkbox', checked: it.favorite, on: { change: (e) => { it.favorite = e.target.checked; } } }), 'Favorite'));
@@ -191,8 +257,12 @@ export function editItem(ctx, item, type = 'login') {
     if (!it.name.trim()) { err.textContent = 'Please give this item a name.'; document.getElementById('f_name').focus(); return false; }
     if (it.type === 'login' && it.totp.trim() && !totpValid(it.totp.trim())) { err.textContent = 'That one-time code secret is not valid (expected base32 or an otpauth://totp link).'; return false; }
     it.name = it.name.trim(); it.totp = it.totp.trim();
-    if (isNew) { it.created = it.updated = it.pwChanged = Date.now(); await store.add(it); }
-    else { const { id, history, created, pwChanged, ...patch } = it; await store.update(id, patch); }
+    if (isNew) { it.created = it.updated = it.pwChanged = Date.now(); it.attachments = []; await store.add(it); }
+    else { const { id, history, created, pwChanged, attachments, revisions, deleted, ...patch } = it; await store.update(id, patch); }
+    try {
+      for (const id of removed) await store.removeAttachment(it.id, id);
+      for (const a of staged) await store.addAttachment(it.id, a);
+    } catch (e) { toast(e.message, 'err', 7000); }
     ctx.S.sel = it.id; toast(isNew ? 'Saved to your vault' : 'Changes saved'); ctx.refresh();
   };
   modal({ title: (isNew ? 'New ' : 'Edit ') + TYPES[it.type].toLowerCase(), body: h('div', null, body), actions: [{ label: 'Cancel' }, { label: 'Save', kind: 'primary', onClick: save }], wide: false });
