@@ -54,6 +54,7 @@ See [SECURITY.md](SECURITY.md) for the threat model and, importantly, what Vault
 |---|---|
 | `index.html`, `css/`, `js/app.js` | shell, lock screen, navigation, auto-lock |
 | `js/views.js`, `js/tools.js`, `js/settings.js` | vault list / detail / editor / attachments; generator, health, QR, import-export; tabbed settings (sync, audit, about) |
+| `js/look.js`, `js/settings-look.js`, `js/widgets.js`, `js/landscapes.js` | look & feel settings, Home widgets, offline wallpaper scenes (ported from ulyOS) |
 | `js/templates.js`, `js/beam.js` | category definitions (data-driven), Wi-Fi QR / expiry helpers; Beam peer-to-peer sync (the only file allowed to use WebRTC) |
 | `js/sync.js`, `js/passkey.js`, `js/blobs.js`, `js/version.js` | encrypted sync (file + gist), WebAuthn passkey glue, attachment storage, version & changelog |
 | `js/crypto.js` | key hierarchy, vault record, QR Seal v2 payloads, recovery key |
@@ -71,7 +72,7 @@ npm test        # lint + unit + browser end-to-end
 The lint enforces the security posture: strict CSP whose `connect-src` may only be `'self'` and `https://api.github.com` (used solely by gist sync, in `js/sync.js` — the only file allowed to use network APIs), no inline scripts / styles / handlers, no `innerHTML`, no `eval`, no network APIs, a complete service-worker precache list, no committed secrets.
 
 ## Status
-Version 0.4 — a complete fourth cut (this repo is the test bench for the stand-alone PC + mobile build — see [ROADMAP.md](ROADMAP.md)), **not yet independently audited**. Treat it accordingly and keep an encrypted backup. See [ROADMAP.md](ROADMAP.md).
+Version 0.5 — a complete fifth cut (this repo is the test bench for the stand-alone PC + mobile build — see [ROADMAP.md](ROADMAP.md)), **not yet independently audited**. Treat it accordingly and keep an encrypted backup. See [ROADMAP.md](ROADMAP.md).
 
 ## Licences
 Code: see repository owner. EFF short wordlist: CC BY 3.0 US. `vendor/qrcode.js`: MIT (Kazuhiko Arase). `vendor/jsQR.js`: Apache-2.0 (`vendor/LICENSE-jsqr.txt`).

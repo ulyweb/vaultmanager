@@ -32,7 +32,7 @@ before(async () => {
 after(async () => { await browser.close(); server.close(); });
 
 async function newPage(opts = {}, allowHosts = []) {
-  const ctx = await browser.newContext({ colorScheme: 'dark', viewport: { width: 1280, height: 800 }, acceptDownloads: true, permissions: ['clipboard-read', 'clipboard-write'], ...opts });
+  const ctx = await browser.newContext({ reducedMotion: 'reduce', colorScheme: 'dark', viewport: { width: 1280, height: 800 }, acceptDownloads: true, permissions: ['clipboard-read', 'clipboard-write'], ...opts });
   const page = await ctx.newPage();
   const problems = [];
   page.on('pageerror', (e) => problems.push('pageerror: ' + e.message));
@@ -395,7 +395,10 @@ test('gist sync (mocked GitHub API): two devices converge; only ciphertext leave
   await B.page.fill('input[aria-label="Sync passphrase"]', SYNC_PASS); await B.page.getByRole('button', { name: 'Save passphrase' }).click();
   await B.page.getByRole('button', { name: /All items/ }).click(); await B.page.locator('.item', { hasText: 'GistSite' }).click();
   await B.page.getByRole('button', { name: /Edit/ }).click(); await B.page.fill('#f_username', 'edited-on-B'); await B.page.getByRole('button', { name: 'Save' }).click();
-  await settingsTab(B.page, /Sync/); await B.page.getByRole('button', { name: /Sync now/ }).click(); await B.page.waitForSelector('text=Last sync');
+  const uploadsBefore = sent.length;
+  await settingsTab(B.page, /Sync/); await B.page.getByRole('button', { name: /Sync now/ }).click();
+  for (let i = 0; i < 60 && sent.length === uploadsBefore; i++) await B.page.waitForTimeout(250);
+  assert.ok(sent.length > uploadsBefore, 'B uploaded its edit');
   await settingsTab(A.page, /Sync/); await A.page.getByRole('button', { name: /Sync now/ }).click(); await A.page.waitForTimeout(800);
   await A.page.getByRole('button', { name: /All items/ }).click(); await A.page.locator('.item', { hasText: 'GistSite' }).click();
   await A.page.waitForFunction(() => /edited-on-B/.test(document.querySelector('.detail').textContent));
@@ -558,4 +561,125 @@ test('beam sync: pair two devices (real WebRTC), verify, merge both ways incl. a
   fs.rmSync(tmp, { recursive: true });
   assert.deepEqual(A.problems, []); assert.deepEqual(B.problems, []);
   await A.ctx.close(); await B.ctx.close();
+});
+
+test('conflicts: same field edited on two devices → newest kept, other version reviewable and resolvable', async () => {
+  const A = await newPage(), B = await newPage();
+  await createVault(A.page, MASTER); await createVault(B.page, 'a-totally-different-master-pass-9');
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'vm-conf-'));
+  const exportFrom = async (P, name) => { await settingsTab(P.page, /Sync/); const [dl] = await Promise.all([P.page.waitForEvent('download'), P.page.getByRole('button', { name: /Export sync file/ }).click()]); const f = path.join(tmp, name); await dl.saveAs(f); return f; };
+  const importInto = async (P, f) => { await settingsTab(P.page, /Sync/); await P.page.setInputFiles('input[aria-label="Sync file"]', f); await P.page.waitForSelector('text=/Merged: /'); };
+  const setPass = async (P) => { await settingsTab(P.page, /Sync/); await P.page.fill('input[aria-label="Sync passphrase"]', SYNC_PASS); await P.page.getByRole('button', { name: 'Save passphrase' }).click(); };
+  await addLogin(A.page, 'Router'); await setPass(A); await setPass(B);
+  await importInto(B, await exportFrom(A, 'seed.vmsync')); await importInto(A, await exportFrom(B, 'back.vmsync'));
+  const editNotes = async (P, text) => { await P.page.locator('.side .nav', { hasText: 'All items' }).click(); await P.page.locator('.item', { hasText: 'Router' }).click(); await P.page.getByRole('button', { name: /Edit/ }).click(); await P.page.fill('#f_notes', text); await P.page.getByRole('button', { name: 'Save' }).click(); await P.page.waitForSelector('.detail .f:has-text("' + text + '")'); };
+  await editNotes(A, 'older note from A'); await A.page.waitForTimeout(30);
+  await editNotes(B, 'newer note from B');
+  await importInto(A, await exportFrom(B, 'b2.vmsync'));        // A pulls B: both edited notes → conflict
+  await importInto(B, await exportFrom(A, 'a2.vmsync'));
+  // different-field edits would have merged silently; this is a real conflict on both devices
+  for (const P of [A, B]) {
+    await P.page.locator('.side .nav', { hasText: 'Needs review' }).click();
+    await P.page.locator('.item', { hasText: 'Router' }).click();
+    await P.page.waitForSelector('.conflict-banner');
+    assert.ok((await P.page.textContent('.detail')).includes('newer note from B'), 'newest value kept');
+  }
+  await shot(A.page, '21-conflict-banner');
+  await A.page.getByRole('button', { name: 'Review', exact: true }).click(); await A.page.waitForSelector('.modal-sheet .conf');
+  assert.ok((await A.page.textContent('.modal-sheet')).includes('older note from A'));
+  await shot(A.page, '22-conflict-review');
+  await A.page.getByRole('button', { name: /Use the other version/ }).click();
+  await A.page.waitForFunction(() => !document.querySelector('.modal-sheet'));
+  await A.page.locator('.side .nav', { hasText: 'All items' }).click(); await A.page.locator('.item', { hasText: 'Router' }).click();
+  await A.page.waitForSelector('.detail .f:has-text("older note from A")');
+  assert.equal(await A.page.locator('.conflict-banner').count(), 0);
+  assert.equal(await A.page.locator('.side .nav', { hasText: 'Needs review' }).count(), 0);
+  // resolution travels: B pulls A's resolved item and the banner goes away there too
+  await importInto(B, await exportFrom(A, 'a3.vmsync'));
+  await B.page.locator('.side .nav', { hasText: 'All items' }).click(); await B.page.locator('.item', { hasText: 'Router' }).click();
+  await B.page.waitForSelector('.detail .f:has-text("older note from A")'); assert.equal(await B.page.locator('.conflict-banner').count(), 0);
+  fs.rmSync(tmp, { recursive: true });
+  assert.deepEqual(A.problems, []); assert.deepEqual(B.problems, []);
+  await A.ctx.close(); await B.ctx.close();
+});
+
+test('look & feel: appearance, effects, dock & menu bar, widgets, start page, boot animation — all apply, persist and survive lock', async () => {
+  const { ctx, page, problems } = await newPage({ reducedMotion: 'no-preference' });
+  await createVault(page);
+  const attr = (n) => page.evaluate((k) => document.documentElement.dataset[k], n);
+  const cssv = (n) => page.evaluate((k) => document.documentElement.style.getPropertyValue(k), n);
+  await addLogin(page, 'Mail', async () => { await page.fill('#f_totp', 'JBSWY3DPEHPK3PXP'); });
+
+  // settings has every tab the ulyOS Settings app has (adapted)
+  await page.locator('.side .nav', { hasText: 'Settings' }).click();
+  for (const t of ['General', 'Appearance', 'Effects', 'Dock & menu bar', 'Widgets', 'Security', 'Sync', 'Audit trail', 'About']) assert.equal(await page.getByRole('tab', { name: new RegExp(t.replace('&', '\\&')) }).count(), 1, t);
+
+  // Appearance: accent, icon style, size, density, radius, scale, wallpaper
+  await page.getByRole('tab', { name: /Appearance/ }).click();
+  await page.getByRole('button', { name: 'Accent Violet' }).click(); assert.equal(await cssv('--accent'), '#8b7dff');
+  await page.selectOption('.setrow:has-text("Icon style") select', 'neon'); assert.equal(await attr('icons'), 'neon');
+  await page.getByRole('button', { name: 'Large', exact: true }).click(); assert.equal(await attr('iconsize'), 'large');
+  await page.getByRole('button', { name: 'Compact', exact: true }).click(); assert.equal(await attr('density'), 'compact');
+  await page.locator('.setrow:has-text("Corner radius") input[type=range]').fill('20'); assert.equal(await cssv('--r'), '20px');
+  await page.locator('.setrow:has-text("UI size") input[type=range]').fill('110'); assert.equal(await cssv('--ui-scale'), '1.1');
+  await page.getByRole('button', { name: 'Wallpaper', exact: true }).click(); await page.waitForSelector('.wall');
+  assert.equal(await page.locator('.wall').count(), 12); assert.equal(await attr('bg'), 'wallpaper'); assert.match(await cssv('--wall'), /^url\("data:image\/svg\+xml/);
+  await page.getByRole('button', { name: 'Wallpaper Starry peaks' }).click(); await shot(page, '23-appearance');
+  await page.getByRole('button', { name: 'Category icon' }).click(); assert.equal(await attr('avatar'), 'icon');
+
+  // Effects
+  await page.getByRole('tab', { name: /Effects/ }).click();
+  await page.selectOption('.setrow:has-text("Window animation") select', 'bounce'); assert.equal(await attr('anim'), 'bounce');
+  await page.getByRole('button', { name: 'Try', exact: true }).click(); await page.waitForSelector('.modal-sheet[data-anim=bounce]'); await page.keyboard.press('Escape');
+  await page.locator('.setrow:has-text("Animation speed") input[type=range]').fill('2'); assert.equal(await cssv('--speed'), '2');
+  await page.locator('.setrow:has-text("Aurora intensity") input[type=range]').fill('10'); assert.equal(await cssv('--fx-aurora'), '10');
+  await page.locator('.setrow:has-text("CRT scanlines") .sw').click(); assert.equal(await attr('scan'), 'on');
+  await page.locator('.setrow:has-text("CRT scanlines") .sw').click(); assert.equal(await attr('scan'), 'off');
+  await page.locator('.setrow:has-text("UI animations") .sw').click(); assert.equal(await attr('motion'), 'off');
+  await page.locator('.setrow:has-text("UI animations") .sw').click(); assert.equal(await attr('motion'), 'on');
+  await shot(page, '24-effects');
+
+  // Layout: dock + menu bar
+  await page.getByRole('tab', { name: /Dock & menu bar/ }).click();
+  await page.selectOption('.setrow:has-text("Navigation style") select', 'dock');
+  await page.waitForSelector('.dock .dock-item'); assert.ok(await page.locator('.dock').isVisible()); assert.ok(await page.locator('.side').isHidden());
+  await page.locator('.setrow:has-text("Show labels") .sw').click(); await page.waitForSelector('.dock-item small');
+  await page.locator('.dock').hover(); await shot(page, '25-dock');
+  await page.getByRole('button', { name: 'Home', exact: true }).click(); await page.waitForSelector('.widgets');
+  await page.getByRole('button', { name: 'Categories', exact: true }).click(); await page.waitForSelector('.modal-sheet .cats'); await page.keyboard.press('Escape');
+  assert.ok(await page.locator('.barclock').isVisible());
+
+  // Widgets: home page, live TOTP code, hide / reorder
+  assert.ok(await page.locator('.widget').count() >= 8);
+  await page.waitForSelector('.widget .totp-tile .wcode:not(:has-text("------"))');
+  assert.match(await page.textContent('.widget .totp-tile .wcode'), /^\d{3} \d{3}$/);
+  await shot(page, '26-home');
+  await page.locator('.dock-item[aria-label="Settings"]').click(); await page.getByRole('tab', { name: /Widgets/ }).click();
+  await page.getByRole('switch', { name: 'Show Quick generator' }).click();
+  await page.getByRole('button', { name: 'Move down Clock & date' }).click();
+  await page.getByRole('button', { name: 'Home', exact: true }).click(); await page.waitForSelector('.widgets');
+  assert.equal(await page.locator('.widget[aria-label="Quick generator"]').count(), 0);
+  assert.equal(await page.locator('.widget').first().getAttribute('aria-label'), 'Vault health');
+
+  // start page + persistence across lock, and the lock screen keeps the look
+  await page.locator('.dock-item[aria-label="Settings"]').click(); await page.getByRole('tab', { name: /Dock & menu bar/ }).click();
+  await page.selectOption('.setrow:has-text("Start page") select', 'home');
+  await page.getByRole('button', { name: '🔒 Lock', exact: true }).click(); await page.waitForSelector('#upw');
+  assert.equal(await cssv('--accent'), '#8b7dff'); assert.equal(await attr('icons'), 'neon');   // lock screen already looks the way you set it
+  await page.reload(); await page.waitForSelector('#upw'); assert.equal(await cssv('--accent'), '#8b7dff');
+  await page.fill('#upw', MASTER); await page.click('button[type=submit]');
+  await page.waitForSelector('#boot');                                    // boot animation (motion allowed in this context)
+  await shot(page, '27-boot');
+  await page.locator('#boot').click(); await page.waitForSelector('#boot', { state: 'detached' });
+  await page.waitForSelector('.widgets');                                 // start page = Home
+  assert.equal(await attr('nav'), 'dock'); assert.equal(await attr('bg'), 'wallpaper'); assert.equal(await attr('anim'), 'bounce');
+
+  // Surprise me + reset
+  await page.locator('.dock-item[aria-label="Settings"]').click(); await page.getByRole('tab', { name: /Appearance/ }).click();
+  await page.getByRole('button', { name: /Surprise me/ }).click(); await page.waitForSelector('text=New look');
+  await page.getByRole('button', { name: 'Reset appearance' }).click(); await page.getByRole('button', { name: 'Reset', exact: true }).click();
+  await page.waitForFunction(() => document.documentElement.dataset.icons === 'vivid');
+  assert.equal(await cssv('--accent'), '#2fe6d0');
+  assert.deepEqual(problems, []);
+  await ctx.close();
 });

@@ -1,7 +1,7 @@
 /* Vault views: item list, detail panel, editor, QR share, recovery kit. */
 
 import { h, clear, modal, toast, confirmDialog, copyText, download } from './dom.js';
-import { newItem, TYPES, matches, totpValid, MAX_ATTACHMENT, MAX_ATTACHMENTS_PER_ITEM } from './vault.js';
+import { newItem, TYPES, matches, totpValid, MAX_ATTACHMENT, MAX_ATTACHMENTS_PER_ITEM, keyLabel, keyIsSecret, describeValue, currentValue } from './vault.js';
 import { TYPE_META, TEMPLATES, isSecretField, MAX_CUSTOM, daysUntil, wifiQRString } from './templates.js';
 import { estimate, crackTime } from './strength.js';
 import { generatePassword, generatePassphrase } from './generator.js';
@@ -12,10 +12,11 @@ import { fmtDate, hostOf, safeHref } from './util.js';
 
 export const TYPE_ICON = Object.fromEntries(Object.entries(TYPE_META).map(([k, m]) => [k, m.icon]));
 
-export function avatar(name) {
+export function avatar(name, type) {
   const n = (name || '?').trim() || '?';
   let hash = 0; for (const c of n) hash = (hash * 31 + c.codePointAt(0)) >>> 0;
-  const a = h('div', { class: 'avatar', 'aria-hidden': 'true' }, Array.from(n)[0].toUpperCase());
+  const useIcon = type && TYPE_ICON[type] && document.documentElement.dataset.avatar === 'icon';
+  const a = h('div', { class: 'avatar', 'aria-hidden': 'true' }, useIcon ? h('span', { class: 'icn', text: TYPE_ICON[type] }) : Array.from(n)[0].toUpperCase());
   a.style.background = `hsl(${hash % 360} 52% 38%)`;
   return a;
 }
@@ -52,13 +53,14 @@ export function filterItems(ctx) {
   let items = S.view === 'trash' ? store.trashed() : store.active();
   const v = S.view;
   if (v === 'fav') items = items.filter((i) => i.favorite);
+  else if (v === 'conflicts') items = items.filter((i) => (i.conflicts || []).length);
   else if (v in TYPE_META) items = items.filter((i) => i.type === v);
   else if (v.startsWith('tag:')) items = items.filter((i) => (i.tags || []).includes(v.slice(4)));
   if (S.q) items = items.filter((i) => matches(i, S.q));
   return items.sort((a, b) => (b.favorite - a.favorite) || a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
 }
 
-const TITLES = { all: 'All items', fav: 'Favorites', trash: 'Trash', ...Object.fromEntries(Object.entries(TYPE_META).map(([k, m]) => [k, m.plural])) };
+const TITLES = { all: 'All items', fav: 'Favorites', trash: 'Trash', conflicts: 'Needs review', ...Object.fromEntries(Object.entries(TYPE_META).map(([k, m]) => [k, m.plural])) };
 
 export function renderVaultView(ctx) {
   const { S, store } = ctx;
@@ -87,7 +89,7 @@ function emptyState(ctx, items) {
 function itemRow(ctx, it) {
   const sub = it.type === 'login' ? (it.username || hostOf(it.url)) : it.type === 'card' ? '•••• ' + (it.card.number || '').replace(/\D/g, '').slice(-4) : TEMPLATES[it.type] ? ((it.fields || {})[TEMPLATES[it.type].sub] || (it.notes || '').split('\n')[0].slice(0, 60)) : (it.notes || '').split('\n')[0].slice(0, 60);
   return h('button', { class: 'item' + (ctx.S.sel === it.id ? ' on' : ''), role: 'option', 'aria-selected': String(ctx.S.sel === it.id), on: { click: () => { ctx.S.sel = it.id; ctx.refresh(); } } },
-    avatar(it.name), h('div', { class: 't' }, h('b', { text: it.name || '(untitled)' }), h('small', { text: sub })), (it.attachments || []).length ? h('span', { class: 'clip', text: '📎', title: it.attachments.length + ' attachment(s)' }) : null, it.favorite ? h('span', { class: 'star', text: '★', 'aria-label': 'Favorite' }) : null);
+    avatar(it.name, it.type), h('div', { class: 't' }, h('b', { text: it.name || '(untitled)' }), h('small', { text: sub })), (it.attachments || []).length ? h('span', { class: 'clip', text: '📎', title: it.attachments.length + ' attachment(s)' }) : null, it.favorite ? h('span', { class: 'star', text: '★', 'aria-label': 'Favorite' }) : null);
 }
 
 /* ---------- detail ---------- */
@@ -133,10 +135,11 @@ function detailPanel(ctx, it) {
         h('button', { class: 'btn sm' + (it.favorite ? ' primary' : ''), 'aria-pressed': String(it.favorite), on: { click: async () => { await store.update(it.id, { favorite: !it.favorite }); ctx.refresh(); } } }, it.favorite ? '★ Favorite' : '☆ Favorite'),
         it.type === 'network' && (it.fields || {}).ssid ? h('button', { class: 'btn sm', on: { click: () => wifiModal(ctx, it) } }, '📶 Wi-Fi QR') : null,
         h('button', { class: 'btn sm', on: { click: () => shareItem(ctx, it) } }, '▦ Seal as QR'),
-        h('button', { class: 'btn sm', on: { click: async () => { const c = newItem(it.type, { ...structuredClone(it), id: undefined, name: it.name + ' (copy)', history: [], created: Date.now(), updated: Date.now() }); c.id = newItem().id; await store.add(c); ctx.S.sel = c.id; toast('Duplicated'); ctx.refresh(); } } }, '⎘ Duplicate'),
+        h('button', { class: 'btn sm', on: { click: async () => { const c = newItem(it.type, { ...structuredClone(it), id: undefined, name: it.name + ' (copy)', history: [], created: Date.now(), updated: Date.now() }); c.id = newItem().id; await store.add(c); ctx.showItem(c.id); toast('Duplicated'); } } }, '⎘ Duplicate'),
         h('button', { class: 'btn danger sm', on: { click: async () => { await store.trash(it.id); ctx.S.sel = null; toast('Moved to trash'); ctx.refresh(); } } }, '🗑 Delete')]);
 
   const rows = [];
+  if ((it.conflicts || []).length && !trashed) rows.push(h('div', { class: 'note warn conflict-banner', role: 'alert' }, '⚠ Edited on two devices: ' + it.conflicts.length + ' value' + (it.conflicts.length > 1 ? 's' : '') + ' differ. The newest was kept and the other is saved. ', h('button', { class: 'linkbtn', on: { click: () => conflictModal(ctx, it) } }, 'Review')));
   if (it.type === 'login') {
     rows.push(field('Username', it.username, { copy: true, ctx }));
     rows.push(field('Password', it.password, { secret: true, copy: true, ctx, extra: undefined }));
@@ -161,9 +164,33 @@ function detailPanel(ctx, it) {
   if (nrev || nhist) rows.push(h('div', { class: 'f' }, h('div', { class: 'k', text: 'History' }), h('div', { class: 'v' }, h('button', { class: 'linkbtn', on: { click: () => historyModal(ctx, it) } }, [nrev ? `${nrev} earlier version${nrev > 1 ? 's' : ''}` : null, nhist ? `${nhist} previous password${nhist > 1 ? 's' : ''}` : null].filter(Boolean).join(' · ')))));
   rows.push(h('div', { class: 'f' }, h('div', { class: 'k', text: 'Updated' }), h('div', { class: 'v hint', text: `${fmtDate(it.updated)} · created ${fmtDate(it.created)}${it.type === 'login' && it.password ? ' · password changed ' + fmtDate(it.pwChanged) : ''}` })));
 
-  const out = h('div', null, h('div', { class: 'detail-head' }, avatar(it.name), h('div', null, h('h2', { text: it.name || '(untitled)' }), h('span', { class: 'chip', text: TYPE_ICON[it.type] + ' ' + TYPES[it.type] }))), actions, rows);
+  const out = h('div', null, h('div', { class: 'detail-head' }, avatar(it.name, it.type), h('div', null, h('h2', { text: it.name || '(untitled)' }), h('span', { class: 'chip' }, h('span', { class: 'icn', text: TYPE_ICON[it.type] }), ' ' + TYPES[it.type]))), actions, rows);
   currentItem = null;
   return out;
+}
+
+export function conflictModal(ctx, it0) {
+  const body = h('div');
+  const draw = () => {
+    const it = ctx.store.get(it0.id);
+    if (!it || !(it.conflicts || []).length) { closeConflict(); return; }
+    clear(body).append(h('p', { class: 'hint', text: 'This item was changed on two devices. VaultManager kept the newest value of each field; the other value is shown here so nothing is lost.' }),
+      it.conflicts.map((c) => {
+        const secret = keyIsSecret(it, c.key); let shown = !secret;
+        const mk = (text) => { const v = h('div', { class: 'cval mono', text: shown ? text : '••••••••' }); return v; };
+        const cur = describeValue(currentValue(it, c.key)), oth = describeValue(c.value);
+        const curEl = mk(cur), othEl = mk(oth);
+        const eye = secret ? h('button', { class: 'btn sm ghost', on: { click: () => { shown = !shown; curEl.textContent = shown ? cur : '••••••••'; othEl.textContent = shown ? oth : '••••••••'; } } }, '👁 Show / hide') : null;
+        return h('div', { class: 'conf' }, h('div', { class: 'row wrap' }, h('b', { text: keyLabel(it, c.key) }), eye),
+          h('div', { class: 'grid2' }, h('div', null, h('p', { class: 'lbl', text: 'Kept (newest)' }), curEl), h('div', null, h('p', { class: 'lbl', text: 'Other version · ' + fmtDate(c.at) }), othEl)),
+          h('div', { class: 'row wrap' }, h('button', { class: 'btn sm', on: { click: async () => { await ctx.store.resolveConflict(it.id, c.id, 'keep'); ctx.refresh(); draw(); } } }, '✓ Keep current'),
+            h('button', { class: 'btn sm primary', on: { click: async () => { await ctx.store.resolveConflict(it.id, c.id, 'other'); ctx.refresh(); draw(); } } }, '↩ Use the other version')));
+      }));
+  };
+  let closeConflict = () => {};
+  const m = modal({ title: 'Review conflicts', sub: it0.name, wide: true, body, actions: [{ label: 'Close' }] });
+  closeConflict = m.close;
+  draw();
 }
 
 function templateRow(ctx, it, f) {
@@ -315,7 +342,7 @@ export function editItem(ctx, item, type = 'login') {
       for (const id of removed) await store.removeAttachment(it.id, id);
       for (const a of staged) await store.addAttachment(it.id, a);
     } catch (e) { toast(e.message, 'err', 7000); }
-    ctx.S.sel = it.id; toast(isNew ? 'Saved to your vault' : 'Changes saved'); ctx.refresh();
+    ctx.showItem(it.id); toast(isNew ? 'Saved to your vault' : 'Changes saved');
   };
   modal({ title: (isNew ? 'New ' : 'Edit ') + TYPES[it.type].toLowerCase(), body: h('div', null, body), actions: [{ label: 'Cancel' }, { label: 'Save', kind: 'primary', onClick: save }], wide: false });
 }
@@ -335,7 +362,7 @@ function tplInput(ctx, it, f) {
 }
 
 export function newItemMenu(ctx) {
-  modal({ title: 'Choose a category', sub: 'Every category can also hold attachments, notes, tags and custom fields', body: h('div', { class: 'checks cats' }, Object.entries(TYPES).map(([k, label]) => h('button', { class: 'btn', style: null, on: { click: () => { ctx.closeModals(); editItem(ctx, null, k); } } }, TYPE_ICON[k] + ' ' + label))), actions: [{ label: 'Cancel' }] });
+  modal({ title: 'Choose a category', sub: 'Every category can also hold attachments, notes, tags and custom fields', body: h('div', { class: 'checks cats' }, Object.entries(TYPES).map(([k, label]) => h('button', { class: 'btn', style: null, on: { click: () => { ctx.closeModals(); editItem(ctx, null, k); } } }, h('span', { class: 'icn', text: TYPE_ICON[k] }), ' ' + label))), actions: [{ label: 'Cancel' }] });
 }
 
 /* ---------- print helper ---------- */

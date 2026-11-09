@@ -68,7 +68,7 @@ export function renderHealth(ctx) {
   const rep = health(ctx.store.items);
   const color = rep.score >= 80 ? 'var(--accent)' : rep.score >= 50 ? 'var(--warn)' : 'var(--danger)';
   const ring = h('div', { class: 'ring' }, h('span', { text: String(rep.score) })); ring.style.setProperty('--p', rep.score); ring.style.setProperty('--c', color);
-  const row = (it, sub) => h('div', { class: 'hl' }, avatar(it.name), h('div', { class: 't' }, h('b', { text: it.name }), h('small', { text: sub || it.username || hostOf(it.url) })), h('button', { class: 'btn sm', on: { click: () => { ctx.S.sel = it.id; ctx.go('all'); } } }, 'Open'));
+  const row = (it, sub) => h('div', { class: 'hl' }, avatar(it.name, it.type), h('div', { class: 't' }, h('b', { text: it.name }), h('small', { text: sub || it.username || hostOf(it.url) })), h('button', { class: 'btn sm', on: { click: () => { ctx.S.sel = it.id; ctx.go('all'); } } }, 'Open'));
   const section = (title, count, desc, rows) => h('div', { class: 'panel pad' }, h('h3', null, title + ' ', h('span', { class: 'chip ' + (count ? 'bad' : 'accent'), text: count ? String(count) : '✓ none' })), h('p', { class: 'hint', text: desc }), rows);
   return page('Vault health', 'Checked locally — passwords never leave this device. (No online breach lookup: that would send data off-device.)',
     h('div', { class: 'panel pad score' }, ring, h('div', null, h('b', { text: rep.total ? `${rep.total} login${rep.total > 1 ? 's' : ''} checked` : 'No logins to check yet' }), h('p', { class: 'hint', text: 'Fix weak and reused passwords first: swap each for a unique generated one.' }))),
@@ -179,7 +179,7 @@ function openTab(ctx) {
         try { const j = JSON.parse(text); if (j && j.vm === 1 && j.item) item = sanitiseItem(j.item); } catch { /* plain text */ }
         if (item) {
           out.append(h('div', { class: 'note', text: 'Opened a VaultManager item.' }), h('div', { class: 'kv' }, h('span', { text: 'Name' }), h('b', { text: item.name }), h('span', { text: 'Type' }), h('b', { text: item.type }), item.username ? [h('span', { text: 'Username' }), h('b', { text: item.username })] : null, item.url ? [h('span', { text: 'Website' }), h('b', { text: item.url })] : null),
-            h('div', { class: 'row wrap', style: null }, h('button', { class: 'btn primary', on: { click: async () => { await ctx.store.add(item); ctx.S.sel = item.id; toast('Added to your vault'); ctx.go('all'); } } }, '＋ Add to my vault')));
+            h('div', { class: 'row wrap', style: null }, h('button', { class: 'btn primary', on: { click: async () => { await ctx.store.add(item); ctx.showItem(item.id); toast('Added to your vault'); } } }, '＋ Add to my vault')));
         } else {
           const pre = h('div', { class: 'genout', text: text });
           out.append(h('div', { class: 'note', text: `Opened (v${info.version}, ${fmtInt(info.iterations)} rounds).` }), pre, h('div', { class: 'row wrap' }, h('button', { class: 'btn sm', on: { click: () => copyText(text, 'Copied', ctx.store.settings.clipboard) } }, '⧉ Copy'), h('button', { class: 'btn sm', on: { click: () => { clear(out); payload.value = ''; pw.value = ''; } } }, 'Purge from screen')));

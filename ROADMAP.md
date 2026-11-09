@@ -20,8 +20,8 @@ This repository is the **test bench**. Every feature is being proven here, in th
 
 Sandbox note: building / signing Windows, macOS, iOS and Android packages needs those platforms' toolchains and developer accounts; I can scaffold the Tauri project and CI, but signing and store submission happen on your side.
 
-## Status (v0.4.0)
-Done and tested: 13 categories (logins, notes, cards, apps, Wi-Fi / network, computer accounts, shopping, insurance, lockers, travel, ID, bank, server) + custom fields · expiry checks · Beam device-to-device sync · encrypted vault · generator · TOTP · vault health · QR sealing + paper backup · import / export (Bitwarden, KeePassXC, Chrome, …) · recovery key · attachments · version history · audit trail · encrypted sync (file + secret GitHub gist) · passkey unlock (WebAuthn PRF) · tabbed settings · installable offline PWA.
+## Status (v0.5.0)
+Done and tested: field-level sync merge with conflict review · look & feel (appearance, effects, dock, widgets) · 13 categories (logins, notes, cards, apps, Wi-Fi / network, computer accounts, shopping, insurance, lockers, travel, ID, bank, server) + custom fields · expiry checks · Beam device-to-device sync · encrypted vault · generator · TOTP · vault health · QR sealing + paper backup · import / export (Bitwarden, KeePassXC, Chrome, …) · recovery key · attachments · version history · audit trail · encrypted sync (file + secret GitHub gist) · passkey unlock (WebAuthn PRF) · tabbed settings · installable offline PWA.
 
 ## Things that change when we move from "test site" to "final app"
 | Topic | Test bench (GitHub Pages) | Final stand-alone build |
@@ -42,7 +42,8 @@ Done and tested: 13 categories (logins, notes, cards, apps, Wi-Fi / network, com
 Add your wishes here — this list is the source of truth while testing.
 - [ ] Browser-extension autofill (PC) and OS autofill (mobile)
 - [ ] Optional breach check (k-anonymity, opt-in, off by default — it needs the network)
-- [ ] Sync to a user-chosen cloud folder / WebDAV; conflict viewer for same-item edits
+- [ ] Sync to a user-chosen cloud folder / WebDAV
+- [ ] Photo wallpapers (ulyOS fetches Wikimedia images; VaultManager stays offline, so only the 12 drawn scenes for now; uploading your own image is a candidate)
 - [ ] Shared vaults / emergency access
 - [ ] Secure notes with Markdown, custom fields, folders
 - [ ] Independent security audit before the 1.0 release

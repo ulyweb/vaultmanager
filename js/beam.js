@@ -242,7 +242,7 @@ export function renderBeam(ctx) {
     if (!st.mine || !st.peerResult) { if (st.mine) progress('Merged. Waiting for the other device to finish…'); return; }
     const r = st.mine, p = st.peerResult;
     cfg.last = { at: Date.now(), ok: true, msg: 'Beam: ' + `${r.added} added, ${r.updated} updated, ${r.removed} removed` }; store.save();
-    show(h('div', { class: 'panel pad' }, h('div', { class: 'note', text: '✓ Sync complete — both vaults now match.' }),
+    show(h('div', { class: 'panel pad' }, h('div', { class: 'note', text: '✓ Sync complete — both vaults now match.' }), r.conflicts ? h('div', { class: 'note warn', text: '⚠ ' + r.conflicts + ' value(s) were edited on both devices. The newest was kept; review the other versions under “Needs review”.' }) : null,
       h('div', { class: 'kv' }, h('span', { text: 'Received here' }), h('b', { text: `${r.added} added · ${r.updated} updated · ${r.removed} removed · ${r.attachments} attachment(s)` }), h('span', { text: 'On the other device' }), h('b', { text: p.ok ? p.msg : 'failed: ' + p.msg })),
       h('div', { class: 'row wrap' }, h('button', { class: 'btn primary', on: { click: () => { const l = link; link = null; if (l) l.close(); ctx.go('all'); } } }, 'Done'), h('button', { class: 'btn', on: { click: () => { const l = link; link = null; if (l) l.close(); cleanupState(); home(); } } }, 'Beam again'))));
   }

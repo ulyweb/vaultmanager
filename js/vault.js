@@ -7,6 +7,7 @@ import { estimate } from './strength.js';
 import { parseTotp } from './totp.js';
 import { memoryBlobs } from './blobs.js';
 import { APP_VERSION } from './version.js';
+import { normalizeLook, LOOK_DEFAULTS } from './look.js';
 import { TYPE_META, TYPE_KEYS, TEMPLATES, isSecretField, MAX_CUSTOM, daysUntil } from './templates.js';
 
 export const TYPES = Object.fromEntries(Object.entries(TYPE_META).map(([k, m]) => [k, m.label]));
@@ -22,18 +23,81 @@ export const DEFAULT_SETTINGS = {
   autolock: 5, clipboard: 30, theme: 'auto', lockOnHide: false, trashDays: 30, logReveal: true,
   gen: { mode: 'password', length: 20, lower: true, upper: true, digits: true, symbols: true, noAmbiguous: false, words: 5, separator: '-', capitalize: false, number: false },
   sync: { method: 'off', token: '', gistId: '', passphrase: '', auto: true, attachments: true, last: null },
+  look: LOOK_DEFAULTS,
 };
 
 export function newItem(type = 'login', init = {}) {
   const now = Date.now();
   return {
     id: uid(), type, name: '', username: '', password: '', url: '', totp: '', notes: '', tags: [], favorite: false,
-    card: { holder: '', number: '', expiry: '', cvv: '', pin: '' }, fields: {}, custom: [], attachments: [], revisions: [],
+    card: { holder: '', number: '', expiry: '', cvv: '', pin: '' }, fields: {}, custom: [], attachments: [], revisions: [], ft: {}, sv: {}, attRemoved: {}, conflicts: [], cr: {},
     history: [], created: now, updated: now, pwChanged: now, deleted: 0, ...init,
   };
 }
 
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+
+/* ---------- field-level merge (used by sync) ----------
+   Every field remembers when it was last edited (ft) and the value-time it had at the last merge (sv).
+   Two devices that edit DIFFERENT fields of one item both keep their changes. If both edited the SAME field
+   since they last merged, the newest wins deterministically (both devices pick the same winner) and the other
+   value is kept as a conflict for the user to review. */
+const MERGE_KEYS = ['name', 'username', 'url', 'password', 'totp', 'notes', 'tags', 'card', 'custom', 'favorite', 'deleted'];
+const NO_CONFLICT = new Set(['favorite', 'deleted']);
+const keysOf = (it) => [...MERGE_KEYS, ...Object.keys(it.fields || {}).map((k) => 'f:' + k)];
+const getKey = (it, k) => (k.startsWith('f:') ? (it.fields || {})[k.slice(2)] ?? '' : it[k]);
+const setKey = (it, k, v) => { if (k.startsWith('f:')) { it.fields = it.fields || {}; if (v === '' || v == null) delete it.fields[k.slice(2)]; else it.fields[k.slice(2)] = v; } else it[k] = v; };
+const ftOf = (it, k) => (it.ft && it.ft[k] !== undefined ? it.ft[k] : it.sv && it.sv[k] !== undefined ? it.sv[k] : it.updated || 0);
+const svOf = (it, k) => (it.sv && it.sv[k] !== undefined ? it.sv[k] : null);   // null: never merged, so nothing counts as "edited since"
+export function keyLabel(it, k) {
+  if (k.startsWith('f:')) { const f = ((TEMPLATES[it.type] || {}).fields || []).find((x) => x.k === k.slice(2)); return f ? f.l : k.slice(2); }
+  return ({ name: 'Name', username: 'Username', url: 'Website', password: 'Password', totp: 'One-time code secret', notes: 'Notes', tags: 'Tags', card: 'Card details', custom: 'Custom fields' })[k] || k;
+}
+export function keyIsSecret(it, k) {
+  if (['password', 'totp', 'card'].includes(k)) return true;
+  if (k.startsWith('f:')) { const f = ((TEMPLATES[it.type] || {}).fields || []).find((x) => x.k === k.slice(2)); return !!f && isSecretField(f); }
+  return false;
+}
+export function describeValue(v) {
+  if (Array.isArray(v)) return v.map((x) => (typeof x === 'string' ? x : x && x.label !== undefined ? x.label + ': ' + (x.secret ? '••••' : x.value) : JSON.stringify(x))).join(', ') || '(empty)';
+  if (v && typeof v === 'object') return Object.entries(v).filter(([, x]) => x).map(([k, x]) => k + ': ' + x).join(' · ') || '(empty)';
+  return String(v ?? '') || '(empty)';
+}
+export const currentValue = (it, k) => getKey(it, k);
+export const conflictId = (key, value) => { let h = 5381; const t = key + '\u0001' + JSON.stringify(value); for (let i = 0; i < t.length; i++) h = ((h << 5) + h + t.charCodeAt(i)) >>> 0; return h.toString(16).padStart(8, '0'); };
+
+export function mergeItem(l, r) {
+  l.ft = l.ft || {}; l.sv = l.sv || {}; l.conflicts = l.conflicts || []; l.cr = l.cr || {}; l.attRemoved = l.attRemoved || {};
+  const before = {}; for (const k of TRACKED) before[k] = structuredClone(l[k]);
+  const changed = [], found = [];
+  for (const k of new Set([...keysOf(l), ...keysOf(r)])) {
+    const lv = getKey(l, k), rv = getKey(r, k), lt = ftOf(l, k), rt = ftOf(r, k);
+    if (same(lv, rv)) { l.ft[k] = Math.max(lt, rt); continue; }
+    const lsv = svOf(l, k), rsv = svOf(r, k);
+    const bothEdited = lsv !== null && lt > lsv && rsv !== null && rt > rsv;
+    const remoteWins = rt > lt || (rt === lt && JSON.stringify(rv) > JSON.stringify(lv));
+    if (bothEdited && !NO_CONFLICT.has(k)) { const loser = remoteWins ? lv : rv; found.push({ id: conflictId(k, loser), key: k, value: structuredClone(loser), at: remoteWins ? lt : rt }); }
+    if (remoteWins) { setKey(l, k, structuredClone(rv)); l.ft[k] = rt; changed.push(k); } else l.ft[k] = lt;
+  }
+  // attachments: union of both sides, minus anything either side removed
+  for (const [id, t] of Object.entries(r.attRemoved || {})) if (!(l.attRemoved[id] >= t)) l.attRemoved[id] = t;
+  const byId = new Map(); for (const a of [...(l.attachments || []), ...(r.attachments || [])]) if (!byId.has(a.id)) byId.set(a.id, a);
+  const attBefore = (l.attachments || []).map((a) => a.id).join();
+  l.attachments = [...byId.values()].filter((a) => !l.attRemoved[a.id]);
+  if (l.attachments.map((a) => a.id).join() !== attBefore) changed.push('attachments');
+  // conflicts: union, minus the ones either side has resolved
+  for (const [id, t] of Object.entries(r.cr || {})) if (!(l.cr[id] >= t)) l.cr[id] = t;
+  const conf = new Map(); for (const c of [...l.conflicts, ...(r.conflicts || []), ...found]) if (!l.cr[c.id] && !conf.has(c.id)) conf.set(c.id, c);
+  const prevConf = l.conflicts.map((c) => c.id).sort().join();
+  l.conflicts = [...conf.values()].slice(0, 20);
+  if (changed.some((k) => TRACKED.includes(k) || k.startsWith('f:'))) {
+    const keysChanged = [...new Set(changed.map((k) => (k.startsWith('f:') ? 'fields' : k)).filter((k) => TRACKED.includes(k)))];
+    if (keysChanged.length) l.revisions = [{ at: l.updated, changed: keysChanged, snap: before }, ...(l.revisions || [])].slice(0, REVISIONS_MAX);
+  }
+  l.updated = Math.max(l.updated || 0, r.updated || 0);
+  for (const k of new Set([...keysOf(l), ...keysOf(r)])) l.sv[k] = l.ft[k] !== undefined ? l.ft[k] : ftOf(l, k);
+  return { changed, newConflicts: l.conflicts.map((c) => c.id).sort().join() !== prevConf ? found.length : 0 };
+}
 
 export class VaultStore {
   constructor(storage, key = KEY, blobs = memoryBlobs()) {
@@ -65,7 +129,8 @@ export class VaultStore {
     data.settings = { ...structuredClone(DEFAULT_SETTINGS), ...(data.settings || {}) };
     data.settings.gen = { ...DEFAULT_SETTINGS.gen, ...(data.settings.gen || {}) };
     data.settings.sync = { ...DEFAULT_SETTINGS.sync, ...(data.settings.sync || {}) };
-    for (const i of data.items) { i.attachments = i.attachments || []; i.revisions = i.revisions || []; i.history = i.history || []; i.fields = i.fields || {}; i.custom = i.custom || []; }
+    data.settings.look = normalizeLook(data.settings.look || {});
+    for (const i of data.items) { i.attachments = i.attachments || []; i.revisions = i.revisions || []; i.history = i.history || []; i.fields = i.fields || {}; i.custom = i.custom || []; i.ft = i.ft || {}; i.sv = i.sv || {}; i.attRemoved = i.attRemoved || {}; i.conflicts = i.conflicts || []; i.cr = i.cr || {}; }
     return data;
   }
 
@@ -138,7 +203,18 @@ export class VaultStore {
   update(id, patch) {
     const it = this.get(id);
     if (!it) return Promise.resolve();
+    /* sync bookkeeping belongs to the store: a caller holding a stale copy of the item must never overwrite it */
+    patch = { ...patch }; for (const k of ['id', 'ft', 'sv', 'attRemoved', 'conflicts', 'cr', 'attachments', 'revisions', 'history', 'created', 'pwChanged', 'deleted']) delete patch[k];
     const changed = TRACKED.filter((k) => patch[k] !== undefined && !same(patch[k], it[k]));
+    const touched = [];   // field-level change times for sync merging
+    for (const k of changed) {
+      if (k === 'fields') for (const fk of new Set([...Object.keys(it.fields || {}), ...Object.keys(patch.fields || {})])) { if (!same((it.fields || {})[fk] ?? '', patch.fields[fk] ?? '')) touched.push('f:' + fk); }
+      else touched.push(k);
+    }
+    if (patch.favorite !== undefined && patch.favorite !== it.favorite) touched.push('favorite');
+    const now = Date.now();
+    if (touched.length) this._seed(it);
+    for (const k of touched) { if (it.sv[k] === undefined && it.ft[k] !== undefined) it.sv[k] = it.ft[k]; else if (it.sv[k] === undefined) it.sv[k] = it.updated; it.ft[k] = now; }
     if (changed.length) {
       const snap = {}; for (const k of TRACKED) snap[k] = structuredClone(it[k]);
       it.revisions = [{ at: it.updated, changed, snap }, ...(it.revisions || [])].slice(0, REVISIONS_MAX);
@@ -160,8 +236,11 @@ export class VaultStore {
     return this.update(id, structuredClone(rev.snap));
   }
 
-  trash(id) { const it = this.get(id); if (it) { it.deleted = Date.now(); it.updated = Date.now(); this.log('item', 'Moved “' + it.name + '” to trash'); } return this.save(); }
-  restore(id) { const it = this.get(id); if (it) { it.deleted = 0; it.updated = Date.now(); this.log('item', 'Restored “' + it.name + '” from trash'); } return this.save(); }
+  /* first edit of an item: every field gets a baseline edit-time, so untouched fields never look newer than they are */
+  _seed(it) { if (!Object.keys(it.ft).length) for (const k of keysOf(it)) it.ft[k] = it.sv[k] !== undefined ? it.sv[k] : it.updated; }
+  _touch(it, k) { this._seed(it); if (it.sv[k] === undefined) it.sv[k] = it.ft[k] !== undefined ? it.ft[k] : it.updated; it.ft[k] = Date.now(); }
+  trash(id) { const it = this.get(id); if (it) { this._touch(it, 'deleted'); it.deleted = Date.now(); it.updated = Date.now(); this.log('item', 'Moved “' + it.name + '” to trash'); } return this.save(); }
+  restore(id) { const it = this.get(id); if (it) { this._touch(it, 'deleted'); it.deleted = 0; it.updated = Date.now(); this.log('item', 'Restored “' + it.name + '” from trash'); } return this.save(); }
 
   async _drop(items) {
     for (const it of items) { this.data.tombstones[it.id] = Date.now(); for (const a of it.attachments || []) await this.blobs.del(this._bk(a.id)); }
@@ -189,6 +268,23 @@ export class VaultStore {
     await this.session.changePassword(newPassword);
     this.log('security', 'Master password changed (new salt, master key re-wrapped)', 'warn');
     return this.save();
+  }
+
+  /* ----- conflicts (same field edited on two devices) ----- */
+  conflictItems() { return this.active().filter((i) => (i.conflicts || []).length); }
+  conflictCount() { return this.conflictItems().reduce((n, i) => n + i.conflicts.length, 0); }
+  /* choice: 'keep' (current value stays) | 'other' (use the other device's value) */
+  async resolveConflict(itemId, confId, choice) {
+    const it = this.get(itemId), c = it && it.conflicts.find((x) => x.id === confId);
+    if (!c) return;
+    it.conflicts = it.conflicts.filter((x) => x.id !== confId); it.cr[confId] = Date.now();
+    if (choice === 'other') {
+      const patch = {};
+      if (c.key.startsWith('f:')) patch.fields = { ...it.fields, [c.key.slice(2)]: c.value }; else patch[c.key] = c.value;
+      if (c.key.startsWith('f:') && (c.value === '' || c.value == null)) delete patch.fields[c.key.slice(2)];
+      await this.update(itemId, patch);
+    } else { it.updated = Date.now(); await this.save(); }
+    this.log('item', `Resolved a sync conflict on “${it.name}” (${choice === 'other' ? 'used the other value' : 'kept the current value'})`);
   }
 
   /* passkey wraps live in the vault record (not in synced data), so passkeys are per device */
@@ -231,6 +327,7 @@ export class VaultStore {
     if (!it) return;
     const meta = it.attachments.find((a) => a.id === attId);
     it.attachments = it.attachments.filter((a) => a.id !== attId);
+    it.attRemoved[attId] = Date.now();
     await this.blobs.del(this._bk(attId));
     it.updated = Date.now();
     if (meta) this.log('item', `Removed attachment “${meta.name}” from “${it.name}”`);
@@ -309,7 +406,7 @@ export class VaultStore {
   /* Merge a remote bundle into this vault: per item the newest `updated` wins, deletions propagate. */
   async applyRemote(bundle) {
     if (!bundle || bundle.format !== 'VaultManager-sync' || !Array.isArray(bundle.items)) throw new Error('This is not a VaultManager sync bundle.');
-    const res = { added: 0, updated: 0, removed: 0, attachments: 0 };
+    const res = { added: 0, updated: 0, removed: 0, attachments: 0, conflicts: 0 };
     const tomb = this.data.tombstones;
     for (const [id, t] of Object.entries(bundle.tombstones || {})) if (/^[0-9a-f]{24}$/.test(id) && Number.isFinite(t) && (!tomb[id] || tomb[id] < t)) tomb[id] = t;
     const local = new Map(this.data.items.map((i) => [i.id, i]));
@@ -322,17 +419,18 @@ export class VaultStore {
       if (!/^[0-9a-f]{24}$/.test(r.id)) continue;
       if (tomb[r.id] && tomb[r.id] >= r.updated) continue;
       const l = local.get(r.id);
-      if (!l) { this.data.items.push(r); local.set(r.id, r); await pullBlobs(r); res.added++; continue; }
-      if (r.updated > l.updated) {
-        const keep = new Set(r.attachments.map((a) => a.id));
-        for (const a of l.attachments) if (!keep.has(a.id)) await this.blobs.del(this._bk(a.id));
-        Object.assign(l, r); await pullBlobs(l); res.updated++;
-      } else if (r.updated === l.updated) await pullBlobs(l);
+      if (!l) { r.sv = { ...r.ft }; for (const k of keysOf(r)) if (r.sv[k] === undefined) r.sv[k] = r.updated; this.data.items.push(r); local.set(r.id, r); await pullBlobs(r); res.added++; continue; }
+      const m = mergeItem(l, r);
+      for (const a of r.attachments) if (l.attRemoved[a.id]) await this.blobs.del(this._bk(a.id));
+      for (const rid of Object.keys(l.attRemoved)) if (!l.attachments.some((a) => a.id === rid)) await this.blobs.del(this._bk(rid));
+      await pullBlobs(l);
+      if (m.changed.length) res.updated++;
+      if (m.newConflicts) { res.conflicts += m.newConflicts; this.log('sync', 'Edited on two devices: “' + l.name + '” — kept the newest value and saved the other for review', 'warn'); }
     }
     const dead = this.data.items.filter((i) => tomb[i.id] && tomb[i.id] >= i.updated);
     if (dead.length) { for (const it of dead) for (const a of it.attachments) await this.blobs.del(this._bk(a.id)); const ids = new Set(dead.map((d) => d.id)); this.data.items = this.data.items.filter((i) => !ids.has(i.id)); res.removed = dead.length; }
     this._pruneTombstones();
-    this.log('sync', `Merged remote changes: ${res.added} added, ${res.updated} updated, ${res.removed} removed, ${res.attachments} attachment(s)`);
+    this.log('sync', `Merged remote changes: ${res.added} added, ${res.updated} updated, ${res.removed} removed, ${res.attachments} attachment(s)${res.conflicts ? ', ' + res.conflicts + ' conflict(s) to review' : ''}`);
     await this.save();
     return res;
   }
@@ -369,6 +467,10 @@ export function sanitiseItem(r, { keepMeta = false, keepAttachments = false } = 
   } else it.attachments = [];
   if (keepMeta) {
     it.id = s(r.id, 40); it.updated = num(r.updated, it.updated); it.deleted = num(r.deleted);
+    const numMap = (o) => Object.fromEntries(Object.entries(o && typeof o === 'object' && !Array.isArray(o) ? o : {}).slice(0, 80).filter(([k, v]) => typeof k === 'string' && k.length < 60 && Number.isFinite(v)));
+    it.ft = numMap(r.ft); it.sv = numMap(r.sv); it.attRemoved = numMap(r.attRemoved); it.cr = numMap(r.cr);
+    if (Array.isArray(r.conflicts)) it.conflicts = r.conflicts.filter((c) => c && typeof c.id === 'string' && /^[0-9a-f]{8}$/.test(c.id) && typeof c.key === 'string' && c.key.length < 60 && JSON.stringify(c.value ?? '').length < 60000).slice(0, 20).map((c) => ({ id: c.id, key: c.key, value: c.value ?? '', at: num(c.at) }));
+    it.favorite = !!r.favorite;
     if (Array.isArray(r.revisions)) it.revisions = r.revisions.filter((v) => v && v.snap && typeof v.snap === 'object').slice(0, REVISIONS_MAX).map((v) => {
       const sn = sanitiseItem(v.snap);
       return { at: num(v.at), changed: Array.isArray(v.changed) ? v.changed.map((x) => s(x, 20)).slice(0, 10) : [], snap: Object.fromEntries(TRACKED.map((k) => [k, sn[k]])) };

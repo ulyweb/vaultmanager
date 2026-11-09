@@ -59,6 +59,8 @@ export function modal({ title, sub, body, actions = [], wide = false, onClose })
     class: 'btn ' + (a.kind || ''), disabled: a.disabled, on: { click: async (e) => { if (a.onClick) { const r = await a.onClick(e, api); if (r !== false && a.close !== false) close(); } else close(); } },
   }, a.label))) : null;
   const sheet = h('div', { class: 'modal-sheet' + (wide ? ' wide' : ''), role: 'dialog', 'aria-modal': 'true', 'aria-label': title }, head, h('div', { class: 'modal-body' }, body), foot);
+  const styles = ['scale', 'slide', 'fade', 'zoom', 'bounce', 'blur', 'flip'], cur = document.documentElement.dataset.anim || 'scale';
+  sheet.dataset.anim = cur === 'random' ? styles[Math.floor(Math.random() * styles.length)] : cur;
   const overlay = h('div', { class: 'modal-overlay', on: { mousedown: (e) => { if (e.target === overlay) close(); } } }, sheet);
   const api = { close, el: sheet, overlay };
   stack.push(api);

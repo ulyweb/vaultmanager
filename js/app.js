@@ -15,13 +15,17 @@ import { syncGist } from './sync.js';
 import { supported as passkeySupported, authenticate as passkeyAuth } from './passkey.js';
 import { wipe } from './crypto.js';
 import { health } from './vault.js';
+import { normalizeLook, applyLook, resolveTheme, loadCosmetic, saveCosmetic } from './look.js';
+import { landscapes } from './landscapes.js';
+import { renderHome } from './widgets.js';
+import { APP_VERSION } from './version.js';
+import { fmtInt } from './util.js';
 
 const root = document.getElementById('app');
 let storage;
 try { storage = window.localStorage; storage.getItem('x'); } catch { storage = null; }
 
 const store = new VaultStore(storage || { _m: new Map(), getItem(k) { return this._m.get(k) ?? null; }, setItem(k, v) { this._m.set(k, v); }, removeItem(k) { this._m.delete(k); } }, undefined, createBlobStore());
-const THEME_KEY = 'vaultmanager.theme';
 
 const ctx = {
   store,
@@ -32,6 +36,8 @@ const ctx = {
   go(view) { ctx.S.view = view; if (view !== 'all' && !isVaultView(view)) ctx.S.sel = null; if (!isVaultView(view)) ctx.S.q = ''; syncSearch(); draw(); window.scrollTo(0, 0); },
   refresh() { draw(); },
   applyTheme, armAutolock, lock, armSync, syncNow,
+  look: () => curLook(), setLook, setTheme,
+  showItem(id) { ctx.S.sel = id; if (!isVaultView(ctx.S.view)) ctx.S.view = 'all'; syncSearch(); draw(); },
   showRecoveryKit(key) { return showRecoveryKit(ctx, key); },
   /* copy a secret, honouring the clipboard-clear setting, and note it (never the value) in the audit trail */
   copySecret(text, label, item, what) {
@@ -46,18 +52,64 @@ const ctx = {
   },
 };
 
-const isVaultView = (v) => ['all', 'fav', 'trash'].includes(v) || v in TYPE_META || v.startsWith('tag:');
+const isVaultView = (v) => ['all', 'fav', 'trash', 'conflicts'].includes(v) || v in TYPE_META || v.startsWith('tag:');
 
-/* ---------- theme ---------- */
+/* ---------- look & feel (theme, accent, effects, layout) ---------- */
+const cosmetic = storage ? loadCosmetic(storage) : null;
+let bootLook = normalizeLook((cosmetic && cosmetic.look) || {}), bootTheme = (cosmetic && cosmetic.theme) || 'auto';   // what the lock screen uses
+const lightMQ = window.matchMedia('(prefers-color-scheme: light)');
+const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+function curLook() { return store.unlocked ? normalizeLook(store.settings.look) : bootLook; }
 function applyTheme() {
-  let t = 'auto';
-  try { t = (store.unlocked && store.settings.theme) || localStorage.getItem(THEME_KEY) || 'auto'; } catch { /* ignore */ }
-  try { localStorage.setItem(THEME_KEY, t); } catch { /* ignore */ }
-  const dark = t === 'dark' || (t === 'auto' && !window.matchMedia('(prefers-color-scheme: light)').matches);
-  document.documentElement.dataset.theme = dark ? 'dark' : 'light';
-  const m = document.querySelector('meta[name=theme-color]'); if (m) m.content = dark ? '#05080d' : '#eef2f6';
+  const setting = store.unlocked ? store.settings.theme : bootTheme, lk = curLook();
+  const theme = resolveTheme(setting, lightMQ.matches);
+  applyLook(lk, theme, landscapes);
+  if (storage) saveCosmetic(storage, setting, lk);
+  bootLook = lk; bootTheme = setting;
+  const m = document.querySelector('meta[name=theme-color]'); if (m) m.content = theme === 'dark' ? '#05080d' : '#eef2f6';
 }
-window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', applyTheme);
+lightMQ.addEventListener('change', applyTheme);
+let lookSaveTimer = null;
+const saveSoon = () => { clearTimeout(lookSaveTimer); lookSaveTimer = setTimeout(() => store.save().catch(() => {}), 500); };
+/* opt.redraw: re-render the page; opt.shell: rebuild top bar / dock too; opt.live: slider drag (no save churn) */
+function setLook(patch, opt = {}) {
+  if (!store.unlocked) return;
+  store.settings.look = normalizeLook({ ...store.settings.look, ...patch });
+  applyTheme(); saveSoon();
+  if (opt.shell) { shell = null; draw(); } else if (opt.redraw) draw(); else if (shell) drawDock();
+}
+function setTheme(v) { store.settings.theme = v; applyTheme(); saveSoon(); }
+
+/* tilt toward the pointer (widgets, sign-in card) */
+document.addEventListener('pointermove', (e) => {
+  const L = curLook(); if (!L.fxTilt || !L.animations || !e.target.closest) return;
+  const el = e.target.closest('.widget, .gate-card'); if (!el) return;
+  const r = el.getBoundingClientRect(), px = (e.clientX - r.left) / r.width - 0.5, py = (e.clientY - r.top) / r.height - 0.5;
+  el.style.setProperty('--rx', (-py * 2 * L.fxTilt).toFixed(2) + 'deg'); el.style.setProperty('--ry', (px * 2 * L.fxTilt).toFixed(2) + 'deg');
+});
+document.addEventListener('pointerleave', (e) => { if (e.target.classList && e.target.matches && e.target.matches('.widget, .gate-card')) { e.target.style.setProperty('--rx', '0deg'); e.target.style.setProperty('--ry', '0deg'); } }, true);
+
+/* unlock animation: a short, skippable log of what actually just happened */
+function showBoot(L, done) {
+  const iter = store.session ? store.session.iterations() : 0, n = store.active().length;
+  const lines = [['VaultManager ' + APP_VERSION, ''], ['Unwrapping master key', 'PBKDF2-SHA256 · ' + fmtInt(iter) + ' rounds ✓'], ['Decrypting vault', 'AES-256-GCM ✓'], ['Verifying integrity tag', '✓'], ['Loading ' + n + ' item' + (n === 1 ? '' : 's'), '✓'], ['Audit trail & auto-lock', 'armed ✓'], ['Ready', '']];
+  const el = h('div', { id: 'boot', role: 'status', 'aria-label': 'Starting' }, lines.map(([a, b], i) => { const l = h('div', { class: 'l' }, '> ', h('b', { text: a }), b ? '  ' + b : ''); l.style.animationDelay = (i * 0.12 / L.animSpeed) + 's'; return l; }), h('div', { class: 'bar' }, h('i')), h('div', { class: 'hint', text: 'Click or press any key to skip' }));
+  document.body.append(el);
+  let finished = false;
+  const finish = () => { if (finished) return; finished = true; el.remove(); window.removeEventListener('keydown', finish, true); done(); };
+  el.addEventListener('click', finish); window.addEventListener('keydown', finish, true);
+  requestAnimationFrame(() => { const i = el.querySelector('.bar i'); if (i) i.style.width = '100%'; });
+  setTimeout(finish, ((lines.length * 0.12 + 0.35) / L.animSpeed) * 1000);
+}
+
+/* the one place every successful unlock ends up */
+function onUnlocked(note) {
+  const L = curLook();
+  ctx.S.view = L.startPage === 'home' ? 'home' : 'all';
+  applyTheme(); armAutolock(); draw();
+  const after = () => { armSync(); if (note === 'recovery') toast('Unlocked with your recovery key — set a new master password in Settings.', 'ok', 7000); };
+  if (L.animations && L.bootAnim && !reducedMotion()) showBoot(L, after); else after();
+}
 
 /* ---------- auto-lock ---------- */
 let idleTimer = null;
@@ -71,7 +123,7 @@ function armAutolock() {
 document.addEventListener('visibilitychange', () => { if (document.hidden && store.unlocked && store.settings.lockOnHide) lock(false, 'Locked because the tab was hidden'); });
 
 function lock(erased, why) {
-  clearTimeout(idleTimer); stopSync();
+  clearTimeout(idleTimer); stopSync(); clearInterval(clockTimer);
   if (store.unlocked && !erased) store.log('security', why || 'Vault locked');
   ctx.runCleanup(); closeAllModals();
   clear(document.getElementById('printArea'));
@@ -100,7 +152,7 @@ async function syncNow(manual = false) {
     const r = await syncGist(store);
     lastFp = fingerprint(); warned = false;
     if (r.pulled && (r.pulled.added || r.pulled.updated || r.pulled.removed)) draw();
-    if (manual) toast('Synced ✓');
+    if (r.pulled && r.pulled.conflicts) toast('Synced — ' + r.pulled.conflicts + ' item value(s) were edited on two devices. See “Needs review”.', 'err', 8000); else if (manual) toast('Synced ✓');
     return { ok: true, summary: r };
   } catch (e) {
     c.last = { at: Date.now(), ok: false, msg: e.message };
@@ -184,7 +236,7 @@ function gateUnlock() {
     try {
       const pk = await passkeyAuth(store.passkeyWraps());
       await store.unlock({ passkey: pk }); wipe(pk.prf);
-      applyTheme(); armAutolock(); draw(); armSync();
+      onUnlocked();
       return;
     } catch (x) { err.textContent = x.message === 'bad-secret' ? 'That passkey did not unlock the vault. Use your master password.' : x.message; }
     pkBtn.disabled = false; pkBtn.textContent = '🔑 Unlock with passkey';
@@ -196,8 +248,7 @@ function gateUnlock() {
     try {
       await store.unlock(mode === 'password' ? { password: p1.input.value } : { recovery: rk.value });
       p1.input.value = ''; rk.value = '';
-      applyTheme(); armAutolock(); draw(); armSync();
-      if (mode === 'recovery') toast('Unlocked with your recovery key — set a new master password in Settings.', 'ok', 7000);
+      onUnlocked(mode === 'recovery' ? 'recovery' : '');
       return;
     } catch (x) {
       err.textContent = x.message === 'bad-secret' ? (mode === 'password' ? 'Wrong master password.' : 'That recovery key does not open this vault.') : x.message === 'locked-out' ? 'Too many wrong attempts. Please wait.' : x.message;
@@ -224,18 +275,55 @@ function drawGate() {
 /* ---------- main shell ---------- */
 let shell = null;
 
-const NAV = [['all', '🗂', 'All items'], ['fav', '★', 'Favorites'], ['trash', '🗑', 'Trash']];
+const NAV = [['home', '🏠', 'Home'], ['all', '🗂', 'All items'], ['fav', '★', 'Favorites'], ['trash', '🗑', 'Trash']];
 const CATS = Object.entries(TYPE_META).map(([k, m]) => [k, m.icon, m.plural]);
 const TOOLS = [['health', '🩺', 'Vault health'], ['gen', '⚡', 'Generator'], ['qr', '▦', 'QR tools'], ['beam', '📡', 'Beam sync'], ['data', '⇅', 'Import & export'], ['settings', '⚙', 'Settings']];
 
 function syncSearch() { if (shell && shell.search.value !== ctx.S.q) shell.search.value = ctx.S.q; }
 
+let clockTimer = null;
+function tickClock() {
+  if (!shell || !shell.clock) return;
+  const L = curLook(), n = new Date();
+  shell.clock.firstChild.textContent = n.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: !L.clock24 });
+  shell.clock.lastChild.textContent = L.dateFmt === 'none' ? '' : n.toLocaleDateString([], L.dateFmt === 'long' ? { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' } : { weekday: 'short', day: 'numeric', month: 'short' });
+}
+
+const DOCK = [['home', '🏠', 'Home'], ['all', '🗂', 'All items'], ['fav', '★', 'Favorites'], ['cats', '🧩', 'Categories'], null, ['health', '🩺', 'Health'], ['gen', '⚡', 'Generator'], ['qr', '▦', 'QR tools'], ['beam', '📡', 'Beam'], null, ['settings', '⚙', 'Settings'], ['new', '＋', 'New item']];
+
+function categoriesModal() {
+  modal({ title: 'Categories', body: h('div', { class: 'checks cats' }, Object.entries(TYPE_META).map(([k, m]) => h('button', { class: 'btn', on: { click: () => { closeAllModals(); ctx.go(k); } } }, h('span', { class: 'icn', text: m.icon }), ' ' + m.plural + ' · ' + store.active().filter((i) => i.type === k).length))), actions: [{ label: 'Close' }] });
+}
+
+function drawDock() {
+  if (!shell || !shell.dock) return;
+  const L = curLook(), hl = health(store.items), attention = hl.weak.length + hl.reused.length + hl.expiring.length;
+  const items = DOCK.map((d) => {
+    if (!d) return h('span', { class: 'dock-sep' });
+    const [id, ic, label] = d;
+    const on = id === 'cats' ? (ctx.S.view in TYPE_META) : ctx.S.view === id;
+    return h('button', { class: 'dock-item' + (on ? ' on' : ''), title: label, 'aria-label': label, 'aria-current': on ? 'page' : null, on: { click: () => (id === 'new' ? newItemMenu(ctx) : id === 'cats' ? categoriesModal() : ctx.go(id)) } },
+      h('span', { class: 'icn', text: ic }), L.dockLabels ? h('small', { text: label }) : null, id === 'health' && attention ? h('span', { class: 'badge', text: String(attention) }) : null);
+  });
+  if (store.conflictCount()) items.splice(3, 0, h('button', { class: 'dock-item' + (ctx.S.view === 'conflicts' ? ' on' : ''), title: 'Needs review', 'aria-label': 'Needs review', on: { click: () => ctx.go('conflicts') } }, h('span', { class: 'icn', text: '⚠' }), L.dockLabels ? h('small', { text: 'Review' }) : null, h('span', { class: 'badge', text: String(store.conflictCount()) })));
+  clear(shell.dock).append(items);
+}
+
 function buildShell() {
+  const L = curLook();
   const search = h('input', { class: 'inp search', type: 'search', placeholder: 'Search your vault  ( / )', 'aria-label': 'Search your vault', autocomplete: 'off', spellcheck: 'false', on: { input: (e) => { ctx.S.q = e.target.value; if (!isVaultView(ctx.S.view)) ctx.S.view = 'all'; drawMain(); drawSide(); } } });
-  const top = h('header', { class: 'topbar' }, h('div', { class: 'logo' }, h('img', { src: 'icons/icon.svg', alt: '', width: '26', height: '26' }), h('b', null, 'Vault', h('span', { text: 'Manager' }))), search,
-    h('button', { class: 'btn primary', on: { click: () => newItemMenu(ctx) } }, '＋ New'), h('button', { class: 'btn', title: 'Lock now (Alt+L)', on: { click: () => lock(false) } }, '🔒 Lock'));
+  const clock = L.clock ? h('div', { class: 'barclock', 'aria-label': 'Clock' }, h('b'), h('span')) : null;
+  const top = h('header', { class: 'topbar' }, h('div', { class: 'logo' }, h('img', { src: 'icons/icon.svg', alt: '', width: '26', height: '26' }), h('b', null, 'Vault', h('span', { text: 'Manager' }))), search, clock,
+    h('button', { class: 'btn primary', on: { click: () => newItemMenu(ctx) } }, '＋', h('span', { class: 'lbl', text: ' New' })), h('button', { class: 'btn', title: 'Lock now (Alt+L)', on: { click: () => lock(false) } }, '🔒', h('span', { class: 'lbl', text: ' Lock' })));
   const side = h('nav', { class: 'side', 'aria-label': 'Sections' }), main = h('main', { class: 'main' });
-  shell = { search, side, main, el: h('div', null, top, h('div', { class: 'shell' }, side, main)) };
+  const dock = h('nav', { class: 'dock', 'aria-label': 'Dock' });
+  dock.addEventListener('pointermove', (e) => {
+    const cur = curLook(); if (!cur.dockMagnify || !cur.animations) return;
+    for (const it of dock.querySelectorAll('.dock-item')) { const r = it.getBoundingClientRect(), d = Math.abs(e.clientX - (r.left + r.width / 2)); it.style.setProperty('--s', (1 + 0.6 * Math.exp(-((d / 64) ** 2))).toFixed(3)); }
+  });
+  dock.addEventListener('pointerleave', () => dock.querySelectorAll('.dock-item').forEach((it) => it.style.setProperty('--s', '1')));
+  shell = { search, side, main, dock, clock, el: h('div', null, top, h('div', { class: 'shell' }, side, main), dock) };
+  clearInterval(clockTimer); tickClock(); clockTimer = setInterval(tickClock, 15000);
 }
 
 function counts() {
@@ -246,10 +334,10 @@ function counts() {
 }
 
 function drawSide() {
-  const c = counts(), btn = (id, ic, label, n, dot) => h('button', { class: 'nav' + (ctx.S.view === id ? ' on' : ''), 'aria-current': ctx.S.view === id ? 'page' : null, on: { click: () => ctx.go(id) } }, h('span', { class: 'ic', text: ic }), label, dot ? h('span', { class: 'dot', title: 'Needs attention' }) : n !== undefined ? h('span', { class: 'n', text: String(n) }) : null);
+  const c = counts(), btn = (id, ic, label, n, dot) => h('button', { class: 'nav' + (ctx.S.view === id ? ' on' : ''), 'aria-current': ctx.S.view === id ? 'page' : null, on: { click: () => ctx.go(id) } }, h('span', { class: 'ic icn', text: ic }), label, dot ? h('span', { class: 'dot', title: 'Needs attention' }) : n !== undefined ? h('span', { class: 'n', text: String(n) }) : null);
   const hl = health(store.items);
   const attention = hl.weak.length + hl.reused.length + hl.expiring.length > 0;
-  clear(shell.side).append(h('h4', { text: 'Vault' }), NAV.map(([id, ic, l]) => btn(id, ic, l, c[id])), h('h4', { text: 'Categories' }), CATS.map(([id, ic, l]) => btn(id, ic, l, c[id])),
+  clear(shell.side).append(h('h4', { text: 'Vault' }), NAV.map(([id, ic, l]) => btn(id, ic, l, id === 'home' ? undefined : c[id])), store.conflictCount() ? btn('conflicts', '⚠', 'Needs review', store.conflictCount()) : null, h('h4', { text: 'Categories' }), CATS.map(([id, ic, l]) => btn(id, ic, l, c[id])),
     store.tags().length ? [h('h4', { text: 'Tags' }), store.tags().map(([t, n]) => btn('tag:' + t, '#', t, n))] : null,
     h('h4', { text: 'Tools' }), TOOLS.map(([id, ic, l]) => btn(id, ic, l, undefined, id === 'health' && attention)));
 }
@@ -257,13 +345,13 @@ function drawSide() {
 function drawMain() {
   ctx.runCleanup();
   const v = ctx.S.view;
-  clear(shell.main).append(isVaultView(v) ? renderVaultView(ctx) : v === 'gen' ? renderGenerator(ctx) : v === 'health' ? renderHealth(ctx) : v === 'qr' ? renderQR(ctx) : v === 'beam' ? renderBeam(ctx) : v === 'data' ? renderData(ctx) : renderSettings(ctx));
+  clear(shell.main).append(isVaultView(v) ? renderVaultView(ctx) : v === 'gen' ? renderGenerator(ctx) : v === 'health' ? renderHealth(ctx) : v === 'home' ? renderHome(ctx) : v === 'qr' ? renderQR(ctx) : v === 'beam' ? renderBeam(ctx) : v === 'data' ? renderData(ctx) : renderSettings(ctx));
 }
 
 function draw() {
   if (!store.unlocked) { shell = null; drawGate(); return; }
   if (!shell) { buildShell(); clear(root).append(shell.el); }
-  drawSide(); drawMain();
+  drawSide(); drawMain(); drawDock();
 }
 
 /* ---------- keyboard ---------- */

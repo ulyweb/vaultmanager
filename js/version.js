@@ -1,6 +1,6 @@
 /* Application version, data-format versions and changelog (shown in Settings → About). */
 
-export const APP_VERSION = '0.4.0';
+export const APP_VERSION = '0.5.0';
 export const APP_NAME = 'VaultManager';
 export const REPO_URL = 'https://github.com/ulyweb/vaultmanager';
 
@@ -15,6 +15,13 @@ export const FORMATS = [
 ];
 
 export const CHANGELOG = [
+  { v: '0.5.0', date: '2026-11-09', notes: [
+    'Conflict handling: sync now merges field by field. Edits to different fields of one item are both kept; if the same field was edited on two devices the newest wins and the other value is saved under “Needs review” (side-by-side, keep or use the other). Resolutions sync too.',
+    'Appearance, Effects, Dock & menu bar and Widgets settings (modelled on ulyOS): accent colours, 12 offline wallpapers, icon styles and sizes, density, corner radius, UI size, window animation styles, animation speed, boot animation, aurora, 3D tilt, glow, CRT scanlines, glass blur and panel fill.',
+    'Dock navigation (with magnify, labels, auto-hide) and a configurable menu-bar clock.',
+    'Home dashboard with widgets: clock, vault health, live one-time codes, expiring soon, favorites, recent, quick generator, categories, sync status, needs review, security tip.',
+    'Fixed: saving from the item editor could overwrite per-field sync timestamps.',
+  ] },
   { v: '0.4.0', date: '2026-11-09', notes: [
     'New categories: Apps / software, Wi-Fi / network, Computer account, Shopping, Insurance, Locker / combination, Travel, ID / identity, Bank account and Server / API key — each with its own fields.',
     'Custom fields (label, value, optional secret) on every item, in every category.',

@@ -482,3 +482,114 @@ test('beam: codes round-trip, malformed codes rejected, verification number is s
   assert.match(v1, /^\d{3} \d{3}$/); assert.equal(v1, v2);
   assert.notEqual(v1, await verifyCode(sdp, 'v=0\r\na=fingerprint:sha-256 99:99:99\r\n'));
 });
+
+/* ================= v0.5: field-level merge & conflicts ================= */
+const tick = () => new Promise((r) => setTimeout(r, 6));
+const PASS5 = 'plum orbit velvet anchor glacier ember';
+const pair = async () => {
+  const A = (await mk('conflict device A pass!')).v, B = (await mk('conflict device B pass!')).v;
+  const round = async (from, to) => to.applyRemote(await openBundle(await sealBundle(await from.buildBundle(), PASS5, FAST), PASS5));
+  const seed = newItem('login', { name: 'Shared', username: 'alice', password: 'pw-original', url: 'https://x.example', notes: 'n0' });
+  await A.add(seed); await round(A, B); await round(B, A); await tick();
+  return { A, B, round, id: seed.id };
+};
+
+test('conflicts: edits to DIFFERENT fields on two devices both survive, no conflict raised', async () => {
+  const { A, B, round, id } = await pair();
+  await A.update(id, { password: 'pw-from-A' }); await tick();
+  await B.update(id, { notes: 'notes from B', username: 'alice2' }); await tick();
+  const r1 = await round(A, B), r2 = await round(B, A);
+  for (const d of [A, B]) { const it = d.get(id); assert.equal(it.password, 'pw-from-A'); assert.equal(it.notes, 'notes from B'); assert.equal(it.username, 'alice2'); assert.equal(it.conflicts.length, 0); }
+  assert.equal(r1.conflicts + r2.conflicts, 0);
+  await round(A, B); await round(B, A);                                    // stays stable
+  assert.equal(A.get(id).password, B.get(id).password);
+});
+
+test('conflicts: same field edited on both → newest wins on BOTH devices, the other value is kept for review', async () => {
+  const { A, B, round, id } = await pair();
+  await A.update(id, { password: 'older-edit-on-A' }); await tick();
+  await B.update(id, { password: 'newer-edit-on-B' }); await tick();
+  const r1 = await round(A, B);      // B pulls A's older edit: B keeps its own newer value
+  const r2 = await round(B, A);
+  assert.equal(A.get(id).password, 'newer-edit-on-B'); assert.equal(B.get(id).password, 'newer-edit-on-B');
+  assert.ok(r1.conflicts + r2.conflicts >= 1);
+  for (const d of [A, B]) { const c = d.get(id).conflicts; assert.equal(c.length, 1); assert.equal(c[0].key, 'password'); assert.equal(c[0].value, 'older-edit-on-A'); }
+  assert.equal(A.get(id).conflicts[0].id, B.get(id).conflicts[0].id, 'both devices describe the conflict identically');
+  assert.ok(A.auditLog().some((e) => /Edited on two devices/.test(e.m)) || B.auditLog().some((e) => /Edited on two devices/.test(e.m)));
+  assert.ok(A.get(id).revisions.length >= 1);                              // the overwritten value is also in version history
+  // a second sync does not duplicate the conflict
+  await round(A, B); await round(B, A); assert.equal(A.get(id).conflicts.length, 1); assert.equal(B.get(id).conflicts.length, 1);
+  assert.equal(A.conflictCount(), 1);
+});
+
+test('conflicts: resolving ("use other" / "keep") propagates to the other device and clears there', async () => {
+  const { A, B, round, id } = await pair();
+  await A.update(id, { password: 'older-edit-on-A', notes: 'A notes' }); await tick();
+  await B.update(id, { password: 'newer-edit-on-B', notes: 'B notes' }); await tick();
+  await round(A, B); await round(B, A);
+  assert.equal(A.get(id).conflicts.length, 2);
+  const pwC = A.get(id).conflicts.find((c) => c.key === 'password'), noteC = A.get(id).conflicts.find((c) => c.key === 'notes');
+  await tick(); await A.resolveConflict(id, pwC.id, 'other');             // A decides the older password was right
+  await A.resolveConflict(id, noteC.id, 'keep');
+  assert.equal(A.get(id).password, 'older-edit-on-A'); assert.equal(A.get(id).conflicts.length, 0);
+  await round(A, B); await round(B, A);
+  assert.equal(B.get(id).password, 'older-edit-on-A'); assert.equal(B.get(id).notes, 'B notes');
+  assert.equal(B.get(id).conflicts.length, 0, 'resolution is synced');
+  await round(B, A); assert.equal(A.get(id).conflicts.length, 0);
+});
+
+test('conflicts: one-sided edits never raise a conflict, regardless of sync order; template + custom fields merge per key', async () => {
+  const { A, B, round } = await pair();
+  const net = newItem('network', { name: 'Home', fields: { ssid: 'one', wifipw: 'pw1', ip: '10.0.0.1' }, custom: [] }); await A.add(net); await round(A, B); await round(B, A); await tick();
+  await A.update(net.id, { fields: { ...A.get(net.id).fields, wifipw: 'pw-A' } }); await tick();
+  await B.update(net.id, { fields: { ...B.get(net.id).fields, ip: '10.0.0.9' } }); await tick();
+  await round(B, A); await round(A, B);
+  for (const d of [A, B]) { const f = d.get(net.id).fields; assert.deepEqual([f.ssid, f.wifipw, f.ip], ['one', 'pw-A', '10.0.0.9']); assert.equal(d.get(net.id).conflicts.length, 0); }
+  // stale device pulls without having edited: it just takes the newer value
+  await A.update(net.id, { fields: { ...A.get(net.id).fields, ssid: 'two' } }); await round(A, B);
+  assert.equal(B.get(net.id).fields.ssid, 'two'); assert.equal(B.get(net.id).conflicts.length, 0);
+});
+
+test('conflicts: attachments from both devices are united; a removal propagates', async () => {
+  const { A, B, round, id } = await pair();
+  const a1 = await A.addAttachment(id, { name: 'a.txt', type: 'text/plain', bytes: bytesOf(50, 3) }); await tick();
+  const b1 = await B.addAttachment(id, { name: 'b.txt', type: 'text/plain', bytes: bytesOf(60, 5) }); await tick();
+  await round(A, B); await round(B, A);
+  for (const d of [A, B]) assert.deepEqual(d.get(id).attachments.map((a) => a.name).sort(), ['a.txt', 'b.txt']);
+  assert.equal((await B.readAttachment(id, a1.id)).bytes.length, 50); assert.equal((await A.readAttachment(id, b1.id)).bytes.length, 60);
+  await A.removeAttachment(id, a1.id); await round(A, B); await round(B, A);
+  assert.deepEqual(B.get(id).attachments.map((a) => a.name), ['b.txt']);
+  assert.equal(await B.hasBlob(a1.id), false);
+  assert.deepEqual(A.get(id).attachments.map((a) => a.name), ['b.txt']);          // removal is not undone by the stale copy
+});
+
+test('conflicts: hostile conflict data in a bundle is bounded and validated', async () => {
+  const { v } = await mk('hostile conflict target');
+  const r = await v.applyRemote({ format: 'VaultManager-sync', v: 1, items: [{ id: 'b'.repeat(24), name: 'x', conflicts: [{ id: 'zzzz', key: 'password', value: 'a' }, { id: 'deadbeef', key: 'k'.repeat(200), value: 'a' }, { id: 'deadbeef', key: 'password', value: 'ok' }, ...Array.from({ length: 50 }, (_, i) => ({ id: i.toString(16).padStart(8, '0'), key: 'notes', value: 'v' }))], ft: { password: 'NaN', notes: 5 }, sv: [1, 2] }] });
+  assert.equal(r.added, 1); const it = v.items[0]; assert.ok(it.conflicts.length <= 20); assert.ok(it.conflicts.every((c) => /^[0-9a-f]{8}$/.test(c.id) && c.key.length < 60));
+  assert.deepEqual(it.ft, { notes: 5 }); assert.ok(Object.values(it.sv).every((n) => Number.isFinite(n)), 'sv is a clean numeric map');
+});
+
+test('update(): a stale copy of the item (as the editor sends) cannot clobber sync bookkeeping', async () => {
+  const { v } = await mk();
+  const it = newItem('login', { name: 'S', username: 'a', password: 'p' }); await v.add(it);
+  const stale = structuredClone(v.get(it.id));                    // the editor opens with this copy
+  await tick(); await v.update(it.id, { notes: 'edited elsewhere' });  // something changes the item meanwhile
+  const ftNotes = v.get(it.id).ft.notes;
+  await tick(); await v.update(it.id, { ...stale, username: 'b' });    // editor saves its whole stale object
+  const cur = v.get(it.id);
+  assert.equal(cur.username, 'b'); assert.equal(cur.notes, '', 'the editor saved its own (older) notes value, as an editor save should');
+  assert.ok(cur.ft.username > ftNotes, 'the new edit carries the newest field timestamp');
+  assert.ok(cur.revisions.length >= 1 && cur.attachments.length === 0);
+});
+
+test('look settings: normalised, bounded, widgets merged, accent maths', async () => {
+  const { normalizeLook, LOOK_DEFAULTS, accentTokens, WIDGET_DEFS } = await import('../js/look.js');
+  const n = normalizeLook({ accent: 'javascript:alert(1)', uiScale: 9999, radius: -5, animSpeed: 'fast', iconStyle: 'bogus', nav: 'dock', dockSize: 1, widgets: [{ id: 'tip', on: false, size: 'xl' }, { id: 'nope' }, { id: 'tip' }] });
+  assert.equal(n.accent, LOOK_DEFAULTS.accent); assert.equal(n.uiScale, 130); assert.equal(n.radius, 4); assert.equal(n.animSpeed, 1); assert.equal(n.iconStyle, 'vivid'); assert.equal(n.nav, 'dock'); assert.equal(n.dockSize, 32);
+  assert.equal(n.widgets.length, WIDGET_DEFS.length); assert.deepEqual(n.widgets[0], { id: 'tip', on: false, size: 's' });
+  const dark = accentTokens('#2fe6d0', 'dark'), light = accentTokens('#2fe6d0', 'light');
+  assert.equal(dark.accent, '#2fe6d0'); assert.notEqual(light.accent, dark.accent); assert.equal(dark.ink, '#06201d'); assert.equal(light.ink, '#ffffff');
+  const { v } = await mk('look settings pass!!'); assert.equal(v.settings.look.accent, '#2fe6d0'); assert.ok(v.settings.look.widgets.length >= 10);
+  v.settings.look.accent = '#ff0000'; await v.save(); v.lock();
+});

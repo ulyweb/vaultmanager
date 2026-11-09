@@ -5,6 +5,7 @@ import { generatePassphrase } from './generator.js';
 import { estimate } from './strength.js';
 import { meter, fmtSize } from './views.js';
 import { page, field, sel, persist, selfTest } from './tools.js';
+import { appearance, effects, layout, widgetsTab } from './settings-look.js';
 import { supported as passkeySupported, enroll as passkeyEnroll } from './passkey.js';
 import { wipe } from './crypto.js';
 import { exportSyncFile, importSyncFile, validateSyncPassphrase } from './sync.js';
@@ -12,14 +13,14 @@ import { APP_NAME, APP_VERSION, CHANGELOG, FORMATS, REPO_URL } from './version.j
 import { KEY } from './vault.js';
 import { fmtDate, fmtInt } from './util.js';
 
-const TABS = [['general', '⚙ General'], ['security', '🔐 Security'], ['sync', '⇄ Sync'], ['audit', '📜 Audit trail'], ['about', 'ⓘ About']];
+const TABS = [['general', '⚙ General'], ['appearance', '🎨 Appearance'], ['effects', '✨ Effects'], ['layout', '🧭 Dock & menu bar'], ['widgets', '🧩 Widgets'], ['security', '🔐 Security'], ['sync', '⇄ Sync'], ['audit', '📜 Audit trail'], ['about', 'ⓘ About']];
 
 export function renderSettings(ctx) {
   const body = h('div');
   const show = (k) => {
     ctx.S.setTab = k; ctx.runCleanup();
     Array.from(bar.children).forEach((b, i) => { b.classList.toggle('on', TABS[i][0] === k); b.setAttribute('aria-selected', String(TABS[i][0] === k)); });
-    clear(body).append({ general, security, sync, audit, about }[k](ctx));
+    clear(body).append({ general, appearance, effects, layout, widgets: widgetsTab, security, sync, audit, about }[k](ctx));
   };
   const bar = h('div', { class: 'tabs', role: 'tablist' }, TABS.map(([k, l]) => h('button', { role: 'tab', on: { click: () => show(k) } }, l)));
   show(ctx.S.setTab || 'general');
@@ -34,7 +35,6 @@ function general(ctx) {
   const { store } = ctx, s = store.settings;
   const set = (k, v, label) => { s[k] = v; store.log('settings', `${label} changed to ${typeof v === 'boolean' ? (v ? 'on' : 'off') : v}`); persist(ctx); if (k === 'theme') ctx.applyTheme(); if (k === 'autolock' || k === 'lockOnHide') ctx.armAutolock(); };
   return h('div', null,
-    panel('Appearance', field('Theme', sel(s.theme, [['auto', 'Match my device'], ['dark', 'Dark'], ['light', 'Light']], (v) => set('theme', v, 'Theme')))),
     panel('Locking & privacy',
       h('div', { class: 'grid2' },
         field('Auto-lock after inactivity', sel(s.autolock, [[1, '1 minute'], [5, '5 minutes'], [15, '15 minutes'], [30, '30 minutes'], [60, '1 hour'], [0, 'Never (not recommended)']], (v) => set('autolock', +v, 'Auto-lock'))),
@@ -43,6 +43,7 @@ function general(ctx) {
       chk('Record copy / reveal / download events in the audit trail (never the values)', s.logReveal, (v) => set('logReveal', v, 'Access logging'))),
     panel('Trash',
       field('Delete trashed items permanently after', sel(s.trashDays, [[7, '7 days'], [30, '30 days'], [90, '90 days'], [0, 'Never (I will empty it myself)']], (v) => set('trashDays', +v, 'Trash retention')), 'Trashed items (and their attachments) are removed for good at your next unlock after this time.')),
+    panel('Look & feel', h('p', { class: 'hint', text: 'Theme, accent colour, wallpaper, icons, animations, dock and widgets have their own tabs.' }), h('div', { class: 'row wrap' }, h('button', { class: 'btn', on: { click: () => { ctx.S.setTab = 'appearance'; ctx.refresh(); } } }, '🎨 Appearance'), h('button', { class: 'btn', on: { click: () => { ctx.S.setTab = 'effects'; ctx.refresh(); } } }, '✨ Effects'))),
     panel('Generator defaults',
       h('p', { class: 'hint', text: 'Length, character sets and passphrase options are remembered as you change them on the Generator page, and used by “Generate” in the item editor.' }),
       h('button', { class: 'btn', on: { click: () => ctx.go('gen') } }, '⚡ Open the generator')),
@@ -167,7 +168,7 @@ function sync(ctx) {
 
   return h('div', null,
     panel('How sync works',
-      h('p', { class: 'hint', text: 'Your items (and, if you choose, attachments) are packed into one bundle, encrypted on this device with a sync passphrase (PBKDF2-SHA256 600,000 rounds → AES-256-GCM) and only then leave it. Devices merge item by item: the newest edit wins, and deletions propagate. Nothing is readable without the passphrase — not by GitHub, not by anyone who finds the file.' }),
+      h('p', { class: 'hint', text: 'Your items (and, if you choose, attachments) are packed into one bundle, encrypted on this device with a sync passphrase (PBKDF2-SHA256 600,000 rounds → AES-256-GCM) and only then leave it. Devices merge field by field: edits to different fields of one item are both kept; if the same field was edited on both, the newest wins and the other value is saved under “Needs review”. Deletions propagate. Nothing is readable without the passphrase — not by GitHub, not by anyone who finds the file.' }),
       h('p', { class: 'hint', text: 'The sync passphrase is separate from your master password, so each device can have its own master password. Both the passphrase and the token are kept only inside your encrypted vault and are never part of exports or bundles.' }), status),
     panel('1 · Sync passphrase',
       field('Passphrase (the same on every device)', h('div', null, h('div', { class: 'pwwrap' }, pass), passM)),
@@ -192,7 +193,7 @@ function sync(ctx) {
       chk('Sync automatically (when unlocking, every 10 minutes, and shortly after changes)', c.auto, (v) => { c.auto = v; store.log('settings', 'Automatic sync ' + (v ? 'on' : 'off')); persist(ctx); ctx.armSync(); }),
       chk('Include attachments (up to 20 MB in total)', c.attachments, (v) => { c.attachments = v; store.log('settings', 'Sync of attachments ' + (v ? 'on' : 'off')); persist(ctx); }),
       h('div', { class: 'row wrap' }, syncBtn, h('button', { class: 'btn danger', on: { click: async () => { if (await confirmDialog({ title: 'Disconnect gist sync?', text: 'Forgets the token and gist ID on this device. The gist itself stays on GitHub; delete it there if you no longer need it.', okLabel: 'Disconnect', danger: true })) { c.token = ''; c.gistId = ''; c.last = null; store.log('sync', 'Gist sync disconnected', 'warn'); await store.save(); ctx.armSync(); ctx.refresh(); } } } }, 'Disconnect')), gErr,
-      h('p', { class: 'note', text: 'What GitHub can see: that you have a secret gist, its size, and when it changes (and your IP address). It cannot read the content. Limits: two devices editing the same item within seconds can overwrite each other (newest wins).' })));
+      h('p', { class: 'note', text: 'What GitHub can see: that you have a secret gist, its size, and when it changes (and your IP address). It cannot read the content. Same-field edits on two devices are never silently lost: the other value stays under “Needs review” and in the version history of the item.' })));
 }
 
 /* ======================= Audit trail ======================= */
