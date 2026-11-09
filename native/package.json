@@ -1,0 +1,19 @@
+{
+  "name": "vaultmanager-native",
+  "version": "0.10.0",
+  "private": true,
+  "description": "Native shells (Windows, macOS, Linux, Android, iOS) around the VaultManager web app, built with Tauri 2.",
+  "scripts": {
+    "web": "node ../tools/build-web.mjs --native",
+    "tauri": "tauri",
+    "dev": "npm run web && tauri dev",
+    "build": "npm run web && tauri build",
+    "android:init": "tauri android init",
+    "android:build": "npm run web && tauri android build",
+    "ios:init": "tauri ios init",
+    "ios:build": "npm run web && tauri ios build"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2"
+  }
+}

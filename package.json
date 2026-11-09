@@ -1,6 +1,6 @@
 {
   "name": "vaultmanager",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "private": true,
   "type": "module",
   "description": "VaultManager \u2014 zero-knowledge, end-to-end encrypted, offline-first password manager with QR-sealed sharing and backup. No build step.",
@@ -9,9 +9,14 @@
     "test:unit": "node --test tests/unit.test.js",
     "test:e2e": "node --test tests/e2e.test.js",
     "test": "npm run lint && npm run test:unit && npm run test:e2e",
-    "serve": "python3 -m http.server 8080"
+    "serve": "python3 -m http.server 8080",
+    "build:web": "node tools/build-web.mjs",
+    "build:offline": "node tools/build-offline.mjs",
+    "build": "npm run build:web && npm run build:offline",
+    "icons": "node tools/make-icons.mjs"
   },
   "devDependencies": {
+    "esbuild": "^0.25.10",
     "playwright": "1.63.0"
   }
 }

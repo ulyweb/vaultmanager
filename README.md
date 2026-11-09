@@ -22,6 +22,14 @@ It shares its core engine and look with [ulyOS](https://github.com/ulyweb/ulyOS)
 - **Passkey unlock**: fingerprint, face, Windows Hello, a phone or a security key (WebAuthn PRF) wraps the vault key; per device, master password stays as fallback.
 - **Recovery key** (optional, printable "Emergency Kit"), auto-lock, clipboard auto-clear, escalating delay after wrong passwords, light/dark theme, installable offline PWA.
 
+## Offline apps (PC and mobile)
+Install it as an app (works with no internet), keep a single `VaultManager-offline.html` file, or build native installers for Windows, macOS, Linux, Android and iOS from the same code. See **[docs/OFFLINE-APPS.md](docs/OFFLINE-APPS.md)** — including exactly what is tested and what still needs a first run on real devices.
+
+```bash
+npm run build:offline     # dist/VaultManager-offline.html — one self-contained file
+npm run build:web         # dist/web — the static app (host it anywhere / wrapped by the native apps)
+```
+
 ## Run it
 ```bash
 npm run serve        # python3 -m http.server 8080
@@ -74,7 +82,7 @@ npm test        # lint + unit + browser end-to-end
 The lint enforces the security posture: strict CSP whose `connect-src` may only be `'self'` and `https://api.github.com` (used solely by gist sync, in `js/sync.js` — the only file allowed to use network APIs), no inline scripts / styles / handlers, no `innerHTML`, no `eval`, no network APIs, a complete service-worker precache list, no committed secrets.
 
 ## Status
-Version 0.9 — a complete ninth cut (this repo is the test bench for the stand-alone PC + mobile build — see [ROADMAP.md](ROADMAP.md)), **not yet independently audited**. Treat it accordingly and keep an encrypted backup. See [ROADMAP.md](ROADMAP.md).
+Version 0.10 — a complete tenth cut (this repo is the test bench for the stand-alone PC + mobile build — see [ROADMAP.md](ROADMAP.md)), **not yet independently audited**. Treat it accordingly and keep an encrypted backup. See [ROADMAP.md](ROADMAP.md).
 
 ## Licences
 Code: see repository owner. EFF short wordlist: CC BY 3.0 US. `vendor/qrcode.js`: MIT (Kazuhiko Arase). `vendor/jsQR.js`: Apache-2.0 (`vendor/LICENSE-jsqr.txt`).

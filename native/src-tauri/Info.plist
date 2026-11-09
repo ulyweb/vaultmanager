@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <!-- merged into the generated iOS / macOS Info.plist by Tauri -->
+  <key>NSCameraUsageDescription</key>
+  <string>VaultManager uses the camera only to scan QR codes (sealed items, backups and Beam pairing). Nothing is recorded or uploaded.</string>
+  <key>NSPhotoLibraryUsageDescription</key>
+  <string>VaultManager reads a photo only when you choose one to attach to an item. It is encrypted before it is stored.</string>
+  <key>NSFaceIDUsageDescription</key>
+  <string>Face ID unlocks your vault when you have added a passkey.</string>
+</dict>
+</plist>

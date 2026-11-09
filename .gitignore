@@ -3,3 +3,7 @@ test-results/
 playwright-report/
 *.vmvault
 *.png.tmp
+dist/
+native/node_modules/
+native/src-tauri/target/
+native/src-tauri/gen/

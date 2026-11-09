@@ -630,3 +630,54 @@ test('v0.7 categories: all 15 requested exist, are grouped exactly once, and are
   const { v: w } = await mk('v07 restore password'); const r = w.mergeItems(dec.items, dec.attachments); await r.save; assert.equal(w.active().length, 15);
   assert.deepEqual(w.active().find((i) => i.type === 'car').fields, v.active().find((i) => i.type === 'car').fields);
 });
+
+/* ================= v0.10: offline apps / native scaffold ================= */
+import fs from 'node:fs';
+import path from 'node:path';
+import { execFileSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
+const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
+const rj = (f) => JSON.parse(fs.readFileSync(path.join(ROOT, f), 'utf8'));
+
+test('native shell scaffold: versions agree, config is strict, only two plugins, icons exist', () => {
+  const pkg = rj('package.json'), conf = rj('native/src-tauri/tauri.conf.json'), npkg = rj('native/package.json'), cap = rj('native/src-tauri/capabilities/default.json');
+  const cargo = fs.readFileSync(path.join(ROOT, 'native/src-tauri/Cargo.toml'), 'utf8');
+  assert.equal(conf.version, pkg.version); assert.equal(npkg.version, pkg.version); assert.match(cargo, new RegExp('^version = "' + pkg.version.replace(/\./g, '\\.') + '"', 'm'));
+  assert.match(fs.readFileSync(path.join(ROOT, 'js/version.js'), 'utf8'), new RegExp("APP_VERSION = '" + pkg.version.replace(/\./g, '\\.') + "'"));
+  assert.match(fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8'), new RegExp("vm-" + pkg.version.replace(/\./g, '\\.')));
+  const csp = conf.app.security.csp;
+  assert.ok(/default-src 'none'/.test(csp) && !/unsafe-/.test(csp) && /script-src 'self'/.test(csp), 'native CSP is as strict as the web CSP');
+  assert.deepEqual([...csp.matchAll(/https?:\/\/[^\s;]+/g)].map((m) => m[0]).filter((u) => !/ipc\.localhost|asset\.localhost|api\.github\.com/.test(u)), [], 'no other hosts');
+  assert.deepEqual(cap.permissions.slice().sort(), ['core:default', 'dialog:allow-save', 'fs:allow-write-file'], 'minimal capability set');
+  assert.equal([...cargo.matchAll(/^tauri-plugin-[a-z]+/gm)].length, 2, 'only the dialog and fs plugins');
+  for (const i of conf.bundle.icon) assert.ok(fs.existsSync(path.join(ROOT, 'native/src-tauri', i)), 'icon ' + i);
+  for (const f of ['android/mipmap-xxxhdpi/ic_launcher.png', 'ios/AppIcon-512@2x.png']) assert.ok(fs.existsSync(path.join(ROOT, 'native/src-tauri/icons', f)), f);
+  assert.equal(conf.identifier, 'com.ulyweb.vaultmanager'); assert.ok(conf.build.frontendDist.endsWith('dist/web'));
+  const wf = fs.readFileSync(path.join(ROOT, '.github/workflows/native.yml'), 'utf8');
+  for (const needle of ['windows-latest', 'macos-latest', 'ubuntu-22.04', 'android init', 'CAMERA', 'upload-artifact']) assert.ok(wf.includes(needle), 'workflow mentions ' + needle);
+});
+
+test('web and single-file builds: complete, hash-pinned, self-contained; native web build only adds the IPC origins', () => {
+  execFileSync(process.execPath, [path.join(ROOT, 'tools/build-web.mjs')], { stdio: 'pipe' });
+  const web = path.join(ROOT, 'dist/web'); const ls = (d) => fs.readdirSync(d, { recursive: true }).map(String);
+  const files = ls(web); for (const f of ['index.html', 'sw.js', 'manifest.webmanifest', 'js/app.js', 'js/icons.js', 'vendor/qrcode.js', 'icons/icon-512.png']) assert.ok(files.includes(f.replace(/\//g, path.sep)), 'dist/web has ' + f);
+  assert.ok(!files.some((f) => /icon-1024/.test(f)));
+  const webHtml = fs.readFileSync(path.join(web, 'index.html'), 'utf8'); assert.ok(!/ipc:/.test(webHtml));
+  execFileSync(process.execPath, [path.join(ROOT, 'tools/build-web.mjs'), '--native'], { stdio: 'pipe' });
+  const nat = fs.readFileSync(path.join(web, 'index.html'), 'utf8'); assert.ok(/connect-src 'self' https:\/\/api\.github\.com ipc: http:\/\/ipc\.localhost;/.test(nat));
+  assert.equal(nat.replace(/ ipc: http:\/\/ipc\.localhost/, ''), webHtml, 'the native build differs only by the IPC origins');
+
+  execFileSync(process.execPath, [path.join(ROOT, 'tools/build-offline.mjs')], { stdio: 'pipe' });
+  const one = fs.readFileSync(path.join(ROOT, 'dist/VaultManager-offline.html'), 'utf8');
+  const csp = one.match(/Content-Security-Policy" content="([^"]*)"/)[1];
+  assert.ok(/script-src 'sha256-[A-Za-z0-9+/=]+' blob:/.test(csp) && /style-src 'sha256-/.test(csp) && !/unsafe-/.test(csp) && /connect-src https:\/\/api\.github\.com;/.test(csp));
+  const crypto = awaitableCrypto();
+  const inline = [...one.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((m) => m[1]); assert.equal(inline.length, 1);
+  assert.ok(csp.includes(crypto.createHash('sha256').update(inline[0]).digest('base64')), 'the inline script matches its CSP hash');
+  const style = one.match(/<style>([\s\S]*?)<\/style>/)[1]; assert.ok(csp.includes(crypto.createHash('sha256').update(style).digest('base64')), 'the stylesheet matches its CSP hash');
+  assert.ok(!/<script[^>]+src=|<link[^>]+href="(?!data:)/.test(one), 'no external references');
+  assert.ok(one.includes('vendor/qrcode.js') && one.includes('vendor/jsQR.js'), 'QR libraries are embedded');
+  assert.ok(!/\bfetch\(|XMLHttpRequest|WebSocket/.test(inline[0].replace(/"(?:[^"\\\n]|\\.)*"/g, '')) || /api\.github\.com/.test(inline[0]), 'only the gist client uses the network');
+});
+import nodeCrypto from 'node:crypto';
+function awaitableCrypto() { return nodeCrypto; }

@@ -1,0 +1,48 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "VaultManager",
+  "version": "0.10.0",
+  "identifier": "com.ulyweb.vaultmanager",
+  "build": {
+    "frontendDist": "../../dist/web"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      {
+        "label": "main",
+        "title": "VaultManager",
+        "width": 1180,
+        "height": 780,
+        "minWidth": 360,
+        "minHeight": 520,
+        "resizable": true,
+        "center": true
+      }
+    ],
+    "security": {
+      "csp": "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data: blob: asset: http://asset.localhost; connect-src 'self' https://api.github.com ipc: http://ipc.localhost; media-src 'self' blob:; font-src 'none'; frame-src 'none'; object-src 'none'; form-action 'none'; base-uri 'none'"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "category": "Utility",
+    "publisher": "ulyweb",
+    "shortDescription": "Zero-knowledge, end-to-end encrypted password manager.",
+    "longDescription": "VaultManager keeps your passwords, notes, cards, documents and 28 kinds of personal records encrypted on your own device. No account, no server, works offline, syncs between your devices.",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "android": {
+      "minSdkVersion": 24
+    },
+    "iOS": {
+      "minimumSystemVersion": "14.0"
+    }
+  }
+}

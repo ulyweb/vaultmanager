@@ -8,6 +8,7 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { TEMPLATES, GROUPS } from '../js/templates.js';
+import { execFileSync } from 'node:child_process';
 
 const require = createRequire(import.meta.url);
 let chromium, devices;
@@ -38,7 +39,7 @@ async function newPage(opts = {}, allowHosts = []) {
   const problems = [];
   page.on('pageerror', (e) => problems.push('pageerror: ' + e.message));
   page.on('console', (m) => { if (['error', 'warning'].includes(m.type())) problems.push(m.type() + ': ' + m.text()); });
-  page.on('request', (r) => { const u = new URL(r.url()); if (u.origin !== new URL(base).origin && !allowHosts.includes(u.host) && !r.url().startsWith('data:') && !r.url().startsWith('blob:')) problems.push('EXTERNAL REQUEST: ' + r.url()); });
+  page.on('request', (r) => { const u = new URL(r.url()); if (u.origin !== new URL(base).origin && !allowHosts.includes(u.host) && !r.url().startsWith('file:') && !r.url().startsWith('data:') && !r.url().startsWith('blob:')) problems.push('EXTERNAL REQUEST: ' + r.url()); });
   return { ctx, page, problems };
 }
 /* the welcome splash appears after the first unlock; most tests just want it out of the way */
@@ -929,6 +930,55 @@ test('v0.7 categories: all 15 new ones are visible, grouped, creatable from the 
   // the categories dialog (dock) and the home widget are grouped / compact too
   await page.locator('.side .nav', { hasText: 'Home' }).first().click(); await page.waitForSelector('.widgets');
   assert.ok((await page.textContent('.widget[aria-label="Categories"]')).includes('Contacts · 1'));
+  assert.deepEqual(problems, []);
+  await ctx.close();
+});
+
+test('offline web app: after the first visit it loads, unlocks, creates items and seals QR codes with the network cut', async () => {
+  const { ctx, page, problems } = await newPage({ serviceWorkers: 'allow' });
+  await page.goto(base); await page.waitForSelector('#pw1');
+  await page.evaluate(() => navigator.serviceWorker.ready.then(() => true));
+  await page.reload(); await page.waitForFunction(() => !!navigator.serviceWorker.controller);          // now controlled by the service worker
+  const missing = await page.evaluate(async () => { const c = await caches.open((await caches.keys()).find((x) => x.startsWith('vm-'))); const need = ['index.html', 'js/app.js', 'js/beam.js', 'js/icons.js', 'css/style.css', 'vendor/qrcode.js', 'vendor/jsQR.js', 'icons/icon-512.png', 'icons/apple-touch-icon.png', 'manifest.webmanifest']; const out = []; for (const n of need) if (!(await c.match(n))) out.push(n); return out; });
+  assert.deepEqual(missing, [], 'the whole app is in the offline cache');
+
+  await ctx.setOffline(true);                                                                              // ✈ no network from here on
+  await page.reload(); await page.waitForSelector('#pw1');
+  await page.fill('#pw1', MASTER); await page.fill('#pw2', MASTER); await page.check('#ack'); await page.click('button[type=submit]');
+  await page.getByRole('button', { name: 'Skip for now' }).click(); await dismissWelcome(page);
+  await addLogin(page, 'OfflineSite');
+  await page.locator('.side .nav', { hasText: 'QR tools' }).click();                                       // QR library comes from the cache
+  await page.fill('textarea[aria-label="Text to seal"]', 'sealed while offline'); await page.fill('input[aria-label="QR password"]', 'offline-qr-pass');
+  await page.getByRole('button', { name: /Seal into QR/ }).click(); await page.waitForSelector('.qrbox canvas');
+  await page.getByRole('button', { name: '🔒 Lock', exact: true }).click(); await page.reload(); await page.waitForSelector('#upw');
+  await page.fill('#upw', MASTER); await page.click('button[type=submit]'); await page.waitForSelector('.topbar');
+  await openAll(page); await page.waitForSelector('.item:has-text("OfflineSite")');
+  await page.locator('.side .nav', { hasText: 'Settings' }).click(); await page.getByRole('tab', { name: /General/ }).click();
+  await page.waitForFunction(() => /Ready to work offline/.test(document.body.textContent), null, { timeout: 15000 });
+  assert.deepEqual(problems.filter((p) => !/Failed to load resource|net::ERR/.test(p)), []);
+  await ctx.close();
+});
+
+test('single-file offline build: dist/VaultManager-offline.html runs straight from disk (file://) with no server', async () => {
+  execFileSync(process.execPath, [path.join(ROOT, 'tools/build-offline.mjs')], { stdio: 'pipe' });
+  const file = path.join(ROOT, 'dist/VaultManager-offline.html'); const html = fs.readFileSync(file, 'utf8');
+  assert.ok(html.length > 300000 && !/<script[^>]+src=/.test(html) && !/<link[^>]+rel="stylesheet"/.test(html), 'one self-contained file');
+  assert.ok(!/unsafe-inline|unsafe-eval/.test(html.match(/Content-Security-Policy"\s+content="([^"]*)"/)[1]), 'the inline blocks are allowed by hash, never unsafe-inline');
+  assert.ok(/^[0-9a-f]{64}  VaultManager-offline\.html/.test(fs.readFileSync(file + '.sha256', 'utf8')));
+  const { ctx, page, problems } = await newPage();
+  await page.goto('file://' + file); await page.waitForSelector('#pw1');
+  assert.equal(await page.evaluate(() => window.isSecureContext), true, 'file:// is a secure context, so WebCrypto works');
+  await page.fill('#pw1', MASTER); await page.fill('#pw2', MASTER); await page.check('#ack'); await page.click('button[type=submit]');
+  await page.getByRole('button', { name: 'Skip for now' }).click(); await dismissWelcome(page);
+  await addLogin(page, 'FromAFile');
+  await page.locator('.side .nav', { hasText: 'QR tools' }).click();                                       // QR libraries are embedded in the file
+  await page.fill('textarea[aria-label="Text to seal"]', 'hello from a single file'); await page.fill('input[aria-label="QR password"]', 'single-file-pass');
+  await page.getByRole('button', { name: /Seal into QR/ }).click(); await page.waitForSelector('.qrbox canvas');
+  await page.getByRole('button', { name: '🔒 Lock', exact: true }).click(); await page.reload(); await page.waitForSelector('#upw');
+  await page.fill('#upw', 'wrong password again'); await page.click('button[type=submit]'); await page.waitForFunction(() => /Wrong master password/.test(document.body.textContent));
+  await page.fill('#upw', MASTER); await page.click('button[type=submit]'); await page.waitForSelector('.topbar'); await openAll(page);
+  await page.waitForSelector('.item:has-text("FromAFile")');                                               // data survived a reload of the file
+  assert.ok(await page.evaluate(() => navigator.serviceWorker && !navigator.serviceWorker.controller), 'no service worker is used from file://');
   assert.deepEqual(problems, []);
   await ctx.close();
 });

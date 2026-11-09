@@ -1,6 +1,6 @@
 /* Application version, data-format versions and changelog (shown in Settings → About). */
 
-export const APP_VERSION = '0.9.0';
+export const APP_VERSION = '0.10.0';
 export const APP_NAME = 'VaultManager';
 export const REPO_URL = 'https://github.com/ulyweb/vaultmanager';
 
@@ -15,6 +15,11 @@ export const FORMATS = [
 ];
 
 export const CHANGELOG = [
+  { v: '0.10.0', date: '2026-11-09', notes: [
+    'Offline apps for PC and mobile: the installable web app keeps working with no internet (tested with the network cut), a single-file copy (VaultManager-offline.html) runs straight from disk, and a Tauri project builds native Windows, macOS, Linux, Android and iOS apps from the same code.',
+    'Update prompt for the installed app, a “Running as” line in About, and a native Save-as dialog for exports when running inside the native app.',
+    'Native apps are set up but have not been compiled or run yet — see docs/OFFLINE-APPS.md for what is verified.',
+  ] },
   { v: '0.9.0', date: '2026-11-09', notes: [
     'Tablets (700–1023 px, e.g. iPad portrait) get a persistent side menu with grouped categories and single-pane drill-down; landscape tablets and PCs get the two-pane layout; phones keep the bottom bar.',
     'App-style look on phones and tablets: large titles, inset grouped lists with disclosure chevrons, a native-style navigation bar (‹ back · Edit) on item screens, grouped field cards, bottom sheets with a grab handle you can swipe down, slide transitions, haptic taps (Android) and no tap-highlight or text-selection on controls.',

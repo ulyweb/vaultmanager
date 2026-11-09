@@ -10,7 +10,7 @@ const fail = [];
 const rd = (f) => fs.readFileSync(path.join(root, f), 'utf8');
 const walk = (d, out = []) => {
   for (const e of fs.readdirSync(path.join(root, d), { withFileTypes: true })) {
-    if (['node_modules', '.git', 'test-results', 'playwright-report'].includes(e.name)) continue;
+    if (['node_modules', '.git', 'test-results', 'playwright-report', 'dist', 'target', 'gen'].includes(e.name)) continue;
     const rel = path.posix.join(d, e.name);
     if (e.isDirectory()) walk(rel, out); else out.push(rel);
   }

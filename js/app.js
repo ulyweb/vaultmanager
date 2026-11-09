@@ -420,4 +420,11 @@ ctx.installApp = async () => { const e = ctx.installEvent; if (!e) return false;
 /* ---------- boot ---------- */
 applyTheme();
 draw();
-if ('serviceWorker' in navigator && location.protocol !== 'file:') navigator.serviceWorker.register('sw.js').catch(() => {});
+if ('serviceWorker' in navigator && location.protocol !== 'file:' && !window.__TAURI__) {
+  navigator.serviceWorker.register('sw.js').then((reg) => {
+    reg.addEventListener('updatefound', () => {
+      const w = reg.installing; if (!w) return;
+      w.addEventListener('statechange', () => { if (w.state === 'installed' && navigator.serviceWorker.controller) toast('A new version is ready — tap here to reload.', 'ok', 20000, () => location.reload()); });
+    });
+  }).catch(() => {});
+}

@@ -7,7 +7,11 @@ function loadScript(src) {
   if (loaded[src]) return loaded[src];
   loaded[src] = new Promise((res, rej) => {
     const s = document.createElement('script');
-    s.src = src; s.onload = res; s.onerror = () => rej(new Error('Could not load ' + src));
+    /* the single-file offline build embeds the vendor libraries as JSON text; they are run from a blob: URL */
+    let embedded = null;
+    try { const el = document.getElementById('vm-embed'); if (el) embedded = JSON.parse(el.textContent)[src] || null; } catch { /* not embedded */ }
+    s.src = embedded ? URL.createObjectURL(new Blob([embedded], { type: 'text/javascript' })) : src;
+    s.onload = res; s.onerror = () => rej(new Error('Could not load ' + src));
     document.head.appendChild(s);
   });
   return loaded[src];

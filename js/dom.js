@@ -44,13 +44,13 @@ export const $ = (sel, root = document) => root.querySelector(sel);
 export const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 
 /* ---------- toasts ---------- */
-export function toast(msg, kind = 'ok', ms = 3200) {
+export function toast(msg, kind = 'ok', ms = 3200, onClick = null) {
   let box = document.getElementById('toasts');
   if (!box) { box = h('div', { id: 'toasts', 'aria-live': 'polite' }); document.body.append(box); }
   const t = h('div', { class: 'toast ' + kind, role: kind === 'err' ? 'alert' : 'status' }, msg);
   while (box.children.length >= 2) box.firstChild.remove();   // never pile up: keep the two newest
   box.append(t);
-  t.addEventListener('click', () => t.remove());
+  t.addEventListener('click', () => { t.remove(); if (onClick) onClick(); });
   setTimeout(() => { t.classList.add('out'); setTimeout(() => t.remove(), 250); }, ms);
 }
 
@@ -138,7 +138,23 @@ export async function copyText(text, label, clearSecs) {
 }
 export function clearClipboardNow() { clearTimeout(clipTimer); try { navigator.clipboard.writeText(''); } catch { /* ignore */ } }
 
+/* Saves a file. In the browser: a normal download. Inside the native (Tauri) app, where blob downloads are not
+   reliable on phones, the system "Save as…" dialog is used when the dialog / fs plugins are present. */
 export function download(filename, data, type = 'application/octet-stream') {
+  const T = window.__TAURI__;
+  if (T && T.dialog && T.fs && T.dialog.save && T.fs.writeFile) {
+    (async () => {
+      const path = await T.dialog.save({ defaultPath: filename });
+      if (!path) return;
+      const bytes = typeof data === 'string' ? new TextEncoder().encode(data) : data instanceof Blob ? new Uint8Array(await data.arrayBuffer()) : new Uint8Array(data);
+      await T.fs.writeFile(path, bytes);
+      toast('Saved');
+    })().catch(() => blobDownload(filename, data, type));
+    return;
+  }
+  blobDownload(filename, data, type);
+}
+function blobDownload(filename, data, type) {
   const url = URL.createObjectURL(new Blob([data], { type }));
   const a = h('a', { href: url, download: filename, class: 'offscreen' });
   document.body.append(a); a.click(); a.remove();
