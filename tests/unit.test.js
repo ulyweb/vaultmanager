@@ -6,7 +6,7 @@ import { estimate } from '../js/strength.js';
 import { VaultStore, sanitiseItem, importCSV, importBitwardenJSON, exportCSV, health, decryptBackup, newItem, matches, parseCSV } from '../js/vault.js';
 import { chunkPayload, ChunkAssembler, parseChunk } from '../js/qr.js';
 import { parseTotp } from '../js/totp.js';
-import { TEMPLATES, TYPE_META, wifiQRString, daysUntil } from '../js/templates.js';
+import { TEMPLATES, TYPE_META, GROUPS, TYPE_KEYS, RESERVED_VIEWS, wifiQRString, daysUntil } from '../js/templates.js';
 import { encode, decode, verifyCode } from '../js/beam.js';
 import { memoryBlobs } from '../js/blobs.js';
 import { sealBundle, openBundle, GistClient, syncGist, exportSyncFile, importSyncFile } from '../js/sync.js';
@@ -592,4 +592,41 @@ test('look settings: normalised, bounded, widgets merged, accent maths', async (
   assert.equal(dark.accent, '#2fe6d0'); assert.notEqual(light.accent, dark.accent); assert.equal(dark.ink, '#06201d'); assert.equal(light.ink, '#ffffff');
   const { v } = await mk('look settings pass!!'); assert.equal(v.settings.look.accent, '#2fe6d0'); assert.ok(v.settings.look.widgets.length >= 10);
   v.settings.look.accent = '#ff0000'; await v.save(); v.lock();
+});
+
+test('v0.7 categories: all 15 requested exist, are grouped exactly once, and are fully usable', async () => {
+  const wanted = ['contact', 'phone', 'technical', 'crypto', 'emergency', 'lens', 'membership', 'internet', 'prescription', 'serial', 'voter', 'photoid', 'library', 'healthcard', 'car'];
+  for (const k of wanted) assert.ok(TEMPLATES[k], 'missing category ' + k);
+  assert.equal(TYPE_KEYS.length, 28);
+  for (const k of TYPE_KEYS) assert.ok(!RESERVED_VIEWS.includes(k), 'category key "' + k + '" collides with an app view id');
+  const flat = GROUPS.flatMap(([, keys]) => keys);
+  assert.equal(new Set(flat).size, flat.length, 'a category is in two groups'); assert.deepEqual([...flat].sort(), [...TYPE_KEYS].sort());
+  for (const [g, keys] of GROUPS) { assert.ok(keys.length); for (const k of keys) assert.equal(TYPE_META[k].group, g); }
+  assert.ok(TEMPLATES.crypto.fields.find((f) => f.k === 'seed' && f.secret && f.kind === 'multiline'), 'seed phrase is a secret multiline field');
+  assert.ok(TEMPLATES.lens.fields.some((f) => f.k === 'od_sph') && TEMPLATES.lens.fields.some((f) => f.k === 'os_axis') && TEMPLATES.lens.fields.some((f) => f.k === 'pd'));
+  assert.ok(TEMPLATES.healthcard.fields.find((f) => f.k === 'blood').options.includes('O+'));
+  assert.ok(TEMPLATES.car.fields.some((f) => f.k === 'vin') && TEMPLATES.car.fields.some((f) => f.k === 'plate'));
+  assert.ok(TEMPLATES.crypto.tip && TEMPLATES.photoid.tip);
+
+  const { v } = await mk('v07 categories password');
+  const secrets = [];
+  for (const k of wanted) {
+    const fields = {}; for (const f of TEMPLATES[k].fields) { const sec = f.kind === 'secret' || f.secret; fields[f.k] = f.kind === 'select' ? f.options[1] : f.kind === 'date' ? '2020-03-04' : sec ? 'SEC-' + k + '-' + f.k : 'plain-' + k + '-' + f.k; if (sec) secrets.push(fields[f.k]); }
+    await v.add(sanitiseItem({ type: k, name: 'Item ' + k, fields }));
+  }
+  assert.equal(v.active().length, 15);
+  for (const it of v.active()) {
+    assert.ok(Object.keys(it.fields).length >= TEMPLATES[it.type].fields.length - 1, it.type + ' keeps its fields');
+    assert.ok(matches(it, 'plain-' + it.type), it.type + ' searchable'); assert.ok(!matches(it, 'SEC-'), it.type + ' secrets not searchable');
+  }
+  const log = JSON.stringify(v.auditLog()); for (const sct of secrets) assert.ok(!log.includes(sct));
+  // everything with an expiry date is reported once the date is in the past
+  const exp = health(v.active(), Date.parse('2026-11-09')).expiring.map((x) => x.item.type + ':' + x.label);
+  for (const k of ['lens', 'membership', 'internet', 'prescription', 'serial', 'voter', 'photoid', 'library', 'healthcard', 'car']) assert.ok(exp.some((e) => e.startsWith(k + ':')), k + ' has an expiry that is tracked');
+  assert.equal(exp.filter((e) => e.startsWith('car:')).length, 3, 'car registration, insurance and service');
+  // backups, sync and csv carry them
+  const csv = exportCSV(v.active()); assert.ok(csv.includes('Recovery seed phrase: SEC-crypto-seed') && csv.includes('Right eye (OD) — sphere: plain-lens-od_sph'));
+  const blob = await v.exportEncrypted('backup pass phrase', FAST); const dec = await decryptBackup(blob, 'backup pass phrase');
+  const { v: w } = await mk('v07 restore password'); const r = w.mergeItems(dec.items, dec.attachments); await r.save; assert.equal(w.active().length, 15);
+  assert.deepEqual(w.active().find((i) => i.type === 'car').fields, v.active().find((i) => i.type === 'car').fields);
 });

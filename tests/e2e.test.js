@@ -7,6 +7,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
+import { TEMPLATES, GROUPS } from '../js/templates.js';
 
 const require = createRequire(import.meta.url);
 let chromium;
@@ -760,6 +761,56 @@ test('welcome splash + guided tour + help: first-run experience, replay, dock mo
   const dockBox = await page.locator('.dock').boundingBox(), hole = await page.locator('.tour-hole').boundingBox();
   assert.ok(hole && Math.abs(hole.x + hole.width / 2 - (dockBox.x + dockBox.width / 2)) < 40, 'the spotlight is on the dock');
   await shot(page, '34-tour-dock'); await page.keyboard.press('Escape');
+  assert.deepEqual(problems, []);
+  await ctx.close();
+});
+
+test('v0.7 categories: all 15 new ones are visible, grouped, creatable from the UI, searchable, and tracked for expiry', async () => {
+  const { ctx, page, problems } = await newPage();
+  await createVault(page);
+  const NEW = ['contact', 'phone', 'technical', 'crypto', 'emergency', 'lens', 'membership', 'internet', 'prescription', 'serial', 'voter', 'photoid', 'library', 'healthcard', 'car'];
+
+  // the picker shows every group and category
+  await page.getByRole('button', { name: '＋ New' }).click(); await page.waitForSelector('.modal-sheet .catgroup');
+  assert.equal(await page.locator('.modal-sheet .catgroup').count(), GROUPS.length);
+  for (const [g] of GROUPS) assert.ok((await page.textContent('.modal-sheet')).includes(g), 'group ' + g);
+  assert.equal(await page.locator('.modal-sheet .cats .btn').count(), 28);
+  await shot(page, '35-picker-groups'); await page.keyboard.press('Escape');
+
+  for (const k of NEW) {
+    const t = TEMPLATES[k]; const first = t.fields.find((f) => f.kind === 'text');
+    await page.getByRole('button', { name: '＋ New' }).click();
+    await page.locator('.modal-sheet .cats .btn', { hasText: t.label }).first().click();
+    await page.waitForSelector('#f_name');
+    if (t.tip) assert.ok((await page.textContent('.modal-sheet')).includes(t.tip.slice(0, 30)), k + ' shows its tip');
+    await page.fill('#f_name', 'My ' + k); await page.fill('#tf_' + first.k, 'findme-' + k);
+    await page.getByRole('button', { name: 'Save' }).click(); await page.waitForSelector(`.detail h2:has-text("My ${k}")`);
+    assert.ok((await page.textContent('.detail')).includes('findme-' + k), k + ' detail shows its field');
+  }
+  assert.equal(await page.locator('.side .nav', { hasText: /^.{0,3}Contacts/ }).count(), 1);
+
+  // sidebar: grouped with fold-away headers, every plural present
+  assert.equal(await page.locator('.side .ngroup').count(), GROUPS.length);
+  for (const k of NEW) assert.equal(await page.locator('.side .nbody .nav', { hasText: TEMPLATES[k].plural }).count() >= 1, true, k);
+  await shot(page, '36-sidebar-groups');
+  await page.locator('.side .ngroup', { hasText: 'Health' }).click(); assert.ok(await page.locator('.side .nbody.collapsed').count() >= 1);
+  assert.equal(await page.locator('.side .nbody.collapsed .nav:visible').count(), 0);
+  await page.locator('.side .ngroup', { hasText: 'Health' }).click();
+
+  // search finds non-secret fields in any new category
+  await page.fill('.search', 'findme-car'); assert.equal(await page.locator('.item').count(), 1); await page.fill('.search', 'findme-'); assert.equal(await page.locator('.item').count(), 15);
+  await page.fill('.search', '');
+
+  // a car registration in the past shows up in Vault health with its label
+  await page.locator('.side .nav', { hasText: 'Cars' }).click(); await page.locator('.item').first().click();
+  await page.getByRole('button', { name: /Edit/ }).click(); await page.fill('#tf_regexp', '2021-02-03'); await page.getByRole('button', { name: 'Save' }).click();
+  await page.waitForSelector('.detail .chip:has-text("expired")');
+  await page.locator('.side .nav', { hasText: 'Vault health' }).click(); await page.waitForSelector('text=Expiring or expired');
+  assert.ok((await page.textContent('.page')).includes('Registration expires: 2021-02-03 — expired'));
+
+  // the categories dialog (dock) and the home widget are grouped / compact too
+  await page.locator('.side .nav', { hasText: 'Home' }).first().click(); await page.waitForSelector('.widgets');
+  assert.ok((await page.textContent('.widget[aria-label="Categories"]')).includes('Contacts · 1'));
   assert.deepEqual(problems, []);
   await ctx.close();
 });

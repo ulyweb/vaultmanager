@@ -1,6 +1,6 @@
 /* Application version, data-format versions and changelog (shown in Settings → About). */
 
-export const APP_VERSION = '0.6.0';
+export const APP_VERSION = '0.7.0';
 export const APP_NAME = 'VaultManager';
 export const REPO_URL = 'https://github.com/ulyweb/vaultmanager';
 
@@ -15,6 +15,11 @@ export const FORMATS = [
 ];
 
 export const CHANGELOG = [
+  { v: '0.7.0', date: '2026-11-09', notes: [
+    '15 new categories: Contact, Phone / SIM, Technical account, Crypto wallet, Emergency numbers, Lens prescription, Membership, Internet settings, Prescription / medication, Serial number, Voter card, Picture / photo ID card, Library card, Health numbers and Car / vehicle — 28 in total.',
+    'Categories are now grouped by purpose (Everyday, Accounts & access, Home & devices, Money, IDs & documents, Health, Travel & vehicles, People & emergency) in the side bar, the New picker and the Categories dialog; groups fold away.',
+    'More things that expire are tracked in Vault health: car registration, insurance and service, prescriptions, lens prescriptions, memberships, library and photo-ID cards, internet contracts and warranties.',
+  ] },
   { v: '0.6.0', date: '2026-11-09', notes: [
     'Welcome splash (hero, feature cards, Enter / Take the tour / Make it yours) after your first unlock, or every unlock if you switch it on.',
     'Guided spotlight tour of the real screens — works with the side bar or the dock and walks you through Home, search, categories, generator, health, QR, Beam, sync, look & feel, security, audit and lock.',

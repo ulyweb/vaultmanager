@@ -10,7 +10,7 @@ import { renderGenerator, renderHealth, renderQR, renderData } from './tools.js'
 import { renderSettings } from './settings.js';
 import { createBlobStore } from './blobs.js';
 import { renderBeam } from './beam.js';
-import { TYPE_META } from './templates.js';
+import { TYPE_META, GROUPS } from './templates.js';
 import { syncGist } from './sync.js';
 import { supported as passkeySupported, authenticate as passkeyAuth } from './passkey.js';
 import { wipe } from './crypto.js';
@@ -30,14 +30,14 @@ const store = new VaultStore(storage || { _m: new Map(), getItem(k) { return thi
 
 const ctx = {
   store,
-  S: { view: 'all', q: '', sel: null, qrTab: 'seal' },
+  S: { view: 'all', q: '', sel: null, qrTab: 'seal', collapsed: new Set() },
   cleanup: [],
   runCleanup() { const c = ctx.cleanup.splice(0); c.forEach((f) => { try { f(); } catch { /* ignore */ } }); },
   closeModals: closeAllModals,
   go(view) { ctx.S.view = view; if (view !== 'all' && !isVaultView(view)) ctx.S.sel = null; if (!isVaultView(view)) ctx.S.q = ''; syncSearch(); draw(); window.scrollTo(0, 0); },
   refresh() { draw(); },
   applyTheme, armAutolock, lock, armSync, syncNow,
-  look: () => curLook(), setLook, setTheme,
+  look: () => curLook(), setLook, setTheme, newItem: () => newItemMenu(ctx),
   showItem(id) { ctx.S.sel = id; if (!isVaultView(ctx.S.view)) ctx.S.view = 'all'; syncSearch(); draw(); },
   showRecoveryKit(key) { return showRecoveryKit(ctx, key); },
   /* copy a secret, honouring the clipboard-clear setting, and note it (never the value) in the audit trail */
@@ -282,7 +282,6 @@ function drawGate() {
 let shell = null;
 
 const NAV = [['home', '🏠', 'Home'], ['all', '🗂', 'All items'], ['fav', '★', 'Favorites'], ['trash', '🗑', 'Trash']];
-const CATS = Object.entries(TYPE_META).map(([k, m]) => [k, m.icon, m.plural]);
 const TOOLS = [['health', '🩺', 'Vault health'], ['gen', '⚡', 'Generator'], ['qr', '▦', 'QR tools'], ['beam', '📡', 'Beam sync'], ['data', '⇅', 'Import & export'], ['settings', '⚙', 'Settings']];
 
 function syncSearch() { if (shell && shell.search.value !== ctx.S.q) shell.search.value = ctx.S.q; }
@@ -298,7 +297,9 @@ function tickClock() {
 const DOCK = [['home', '🏠', 'Home'], ['all', '🗂', 'All items'], ['fav', '★', 'Favorites'], ['cats', '🧩', 'Categories'], null, ['health', '🩺', 'Health'], ['gen', '⚡', 'Generator'], ['qr', '▦', 'QR tools'], ['beam', '📡', 'Beam'], null, ['settings', '⚙', 'Settings'], ['help', '❓', 'Help'], ['new', '＋', 'New item']];
 
 function categoriesModal() {
-  modal({ title: 'Categories', body: h('div', { class: 'checks cats' }, Object.entries(TYPE_META).map(([k, m]) => h('button', { class: 'btn', on: { click: () => { closeAllModals(); ctx.go(k); } } }, h('span', { class: 'icn', text: m.icon }), ' ' + m.plural + ' · ' + store.active().filter((i) => i.type === k).length))), actions: [{ label: 'Close' }] });
+  const cnt = (k) => store.active().filter((i) => i.type === k).length;
+  modal({ title: 'Categories', wide: true, body: h('div', null, GROUPS.map(([g, keys]) => h('div', { class: 'catgroup' }, h('p', { class: 'lbl', text: g }),
+    h('div', { class: 'checks cats' }, keys.map((k) => h('button', { class: 'btn', on: { click: () => { closeAllModals(); ctx.go(k); } } }, h('span', { class: 'icn', text: TYPE_META[k].icon }), ' ' + TYPE_META[k].plural + ' · ' + cnt(k))))))), actions: [{ label: 'Close' }] });
 }
 
 function drawDock() {
@@ -339,11 +340,18 @@ function counts() {
   return c;
 }
 
+function groupBlock(g, keys, c, btn) {
+  const closed = ctx.S.collapsed.has(g), total = keys.reduce((n, k) => n + c[k], 0);
+  const head = h('button', { class: 'ngroup', 'aria-expanded': String(!closed), title: closed ? 'Expand ' + g : 'Collapse ' + g, on: { click: () => { if (ctx.S.collapsed.has(g)) ctx.S.collapsed.delete(g); else ctx.S.collapsed.add(g); drawSide(); } } },
+    h('span', { class: 'chev', text: closed ? '▸' : '▾' }), h('span', { text: g }), total ? h('span', { class: 'n', text: String(total) }) : null);
+  return h('div', { class: 'ngroup-wrap' }, head, h('div', { class: 'nbody' + (closed ? ' collapsed' : '') }, keys.map((k) => btn(k, TYPE_META[k].icon, TYPE_META[k].plural, c[k]))));
+}
+
 function drawSide() {
   const c = counts(), btn = (id, ic, label, n, dot) => h('button', { class: 'nav' + (ctx.S.view === id ? ' on' : ''), 'aria-current': ctx.S.view === id ? 'page' : null, on: { click: () => ctx.go(id) } }, h('span', { class: 'ic icn', text: ic }), label, dot ? h('span', { class: 'dot', title: 'Needs attention' }) : n !== undefined ? h('span', { class: 'n', text: String(n) }) : null);
   const hl = health(store.items);
   const attention = hl.weak.length + hl.reused.length + hl.expiring.length > 0;
-  clear(shell.side).append(h('h4', { text: 'Vault' }), NAV.map(([id, ic, l]) => btn(id, ic, l, id === 'home' ? undefined : c[id])), store.conflictCount() ? btn('conflicts', '⚠', 'Needs review', store.conflictCount()) : null, h('h4', { text: 'Categories' }), CATS.map(([id, ic, l]) => btn(id, ic, l, c[id])),
+  clear(shell.side).append(h('h4', { text: 'Vault' }), NAV.map(([id, ic, l]) => btn(id, ic, l, id === 'home' ? undefined : c[id])), store.conflictCount() ? btn('conflicts', '⚠', 'Needs review', store.conflictCount()) : null, h('h4', { text: 'Categories' }), GROUPS.map(([g, keys]) => groupBlock(g, keys, c, btn)),
     store.tags().length ? [h('h4', { text: 'Tags' }), store.tags().map(([t, n]) => btn('tag:' + t, '#', t, n))] : null,
     h('h4', { text: 'Tools' }), TOOLS.map(([id, ic, l]) => btn(id, ic, l, undefined, id === 'health' && attention)));
 }

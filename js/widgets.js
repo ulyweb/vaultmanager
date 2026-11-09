@@ -65,8 +65,9 @@ const BUILD = {
     return h('div', null, out, h('div', { class: 'row wrap', style: null }, h('button', { class: 'btn sm', on: { click: gen } }, '⟳'), h('button', { class: 'btn sm', on: { click: () => ctx.copySecret(out.textContent, 'Password copied') } }, '⧉ Copy'), h('button', { class: 'btn sm ghost', on: { click: () => ctx.go('gen') } }, 'Options')));
   },
   stats(ctx) {
-    const a = ctx.store.active();
-    return h('div', { class: 'wgrid' }, Object.entries(TYPE_META).map(([k, m]) => h('button', { class: 'btn sm', on: { click: () => ctx.go(k) } }, h('span', { class: 'icn', text: m.icon }), ` ${m.plural} · ${a.filter((i) => i.type === k).length}`)));
+    const a = ctx.store.active(), used = Object.entries(TYPE_META).filter(([k]) => a.some((i) => i.type === k));
+    return h('div', null, used.length ? h('div', { class: 'wgrid' }, used.map(([k, m]) => h('button', { class: 'btn sm', on: { click: () => ctx.go(k) } }, h('span', { class: 'icn', text: m.icon }), ` ${m.plural} · ${a.filter((i) => i.type === k).length}`))) : empty('No items yet — your categories show up here as you add things.'),
+      h('div', { class: 'row wrap' }, h('button', { class: 'btn sm ghost', on: { click: () => ctx.newItem() } }, `＋ Browse all ${Object.keys(TYPE_META).length} categories`)));
   },
   sync(ctx) {
     const c = ctx.store.settings.sync;

@@ -438,3 +438,10 @@ html[data-nav=dock] #toasts { bottom: calc(var(--dock) + 84px); }
 html[data-motion=off] .welcome, html[data-motion=off] .wl-card { transition: none; }
 
 .btn.icon { width: 36px; padding: 0; font-weight: 800; }
+
+/* category groups */
+.ngroup { display: flex; align-items: center; gap: 6px; width: 100%; padding: 9px 10px 4px; font-family: var(--mono); font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); text-align: left; }
+.ngroup:hover { color: var(--ink); } .ngroup .chev { width: 10px; } .ngroup .n { margin-left: auto; font-size: 10.5px; }
+.nbody.collapsed { display: none; }
+@media (max-width: 860px) { .ngroup-wrap { display: contents; } .ngroup { display: none; } .nbody, .nbody.collapsed { display: contents; } }
+.catgroup { margin-bottom: 14px; } .catgroup .lbl { margin: 0 0 6px; } .catgroup .checks { margin: 0; }

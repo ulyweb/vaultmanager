@@ -2,7 +2,7 @@
 
 import { h, clear, modal, toast, confirmDialog, copyText, download } from './dom.js';
 import { newItem, TYPES, matches, totpValid, MAX_ATTACHMENT, MAX_ATTACHMENTS_PER_ITEM, keyLabel, keyIsSecret, describeValue, currentValue } from './vault.js';
-import { TYPE_META, TEMPLATES, isSecretField, MAX_CUSTOM, daysUntil, wifiQRString } from './templates.js';
+import { TYPE_META, TEMPLATES, GROUPS, isSecretField, MAX_CUSTOM, daysUntil, wifiQRString } from './templates.js';
 import { estimate, crackTime } from './strength.js';
 import { generatePassword, generatePassphrase } from './generator.js';
 import { totpNow, parseTotp } from './totp.js';
@@ -278,7 +278,7 @@ export function editItem(ctx, item, type = 'login') {
   const err = h('p', { class: 'err', role: 'alert' });
 
   const body = [];
-  body.push(h('div', { class: 'field' }, h('label', { for: 'f_name', text: 'Name' }), h('input', { id: 'f_name', class: 'inp', value: it.name, autofocus: true, autocomplete: 'off', placeholder: ({ card: 'e.g. Visa ending 4242', note: 'e.g. Safe-deposit notes', network: 'e.g. Home Wi-Fi', app: 'e.g. Adobe Creative Cloud', computer: 'e.g. Work laptop', shopping: 'e.g. Amazon', insurance: 'e.g. Car insurance', locker: 'e.g. Gym locker', travel: 'e.g. Passport — Alex', identity: 'e.g. Driver licence', bank: 'e.g. Checking account', server: 'e.g. Production API' })[it.type] || 'e.g. GitHub', on: { input: (e) => { it.name = e.target.value; } } })));
+  body.push(h('div', { class: 'field' }, h('label', { for: 'f_name', text: 'Name' }), h('input', { id: 'f_name', class: 'inp', value: it.name, autofocus: true, autocomplete: 'off', placeholder: ({ card: 'e.g. Visa ending 4242', note: 'e.g. Safe-deposit notes', network: 'e.g. Home Wi-Fi', app: 'e.g. Adobe Creative Cloud', computer: 'e.g. Work laptop', shopping: 'e.g. Amazon', insurance: 'e.g. Car insurance', locker: 'e.g. Gym locker', travel: 'e.g. Passport — Alex', identity: 'e.g. Driver licence', bank: 'e.g. Checking account', server: 'e.g. Production API', contact: 'e.g. Dr. Rivera', phone: 'e.g. My mobile', technical: 'e.g. AWS production', crypto: 'e.g. Ledger Nano', emergency: 'e.g. ICE — Sam', lens: 'e.g. Glasses 2026', membership: 'e.g. City Gym', internet: 'e.g. Home fibre', prescription: 'e.g. Amoxicillin', serial: 'e.g. MacBook Pro', voter: 'e.g. Voter card', photoid: 'e.g. Student ID', library: 'e.g. Central Library', health: 'e.g. Health insurance', car: 'e.g. Honda Civic' })[it.type] || 'e.g. GitHub', on: { input: (e) => { it.name = e.target.value; } } })));
   if (it.type === 'login') {
     body.push(h('div', { class: 'grid2' }, inp('username', 'Username / email'), inp('url', 'Website', { ph: 'https://' })));
     const pf = pwField(it.password, { ctx, onInput: (v) => { it.password = v; } });
@@ -290,6 +290,7 @@ export function editItem(ctx, item, type = 'login') {
       inp('expiry', 'Expiry (MM/YY)', { mono: true, get: () => c.expiry, set: (v) => { c.expiry = v; } }), inp('cvv', 'CVV', { mono: true, inputmode: 'numeric', get: () => c.cvv, set: (v) => { c.cvv = v; } }),
       inp('pin', 'PIN', { mono: true, inputmode: 'numeric', get: () => c.pin, set: (v) => { c.pin = v; } })));
   } else if (TEMPLATES[it.type]) {
+    if (TEMPLATES[it.type].tip) body.push(h('p', { class: 'note', text: TEMPLATES[it.type].tip }));
     body.push(h('div', { class: 'grid2' }, TEMPLATES[it.type].fields.map((f) => tplInput(ctx, it, f))));
   }
   /* custom fields: any extra label / value (optionally secret) on any item */
@@ -362,7 +363,9 @@ function tplInput(ctx, it, f) {
 }
 
 export function newItemMenu(ctx) {
-  modal({ title: 'Choose a category', sub: 'Every category can also hold attachments, notes, tags and custom fields', body: h('div', { class: 'checks cats' }, Object.entries(TYPES).map(([k, label]) => h('button', { class: 'btn', style: null, on: { click: () => { ctx.closeModals(); editItem(ctx, null, k); } } }, h('span', { class: 'icn', text: TYPE_ICON[k] }), ' ' + label))), actions: [{ label: 'Cancel' }] });
+  const pick = (k) => h('button', { class: 'btn', on: { click: () => { ctx.closeModals(); editItem(ctx, null, k); } } }, h('span', { class: 'icn', text: TYPE_ICON[k] }), ' ' + TYPES[k]);
+  modal({ title: 'Choose a category', sub: Object.keys(TYPES).length + ' categories. Every one can also hold attachments, notes, tags and custom fields', wide: true,
+    body: h('div', null, GROUPS.map(([g, keys]) => h('div', { class: 'catgroup' }, h('p', { class: 'lbl', text: g }), h('div', { class: 'checks cats' }, keys.map(pick))))), actions: [{ label: 'Cancel' }] });
 }
 
 /* ---------- print helper ---------- */
