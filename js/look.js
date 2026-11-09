@@ -30,7 +30,7 @@ export const LOOK_DEFAULTS = {
   animations: true, animStyle: 'scale', animSpeed: 1, bootAnim: true, fxAnim: true, fxAurora: 65, fxTilt: 0, fxGlow: 35, fxScan: false, blur: 12, glassAlpha: 0.72,
   // layout (dock & menu bar)
   nav: 'sidebar', dockSize: 46, dockMagnify: true, dockLabels: false, dockAutoHide: false,
-  clock: true, clock24: false, dateFmt: 'short', barLabels: true, startPage: 'all',
+  clock: true, clock24: false, dateFmt: 'short', barLabels: true, startPage: 'home',
   widgets: WIDGET_DEFS.map((w) => ({ id: w.id, on: true, size: w.size })),
 };
 

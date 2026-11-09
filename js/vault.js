@@ -20,7 +20,7 @@ export const MAX_ATTACHMENTS_PER_ITEM = 20;
 export const TRACKED = ['name', 'username', 'url', 'password', 'totp', 'notes', 'tags', 'card', 'fields', 'custom'];
 
 export const DEFAULT_SETTINGS = {
-  autolock: 5, clipboard: 30, theme: 'auto', lockOnHide: false, trashDays: 30, logReveal: true,
+  autolock: 5, clipboard: 30, theme: 'auto', lockOnHide: false, trashDays: 30, logReveal: true, displayName: '', tourSeen: false, welcomeAlways: false,
   gen: { mode: 'password', length: 20, lower: true, upper: true, digits: true, symbols: true, noAmbiguous: false, words: 5, separator: '-', capitalize: false, number: false },
   sync: { method: 'off', token: '', gistId: '', passphrase: '', auto: true, attachments: true, last: null },
   look: LOOK_DEFAULTS,

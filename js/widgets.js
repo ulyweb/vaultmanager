@@ -11,7 +11,7 @@ import { WIDGET_DEFS, TIPS } from './look.js';
 import { fmtDate, hostOf } from './util.js';
 
 const HUES = ['#2fe6d0', '#59b4ff', '#8b7dff', '#ff7ad9', '#ffb547', '#7dff9b', '#ff6b6b', '#ff8a4c', '#d6e2ee', '#4fd1c5', '#f6ad55'];
-const greeting = () => { const hr = new Date().getHours(); return hr < 5 ? 'Still up?' : hr < 12 ? 'Good morning' : hr < 18 ? 'Good afternoon' : 'Good evening'; };
+const greeting = (name) => { const hr = new Date().getHours(), n = (name || '').trim(); return hr < 5 ? (n ? 'Still up, ' + n + '?' : 'Still up?') : (hr < 12 ? 'Good morning' : hr < 18 ? 'Good afternoon' : 'Good evening') + (n ? ', ' + n : ''); };
 
 const wrap = (ctx, def, size, idx, body, extra) => {
   const el = h('section', { class: 'panel widget ' + size, 'aria-label': def.label }, h('div', { class: 'whead' }, h('span', { class: 'icn', text: def.icon }), h('span', { text: def.label }), extra ? h('span', { class: 'spacer' }, extra) : null), body);
@@ -85,7 +85,7 @@ export function renderHome(ctx) {
   const list = L.widgets.filter((w) => w.on);
   const grid = h('div', { class: 'widgets' });
   list.forEach((w, i) => { const def = WIDGET_DEFS.find((d) => d.id === w.id); grid.append(wrap(ctx, def, w.size, i, BUILD[w.id](ctx))); });
-  return h('div', { class: 'page home', style: null }, h('h2', { text: greeting() }), h('p', { class: 'sub', text: n ? `${n} item${n === 1 ? '' : 's'} in your vault. Customise this page in Settings → Widgets.` : 'Your vault is empty — press “＋ New” to add your first item.' }),
+  return h('div', { class: 'page home', style: null }, h('h2', { text: greeting(ctx.store.settings.displayName) }), h('p', { class: 'sub', text: n ? `${n} item${n === 1 ? '' : 's'} in your vault. Customise this page in Settings → Widgets.` : 'Your vault is empty — press “＋ New” to add your first item.' }),
     list.length ? grid : h('div', { class: 'panel pad' }, h('p', { text: 'All widgets are hidden. Turn some on in Settings → Widgets.' }), h('button', { class: 'btn', on: { click: () => { ctx.S.setTab = 'widgets'; ctx.go('settings'); } } }, 'Open widget settings')));
 }
 void clear;

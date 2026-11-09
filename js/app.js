@@ -18,6 +18,7 @@ import { health } from './vault.js';
 import { normalizeLook, applyLook, resolveTheme, loadCosmetic, saveCosmetic } from './look.js';
 import { landscapes } from './landscapes.js';
 import { renderHome } from './widgets.js';
+import { createTour } from './tour.js';
 import { APP_VERSION } from './version.js';
 import { fmtInt } from './util.js';
 
@@ -51,6 +52,9 @@ const ctx = {
     return '';
   },
 };
+
+const tour = createTour(ctx);
+ctx.tour = tour;
 
 const isVaultView = (v) => ['all', 'fav', 'trash', 'conflicts'].includes(v) || v in TYPE_META || v.startsWith('tag:');
 
@@ -107,7 +111,7 @@ function onUnlocked(note) {
   const L = curLook();
   ctx.S.view = L.startPage === 'home' ? 'home' : 'all';
   applyTheme(); armAutolock(); draw();
-  const after = () => { armSync(); if (note === 'recovery') toast('Unlocked with your recovery key — set a new master password in Settings.', 'ok', 7000); };
+  const after = () => { armSync(); tour.maybeWelcome(); if (note === 'recovery') toast('Unlocked with your recovery key — set a new master password in Settings.', 'ok', 7000); };
   if (L.animations && L.bootAnim && !reducedMotion()) showBoot(L, after); else after();
 }
 
@@ -123,7 +127,7 @@ function armAutolock() {
 document.addEventListener('visibilitychange', () => { if (document.hidden && store.unlocked && store.settings.lockOnHide) lock(false, 'Locked because the tab was hidden'); });
 
 function lock(erased, why) {
-  clearTimeout(idleTimer); stopSync(); clearInterval(clockTimer);
+  clearTimeout(idleTimer); stopSync(); clearInterval(clockTimer); tour.stop();
   if (store.unlocked && !erased) store.log('security', why || 'Vault locked');
   ctx.runCleanup(); closeAllModals();
   clear(document.getElementById('printArea'));
@@ -203,7 +207,9 @@ function gateCreate() {
     btn.disabled = true; btn.textContent = 'Deriving key (600,000 rounds)…';
     try { await store.create(p1.input.value); } catch (x) { err.textContent = x.message; btn.disabled = false; btn.textContent = 'Create my vault'; return; }
     p1.input.value = p2.input.value = '';
+    ctx.S.view = curLook().startPage === 'home' ? 'home' : 'all';
     applyTheme(); armAutolock(); draw();
+    tour.maybeWelcome();
     modal({ title: 'Vault created 🎉', sub: 'One more thing', body: h('div', null, h('p', { text: 'Your master password never leaves this device and cannot be reset. A recovery key is a printable backup way in if you ever forget it.' })),
       actions: [{ label: 'Skip for now' }, { label: 'Create recovery key', kind: 'primary', onClick: async () => { const key = await store.session.createRecovery(); await store.save(); showRecoveryKit(ctx, key); } }] });
   } } },
@@ -289,7 +295,7 @@ function tickClock() {
   shell.clock.lastChild.textContent = L.dateFmt === 'none' ? '' : n.toLocaleDateString([], L.dateFmt === 'long' ? { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' } : { weekday: 'short', day: 'numeric', month: 'short' });
 }
 
-const DOCK = [['home', '🏠', 'Home'], ['all', '🗂', 'All items'], ['fav', '★', 'Favorites'], ['cats', '🧩', 'Categories'], null, ['health', '🩺', 'Health'], ['gen', '⚡', 'Generator'], ['qr', '▦', 'QR tools'], ['beam', '📡', 'Beam'], null, ['settings', '⚙', 'Settings'], ['new', '＋', 'New item']];
+const DOCK = [['home', '🏠', 'Home'], ['all', '🗂', 'All items'], ['fav', '★', 'Favorites'], ['cats', '🧩', 'Categories'], null, ['health', '🩺', 'Health'], ['gen', '⚡', 'Generator'], ['qr', '▦', 'QR tools'], ['beam', '📡', 'Beam'], null, ['settings', '⚙', 'Settings'], ['help', '❓', 'Help'], ['new', '＋', 'New item']];
 
 function categoriesModal() {
   modal({ title: 'Categories', body: h('div', { class: 'checks cats' }, Object.entries(TYPE_META).map(([k, m]) => h('button', { class: 'btn', on: { click: () => { closeAllModals(); ctx.go(k); } } }, h('span', { class: 'icn', text: m.icon }), ' ' + m.plural + ' · ' + store.active().filter((i) => i.type === k).length))), actions: [{ label: 'Close' }] });
@@ -302,7 +308,7 @@ function drawDock() {
     if (!d) return h('span', { class: 'dock-sep' });
     const [id, ic, label] = d;
     const on = id === 'cats' ? (ctx.S.view in TYPE_META) : ctx.S.view === id;
-    return h('button', { class: 'dock-item' + (on ? ' on' : ''), title: label, 'aria-label': label, 'aria-current': on ? 'page' : null, on: { click: () => (id === 'new' ? newItemMenu(ctx) : id === 'cats' ? categoriesModal() : ctx.go(id)) } },
+    return h('button', { class: 'dock-item' + (on ? ' on' : ''), title: label, 'aria-label': label, 'aria-current': on ? 'page' : null, on: { click: () => (id === 'new' ? newItemMenu(ctx) : id === 'help' ? tour.help() : id === 'cats' ? categoriesModal() : ctx.go(id)) } },
       h('span', { class: 'icn', text: ic }), L.dockLabels ? h('small', { text: label }) : null, id === 'health' && attention ? h('span', { class: 'badge', text: String(attention) }) : null);
   });
   if (store.conflictCount()) items.splice(3, 0, h('button', { class: 'dock-item' + (ctx.S.view === 'conflicts' ? ' on' : ''), title: 'Needs review', 'aria-label': 'Needs review', on: { click: () => ctx.go('conflicts') } }, h('span', { class: 'icn', text: '⚠' }), L.dockLabels ? h('small', { text: 'Review' }) : null, h('span', { class: 'badge', text: String(store.conflictCount()) })));
@@ -314,7 +320,7 @@ function buildShell() {
   const search = h('input', { class: 'inp search', type: 'search', placeholder: 'Search your vault  ( / )', 'aria-label': 'Search your vault', autocomplete: 'off', spellcheck: 'false', on: { input: (e) => { ctx.S.q = e.target.value; if (!isVaultView(ctx.S.view)) ctx.S.view = 'all'; drawMain(); drawSide(); } } });
   const clock = L.clock ? h('div', { class: 'barclock', 'aria-label': 'Clock' }, h('b'), h('span')) : null;
   const top = h('header', { class: 'topbar' }, h('div', { class: 'logo' }, h('img', { src: 'icons/icon.svg', alt: '', width: '26', height: '26' }), h('b', null, 'Vault', h('span', { text: 'Manager' }))), search, clock,
-    h('button', { class: 'btn primary', on: { click: () => newItemMenu(ctx) } }, '＋', h('span', { class: 'lbl', text: ' New' })), h('button', { class: 'btn', title: 'Lock now (Alt+L)', on: { click: () => lock(false) } }, '🔒', h('span', { class: 'lbl', text: ' Lock' })));
+    h('button', { class: 'btn primary', on: { click: () => newItemMenu(ctx) } }, '＋', h('span', { class: 'lbl', text: ' New' })), h('button', { class: 'btn', title: 'Lock now (Alt+L)', on: { click: () => lock(false) } }, '🔒', h('span', { class: 'lbl', text: ' Lock' })), h('button', { class: 'btn icon', title: 'Help, tour and shortcuts', 'aria-label': 'Help', on: { click: () => tour.help() } }, '?'));
   const side = h('nav', { class: 'side', 'aria-label': 'Sections' }), main = h('main', { class: 'main' });
   const dock = h('nav', { class: 'dock', 'aria-label': 'Dock' });
   dock.addEventListener('pointermove', (e) => {

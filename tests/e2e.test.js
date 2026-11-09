@@ -40,6 +40,13 @@ async function newPage(opts = {}, allowHosts = []) {
   page.on('request', (r) => { const u = new URL(r.url()); if (u.origin !== new URL(base).origin && !allowHosts.includes(u.host) && !r.url().startsWith('data:') && !r.url().startsWith('blob:')) problems.push('EXTERNAL REQUEST: ' + r.url()); });
   return { ctx, page, problems };
 }
+/* the welcome splash appears after the first unlock; most tests just want it out of the way */
+async function dismissWelcome(page) {
+  await page.waitForSelector('.welcome.in', { timeout: 10000 });
+  await page.keyboard.press('Escape');
+  await page.waitForSelector('.welcome', { state: 'detached' });
+}
+const openAll = async (page) => { await page.locator('.side .nav', { hasText: 'All items' }).click(); await page.waitForSelector('.list'); };
 const shot = async (page, name) => { if (SHOTS) await page.screenshot({ path: path.join(SHOTS, name + '.png') }); };
 
 test('full journey: create → add → lock → unlock → tools → QR round trips', async () => {
@@ -57,7 +64,7 @@ test('full journey: create → add → lock → unlock → tools → QR round tr
   assert.match(await page.textContent('.err'), /do not match/);
   await page.fill('#pw2', MASTER);
   await page.click('button[type=submit]');
-  await page.getByRole('button', { name: 'Skip for now' }).click();
+  await page.getByRole('button', { name: 'Skip for now' }).click(); await dismissWelcome(page);
   await page.waitForSelector('.topbar');
 
   // add a login with a generated password
@@ -101,6 +108,8 @@ test('full journey: create → add → lock → unlock → tools → QR round tr
   await page.waitForFunction(() => /Wrong master password/.test(document.body.textContent));
   await page.fill('#upw', MASTER); await page.click('button[type=submit]');
   await page.waitForSelector('.topbar');
+  await page.waitForSelector('.widgets');                                  // Home is the default start page
+  await openAll(page);
   assert.equal(await page.locator('.item').count(), 3);
 
   // generator
@@ -154,7 +163,7 @@ test('full journey: create → add → lock → unlock → tools → QR round tr
   files.forEach((f) => fs.unlinkSync(f));
 
   // settings: self-test passes in the browser
-  await page.getByRole('button', { name: /Settings/ }).click();
+  await page.locator('.side .nav:has-text("Settings"), .dock-item[aria-label="Settings"]').first().click();
   await page.getByRole('tab', { name: /About/ }).click();
   await page.getByRole('button', { name: /Run crypto self-test/ }).click();
   await page.waitForFunction(() => /All \d+ tests passed/.test(document.body.textContent), null, { timeout: 60000 });
@@ -172,12 +181,12 @@ test('recovery key unlocks, and master password change works', async () => {
   await page.waitForSelector('.recovery');
   const key = (await page.textContent('.recovery')).trim();
   assert.match(key, /^([0-9A-Z]{4}-){12}[0-9A-Z]{4}$/);
-  await page.check('.modal-sheet input[type=checkbox]'); await page.getByRole('button', { name: 'Done' }).click();
+  await page.check('.modal-sheet input[type=checkbox]'); await page.getByRole('button', { name: 'Done' }).click(); await dismissWelcome(page);
   await page.getByRole('button', { name: '🔒 Lock', exact: true }).click(); await page.waitForSelector('#upw');
   await page.getByRole('button', { name: /Use recovery key instead/ }).click();
   await page.fill('#urk', key.toLowerCase()); await page.click('button[type=submit]');
   await page.waitForSelector('.topbar');
-  await page.getByRole('button', { name: /Settings/ }).click();
+  await page.locator('.side .nav:has-text("Settings"), .dock-item[aria-label="Settings"]').first().click();
   await page.getByRole('tab', { name: /Security/ }).click();
   await page.fill('input[aria-label="Current master password"]', MASTER);
   await page.fill('input[aria-label="New master password"]', 'new-horse-battery-staple-xylophone');
@@ -198,7 +207,7 @@ test('mobile layout: no horizontal scroll, detail replaces list', async () => {
   await page.goto(base); await page.waitForSelector('#pw1');
   await shot(page, '10-mobile-create');
   await page.fill('#pw1', MASTER); await page.fill('#pw2', MASTER); await page.check('#ack'); await page.click('button[type=submit]');
-  await page.getByRole('button', { name: 'Skip for now' }).click();
+  await page.getByRole('button', { name: 'Skip for now' }).click(); await dismissWelcome(page);
   await page.waitForSelector('.topbar');
   await page.getByRole('button', { name: '＋ New' }).click(); await page.getByRole('button', { name: '🔑 Login', exact: true }).click();
   await page.fill('#f_name', 'Example'); await page.fill('#f_username', 'me@example.com'); await page.getByRole('button', { name: '⚡ Generate' }).click(); await page.getByRole('button', { name: 'Save' }).click();
@@ -227,14 +236,14 @@ const SYNC_PASS = 'plum-orbit-velvet-anchor-glacier-ember';
 async function createVault(page, pw = MASTER) {
   await page.goto(base); await page.waitForSelector('#pw1');
   await page.fill('#pw1', pw); await page.fill('#pw2', pw); await page.check('#ack'); await page.click('button[type=submit]');
-  await page.getByRole('button', { name: 'Skip for now' }).click(); await page.waitForSelector('.topbar');
+  await page.getByRole('button', { name: 'Skip for now' }).click(); await dismissWelcome(page); await page.waitForSelector('.topbar');
 }
 async function addLogin(page, name, extra = async () => {}) {
   await page.getByRole('button', { name: '＋ New' }).click(); await page.getByRole('button', { name: '🔑 Login', exact: true }).click();
   await page.fill('#f_name', name); await page.fill('#f_username', 'user-' + name); await page.getByRole('button', { name: '⚡ Generate' }).click();
   await extra(); await page.getByRole('button', { name: 'Save' }).click(); await page.waitForSelector(`.detail h2:has-text("${name}")`);
 }
-const settingsTab = async (page, tab) => { await page.getByRole('button', { name: /Settings/ }).click(); await page.getByRole('tab', { name: tab }).click(); };
+const settingsTab = async (page, tab) => { await page.locator('.side .nav:has-text("Settings"), .dock-item[aria-label="Settings"]').first().click(); await page.getByRole('tab', { name: tab }).click(); };
 
 test('attachments: add image + document to login, note and card; preview, download, persist across lock and reload', async () => {
   const { ctx, page, problems } = await newPage();
@@ -385,7 +394,7 @@ test('gist sync (mocked GitHub API): two devices converge; only ciphertext leave
 
   // wrong passphrase on a device: error shown, remote untouched
   const before = JSON.stringify([...gists.values()]);
-  await B.page.getByRole('button', { name: /Settings/ }).click(); await B.page.getByRole('tab', { name: /Sync/ }).click();
+  await B.page.locator('.side .nav:has-text("Settings"), .dock-item[aria-label="Settings"]').first().click(); await B.page.getByRole('tab', { name: /Sync/ }).click();
   await B.page.fill('input[aria-label="Sync passphrase"]', 'silver-lantern-orbit-maple-quiet-river'); await B.page.getByRole('button', { name: 'Save passphrase' }).click();
   await B.page.getByRole('button', { name: /Sync now/ }).click();
   await B.page.waitForFunction(() => /Wrong sync passphrase/.test(document.body.textContent));
@@ -429,6 +438,7 @@ test('passkey unlock: add (re-auth required), unlock with it, fall back to passw
   await page.getByRole('button', { name: '🔒 Lock', exact: true }).click(); await page.waitForSelector('#upw');
   await page.getByRole('button', { name: /Unlock with passkey/ }).click();
   await page.waitForSelector('.topbar');
+  await openAll(page);
   assert.equal(await page.locator('.item').count(), 1);
   await settingsTab(page, /Audit trail/);
   assert.ok((await page.textContent('.page')).includes('unlocked with a passkey') && (await page.textContent('.page')).includes('Passkey added: Test laptop'));
@@ -680,6 +690,76 @@ test('look & feel: appearance, effects, dock & menu bar, widgets, start page, bo
   await page.getByRole('button', { name: 'Reset appearance' }).click(); await page.getByRole('button', { name: 'Reset', exact: true }).click();
   await page.waitForFunction(() => document.documentElement.dataset.icons === 'vivid');
   assert.equal(await cssv('--accent'), '#2fe6d0');
+  assert.deepEqual(problems, []);
+  await ctx.close();
+});
+
+test('welcome splash + guided tour + help: first-run experience, replay, dock mode, preferences', async () => {
+  const { ctx, page, problems } = await newPage();
+  await page.goto(base); await page.waitForSelector('#pw1');
+  await page.fill('#pw1', MASTER); await page.fill('#pw2', MASTER); await page.check('#ack'); await page.click('button[type=submit]');
+  await page.getByRole('button', { name: 'Skip for now' }).click();
+
+  // Home is the default start page, and the welcome splash appears on the very first unlock
+  await page.waitForSelector('.welcome.in', { timeout: 10000 });
+  await page.waitForSelector('.widgets');
+  const w = await page.textContent('.welcome');
+  for (const needle of ['Welcome to VaultManager', 'Zero-knowledge', 'PC and phone', 'More than passwords', 'Open my vault', 'Take the tour', 'Make it yours', 'AES-256']) assert.ok(w.includes(needle), 'welcome mentions ' + needle);
+  assert.equal(await page.locator('.wl-ico').count(), 8); assert.equal(await page.locator('.welcome input[type=checkbox]').isChecked(), false);
+  await shot(page, '30-welcome');
+
+  // the tour: every step shows a card; steps with a target spotlight a real element
+  await page.getByRole('button', { name: /Take the tour/ }).click();
+  await page.waitForSelector('.tour-card'); await page.waitForSelector('.welcome', { state: 'detached' });
+  const total = +(/\/ (\d+)/.exec(await page.textContent('.tour-n'))[1]); assert.ok(total >= 15, 'tour has ' + total + ' steps');
+  const seen = [], spotted = [];
+  for (let i = 0; i < total; i++) {
+    await page.waitForFunction((n) => document.querySelector('.tour-n') && document.querySelector('.tour-n').textContent.startsWith(n + ' /'), i + 1);
+    await page.waitForTimeout(160);
+    const title = await page.textContent('.tour-head b'); seen.push(title);
+    const box = await page.locator('.tour-hole').evaluate((e) => ({ shown: getComputedStyle(e).display !== 'none', w: e.getBoundingClientRect().width, h: e.getBoundingClientRect().height }));
+    if (box.shown && box.w > 20 && box.h > 10) spotted.push(title);
+    if (i === 2) await shot(page, '31-tour-nav');
+    if (i === 6) await shot(page, '32-tour-generator');
+    if (i < total - 1) await page.getByRole('button', { name: /Next/ }).click(); else await page.getByRole('button', { name: 'Finish' }).click();
+  }
+  await page.waitForSelector('.tour-card', { state: 'detached' });
+  assert.ok(spotted.length >= 12, 'spotlit steps: ' + spotted.join(' | '));
+  for (const t of ['Welcome to VaultManager', 'Find your way around', 'Password generator', 'Vault health', 'Beam sync', 'Sync and conflicts', 'Lock when you leave', 'You are all set']) assert.ok(seen.includes(t), 'step ' + t);
+
+  // seen once → no welcome on the next unlock
+  await page.getByRole('button', { name: '🔒 Lock', exact: true }).click(); await page.waitForSelector('#upw');
+  await page.fill('#upw', MASTER); await page.click('button[type=submit]'); await page.waitForSelector('.widgets');
+  await page.waitForTimeout(1600); assert.equal(await page.locator('.welcome').count(), 0, 'welcome is not repeated');
+
+  // Help (?) → replay; Escape ends the tour
+  await page.getByRole('button', { name: 'Help', exact: true }).click(); await page.waitForSelector('.modal-sheet:has-text("Keyboard shortcuts")');
+  assert.ok((await page.textContent('.modal-sheet')).includes('Alt + L'));
+  await shot(page, '33-help');
+  await page.getByRole('button', { name: /Guided tour/ }).click(); await page.waitForSelector('.tour-card'); await page.keyboard.press('Escape'); await page.waitForSelector('.tour-card', { state: 'detached' });
+  await page.getByRole('button', { name: 'Help', exact: true }).click(); await page.getByRole('button', { name: /Welcome screen/ }).click(); await page.waitForSelector('.welcome.in');
+  await page.getByRole('button', { name: /Make it yours/ }).click();                       // → Settings → Appearance
+  await page.waitForSelector('.setrow:has-text("Accent colour")'); await page.waitForSelector('.welcome', { state: 'detached' });
+
+  // preferences: display name + "show every time"
+  await page.getByRole('tab', { name: /General/ }).click();
+  await page.fill('input[aria-label="Your name"]', 'Alex'); await page.locator('input[aria-label="Your name"]').blur();
+  await page.getByLabel('Show the welcome screen every time I unlock').check();
+  await page.locator('.side .nav', { hasText: 'Home' }).click(); await page.waitForSelector('h2:has-text("Alex")');
+  await page.getByRole('button', { name: '🔒 Lock', exact: true }).click(); await page.waitForSelector('#upw');
+  await page.fill('#upw', MASTER); await page.click('button[type=submit]');
+  await page.waitForSelector('.welcome.in', { timeout: 10000 }); assert.ok((await page.textContent('.wl-hello')).includes('Alex'));
+  await page.keyboard.press('Enter'); await page.waitForSelector('.welcome', { state: 'detached' });
+
+  // the tour also works with the dock instead of the side bar
+  await settingsTab(page, /Dock & menu bar/);
+  await page.selectOption('.setrow:has-text("Navigation style") select', 'dock'); await page.waitForSelector('.dock .dock-item');
+  await page.locator('.dock-item[aria-label="Help"]').click(); await page.getByRole('button', { name: /Guided tour/ }).click();
+  await page.waitForSelector('.tour-card'); await page.getByRole('button', { name: /Next/ }).click(); await page.getByRole('button', { name: /Next/ }).click();
+  await page.waitForFunction(() => document.querySelector('.tour-head b').textContent === 'Find your way around'); await page.waitForTimeout(250);
+  const dockBox = await page.locator('.dock').boundingBox(), hole = await page.locator('.tour-hole').boundingBox();
+  assert.ok(hole && Math.abs(hole.x + hole.width / 2 - (dockBox.x + dockBox.width / 2)) < 40, 'the spotlight is on the dock');
+  await shot(page, '34-tour-dock'); await page.keyboard.press('Escape');
   assert.deepEqual(problems, []);
   await ctx.close();
 });

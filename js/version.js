@@ -1,6 +1,6 @@
 /* Application version, data-format versions and changelog (shown in Settings → About). */
 
-export const APP_VERSION = '0.5.0';
+export const APP_VERSION = '0.6.0';
 export const APP_NAME = 'VaultManager';
 export const REPO_URL = 'https://github.com/ulyweb/vaultmanager';
 
@@ -15,6 +15,13 @@ export const FORMATS = [
 ];
 
 export const CHANGELOG = [
+  { v: '0.6.0', date: '2026-11-09', notes: [
+    'Welcome splash (hero, feature cards, Enter / Take the tour / Make it yours) after your first unlock, or every unlock if you switch it on.',
+    'Guided spotlight tour of the real screens — works with the side bar or the dock and walks you through Home, search, categories, generator, health, QR, Beam, sync, look & feel, security, audit and lock.',
+    'Help (?) button and dock item: replay the tour or welcome screen, keyboard shortcuts. Replay also from Settings → General and About.',
+    'Home is now the default start page.',
+    'Optional display name for greetings.',
+  ] },
   { v: '0.5.0', date: '2026-11-09', notes: [
     'Conflict handling: sync now merges field by field. Edits to different fields of one item are both kept; if the same field was edited on two devices the newest wins and the other value is saved under “Needs review” (side-by-side, keep or use the other). Resolutions sync too.',
     'Appearance, Effects, Dock & menu bar and Widgets settings (modelled on ulyOS): accent colours, 12 offline wallpapers, icon styles and sizes, density, corner radius, UI size, window animation styles, animation speed, boot animation, aurora, 3D tilt, glow, CRT scanlines, glass blur and panel fill.',

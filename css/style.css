@@ -399,3 +399,42 @@ html[data-wstyle=vivid] .whead { color: var(--wc); }
 
 .widget .wbig { font-size: clamp(22px, 3.2vw, 30px); white-space: nowrap; }
 html[data-nav=dock] #toasts { bottom: calc(var(--dock) + 84px); }
+
+/* =====================================================================================
+   Welcome splash + guided tour
+   ===================================================================================== */
+.welcome { position: fixed; inset: 0; z-index: 9000; display: grid; place-items: center; padding: 16px; overflow-y: auto; opacity: 0; transition: opacity .3s ease;
+  background: radial-gradient(80% 70% at 30% 20%, rgba(var(--accent-rgb), .22), transparent 60%), radial-gradient(70% 60% at 80% 90%, rgba(139,125,255,.18), transparent 60%), rgba(3,6,12,.9); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+:root[data-theme="light"] .welcome { background: radial-gradient(80% 70% at 30% 20%, rgba(var(--accent-rgb), .25), transparent 60%), rgba(235,238,247,.9); }
+.welcome.in { opacity: 1; } .welcome.out { opacity: 0; }
+.wl-card { width: min(900px, 100%); display: grid; grid-template-columns: 1.05fr 1fr; border-radius: 28px; overflow: hidden; border: 1px solid var(--line-2); background: var(--panel); box-shadow: 0 40px 120px rgba(0,0,0,.6), 0 0 80px -20px rgba(var(--accent-rgb), .5); transform: translateY(14px) scale(.98); transition: transform .35s cubic-bezier(.2,.8,.2,1); }
+.welcome.in .wl-card { transform: none; }
+.wl-hero { position: relative; min-height: 520px; overflow: hidden; display: grid; align-items: end; padding: 34px; color: #fff; background: radial-gradient(120% 90% at 20% 0%, rgba(var(--accent-rgb), .9) 0%, transparent 60%), radial-gradient(100% 80% at 100% 100%, #8b7dff 0%, transparent 55%), linear-gradient(160deg, #0a1424, #05080d); }
+.wl-orb { position: absolute; border-radius: 50%; filter: blur(46px); opacity: .5; animation: wl-drift 14s ease-in-out infinite alternate; } .wl-orb.o1 { width: 280px; height: 280px; left: -60px; top: -40px; background: #38bdf8; } .wl-orb.o2 { width: 300px; height: 300px; right: -80px; bottom: -60px; background: #ec4899; animation-delay: -6s; }
+@keyframes wl-drift { to { transform: translate(40px, 30px) scale(1.15); } }
+.wl-float { position: absolute; inset: 0; } .wl-ico { position: absolute; font-size: 54px; filter: drop-shadow(0 14px 22px rgba(0,0,0,.45)); animation: wl-bob 5.5s ease-in-out infinite; }
+@keyframes wl-bob { 0%, 100% { transform: translateY(0) rotate(-3deg); } 50% { transform: translateY(-14px) rotate(3deg); } }
+.wl-brand { position: relative; z-index: 1; text-align: left; } .wl-logo { display: inline-grid; place-items: center; width: 64px; height: 64px; border-radius: 20px; background: rgba(255,255,255,.14); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,.25); margin-bottom: 14px; }
+.wl-brand h1 { margin: 0; font-family: var(--mono); font-size: 32px; letter-spacing: -.01em; line-height: 1.1; } .wl-brand h1 span { color: #ffe08a; }
+.wl-tag { margin: 8px 0 14px; font-size: 15px; opacity: .92; } .wl-ver { display: inline-block; padding: 3px 10px; border-radius: 999px; background: rgba(0,0,0,.35); font-size: 11.5px; }
+.wl-side { padding: 30px 30px 22px; display: flex; flex-direction: column; gap: 12px; text-align: left; }
+.wl-hello { margin: 0 0 4px; color: var(--ink-dim); line-height: 1.55; } .wl-hello b { color: var(--ink); }
+.wl-feat { display: flex; gap: 14px; align-items: center; padding: 12px 14px; border-radius: 16px; background: var(--panel-2); border: 1px solid var(--line); transition: transform .2s; } .wl-feat:hover { transform: translateX(4px); }
+.wl-fi { flex: none; width: 44px; height: 44px; border-radius: 14px; display: grid; place-items: center; font-size: 22px; box-shadow: 0 8px 18px rgba(0,0,0,.3); } .wl-feat b { display: block; } .wl-feat p { margin: 2px 0 0; color: var(--muted); font-size: 12.5px; }
+.wl-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; } .wl-stats div { text-align: center; padding: 8px 4px; border-radius: 12px; background: rgba(var(--accent-rgb), .1); } .wl-stats b { display: block; font-family: var(--mono); font-size: 16px; color: var(--accent); } .wl-stats span { font-size: 11px; color: var(--muted); }
+.wl-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 4px; } .wl-actions .btn { min-height: 42px; }
+.wl-go { flex: 1 1 100%; } .wl-tour, .wl-ghost { flex: 1; }
+@media (max-width: 760px) { .wl-card { grid-template-columns: 1fr; max-height: 94vh; overflow: auto; } .wl-hero { min-height: 190px; padding: 22px; } .wl-ico { font-size: 34px; } .wl-brand h1 { font-size: 24px; } .wl-side { padding: 20px; } }
+
+.tour-shield { position: fixed; inset: 0; z-index: 9100; }
+.tour-hole { position: fixed; z-index: 9101; display: none; border-radius: 16px; pointer-events: none; border: 2px solid var(--accent); box-shadow: 0 0 0 9999px rgba(2,5,10,.72), 0 0 24px rgba(var(--accent-rgb), .6); transition: left .25s, top .25s, width .25s, height .25s; }
+.tour-card { position: fixed; z-index: 9102; width: min(360px, calc(100vw - 24px)); padding: 16px 18px 14px; border-radius: 18px; border: 1px solid var(--line-2); background: var(--panel); box-shadow: 0 24px 70px rgba(0,0,0,.6), var(--glow); transition: left .25s, top .25s; }
+.tour-head { display: flex; align-items: center; gap: 9px; margin-bottom: 8px; } .tour-head b { flex: 1; font-size: 15px; }
+.tour-ico { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 10px; font-size: 16px; background: linear-gradient(135deg, rgba(var(--accent-rgb), .35), rgba(139,125,255,.35)); }
+.tour-n { color: var(--muted); font-size: 11px; font-family: var(--mono); }
+.tour-text { margin: 0 0 12px; color: var(--ink-dim); line-height: 1.6; }
+.tour-dots { display: flex; gap: 5px; justify-content: center; margin-bottom: 12px; flex-wrap: wrap; } .tour-dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--line-2); cursor: pointer; } .tour-dots i.on { background: var(--accent); box-shadow: 0 0 8px var(--accent); }
+.tour-nav { display: flex; gap: 8px; align-items: center; } .tour-nav .grow { flex: 1; }
+html[data-motion=off] .welcome, html[data-motion=off] .wl-card { transition: none; }
+
+.btn.icon { width: 36px; padding: 0; font-weight: 800; }
