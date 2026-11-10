@@ -1482,3 +1482,30 @@ test('v0.21: centred unlock screen, side-bar auto-hide, clock position, live New
   assert.deepEqual(problems.filter((p) => !/Failed to load resource/.test(p)), []);
   await ctx.close();
 });
+
+test('v0.22: security check finds extension traces and replaced browser functions, warns live, explains limits and advice; protected-data explanation', async () => {
+  const { ctx, page, problems } = await newPage();
+  await page.addInitScript(() => Object.defineProperty(Navigator.prototype, 'webdriver', { get: () => false }));   // the test browser is automated; pretend it is not so the page starts clean
+  await createVault(page);
+  await page.locator('.side .nav', { hasText: 'Task manager' }).click(); await page.getByRole('tab', { name: 'Security check' }).click();
+  assert.match(await page.textContent('.secsum'), /No signs of tampering/);
+  assert.match(await page.textContent('.tm'), /cannot \(and would not\) read that list/); assert.ok((await page.locator('.advlist li').count()) >= 5);
+  // simulate an extension: a known password-manager element, an unknown custom element, an extension script, and a replaced fetch
+  await page.evaluate(() => {
+    const a = document.createElement('com-bitwarden-button'); document.body.append(a);
+    const b = document.createElement('weird-ext-widget'); document.body.append(b);
+    const c = document.createElement('script'); c.setAttribute('src', 'chrome-extension://abcdefghijklmnop/inject.js'); document.head.append(c);
+    window.fetch = function fakeFetch() { return Promise.resolve(); };
+  });
+  await page.waitForSelector('.secbar:not([hidden])', { timeout: 5000 });
+  assert.match(await page.textContent('.secbar'), /modifying this page/);
+  await page.getByRole('button', { name: /Scan again/ }).click();
+  const txt = await page.textContent('.secfinds');
+  assert.match(txt, /Bitwarden is active on this page/); assert.match(txt, /unknown extension added an element \(<weird-ext-widget>\)/); assert.match(txt, /injected its own script/); assert.match(txt, /Browser functions have been replaced[\s\S]*window\.fetch/);
+  assert.match(await page.textContent('.secsum'), /thing/);
+  await page.getByRole('button', { name: 'Dismiss' }).click(); assert.ok(await page.locator('.secbar').isHidden());
+  // settings explain what is protected
+  await settingsTab(page, 'Security'); const prot = await page.textContent('.protgrid'); assert.match(prot, /Encrypted[\s\S]*seed phrases[\s\S]*Attached files/); assert.match(prot, /profile’s name and picture/);
+  assert.ok(await page.getByRole('button', { name: /device & browser check/ }).count());
+  await ctx.close();
+});

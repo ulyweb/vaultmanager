@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VaultManager v0.21.0 — single-file offline build. Verify with the .sha256 file next to it. -->
+<!-- VaultManager v0.22.0 — single-file offline build. Verify with the .sha256 file next to it. -->
 <html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
@@ -11,7 +11,7 @@
 <meta name="application-name" content="VaultManager">
 <meta name="format-detection" content="telephone=no">
 <meta name="referrer" content="no-referrer">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-my0iDgAq9CKtIbhPSNI+KDJ3CrRF5BnnI78IbOZgDNs=' blob:; style-src 'sha256-m4Gm6oZmDjBOonKt8RFAn5rWinHfOZnVf8Hga4mZ1Vo='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-5JeFtqNOYujPLDWjnNfwf9Wgm/ueWlX/Jfwh7d0abCs=' blob:; style-src 'sha256-AcCjF9/REsUgfwz3Hce9JLVO6x9kcZsU4vKadv2iM8Y='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
 <title>VaultManager | Zero-Knowledge Password Manager</title>
 <meta name="description" content="VaultManager: an offline-first, zero-knowledge, end-to-end encrypted password manager with a strong password generator, TOTP codes and QR-sealed sharing and backup. Runs entirely in your browser.">
 <meta name="theme-color" content="#05080d">
@@ -837,6 +837,13 @@ html[data-fxanim=on] .mbar-fab::before { content: ''; position: absolute; inset:
 html[data-barlabels="0"] .topbar .newbtn { padding: 6px 10px 6px 8px; }
 @media (prefers-reduced-motion: reduce) { .topbar .newbtn::after, .topbar .newbtn .newico, .topbar .newbtn .newico::before, .mbar-fab, .mbar-fab::before { animation: none !important; } }
 .mbar-fab { position: relative; }
+
+/* ---- security check ---- */
+.secsum { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line); margin-bottom: 12px; } .secsum.ok { border-color: color-mix(in srgb, #34d399 55%, var(--line)); } .secsum.bad { border-color: color-mix(in srgb, #f87171 60%, var(--line)); background: color-mix(in srgb, #f87171 8%, transparent); } .secsum small { color: var(--muted); flex: 1; }
+.secfinds { display: grid; gap: 10px; margin-bottom: 12px; } .secfind { border: 1px solid var(--line); border-left-width: 4px; border-radius: 10px; padding: 10px 12px; } .secfind.high { border-left-color: #f87171; } .secfind.warn { border-left-color: #fbbf24; } .secfind p { margin: 4px 0; font-size: 13px; } .secf-h { display: flex; gap: 8px; align-items: center; } .secfind .advice { color: var(--ink-dim); }
+.advlist { margin: 6px 0 0 18px; padding: 0; font-size: 13px; } .advlist li { margin: 6px 0; }
+.secbar { position: sticky; top: 56px; z-index: 19; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding: 8px 16px; background: color-mix(in srgb, #f87171 22%, var(--panel)); border-bottom: 1px solid #f87171; font-size: 13px; } .secbar[hidden] { display: none; }
+.protgrid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); margin: 8px 0 12px; } .prot { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; } .prot.ok { border-color: color-mix(in srgb, #34d399 55%, var(--line)); } .prot ul { margin: 6px 0 0 18px; padding: 0; font-size: 13px; } .prot li { margin: 3px 0; }
 </style>
 </head>
 <body>
@@ -1581,25 +1588,25 @@ html[data-barlabels="0"] .topbar .newbtn { padding: 6px 10px 6px 8px; }
     const session = new Session(id, mk, dataKey, wraps);
     return { session, record: await session.seal(data) };
   }
-  async function openVault(record, secret) {
-    if (!record || record.v !== 1 || !Array.isArray(record.wraps) || !record.wraps.every(validWrap) || typeof record.iv !== "string" || typeof record.ct !== "string" || typeof record.id !== "string") {
+  async function openVault(record2, secret) {
+    if (!record2 || record2.v !== 1 || !Array.isArray(record2.wraps) || !record2.wraps.every(validWrap) || typeof record2.iv !== "string" || typeof record2.ct !== "string" || typeof record2.id !== "string") {
       throw new Error("The stored vault looks corrupted.");
     }
     let mk;
     try {
       if (secret.passkey) {
-        const w = record.wraps.find((x) => x.type === "passkey" && x.cred === secret.passkey.cred);
+        const w = record2.wraps.find((x) => x.type === "passkey" && x.cred === secret.passkey.cred);
         if (!w) throw new Error("no passkey wrap");
-        mk = await unwrap(await hkdfKey(secret.passkey.prf, PASSKEY_INFO, ["decrypt"]), w, record.id, "passkey:" + w.cred);
+        mk = await unwrap(await hkdfKey(secret.passkey.prf, PASSKEY_INFO, ["decrypt"]), w, record2.id, "passkey:" + w.cred);
       } else if (secret.recovery) {
-        const w = record.wraps.find((x) => x.type === "recovery");
+        const w = record2.wraps.find((x) => x.type === "recovery");
         if (!w) throw new Error("no recovery wrap");
         const bytes2 = recoveryDecode(secret.recovery);
-        mk = await unwrap(await hkdfKey(bytes2, RECOVERY_INFO, ["decrypt"]), w, record.id, "recovery");
+        mk = await unwrap(await hkdfKey(bytes2, RECOVERY_INFO, ["decrypt"]), w, record2.id, "recovery");
         wipe(bytes2);
       } else {
-        const w = record.wraps.find((x) => x.type === "password");
-        mk = await unwrap(await passwordKey(secret.password, b64.dec(w.salt), w.iter, ["decrypt"]), w, record.id, "password");
+        const w = record2.wraps.find((x) => x.type === "password");
+        mk = await unwrap(await passwordKey(secret.password, b64.dec(w.salt), w.iter, ["decrypt"]), w, record2.id, "password");
       }
     } catch (e) {
       if (/invalid character|52 characters/.test(e.message)) throw e;
@@ -1608,12 +1615,12 @@ html[data-barlabels="0"] .topbar .newbtn { padding: 6px 10px 6px 8px; }
     const dataKey = await hkdfKey(mk, DATA_INFO);
     let data;
     try {
-      data = JSON.parse(td.decode(await gcmOpen(dataKey, b64.dec(record.iv), b64.dec(record.ct), dataAad(record.id))));
+      data = JSON.parse(td.decode(await gcmOpen(dataKey, b64.dec(record2.iv), b64.dec(record2.ct), dataAad(record2.id))));
     } catch {
       wipe(mk);
       throw new Error("The vault failed its integrity check (damaged or tampered).");
     }
-    return { session: new Session(record.id, mk, dataKey, record.wraps), data };
+    return { session: new Session(record2.id, mk, dataKey, record2.wraps), data };
   }
 
   // js/wordlist.js
@@ -1876,7 +1883,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   }
 
   // js/version.js
-  var APP_VERSION = "0.21.0";
+  var APP_VERSION = "0.22.0";
   var APP_NAME = "VaultManager";
   var REPO_URL = "https://github.com/ulyweb/vaultmanager";
   var FORMATS = [
@@ -1890,6 +1897,11 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     ["Attachments at rest", "AES-256-GCM per file, bound to vault + file id"]
   ];
   var CHANGELOG = [
+    { v: "0.22.0", date: "2026-11-10", notes: [
+      "Device & browser security check (Tools \u2192 Task manager \u2192 Security check): live detection of traces left by browser extensions in this page (injected elements and scripts, known password managers / writing assistants, replaced browser functions), a warning bar if something is clearly tampering, and plain recommendations. Browsers do not let websites list extensions, so it reports what a page can honestly see.",
+      "Settings \u2192 Security now shows what is protected: everything is encrypted; only each profile\u2019s name and picture (and harmless appearance choices) are visible on the sign-in screen.",
+      "The guided tour and Help explain both."
+    ] },
     { v: "0.21.0", date: "2026-11-10", notes: [
       "Security review of all scripts (see SECURITY.md). Fixed: a crafted backup could weaken settings (auto-lock, reveal logging, generator); imported file names are cleaned; PBKDF2 limit for untrusted payloads lowered to 5,000,000; the app refuses to be framed.",
       "The unlock screen is centred, like ulyOS.",
@@ -2902,10 +2914,10 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     }
     async create(password, opt = {}) {
       const data = this._prepare({ v: 1, created: Date.now(), items: [] });
-      const { session, record } = await createVault(password, data, opt);
+      const { session, record: record2 } = await createVault(password, data, opt);
       this.session = session;
       this.data = data;
-      this.storage.setItem(this.key, JSON.stringify(record));
+      this.storage.setItem(this.key, JSON.stringify(record2));
       this._clearFails();
       this.log("security", "Vault created on this device (AES-256-GCM, PBKDF2-SHA256 " + session.iterations().toLocaleString("en-US") + " rounds)");
       await this.save();
@@ -2915,15 +2927,15 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       if (!secret.passkey && this.delayLeft() > 0) throw new Error("locked-out");
       const raw = this.storage.getItem(this.key);
       if (!raw) throw new Error("There is no vault on this device yet.");
-      let record;
+      let record2;
       try {
-        record = JSON.parse(raw);
+        record2 = JSON.parse(raw);
       } catch {
         throw new Error("The stored vault looks corrupted.");
       }
       let opened;
       try {
-        opened = await openVault(record, secret);
+        opened = await openVault(record2, secret);
       } catch (e) {
         if (e.message === "bad-secret") this._fail();
         throw e;
@@ -2956,7 +2968,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       const s = this.session, d = this.data;
       if (!s) return Promise.resolve();
       this.chain = this.chain.then(async () => {
-        const record = await s.seal(d);
+        const record2 = await s.seal(d);
         const prev = this.storage.getItem(this.key);
         if (prev) {
           try {
@@ -2964,7 +2976,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
           } catch {
           }
         }
-        this.storage.setItem(this.key, JSON.stringify(record));
+        this.storage.setItem(this.key, JSON.stringify(record2));
         this.lastSaved = Date.now();
         if (this.onSaved) {
           try {
@@ -5111,13 +5123,13 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       return true;
     });
     t("Vault: create \u2192 open with password, wrong password rejected, fresh IV per write", async () => {
-      const { session, record } = await createVault("a long master password", { items: [1, 2, 3] }, { iterations: 1e5 });
+      const { session, record: record2 } = await createVault("a long master password", { items: [1, 2, 3] }, { iterations: 1e5 });
       const again = await session.seal({ items: [1, 2, 3] });
-      if (again.iv === record.iv || again.ct === record.ct) return false;
-      const o = await openVault(record, { password: "a long master password" });
+      if (again.iv === record2.iv || again.ct === record2.ct) return false;
+      const o = await openVault(record2, { password: "a long master password" });
       if (JSON.stringify(o.data) !== '{"items":[1,2,3]}') return false;
       try {
-        await openVault(record, { password: "nope" });
+        await openVault(record2, { password: "nope" });
         return false;
       } catch (e) {
         if (e.message !== "bad-secret") return false;
@@ -5125,7 +5137,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       return true;
     });
     t("Vault: recovery key opens the vault; password change keeps data readable", async () => {
-      const { session, record } = await createVault("first password!", { n: 1 }, { iterations: 1e5 });
+      const { session, record: record2 } = await createVault("first password!", { n: 1 }, { iterations: 1e5 });
       const rk = await session.createRecovery();
       await session.changePassword("second password!", 1e5);
       const rec2 = await session.seal({ n: 1 });
@@ -5137,7 +5149,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       } catch {
       }
       try {
-        await openVault(record, { password: "second password!" });
+        await openVault(record2, { password: "second password!" });
         return false;
       } catch {
       }
@@ -5835,6 +5847,123 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     });
   }
 
+  // js/devcheck.js
+  var EXT_URL = /^(chrome|moz|safari-web|ms-browser|edge)-extension:\/\//i;
+  var KNOWN = [
+    [/grammarly/i, "Grammarly", "writing assistant (reads text you type)"],
+    [/lastpass|__lpform|data-lp/i, "LastPass", "password manager (autofill)"],
+    [/bitwarden|data-bwautofill|com-bitwarden/i, "Bitwarden", "password manager (autofill)"],
+    [/1password|com-1password|data-1p/i, "1Password", "password manager (autofill)"],
+    [/dashlane/i, "Dashlane", "password manager (autofill)"],
+    [/keeper/i, "Keeper", "password manager (autofill)"],
+    [/nordpass|data-np-/i, "NordPass", "password manager (autofill)"],
+    [/honey|joinhoney/i, "Honey", "shopping assistant (reads pages)"],
+    [/kaspersky|avast|avg-|norton|mcafee|bitdefender/i, "Security suite", "antivirus browser add-on"],
+    [/translate|deepl|google-translate/i, "Translator", "page translator (reads page text)"],
+    [/loom|screencastify|nimbus|lightshot/i, "Screen capture", "screen recorder / screenshot tool"],
+    [/ublock|adblock|ghostery/i, "Content blocker", "ad / tracker blocker"]
+  ];
+  var brand = (s) => {
+    for (const [re, name, kind] of KNOWN) if (re.test(s)) return { name, kind };
+    return null;
+  };
+  var OWN_SCRIPT = (el) => !el.src || el.id === "vm-embed" || el.src.startsWith("blob:") || /\/js\/app\.js(\?|$)/.test(el.src);
+  function classifyNode(el) {
+    if (!el || el.nodeType !== 1) return null;
+    const tag = el.localName || "", id = el.id || "", cls = typeof el.className === "string" ? el.className : "";
+    const attrs = [...el.attributes || []].map((a) => a.name + "=" + a.value).join(" ");
+    const sig = [tag, id, cls, attrs].join(" ");
+    const urlAttr = el.getAttribute && (el.getAttribute("src") || el.getAttribute("href") || el.getAttribute("data") || "");
+    if (urlAttr && EXT_URL.test(urlAttr)) return { level: "high", key: "ext-url:" + tag, title: "A browser extension injected its own " + tag + " into this page", detail: "Found <" + tag + "> loading from an extension address (" + urlAttr.split("/")[2].slice(0, 12) + "\u2026). Extensions that run inside this page can read what you see and type.", advice: "Use a browser profile or a Private / Incognito window with extensions turned off, or the desktop app." };
+    if (tag === "iframe" || tag === "frame" || tag === "object" || tag === "embed") return { level: "high", key: "frame", title: "Something added a frame to this page", detail: "VaultManager never uses frames; one was inserted by something running in your browser.", advice: "Close this tab, turn off extensions for this site, and sign in again." };
+    if (tag === "script" && !OWN_SCRIPT(el)) return { level: "high", key: "script:" + (el.src || "inline").slice(0, 40), title: "An unexpected script was added to this page", detail: "A script that is not part of VaultManager was inserted (" + (el.src ? el.src.slice(0, 60) : "inline") + ").", advice: "Turn off extensions for this site; if it comes back, stop using this browser for your vault." };
+    const b = brand(sig);
+    if (b && (tag.includes("-") || /(^|\s)(data-|__|com-|lp|bw|np)/i.test(sig))) return { level: "warn", key: "known:" + b.name, title: b.name + " is active on this page", detail: b.kind + ". It can see this page, including what you type into it.", advice: b.kind.includes("password manager") ? "Set the extension to \u201Cnever autofill / run on this site\u201D for VaultManager, so it cannot read your master password field." : "Turn it off for this site (or use a clean browser profile)." };
+    if (tag.includes("-") && el.parentNode) return { level: "warn", key: "custom:" + tag, title: "An unknown extension added an element (<" + tag + ">)", detail: "VaultManager defines no custom elements, so this was inserted by something else in your browser.", advice: "Open your browser\u2019s extensions page, switch off extensions you do not recognise or no longer use, then reload." };
+    return null;
+  }
+  var native = (f) => {
+    try {
+      return typeof f === "function" && /\{\s*\[native code\]\s*\}/.test(Function.prototype.toString.call(f));
+    } catch {
+      return false;
+    }
+  };
+  function checkNatives() {
+    const out = [];
+    if (!native(Function.prototype.toString)) out.push("Function.prototype.toString");
+    const probes = [
+      ["window.fetch", window.fetch],
+      ["XMLHttpRequest.send", window.XMLHttpRequest && XMLHttpRequest.prototype.send],
+      ["EventTarget.addEventListener", EventTarget.prototype.addEventListener],
+      ["Document.createElement", Document.prototype.createElement],
+      ["crypto.getRandomValues", crypto.getRandomValues],
+      ["SubtleCrypto.deriveBits", window.SubtleCrypto && SubtleCrypto.prototype.deriveBits],
+      ["SubtleCrypto.encrypt", window.SubtleCrypto && SubtleCrypto.prototype.encrypt],
+      ["SubtleCrypto.decrypt", window.SubtleCrypto && SubtleCrypto.prototype.decrypt],
+      ["Clipboard.writeText", window.Clipboard && Clipboard.prototype.writeText],
+      ["JSON.stringify", JSON.stringify],
+      ["HTMLInputElement value getter", (Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value") || {}).get],
+      ["HTMLInputElement value setter", (Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value") || {}).set]
+    ];
+    for (const [name, fn] of probes) if (fn && !native(fn)) out.push(name);
+    return out;
+  }
+  var seen = /* @__PURE__ */ new Map();
+  var observer = null;
+  var listeners = /* @__PURE__ */ new Set();
+  var record = (f) => {
+    if (f && !seen.has(f.key)) {
+      seen.set(f.key, { ...f, at: Date.now() });
+      for (const l of listeners) {
+        try {
+          l(f);
+        } catch {
+        }
+      }
+    }
+  };
+  function onFinding(fn) {
+    listeners.add(fn);
+    return () => listeners.delete(fn);
+  }
+  function sweep(root2) {
+    record(classifyNode(root2));
+    if (root2.querySelectorAll) for (const el of root2.querySelectorAll("*")) record(classifyNode(el));
+  }
+  function startWatch() {
+    if (observer || typeof MutationObserver === "undefined") return;
+    const html = document.documentElement;
+    if (html.dataset.cursor !== void 0) {
+    }
+    sweep(html);
+    observer = new MutationObserver((muts) => {
+      for (const m of muts) for (const n of m.addedNodes) if (n.nodeType === 1) sweep(n);
+    });
+    observer.observe(document, { childList: true, subtree: true });
+  }
+  function runCheck() {
+    startWatch();
+    sweep(document.documentElement);
+    const findings = [...seen.values()];
+    const tampered = checkNatives();
+    if (tampered.length) findings.push({ level: window.__TAURI__ ? "warn" : "high", key: "natives", title: "Browser functions have been replaced", detail: "These built-in functions are not the genuine ones any more: " + tampered.join(", ") + ". Something running in your browser (an extension or injected script) is intercepting them, which is how keyloggers and password stealers work. Some developer tools and monitoring add-ons also do this.", advice: "Turn off extensions for this site or use a clean browser profile / Private window, then run this check again. If it stays, do not enter your master password on this browser." });
+    if (!window.isSecureContext) findings.push({ level: "high", key: "insecure", title: "This page is not a secure context", detail: "Encryption needs https:// (or localhost / a local file). Anything on the network could read an http:// page.", advice: "Open VaultManager over https:// or use the offline file." });
+    if (navigator.webdriver) findings.push({ level: "warn", key: "webdriver", title: "The browser reports it is remote-controlled", detail: "navigator.webdriver is on, which means automation software is driving this browser.", advice: "Only continue if you started that automation yourself." });
+    const order = { high: 0, warn: 1, info: 2, ok: 3 };
+    findings.sort((a, b) => order[a.level] - order[b.level]);
+    return { findings, at: Date.now(), clean: !findings.some((f) => f.level === "high" || f.level === "warn") };
+  }
+  var highCount = () => [...seen.values()].filter((f) => f.level === "high").length + (!window.__TAURI__ && checkNatives().length ? 1 : 0);
+  var ADVICE = [
+    ["Use a clean browser profile for your vault", "Create a separate Chrome / Edge / Firefox profile with no extensions, or open VaultManager in a Private / Incognito window (extensions are off there unless you allow them)."],
+    ["Review your extensions", "Open your browser\u2019s extensions page (Chrome / Edge: type chrome:// or edge:// then \u201Cextensions\u201D in the address bar; Firefox: about:addons). Remove anything you do not recognise or no longer use. Be most careful with extensions that can \u201Cread and change all your data on all websites\u201D."],
+    ["Set extensions to \u201Con click\u201D or \u201Cthis site only\u201D", "In the extension\u2019s Details, change \u201CSite access\u201D from \u201COn all sites\u201D to \u201COn click\u201D so it cannot see the vault page unless you allow it."],
+    ["Turn off password-manager autofill here", "If you use another password manager, tell it not to run on this site, so it cannot read your master password field."],
+    ["Prefer the offline file or the desktop app", "VaultManager-offline.html (kept on a USB stick) and the installable apps run outside normal web pages; a clean browser profile or the installed app avoids most extension risk."],
+    ["Keep your browser and system updated", "Updates fix the holes malware uses to get into browsers. Never unlock a vault on a shared or public computer."]
+  ];
+
   // js/taskman.js
   var fmtB = (n) => n >= 1073741824 ? (n / 1073741824).toFixed(2) + " GB" : n >= 1048576 ? (n / 1048576).toFixed(1) + " MB" : n >= 1024 ? (n / 1024).toFixed(1) + " KB" : Math.round(n) + " B";
   var fmtDur = (ms) => {
@@ -5848,7 +5977,8 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   };
   function renderTaskManager(ctx2) {
     const { store: store2 } = ctx2;
-    const tabs = [["proc", "Processes"], ["perf", "Performance"], ["disk", "Storage"], ["sys", "This device"]];
+    startWatch();
+    const tabs = [["proc", "Processes"], ["perf", "Performance"], ["disk", "Storage"], ["sys", "This device"], ["sec", "Security check"]];
     let tab = ctx2.S.tmTab || "proc", fps = 0, async = {}, timer = null;
     const body = h("div", { class: "tm" }), bar0 = h("div", { class: "tabs", role: "tablist" }, tabs.map(([k, l]) => h("button", { role: "tab", "aria-selected": String(k === tab), class: k === tab ? "on" : "", on: { click: () => {
       tab = k;
@@ -5994,12 +6124,34 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       ["Language", navigator.language],
       ["Time zone", Intl.DateTimeFormat().resolvedOptions().timeZone]
     ]);
+    const secTab = () => {
+      const r = runCheck(), n = r.findings.filter((f) => f.level === "high" || f.level === "warn").length;
+      const card = (f) => h("div", { class: "secfind " + f.level }, h("div", { class: "secf-h" }, h("span", { class: "chip " + (f.level === "high" ? "bad" : f.level === "warn" ? "warn" : ""), text: f.level === "high" ? "Act now" : f.level === "warn" ? "Review" : "Note" }), h("b", { text: f.title })), h("p", { text: f.detail }), h("p", { class: "advice" }, h("b", { text: "What to do: " }), f.advice));
+      return h(
+        "div",
+        { class: "panel pad" },
+        h(
+          "div",
+          { class: "secsum " + (r.clean ? "ok" : "bad"), role: "status" },
+          h("b", { text: r.clean ? "\u2713 No signs of tampering found on this device right now" : "\u26A0 " + n + " thing" + (n === 1 ? "" : "s") + " to look at" }),
+          h("small", { text: " Checked " + new Date(r.at).toLocaleTimeString() + " \xB7 it keeps watching while the app is open" }),
+          h("button", { class: "btn sm", type: "button", on: { click: () => {
+            paint();
+            toast("Scan finished");
+          } } }, "{{refresh}} Scan again")
+        ),
+        r.findings.length ? h("div", { class: "secfinds" }, r.findings.map(card)) : h("p", { class: "hint", text: "Nothing was injected into this page, and the browser\u2019s built-in security functions are the genuine ones." }),
+        h("div", { class: "note" }, h("b", { text: "What this can and cannot see. " }), "Browsers do not let any website list your installed extensions \u2014 so VaultManager cannot (and would not) read that list. It can see the traces extensions leave in this page: elements and scripts they inject and browser functions they replace to read what you type. A clean result is good news, not a guarantee: an extension that stays hidden can still read an unlocked vault."),
+        h("h4", { text: "How to keep your vault safe from extensions" }),
+        h("ol", { class: "advlist" }, ADVICE.map(([t, d]) => h("li", null, h("b", { text: t + ". " }), d)))
+      );
+    };
     const paint = () => {
       Array.from(bar0.children).forEach((b, i) => {
         b.classList.toggle("on", tabs[i][0] === tab);
         b.setAttribute("aria-selected", String(tabs[i][0] === tab));
       });
-      clear(body).append(tab === "proc" ? procs() : tab === "perf" ? perf() : tab === "disk" ? disk() : h("div", { class: "panel pad" }, sys()));
+      clear(body).append(tab === "proc" ? procs() : tab === "perf" ? perf() : tab === "disk" ? disk() : tab === "sec" ? secTab() : h("div", { class: "panel pad" }, sys()));
     };
     gather().then(paint);
     timer = setInterval(() => {
@@ -7178,6 +7330,20 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     return h(
       "div",
       null,
+      panel2(
+        "What is protected",
+        h("p", { class: "hint", text: "Everything you store is encrypted on this device with AES-256-GCM under a key only your master password (or passkey / recovery key) can open." }),
+        h(
+          "div",
+          { class: "protgrid" },
+          h("div", { class: "prot ok" }, h("b", { text: "\u2713 Encrypted" }), h("ul", null, ["Every item and field (passwords, cards, seed phrases, bank numbers\u2026)", "Notes, custom fields, tags, favourites", "Attached files and pictures (each file separately)", "Settings, look, audit trail, version history", "Your GitHub sync token and passphrase", "Items with a secondary passcode get a second layer"].map((t) => h("li", { text: t })))),
+          h("div", { class: "prot" }, h("b", { text: "Visible on the sign-in screen" }), h("ul", null, ["Each profile\u2019s name and picture (so you can choose who signs in)", "Harmless appearance choices such as colours and wallpaper", "A counter of failed unlock attempts"].map((t) => h("li", { text: t }))), h("p", { class: "hint", text: "So keep secrets out of profile names. That is the only rule." }))
+        ),
+        h("button", { class: "btn", on: { click: () => {
+          ctx2.S.tmTab = "sec";
+          ctx2.go("tm");
+        } } }, "{{shieldlock}} Run the device & browser check")
+      ),
       panel2(
         "Master password",
         field2("Current password", pw0),
@@ -8710,6 +8876,11 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       { icon: "{{sync}}", target: () => q(".page .tabs"), before: go("settings", "sync"), title: "Sync and conflicts", text: "Sync through an encrypted file, Beam, or a secret GitHub gist. Devices merge field by field; if the same field changed on two of them, the newest wins and the other value waits under \u201CNeeds review\u201D." },
       { icon: "{{palette}}", target: () => q(".page .tabs"), before: go("settings", "appearance"), title: "Make it yours", text: "Appearance, Effects, Dock & menu bar and Widgets: accent colours, nature wallpapers, icon styles and sizes, animation styles, 3D tilt, CRT scanlines, glass blur and more." },
       { icon: "{{shieldlock}}", target: () => q(".page .tabs"), before: go("settings", "security"), title: "Security you control", text: "Change the master password, add a fingerprint / Windows Hello passkey, create a printable recovery key, tune the key-derivation strength \u2014 and set auto-lock and clipboard clearing in General." },
+      { icon: "{{shieldlock}}", title: "What is protected \u2014 and what is not", text: "Everything you store is encrypted on this device with AES-256-GCM: every item and field, notes, attachments, settings, your audit trail and any sync token. The only things the sign-in screen has to show before you unlock are each profile\u2019s name and picture (plus harmless appearance choices such as colours). So never put a secret in a profile name \u2014 everything else is sealed behind your master password." },
+      { icon: "{{alert}}", target: () => q(".page .tabs"), before: () => {
+        ctx2.S.tmTab = "sec";
+        ctx2.go("tm");
+      }, title: "Keep browser extensions in check", text: "A malicious or over-privileged browser extension can read an unlocked vault, like any web page. Browsers do not let websites list your extensions, but VaultManager watches for the traces they leave and warns you live. Best practice: use a clean browser profile or a Private window with extensions off, set extensions to \u201Con click\u201D, or use the offline file / desktop app." },
       { icon: "{{scroll}}", target: () => q(".page .tabs"), before: go("settings", "audit"), title: "Audit trail & About", text: "The audit trail records sign-ins, edits, copies, exports and syncs (never the secrets themselves). About shows the version history and data formats, and can run a self-test of your browser\u2019s crypto." },
       { icon: "{{lock}}", target: () => q('.topbar [title^="Lock"]'), before: go("home"), title: "Lock when you leave", text: "Press Lock (or Alt+L) to seal the vault instantly. It also locks by itself after a period of inactivity, and the clipboard is cleared shortly after you copy a password." },
       { icon: "{{help}}", target: () => q('.topbar [aria-label="Help"]'), title: "Help is one click away", text: "The ? button replays this tour or the welcome screen and lists the keyboard shortcuts." },
@@ -8969,6 +9140,8 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
         row2("Backups", "Whole profile = profile + passwords + settings (Settings \u2192 General). Database backup = passwords only (Tools \u2192 Import & export)."),
         row2("QR passwords", "QR tools hide the password and ask you to type it twice. \u201CPurge memory\u201D wipes fields, closed-again locked items and the clipboard."),
         row2("Tidy the menu", "Settings \u2192 Dock & menu bar lets you hide tools and categories you never use."),
+        row2("Security check", "Tools \u2192 Task manager \u2192 Security check watches this browser for extensions that tamper with the page and tells you what to do."),
+        row2("What is encrypted", "Everything you store. Only each profile\u2019s name and picture are visible on the sign-in screen, so keep secrets out of profile names."),
         row2("Task manager", "Tools \u2192 Task manager shows what the app is holding in memory and on disk."),
         h("p", { class: "hint", text: "Stuck? Settings \u2192 About runs a crypto self-test and shows the data formats; Settings \u2192 Audit trail shows what happened and when." })
       ), actions: [{ label: "Close" }] });
@@ -9324,7 +9497,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   function trustChips() {
     return h("div", { class: "trust" }, ["Zero-knowledge", "End-to-end encrypted", "AES-256-GCM", "Works offline", "No account \xB7 no server"].map((t) => h("span", { class: "chip accent", text: "{{check}} " + t })));
   }
-  var brand = (sub) => h("div", { class: "brand" }, h("img", { src: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImciIHgxPSIwIiB5MT0iMCIgeDI9IjEiIHkyPSIxIj48c3RvcCBvZmZzZXQ9IjAiIHN0b3AtY29sb3I9IiMyZmU2ZDAiLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiM1OWI0ZmYiLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz48cmVjdCB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgcng9IjExMiIgZmlsbD0iIzA1MDgwZCIvPjxyZWN0IHg9IjQwIiB5PSI0MCIgd2lkdGg9IjQzMiIgaGVpZ2h0PSI0MzIiIHJ4PSI4NCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMTUyNTM0IiBzdHJva2Utd2lkdGg9IjYiLz48cGF0aCBkPSJNMjU2IDk2bDEzMiA0OHYxMDJjMCA4OC01NiAxNDQtMTMyIDE3MC03Ni0yNi0xMzItODItMTMyLTE3MFYxNDR6IiBmaWxsPSJub25lIiBzdHJva2U9InVybCgjZykiIHN0cm9rZS13aWR0aD0iMjIiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz48Y2lyY2xlIGN4PSIyNTYiIGN5PSIyMzIiIHI9IjM4IiBmaWxsPSJ1cmwoI2cpIi8+PHBhdGggZD0iTTI1NiAyNjJ2NzQiIHN0cm9rZT0idXJsKCNnKSIgc3Ryb2tlLXdpZHRoPSIyNiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+PC9zdmc+Cg==", alt: "", width: "44", height: "44" }), h("div", null, h("h1", null, "Vault", h("span", { text: "Manager" }), h("small", { class: "ver", text: " v" + APP_VERSION })), h("p", { text: sub })));
+  var brand2 = (sub) => h("div", { class: "brand" }, h("img", { src: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImciIHgxPSIwIiB5MT0iMCIgeDI9IjEiIHkyPSIxIj48c3RvcCBvZmZzZXQ9IjAiIHN0b3AtY29sb3I9IiMyZmU2ZDAiLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiM1OWI0ZmYiLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz48cmVjdCB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgcng9IjExMiIgZmlsbD0iIzA1MDgwZCIvPjxyZWN0IHg9IjQwIiB5PSI0MCIgd2lkdGg9IjQzMiIgaGVpZ2h0PSI0MzIiIHJ4PSI4NCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMTUyNTM0IiBzdHJva2Utd2lkdGg9IjYiLz48cGF0aCBkPSJNMjU2IDk2bDEzMiA0OHYxMDJjMCA4OC01NiAxNDQtMTMyIDE3MC03Ni0yNi0xMzItODItMTMyLTE3MFYxNDR6IiBmaWxsPSJub25lIiBzdHJva2U9InVybCgjZykiIHN0cm9rZS13aWR0aD0iMjIiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz48Y2lyY2xlIGN4PSIyNTYiIGN5PSIyMzIiIHI9IjM4IiBmaWxsPSJ1cmwoI2cpIi8+PHBhdGggZD0iTTI1NiAyNjJ2NzQiIHN0cm9rZT0idXJsKCNnKSIgc3Ryb2tlLXdpZHRoPSIyNiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+PC9zdmc+Cg==", alt: "", width: "44", height: "44" }), h("div", null, h("h1", null, "Vault", h("span", { text: "Manager" }), h("small", { class: "ver", text: " v" + APP_VERSION })), h("p", { text: sub })));
   function pwInput(id, label, auto) {
     const i = h("input", { id, type: "password", class: "inp mono", autocomplete: auto, spellcheck: "false", "aria-label": label, required: true });
     const eye = h("button", { type: "button", class: "icon-btn eye", "aria-label": "Show or hide " + label, title: "Show / hide", on: { click: () => {
@@ -9443,7 +9616,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     return h(
       "div",
       { class: "panel gate-card" },
-      brand(first ? "Create your profile and encrypted vault" : "Add a profile"),
+      brand2(first ? "Create your profile and encrypted vault" : "Add a profile"),
       form,
       h("div", { class: "gate-links" }, h("button", { type: "button", class: "linkbtn", on: { click: () => ctx.importProfile(enterProfile) } }, "{{importfile}} Import a profile backup \u2014 restore a whole database"), list.length ? h("button", { type: "button", class: "linkbtn", on: { click: () => {
         ctx.S.gate = "picker";
@@ -9467,7 +9640,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     return h(
       "div",
       { class: "panel gate-card wide" },
-      brand("Who is signing in?"),
+      brand2("Who is signing in?"),
       h("div", { class: "profgrid" }, list.map(card), add),
       h("div", { class: "gate-links" }, h("button", { type: "button", class: "linkbtn", on: { click: () => ctx.importProfile(enterProfile) } }, "{{importfile}} Import a profile backup")),
       trustChips(),
@@ -9595,7 +9768,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     clear(root);
     ctx.runCleanup();
     if (!available()) {
-      root.append(h("div", { class: "gate" }, h("div", { class: "panel gate-card" }, brand("Cannot start"), h("p", { class: "note danger", text: "WebCrypto is unavailable. Open VaultManager over https:// or http://localhost \u2014 browsers disable encryption on insecure origins." }))));
+      root.append(h("div", { class: "gate" }, h("div", { class: "panel gate-card" }, brand2("Cannot start"), h("p", { class: "note danger", text: "WebCrypto is unavailable. Open VaultManager over https:// or http://localhost \u2014 browsers disable encryption on insecure origins." }))));
       return;
     }
     const storageWarn = storage ? null : h("p", { class: "note warn", text: "Browser storage is blocked, so this vault will disappear when you close the tab. Allow site data to keep it." });
@@ -9813,6 +9986,23 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       }
     });
   }
+  function drawSecBar() {
+    if (!shell || !shell.secbar) return;
+    const n = highCount(), show = n > 0 && !ctx.S.secDismissed;
+    shell.secbar.hidden = !show;
+    clear(shell.secbar);
+    if (show) shell.secbar.append(
+      h("span", { class: "grow", text: "\u26A0 Something on this device is modifying this page \u2014 it may be a malicious or over-privileged browser extension. Do not enter secrets until you have checked." }),
+      h("button", { class: "btn sm", type: "button", on: { click: () => {
+        ctx.S.tmTab = "sec";
+        ctx.go("tm");
+      } } }, "Open security check"),
+      h("button", { class: "btn sm", type: "button", "aria-label": "Dismiss", on: { click: () => {
+        ctx.S.secDismissed = true;
+        drawSecBar();
+      } } }, "{{close}}")
+    );
+  }
   function buildShell() {
     const L = curLook();
     const search = h("input", { class: "inp search", type: "search", placeholder: "Search your vault  ( / )", "aria-label": "Search your vault", autocomplete: "off", spellcheck: "false", on: { input: (e) => {
@@ -9846,7 +10036,8 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       }
     });
     dock.addEventListener("pointerleave", () => dock.querySelectorAll(".dock-item").forEach((it) => it.style.setProperty("--s", "1")));
-    shell = { search, side, main, dock, mbar, title, clock, el: h("div", null, top, h("div", { class: "shell" }, side, main), dock, mbar) };
+    const secbar = h("div", { class: "secbar", role: "alert", hidden: true });
+    shell = { search, side, main, dock, mbar, title, clock, secbar, el: h("div", null, top, secbar, h("div", { class: "shell" }, side, main), dock, mbar) };
     clearInterval(clockTimer);
     tickClock();
     clockTimer = setInterval(tickClock, 15e3);
@@ -9906,6 +10097,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     drawDock();
     drawMbar();
     drawTitle();
+    drawSecBar();
   }
   document.addEventListener("keydown", (e) => {
     const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement && document.activeElement.tagName);
@@ -9955,6 +10147,13 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     return r && r.outcome === "accepted";
   };
   initCursor();
+  startWatch();
+  onFinding((f) => {
+    if (f.level === "high") {
+      ctx.S.secDismissed = false;
+      drawSecBar();
+    }
+  });
   {
     const last = env.profiles.last();
     openProfile(last ? last.id : null);

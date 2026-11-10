@@ -45,7 +45,7 @@ for (const f of files.filter((f) => /^js\/.*\.js$/.test(f) || f === 'sw.js')) {
   const s = rd(f).replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
   if (/\.(innerHTML|outerHTML)\s*=|insertAdjacentHTML|document\.write/.test(s)) fail.push(f + ': HTML string injection API');
   if (/\beval\(|new Function\(/.test(s)) fail.push(f + ': eval / Function constructor');
-  if (f !== 'sw.js' && f !== 'js/wordlist.js' && f !== 'js/sync.js' && f !== 'js/offline.js' && f !== 'js/admin.js' && /\b(fetch|XMLHttpRequest|WebSocket|EventSource|sendBeacon)\b/.test(s.replace(/'[^']*'|"[^"]*"/g, ''))) fail.push(f + ': network API used — VaultManager must make no network requests');
+  if (f !== 'sw.js' && f !== 'js/wordlist.js' && f !== 'js/sync.js' && f !== 'js/offline.js' && f !== 'js/admin.js' && f !== 'js/devcheck.js' && /\b(fetch|XMLHttpRequest|WebSocket|EventSource|sendBeacon)\b/.test(s.replace(/'[^']*'|"[^"]*"/g, ''))) fail.push(f + ': network API used — VaultManager must make no network requests');
   if (/localStorage\.setItem\([^)]*(password|passphrase|secret|recovery)\b/i.test(s)) fail.push(f + ': secret-looking value written straight to localStorage');
   if (f !== 'js/beam.js' && /RTCPeerConnection/.test(s)) fail.push(f + ': WebRTC is only allowed in js/beam.js');
   if (/console\.(log|debug|info)\(/.test(s)) fail.push(f + ': console logging (could leak secrets)');

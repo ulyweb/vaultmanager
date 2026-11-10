@@ -105,6 +105,12 @@ function security(ctx) {
   const pwErr = h('p', { class: 'err', role: 'alert' });
   const recStatus = h('span', { class: 'chip ' + (sess.hasRecovery() ? 'accent' : 'warn'), text: sess.hasRecovery() ? '{{check}} recovery key set' : 'no recovery key' });
   return h('div', null,
+    panel('What is protected',
+      h('p', { class: 'hint', text: 'Everything you store is encrypted on this device with AES-256-GCM under a key only your master password (or passkey / recovery key) can open.' }),
+      h('div', { class: 'protgrid' },
+        h('div', { class: 'prot ok' }, h('b', { text: '✓ Encrypted' }), h('ul', null, ['Every item and field (passwords, cards, seed phrases, bank numbers…)', 'Notes, custom fields, tags, favourites', 'Attached files and pictures (each file separately)', 'Settings, look, audit trail, version history', 'Your GitHub sync token and passphrase', 'Items with a secondary passcode get a second layer'].map((t) => h('li', { text: t })))),
+        h('div', { class: 'prot' }, h('b', { text: 'Visible on the sign-in screen' }), h('ul', null, ['Each profile’s name and picture (so you can choose who signs in)', 'Harmless appearance choices such as colours and wallpaper', 'A counter of failed unlock attempts']. map((t) => h('li', { text: t }))), h('p', { class: 'hint', text: 'So keep secrets out of profile names. That is the only rule.' }))),
+      h('button', { class: 'btn', on: { click: () => { ctx.S.tmTab = 'sec'; ctx.go('tm'); } } }, '{{shieldlock}} Run the device & browser check')),
     panel('Master password',
       field('Current password', pw0), field('New password', h('div', null, h('div', { class: 'pwwrap' }, pw1), pwM), 'At least 12 characters. A passphrase of 5+ random words is ideal.'), field('Repeat new password', pw2),
       h('div', { class: 'row wrap' }, h('button', { class: 'btn primary', on: { click: async (e) => {

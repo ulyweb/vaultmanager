@@ -17,6 +17,7 @@ import { profileAvatar, avatarPicker, importProfileDialog, exportProfileDialog }
 import { canOfferCopy, saveOfflineCopy } from './offline.js';
 import * as admin from './admin.js';
 import { initCursor } from './cursor.js';
+import { startWatch, onFinding, highCount } from './devcheck.js';
 import { APP_VERSION } from './version.js';
 import { renderBeam } from './beam.js';
 import { TYPE_META, GROUPS } from './templates.js';
@@ -494,6 +495,15 @@ function systemMenu(anchor) {
   });
 }
 
+/* a warning bar under the top bar when something on this device is clearly tampering with the page */
+function drawSecBar() {
+  if (!shell || !shell.secbar) return;
+  const n = highCount(), show = n > 0 && !ctx.S.secDismissed;
+  shell.secbar.hidden = !show; clear(shell.secbar);
+  if (show) shell.secbar.append(h('span', { class: 'grow', text: '⚠ Something on this device is modifying this page — it may be a malicious or over-privileged browser extension. Do not enter secrets until you have checked.' }),
+    h('button', { class: 'btn sm', type: 'button', on: { click: () => { ctx.S.tmTab = 'sec'; ctx.go('tm'); } } }, 'Open security check'), h('button', { class: 'btn sm', type: 'button', 'aria-label': 'Dismiss', on: { click: () => { ctx.S.secDismissed = true; drawSecBar(); } } }, '{{close}}'));
+}
+
 function buildShell() {
   const L = curLook();
   const search = h('input', { class: 'inp search', type: 'search', placeholder: 'Search your vault  ( / )', 'aria-label': 'Search your vault', autocomplete: 'off', spellcheck: 'false', on: { input: (e) => { ctx.S.q = e.target.value; if (!isVaultView(ctx.S.view)) ctx.S.view = 'all'; drawMain(); drawSide(); } } });
@@ -509,7 +519,8 @@ function buildShell() {
     for (const it of dock.querySelectorAll('.dock-item')) { const r = it.getBoundingClientRect(), d = Math.abs(e.clientX - (r.left + r.width / 2)); it.style.setProperty('--s', (1 + 0.6 * Math.exp(-((d / 64) ** 2))).toFixed(3)); }
   });
   dock.addEventListener('pointerleave', () => dock.querySelectorAll('.dock-item').forEach((it) => it.style.setProperty('--s', '1')));
-  shell = { search, side, main, dock, mbar, title, clock, el: h('div', null, top, h('div', { class: 'shell' }, side, main), dock, mbar) };
+  const secbar = h('div', { class: 'secbar', role: 'alert', hidden: true });
+  shell = { search, side, main, dock, mbar, title, clock, secbar, el: h('div', null, top, secbar, h('div', { class: 'shell' }, side, main), dock, mbar) };
   clearInterval(clockTimer); tickClock(); clockTimer = setInterval(tickClock, 15000);
 }
 
@@ -545,7 +556,7 @@ function drawMain() {
 function draw() {
   if (!store.unlocked) { shell = null; drawGate(); return; }
   if (!shell) { buildShell(); clear(root).append(shell.el); }
-  drawSide(); drawMain(); drawDock(); drawMbar(); drawTitle();
+  drawSide(); drawMain(); drawDock(); drawMbar(); drawTitle(); drawSecBar();
 }
 
 /* ---------- keyboard ---------- */
@@ -567,7 +578,8 @@ ctx.isStandalone = standalone;
 ctx.installApp = async () => { const e = ctx.installEvent; if (!e) return false; e.prompt(); const r = await e.userChoice; ctx.installEvent = null; return r && r.outcome === 'accepted'; };
 
 /* ---------- boot ---------- */
-initCursor();
+initCursor(); startWatch();
+onFinding((f) => { if (f.level === 'high') { ctx.S.secDismissed = false; drawSecBar(); } });
 { const last = env.profiles.last(); openProfile(last ? last.id : null); }
 applyTheme();
 draw();

@@ -5,14 +5,15 @@ import { h, clear, toast, confirmDialog } from './dom.js';
 import { page } from './tools.js';
 import { APP_NAME, APP_VERSION } from './version.js';
 import { fmtDate } from './util.js';
+import { runCheck, ADVICE, startWatch } from './devcheck.js';
 
 const fmtB = (n) => (n >= 1073741824 ? (n / 1073741824).toFixed(2) + ' GB' : n >= 1048576 ? (n / 1048576).toFixed(1) + ' MB' : n >= 1024 ? (n / 1024).toFixed(1) + ' KB' : Math.round(n) + ' B');
 const fmtDur = (ms) => { const s = Math.max(0, Math.floor(ms / 1000)), m = Math.floor(s / 60), hr = Math.floor(m / 60); return hr ? `${hr}h ${m % 60}m` : m ? `${m}m ${s % 60}s` : `${s}s`; };
 const bar = (frac, cls = '') => { const i = h('i'); i.style.width = Math.round(Math.min(1, Math.max(0, frac)) * 100) + '%'; return h('div', { class: 'tmbar ' + cls }, i); };
 
 export function renderTaskManager(ctx) {
-  const { store } = ctx;
-  const tabs = [['proc', 'Processes'], ['perf', 'Performance'], ['disk', 'Storage'], ['sys', 'This device']];
+  const { store } = ctx; startWatch();
+  const tabs = [['proc', 'Processes'], ['perf', 'Performance'], ['disk', 'Storage'], ['sys', 'This device'], ['sec', 'Security check']];
   let tab = ctx.S.tmTab || 'proc', fps = 0, async = {}, timer = null;
   const body = h('div', { class: 'tm' }), bar0 = h('div', { class: 'tabs', role: 'tablist' }, tabs.map(([k, l]) => h('button', { role: 'tab', 'aria-selected': String(k === tab), class: k === tab ? 'on' : '', on: { click: () => { tab = k; ctx.S.tmTab = k; paint(); } } }, l)));
 
@@ -84,9 +85,21 @@ export function renderTaskManager(ctx) {
     ['Touch', navigator.maxTouchPoints ? navigator.maxTouchPoints + ' points' : 'no'], ['Secure context', window.isSecureContext ? 'yes (WebCrypto available)' : 'NO — encryption unavailable'], ['Running from', location.protocol === 'file:' ? 'a file (single-file offline copy)' : window.__TAURI__ ? 'the native app' : location.origin],
     ['Language', navigator.language], ['Time zone', Intl.DateTimeFormat().resolvedOptions().timeZone]]);
 
+
+  const secTab = () => {
+    const r = runCheck(), n = r.findings.filter((f) => f.level === 'high' || f.level === 'warn').length;
+    const card = (f) => h('div', { class: 'secfind ' + f.level }, h('div', { class: 'secf-h' }, h('span', { class: 'chip ' + (f.level === 'high' ? 'bad' : f.level === 'warn' ? 'warn' : ''), text: f.level === 'high' ? 'Act now' : f.level === 'warn' ? 'Review' : 'Note' }), h('b', { text: f.title })), h('p', { text: f.detail }), h('p', { class: 'advice' }, h('b', { text: 'What to do: ' }), f.advice));
+    return h('div', { class: 'panel pad' },
+      h('div', { class: 'secsum ' + (r.clean ? 'ok' : 'bad'), role: 'status' }, h('b', { text: r.clean ? '✓ No signs of tampering found on this device right now' : '⚠ ' + n + ' thing' + (n === 1 ? '' : 's') + ' to look at' }),
+        h('small', { text: ' Checked ' + new Date(r.at).toLocaleTimeString() + ' · it keeps watching while the app is open' }), h('button', { class: 'btn sm', type: 'button', on: { click: () => { paint(); toast('Scan finished'); } } }, '{{refresh}} Scan again')),
+      r.findings.length ? h('div', { class: 'secfinds' }, r.findings.map(card)) : h('p', { class: 'hint', text: 'Nothing was injected into this page, and the browser’s built-in security functions are the genuine ones.' }),
+      h('div', { class: 'note' }, h('b', { text: 'What this can and cannot see. ' }), 'Browsers do not let any website list your installed extensions — so VaultManager cannot (and would not) read that list. It can see the traces extensions leave in this page: elements and scripts they inject and browser functions they replace to read what you type. A clean result is good news, not a guarantee: an extension that stays hidden can still read an unlocked vault.'),
+      h('h4', { text: 'How to keep your vault safe from extensions' }), h('ol', { class: 'advlist' }, ADVICE.map(([t, d]) => h('li', null, h('b', { text: t + '. ' }), d))));
+  };
+
   const paint = () => {
     Array.from(bar0.children).forEach((b, i) => { b.classList.toggle('on', tabs[i][0] === tab); b.setAttribute('aria-selected', String(tabs[i][0] === tab)); });
-    clear(body).append(tab === 'proc' ? procs() : tab === 'perf' ? perf() : tab === 'disk' ? disk() : h('div', { class: 'panel pad' }, sys()));
+    clear(body).append(tab === 'proc' ? procs() : tab === 'perf' ? perf() : tab === 'disk' ? disk() : tab === 'sec' ? secTab() : h('div', { class: 'panel pad' }, sys()));
   };
   gather().then(paint);
   timer = setInterval(() => { if (!body.isConnected) return; if (tab === 'perf' || tab === 'proc') { paint(); } }, 1000);

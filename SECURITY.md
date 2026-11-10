@@ -62,9 +62,9 @@ A review of all scripts (crypto, vault, sync, Beam, import / export, profiles, i
 - The app refuses to run inside someone else's page (clickjacking; a `<meta>` CSP cannot set `frame-ancestors`).
 
 **Known limits (by design or outside the app's control):**
-- Anyone who can run JavaScript on the page (a malicious browser extension, a compromised device) can read an unlocked vault. Lock when you leave; use a device you trust.
+- Anyone who can run JavaScript on the page (a malicious or over-privileged browser extension, a compromised device) can read an unlocked vault — as with any web page. Browsers do not let a website list your installed extensions, so VaultManager cannot name a bad one; instead Tools → Task manager → Security check looks for the traces extensions leave (injected elements and scripts, replaced browser functions), watches live while the app is open, shows a warning bar, and recommends what to do (clean browser profile or Private window, set extensions to “on click”, offline file / desktop app). A clean result is not a guarantee.
 - Failed-attempt throttling and lockouts are client-side; someone with the encrypted file can try passwords offline at the speed of PBKDF2 (600,000 rounds). Use a long master password or passphrase.
-- Profile names and pictures are stored unencrypted so the sign-in screen can show them. Removing a profile from the sign-in screen needs its name typed, not its password (so a forgotten-password profile can be removed).
+- Everything you store is encrypted. The only things readable before you unlock are each profile’s name and picture (so the sign-in screen can show them), harmless appearance choices such as colours, and a failed-attempt counter — keep secrets out of profile names. Removing a profile from the sign-in screen needs its name typed, not its password (so a forgotten-password profile can be removed).
 - Beam with "internet" enabled asks a public STUN server (Google) for your address; the default is same-Wi-Fi only.
 - Contact admin / the new-profile notice send what is described on screen to the administrator's relay; the relay's own handling is outside this app.
 - GitHub Actions in the native-build workflow are referenced by version tag, not commit hash (a supply-chain risk for the installers).

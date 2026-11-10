@@ -1,6 +1,6 @@
 /* Application version, data-format versions and changelog (shown in Settings → About). */
 
-export const APP_VERSION = '0.21.0';
+export const APP_VERSION = '0.22.0';
 export const APP_NAME = 'VaultManager';
 export const REPO_URL = 'https://github.com/ulyweb/vaultmanager';
 
@@ -16,6 +16,11 @@ export const FORMATS = [
 ];
 
 export const CHANGELOG = [
+  { v: '0.22.0', date: '2026-11-10', notes: [
+    'Device & browser security check (Tools → Task manager → Security check): live detection of traces left by browser extensions in this page (injected elements and scripts, known password managers / writing assistants, replaced browser functions), a warning bar if something is clearly tampering, and plain recommendations. Browsers do not let websites list extensions, so it reports what a page can honestly see.',
+    'Settings → Security now shows what is protected: everything is encrypted; only each profile’s name and picture (and harmless appearance choices) are visible on the sign-in screen.',
+    'The guided tour and Help explain both.',
+  ] },
   { v: '0.21.0', date: '2026-11-10', notes: [
     'Security review of all scripts (see SECURITY.md). Fixed: a crafted backup could weaken settings (auto-lock, reveal logging, generator); imported file names are cleaned; PBKDF2 limit for untrusted payloads lowered to 5,000,000; the app refuses to be framed.',
     'The unlock screen is centred, like ulyOS.',
