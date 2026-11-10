@@ -4,6 +4,8 @@
    Everything is applied through CSS variables / data-attributes (no inline <style>, CSP-clean). */
 
 export const ACCENTS = [['Teal', '#2fe6d0'], ['Mint', '#7dff9b'], ['Sky', '#59b4ff'], ['Violet', '#8b7dff'], ['Pink', '#ff7ad9'], ['Amber', '#ffb547'], ['Coral', '#ff6b6b'], ['Orange', '#ff8a4c'], ['Silver', '#d6e2ee']];
+import { applyCursor } from './cursor.js';
+
 export const ICON_STYLES = [['vivid', 'Colourful & animated'], ['glass', 'Glass'], ['gradient', 'Gradient tile'], ['neon', 'Neon'], ['tint', 'Tinted (accent)'], ['flat', 'Flat (grey)']];
 export const ANIM_STYLES = [['scale', 'Scale'], ['slide', 'Slide up'], ['fade', 'Fade'], ['zoom', 'Zoom'], ['bounce', 'Bounce'], ['blur', 'Blur in'], ['flip', 'Flip']];
 export const NAV_MODES = [['sidebar', 'Side bar'], ['dock', 'Dock (bottom)']];
@@ -24,7 +26,7 @@ export const WIDGET_DEFS = [
 
 export const LOOK_DEFAULTS = {
   // appearance
-  accent: '#2fe6d0', hiddenCats: [], hiddenNav: [], bg: 'default', wallpaper: 'forest', wallImage: '', wallUrl: '', bgDim: 55, iconStyle: 'vivid', iconSize: 'medium', avatar: 'letter',
+  accent: '#2fe6d0', cursor: false, cursorStyle: 'neon', cursorSize: 100, cursorColor: '', cursorRing: true, hiddenCats: [], hiddenNav: [], bg: 'default', wallpaper: 'forest', wallImage: '', wallUrl: '', bgDim: 55, iconStyle: 'vivid', iconSize: 'medium', avatar: 'letter',
   uiScale: 100, density: 'comfortable', radius: 12, widgetStyle: 'vivid',
   // effects
   animations: true, animStyle: 'scale', animSpeed: 1, bootAnim: true, fxAnim: true, fxAurora: 65, fxTilt: 0, fxGlow: 35, fxScan: false, blur: 12, glassAlpha: 0.72,
@@ -38,6 +40,7 @@ const num = (v, lo, hi, d) => (Number.isFinite(+v) ? Math.min(hi, Math.max(lo, +
 const oneOf = (v, list, d) => (list.includes(v) ? v : d);
 const bool = (v, d) => (typeof v === 'boolean' ? v : d);
 
+const CURSOR_STYLE_IDS = ['classic', 'dot', 'cross', 'neon', 'ring', 'solid', 'target', 'system'];
 /* sections of the side bar / dock / menu the user may hide (Home, All items and Settings always stay) */
 export const HIDEABLE = ['fav', 'trash', 'health', 'gen', 'qr', 'beam', 'data', 'tm', 'cats'];
 export const landscapeIds = [];   // filled lazily by the UI (avoids loading the scenes before they are needed)
@@ -48,6 +51,8 @@ export function normalizeLook(o = {}, wallIds = null) {
   for (const w of Array.isArray(o.widgets) ? o.widgets : []) if (w && WIDGET_DEFS.some((d) => d.id === w.id) && !widgets.some((x) => x.id === w.id)) widgets.push({ id: w.id, on: bool(w.on, true), size: oneOf(w.size, ['s', 'm', 'l'], WIDGET_DEFS.find((d) => d.id === w.id).size), pinned: bool(w.pinned, false), cw: Math.round(num(w.cw, 0, 4, 0)), ch: w.ch ? Math.round(num(w.ch, 100, 700, 0)) : 0 });
   for (const d of WIDGET_DEFS) if (!widgets.some((x) => x.id === d.id)) widgets.push({ id: d.id, on: true, size: d.size, pinned: false, cw: 0, ch: 0 });
   return {
+    cursor: bool(o.cursor, D.cursor), cursorStyle: oneOf(o.cursorStyle, CURSOR_STYLE_IDS, D.cursorStyle), cursorSize: Math.round(num(o.cursorSize, 50, 300, D.cursorSize)),
+    cursorColor: typeof o.cursorColor === 'string' && /^#[0-9a-fA-F]{6}$/.test(o.cursorColor) ? o.cursorColor.toLowerCase() : '', cursorRing: bool(o.cursorRing, D.cursorRing),
     hiddenCats: Array.isArray(o.hiddenCats) ? [...new Set(o.hiddenCats.filter((k) => typeof k === 'string' && /^[a-z0-9]{2,20}$/.test(k)))].slice(0, 60) : [],
     hiddenNav: Array.isArray(o.hiddenNav) ? [...new Set(o.hiddenNav.filter((k) => HIDEABLE.includes(k)))] : [],
     accent: /^#[0-9a-fA-F]{6}$/.test(o.accent) ? o.accent.toLowerCase() : D.accent,
@@ -93,6 +98,7 @@ export function applyLook(look, theme, landscapes = null) {
   set('--fx-aurora', String(look.fxAurora)); set('--fx-glow', String(look.fxGlow)); set('--speed', String(look.animSpeed)); set('--ui-scale', String(look.uiScale / 100));
   set('--tilt', look.fxTilt + 'deg'); set('--dock', look.dockSize + 'px'); set('--wall-dim', String(look.bgDim / 100));
   set('--wall-dim-rgb', theme === 'light' ? '238,242,246' : '2,6,12');
+  applyCursor(look, el);
   const d = el.dataset;
   d.theme = theme; d.icons = look.iconStyle; d.iconsize = look.iconSize; d.density = look.density; d.avatar = look.avatar;
   d.motion = look.animations ? 'on' : 'off'; d.fxanim = look.fxAnim && look.animations ? 'on' : 'off'; d.anim = look.animStyle; d.scan = look.fxScan ? 'on' : 'off';

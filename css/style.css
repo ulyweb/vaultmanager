@@ -747,3 +747,21 @@ html[data-barlabels="0"] .topbar .btn.primary { min-width: 56px; padding: 6px 12
 .topbar .btn .ico { margin: 0 !important; }
 .gate-foot { display: grid; gap: 8px; justify-items: center; }
 .linkbtn .ico { width: 1.25em; height: 1.25em; padding: .14em; border-radius: .38em; }
+
+/* ---- explanations ---- */
+.how-panel h4 { margin: 10px 0 4px; font-size: 13px; } .how-panel ul, .how-panel ol, details.how ol { margin: 4px 0 8px 18px; padding: 0; font-size: 13px; } .how-panel li, details.how li { margin: 3px 0; }
+.howgrid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+details.how { margin: 8px 0; padding: 8px 12px; border: 1px solid var(--line); border-radius: 10px; font-size: 13px; } details.how summary { cursor: pointer; font-weight: 600; }
+.itemcard { border: 1px solid var(--line); border-radius: 12px; padding: 12px; margin: 10px 0; } .itemcard .fields { margin-top: 8px; }
+
+/* ---- custom cursor (ulyOS style) ---- */
+html[data-cursor=on], html[data-cursor=on] body { cursor: var(--cur-default); }
+html[data-cursor=on] :is(a, button, [role=button], [role=tab], [role=switch], select, label, summary, .nav, .dock-item, .item, .msheet-item, .wall, input[type=checkbox], input[type=range], input[type=color], .wgrip) { cursor: var(--cur-pointer); }
+html[data-cursor=on] :is(input:not([type=checkbox]):not([type=range]):not([type=color]), textarea) { cursor: text; }
+#cursor-ring { --ring-c: var(--accent); position: fixed; left: 0; top: 0; width: 32px; height: 32px; margin: 0; border-radius: 50%; z-index: 30000; pointer-events: none; border: 1.5px solid color-mix(in srgb, var(--ring-c) 55%, transparent); opacity: 0; transform: translate3d(-100px, -100px, 0) scale(var(--ring-scale, 1)); transition: width .15s, height .15s, opacity .2s, background .15s, border-color .15s; }
+html[data-cursorring=on] #cursor-ring { opacity: .9; } #cursor-ring.hidden { opacity: 0 !important; }
+#cursor-ring.hot { width: 44px; height: 44px; margin: -6px 0 0 -6px; border-color: color-mix(in srgb, var(--ring-c) 80%, transparent); background: color-mix(in srgb, var(--ring-c) 14%, transparent); }
+#cursor-ring.down { width: 22px; height: 22px; margin: 5px 0 0 5px; }
+@media (pointer: coarse) { #cursor-ring { display: none; } }
+.curprev { margin-top: 10px; padding: 18px; border: 1px dashed var(--line); border-radius: 12px; display: flex; gap: 16px; align-items: center; justify-content: space-around; color: var(--muted); font-size: 12px; cursor: var(--pc1, default); }
+.curprev b { padding: 8px 14px; border-radius: 8px; border: 1px solid var(--line); color: var(--ink); font-weight: 500; cursor: var(--pc2, pointer); }

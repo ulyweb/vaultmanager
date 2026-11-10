@@ -1289,3 +1289,64 @@ test('v0.16: first login lands on Home with only Everyday expanded; app-style ic
   assert.deepEqual(problems.filter((p) => !/Failed to load resource/.test(p)), []);
   await ctx.close();
 });
+
+test('v0.18: a QR holds the WHOLE item and Open QR shows the full card; Backup to QR explains, verifies and restores; cursor settings', async () => {
+  const { ctx, page, problems } = await newPage();
+  await createVault(page);
+  // a crypto wallet with several fields, notes and a custom field
+  await page.getByRole('button', { name: '＋ New' }).click(); await page.locator('.modal-sheet .cats .btn', { hasText: 'Crypto wallet' }).click();
+  await page.fill('#f_name', 'Ledger Nano X'); await page.fill('#tf_wallet', 'Ledger'); await page.fill('#tf_seed', 'zoo zebra zone zero zest zinc zip zigzag'); await page.fill('#tf_privkey', 'key-4821');
+  await page.fill('#f_notes', 'Stored in the safe');
+  await page.getByRole('button', { name: 'Save' }).click(); await page.waitForSelector('.detail h2:has-text("Ledger Nano X")');
+  await page.getByRole('button', { name: /^.*Seal as QR$/ }).first().click();
+  assert.ok(await page.locator('.modal-sheet details.how').count(), 'explains how it works');
+  await page.getByRole('button', { name: 'Create QR' }).click(); await page.waitForSelector('.modal-sheet canvas', { timeout: 30000 });
+  const note = await page.locator('.modal-sheet .note.ok').textContent();
+  assert.match(note, /Checked/); assert.match(note, /WHOLE item/); assert.match(note, /filled field/); assert.match(note, /notes/);
+  await page.getByRole('button', { name: /Preview what a scan restores/ }).click();
+  const prev = await page.locator('.modal-sheet').last().textContent(); assert.match(prev, /Recovery seed phrase/); assert.match(prev, /Private key/); assert.match(prev, /Stored in the safe/);
+  await page.keyboard.press('Escape'); await page.keyboard.press('Escape');
+  // restore through Open QR with a payload made exactly like the share dialog makes it
+  const sealed = await page.evaluate(async () => { const { sealText } = await import('./js/crypto.js'); return sealText(JSON.stringify({ vm: 1, item: { type: 'crypto', name: 'Restored wallet', fields: { wallet: 'Ledger', seed: 'abandon ability able about', privkey: '1234' }, notes: 'from QR', custom: [{ label: 'Branch', value: 'north', secret: false }] } }), 'qr-pass-1234'); });
+  await page.locator('.side .nav', { hasText: 'QR tools' }).click(); await page.getByRole('tab', { name: 'Open QR' }).click();
+  assert.ok(await page.locator('details.how summary', { hasText: 'restore' }).count());
+  await page.fill('textarea[aria-label="Sealed payload"]', sealed); await page.fill('input[aria-label="Password"]', 'qr-pass-1234'); await page.getByRole('button', { name: /Open/ }).last().click();
+  await page.waitForSelector('.itemcard', { timeout: 30000 });
+  const card = await page.textContent('.itemcard'); assert.match(card, /Restored wallet/); assert.match(card, /Recovery seed phrase/); assert.match(card, /Private key/); assert.match(card, /from QR/); assert.match(card, /Branch/);
+  await page.getByRole('button', { name: /Add to my vault/ }).click(); await page.waitForSelector('.detail h2:has-text("Restored wallet")');
+  assert.match(await page.textContent('.detail'), /Recovery seed phrase/);
+  // Backup to QR: explanation, verification
+  await page.locator('.side .nav', { hasText: 'QR tools' }).click(); await page.getByRole('tab', { name: 'Backup to QR' }).click();
+  const guide = await page.textContent('.how-panel'); assert.match(guide, /What is backed up/); assert.match(guide, /What is NOT in it/); assert.match(guide, /How to restore it/); assert.match(guide, /Crypto 2/);
+  await page.fill('input[aria-label="Backup password"]', 'backup-pass-phrase-1'); await page.fill('input[aria-label="Confirm Backup password"]', 'backup-pass-phrase-1');
+  await page.getByRole('button', { name: /Create QR backup/ }).click(); await page.waitForSelector('.qrgrid canvas', { timeout: 60000 });
+  assert.match(await page.textContent('.note.ok'), /would restore all 2 items/);
+  // cursor settings
+  await settingsTab(page, 'Effects');
+  assert.equal(await page.evaluate(() => document.documentElement.dataset.cursor), 'off');
+  await page.getByRole('switch', { name: 'cursor', exact: true }).click();
+  assert.equal(await page.evaluate(() => document.documentElement.dataset.cursor), 'on'); assert.match(await page.evaluate(() => document.documentElement.style.getPropertyValue('--cur-default')), /data:image\/svg\+xml/);
+  const neon = await page.evaluate(() => document.documentElement.style.getPropertyValue('--cur-default'));
+  await page.selectOption('.setrow:has-text("Cursor style") select', 'dot'); assert.notEqual(await page.evaluate(() => document.documentElement.style.getPropertyValue('--cur-default')), neon);
+  await page.locator('.setrow:has-text("Pointer size") input[type=range]').fill('200'); assert.equal(await page.evaluate(() => document.documentElement.style.getPropertyValue('--ring-scale')), '2.00');
+  assert.equal(await page.evaluate(() => document.documentElement.dataset.cursorring), 'on'); assert.ok(await page.locator('#cursor-ring').count());
+  await page.selectOption('.setrow:has-text("Cursor style") select', 'system'); assert.equal(await page.evaluate(() => document.documentElement.dataset.cursor), 'off');
+  assert.deepEqual(problems.filter((p) => !/Failed to load resource/.test(p)), []);
+  await ctx.close();
+});
+
+test('v0.18 on iPhone SE: QR tool tabs, the Seal-as-QR dialog and cursor settings fit the screen', async () => {
+  const { defaultBrowserType, ...d } = devices['iPhone SE']; void defaultBrowserType;
+  const { ctx, page, problems } = await newPage({ ...d, colorScheme: 'dark', reducedMotion: 'reduce' });
+  const fits = async (what) => { const o = await page.evaluate(() => ({ sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth })); assert.ok(o.sw <= o.cw + 1, `${what}: overflow ${o.sw}>${o.cw}`); };
+  await page.goto(base); await page.waitForSelector('#pw1'); await page.fill('#pw1', MASTER); await page.fill('#pw2', MASTER); await page.check('#ack'); await page.click('button[type=submit]');
+  await page.getByRole('button', { name: 'Skip for now' }).click(); await page.waitForSelector('.welcome.in').catch(() => {}); await page.keyboard.press('Escape'); await page.waitForTimeout(250);
+  const more = async (label) => { await page.getByRole('button', { name: 'More' }).click(); await page.waitForSelector('.msheet'); await page.locator('.msheet-item', { hasText: label }).first().click(); };
+  await page.getByRole('button', { name: 'New item' }).click(); await page.locator('.modal-sheet .cats .btn', { hasText: 'Crypto wallet' }).click();
+  await page.fill('#f_name', 'Phone wallet'); await page.fill('#tf_seed', 'one two three four'); await page.getByRole('button', { name: 'Save' }).click(); await page.waitForSelector('.detail h2');
+  await page.getByRole('button', { name: /Seal as QR/ }).first().click(); await page.getByRole('button', { name: 'Create QR' }).click(); await page.waitForSelector('.modal-sheet .note.ok', { timeout: 30000 }); await fits('seal as QR dialog'); await page.keyboard.press('Escape');
+  await more('QR tools'); for (const t of ['Open QR', 'Backup to QR', 'Seal text']) { await page.getByRole('tab', { name: t }).click(); await page.waitForTimeout(150); await fits('QR tools ' + t); }
+  await more('Settings'); await page.waitForSelector('.tabs'); await page.getByRole('tab', { name: /Effects/ }).click(); await page.waitForSelector('.curprev'); await fits('cursor settings');
+  assert.deepEqual(problems.filter((p) => !/Failed to load resource/.test(p)), []);
+  await ctx.close();
+});

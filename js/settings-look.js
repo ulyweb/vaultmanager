@@ -4,6 +4,7 @@ import { h, clear, modal, toast, confirmDialog } from './dom.js';
 import { page, sel } from './tools.js';
 import { HIDEABLE, ACCENTS, ICON_STYLES, ANIM_STYLES, NAV_MODES, WIDGET_DEFS, LOOK_DEFAULTS, normalizeLook, randomLook } from './look.js';
 import { landscapes } from './landscapes.js';
+import { CURSOR_STYLES, cursorImages } from './cursor.js';
 import { TYPE_META, GROUPS } from './templates.js';
 import { fmtTime } from './util.js';
 
@@ -149,6 +150,35 @@ function visibilityPanel(ctx) {
   return panel('Show or hide', h('p', { class: 'hint', text: 'Tidy the side bar, dock and menu. Nothing is deleted: hidden categories still appear in All items and in search, and you can still create items in them.' }), wrap);
 }
 
+
+/* Mouse cursor: style, size, colour and the trailing ring — like the ulyOS Settings. */
+function cursorPanel(ctx) {
+  const { sw, range, select, L, set } = ctls(ctx);
+  const prev = h('div', { class: 'curprev', 'aria-hidden': 'true' });
+  const paintPrev = () => {
+    const l = L(), im = l.cursor && l.cursorStyle !== 'system' ? cursorImages(l.cursorStyle, l.accent, l.cursorColor, l.cursorSize) : null;
+    prev.style.setProperty('--pc1', im ? im[0] : 'default'); prev.style.setProperty('--pc2', im ? im[1] : 'pointer');
+    clear(prev).append(h('span', { text: 'Move here: normal' }), h('b', { text: 'and over a button' }));
+  };
+  const ci = h('input', { type: 'color', value: L().cursorColor || L().accent, 'aria-label': 'Pointer colour', on: { input: (e) => { set('cursorColor', e.target.value, { live: true }); paintPrev(); }, change: () => paintPrev() } });
+  const color = h('div', { class: 'row wrap' }, ci,
+    h('button', { class: 'btn sm', type: 'button', on: { click: () => { set('cursorColor', ''); ci.value = L().accent; paintPrev(); } } }, 'Follow accent'),
+    h('button', { class: 'btn sm', type: 'button', title: 'Random colour', on: { click: () => { const c = '#' + [0, 0, 0].map(() => (80 + Math.floor(Math.random() * 175)).toString(16).padStart(2, '0')).join(''); set('cursorColor', c); ci.value = c; paintPrev(); } } }, '🎲'));
+  const onChange = (fn) => (...a) => { const r = fn(...a); setTimeout(paintPrev, 0); return r; };
+  paintPrev();
+  const swc = sw('cursor'); swc.addEventListener('click', () => setTimeout(paintPrev, 0));
+  const styleSel = select('cursorStyle', CURSOR_STYLES); styleSel.addEventListener('change', () => setTimeout(paintPrev, 0));
+  const sizeCtl = range('cursorSize', 60, 250, 10, (v) => v + '%'); sizeCtl[0].addEventListener('input', () => setTimeout(paintPrev, 0)); sizeCtl[0].addEventListener('change', () => setTimeout(paintPrev, 0));
+  void onChange;
+  return panel('Mouse cursor',
+    h('p', { class: 'hint', text: 'Only for a mouse or pen — touch screens are not affected. Pick “System default” (or turn it off) to get your normal pointer back.' }),
+    row('Custom cursor', 'Replace the pointer with a styled one', swc),
+    row('Cursor style', 'Classic, dot, crosshair, neon, ring, solid, target — or your system default', styleSel),
+    row('Pointer size', 'Scales the cursor and its trailing ring', sizeCtl),
+    row('Pointer colour', '“Follow accent” uses your accent colour (tints Neon, Dot, Solid, Target, Crosshair)', color),
+    row('Trailing ring', 'A soft ring that follows the pointer and grows over buttons', sw('cursorRing')), prev);
+}
+
 /* ======================= Effects ======================= */
 export function effects(ctx) {
   const { sw, range, select, L } = ctls(ctx);
@@ -159,6 +189,7 @@ export function effects(ctx) {
       row('Animation speed', 'Slower ← → faster', range('animSpeed', 0.5, 2, 0.25, (v) => v + '×')),
       row('Boot animation', 'Show the unlock log when you sign in (click or press a key to skip)', sw('bootAnim')),
       row('Haptic feedback', 'A tiny vibration on taps in the phone layout (Android; iPhone Safari does not allow it)', sw('haptics'))),
+    cursorPanel(ctx),
     panel('Telemetry FX',
       row('Aurora intensity', 'Soft animated glow floating behind everything', range('fxAurora', 0, 100, 1)),
       row('3D tilt', 'Widgets and the sign-in card lean toward the pointer', range('fxTilt', 0, 10, 1, (v) => v + '°')),

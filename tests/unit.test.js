@@ -801,3 +801,17 @@ test('contact admin: same relay as ulyOS, notice carries no secrets, only fires 
   const l = normalizeLook({ hiddenCats: ['crypto', 'crypto', '<x>', 5, 'bank'], hiddenNav: ['qr', 'home', 'settings', 'tm', 'zzz'] });
   assert.deepEqual(l.hiddenCats, ['crypto', 'bank']); assert.deepEqual(l.hiddenNav, ['qr', 'tm']);
 });
+
+test('cursor: every style yields normal + pointer images that scale with size; system / off yield none; values are bounded', async () => {
+  const { cursorImages, CURSOR_STYLES } = await import('../js/cursor.js');
+  const { normalizeLook } = await import('../js/look.js');
+  for (const [id] of CURSOR_STYLES) {
+    const im = cursorImages(id, '#2fe6d0', '', 100);
+    if (id === 'system') { assert.equal(im, null); continue; }
+    assert.equal(im.length, 2); assert.ok(im.every((u) => /^url\("data:image\/svg\+xml,[^"]+"\) \d+ \d+, (default|pointer|crosshair)$/.test(u)), id);
+  }
+  assert.notEqual(cursorImages('dot', '#2fe6d0', '', 100)[0], cursorImages('dot', '#2fe6d0', '', 200)[0], 'size changes the image');
+  assert.notEqual(cursorImages('dot', '#2fe6d0', '#ff0000', 100)[1], cursorImages('dot', '#2fe6d0', '', 100)[1], 'colour changes the image');
+  const n = normalizeLook({ cursor: true, cursorStyle: 'bogus', cursorSize: 9999, cursorColor: 'red' });
+  assert.deepEqual([n.cursor, n.cursorStyle, n.cursorSize, n.cursorColor], [true, 'neon', 300, '']);
+});

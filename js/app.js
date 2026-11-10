@@ -14,6 +14,7 @@ import { Profiles, keysFor, newProfileId } from './profiles.js';
 import { profileAvatar, avatarPicker, importProfileDialog, exportProfileDialog } from './profile-ui.js';
 import { canOfferCopy, saveOfflineCopy } from './offline.js';
 import * as admin from './admin.js';
+import { initCursor } from './cursor.js';
 import { APP_VERSION } from './version.js';
 import { renderBeam } from './beam.js';
 import { TYPE_META, GROUPS } from './templates.js';
@@ -519,6 +520,7 @@ ctx.isStandalone = standalone;
 ctx.installApp = async () => { const e = ctx.installEvent; if (!e) return false; e.prompt(); const r = await e.userChoice; ctx.installEvent = null; return r && r.outcome === 'accepted'; };
 
 /* ---------- boot ---------- */
+initCursor();
 { const last = env.profiles.last(); openProfile(last ? last.id : null); }
 applyTheme();
 draw();

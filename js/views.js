@@ -1,12 +1,12 @@
 /* Vault views: item list, detail panel, editor, QR share, recovery kit. */
 
 import { h, clear, modal, toast, confirmDialog, copyText, download } from './dom.js';
-import { newItem, SENSITIVE, TYPES, matches, totpValid, MAX_ATTACHMENT, MAX_ATTACHMENTS_PER_ITEM, keyLabel, keyIsSecret, describeValue, currentValue } from './vault.js';
+import { newItem, sanitiseItem, SENSITIVE, TYPES, matches, totpValid, MAX_ATTACHMENT, MAX_ATTACHMENTS_PER_ITEM, keyLabel, keyIsSecret, describeValue, currentValue } from './vault.js';
 import { TYPE_META, TEMPLATES, GROUPS, isSecretField, MAX_CUSTOM, daysUntil, wifiQRString } from './templates.js';
 import { estimate, crackTime } from './strength.js';
 import { generatePassword, generatePassphrase } from './generator.js';
 import { totpNow, parseTotp } from './totp.js';
-import { sealText } from './crypto.js';
+import { sealText, openText } from './crypto.js';
 import { drawQR } from './qr.js';
 import { fmtDate, hostOf, safeHref } from './util.js';
 
@@ -155,6 +155,40 @@ function totpField(ctx, it) {
   const f = h('div', { class: 'f' }, h('div', { class: 'k', text: 'One-time code' }), h('div', { class: 'v' }, wrap),
     h('div', { class: 'acts' }, h('button', { class: 'icon-btn', 'aria-label': 'Copy one-time code', on: { click: () => ctx.copySecret(last, 'Code copied', it, 'one-time code') } }, '{{copy}}')));
   return f;
+}
+
+
+/* The whole item as a read-only card (used to preview a scanned QR before adding it, and to prove what a QR contains). */
+export function itemCard(ctx, it) {
+  currentItem = null;
+  const rows = [];
+  if (it.type === 'login') {
+    rows.push(field('Username', it.username, { copy: true, ctx }), field('Password', it.password, { secret: true, copy: true, ctx }), field('Website', it.url, { link: true, copy: true, ctx }));
+    if (it.totp) rows.push(field('One-time code secret', it.totp, { secret: true, copy: true, ctx }));
+  } else if (it.type === 'card') {
+    const c = it.card || {};
+    rows.push(field('Cardholder', c.holder, { copy: true, ctx }), field('Number', c.number, { secret: true, copy: true, ctx }), field('Expiry', c.expiry, { copy: true, ctx }), field('CVV', c.cvv, { secret: true, copy: true, ctx }), field('PIN', c.pin, { secret: true, copy: true, ctx }));
+  } else if (TEMPLATES[it.type]) {
+    for (const f of TEMPLATES[it.type].fields) rows.push(templateRow(ctx, it, f));
+  }
+  rows.push(field('Notes', it.notes, { pre: true, copy: it.type === 'note', ctx, stats: STATS_TYPES.has(it.type) }));
+  for (const c of it.custom || []) rows.push(field(c.label || 'Custom field', c.value, { secret: c.secret, copy: true, ctx, pre: true }));
+  if ((it.tags || []).length) rows.push(h('div', { class: 'f' }, h('div', { class: 'k', text: 'Tags' }), h('div', { class: 'v' }, h('div', { class: 'tags' }, it.tags.map((t) => h('span', { class: 'chip', text: '#' + t }))))));
+  return h('div', { class: 'itemcard' }, h('div', { class: 'detail-head' }, avatar(it.name, it.type), h('div', null, h('h2', { text: it.name || '(untitled)' }), h('span', { class: 'chip' }, h('span', { class: 'icn', text: TYPE_ICON[it.type] || '' }), ' ' + (TYPES[it.type] || it.type)))), h('div', { class: 'fields' }, rows));
+}
+
+/* Plain-language list of what an item QR holds (and what it cannot). */
+export function describeContents(it) {
+  const t = TEMPLATES[it.type], filled = t ? t.fields.filter((f) => (it.fields || {})[f.k]) : [];
+  const secrets = filled.filter((f) => isSecretField(f)).length + (it.password ? 1 : 0) + (it.card && (it.card.number || it.card.cvv || it.card.pin) ? 1 : 0) + (it.custom || []).filter((c) => c.secret && c.value).length;
+  const parts = [];
+  if (filled.length) parts.push(filled.length + ' filled field' + (filled.length === 1 ? '' : 's') + (secrets ? ' (' + secrets + ' secret)' : ''));
+  if (it.username || it.password || it.url || it.totp) parts.push('login details');
+  if (it.card && (it.card.number || it.card.holder)) parts.push('card details');
+  if (it.notes) parts.push('notes');
+  if ((it.custom || []).length) parts.push(it.custom.length + ' custom field' + (it.custom.length === 1 ? '' : 's'));
+  if ((it.tags || []).length) parts.push(it.tags.length + ' tag' + (it.tags.length === 1 ? '' : 's'));
+  return { included: parts.length ? parts.join(', ') : 'the name only (this item has no other details filled in)', attachments: (it.attachments || []).length };
 }
 
 function detailPanel(ctx, it0) {
@@ -496,7 +530,12 @@ export function shareItem(ctx, it, only = null) {
       const sealed = await sealText(JSON.stringify(payload), pwBox.value);
       canvas = h('canvas', { role: 'img', 'aria-label': 'Encrypted QR code' });
       const r = await drawQR(canvas, sealed, { scale: 6 });
-      clear(out).append(h('div', { class: 'qrbox' }, canvas), h('p', { class: 'hint', text: `QR version ${r.version} · ECC ${r.ecc} · AES-256-GCM · PBKDF2-SHA256 600,000 rounds. The password is NOT in the code — share it by a different channel.` }),
+      const back = JSON.parse(await openText(sealed, pwBox.value));   // prove it opens again, exactly like the Open QR tab will
+      const verified = only ? back.field && back.field.value === only.value : back.item && back.item.name === it.name && JSON.stringify(back.item.fields || {}) === JSON.stringify(it.fields || {}) && back.item.notes === it.notes && back.item.password === it.password;
+      if (!verified) throw new Error('The QR did not read back correctly — nothing was changed. Try again.');
+      const dc = only ? null : describeContents(it);
+      clear(out).append(h('div', { class: 'qrbox' }, canvas), h('div', { class: 'note ok', role: 'status' }, h('b', { text: '✓ Checked: this QR opens again with the password. ' }), only ? 'It holds this single value.' : ['It holds the WHOLE item: ', h('b', { text: dc.included }), '.', dc.attachments ? ` Not included: ${dc.attachments} attached file${dc.attachments === 1 ? '' : 's'} (QR codes are far too small for files — they stay in your vault; a whole-profile backup includes them).` : ' This item has no attached files.'], it.lock ? h('p', { class: 'hint', text: 'This item has a secondary passcode in your vault. The QR is protected by the QR password only — whoever has the picture and that password can read it.' }) : null,
+        only ? null : h('div', { class: 'row' }, h('button', { class: 'btn sm', on: { click: () => modal({ title: 'What a scan restores', sub: 'Exactly what “Open QR” will show', wide: true, body: itemCard(ctx, sanitiseItem(back.item)), actions: [{ label: 'Close' }] }) } }, '{{search}} Preview what a scan restores'))), h('p', { class: 'hint', text: `QR version ${r.version} · ECC ${r.ecc} · AES-256-GCM · PBKDF2-SHA256 600,000 rounds. The password is NOT in the code — share it by a different channel.` }),
         h('div', { class: 'row wrap' }, h('button', { class: 'btn sm', on: { click: () => canvas.toBlob((b) => download(`vaultmanager-${it.name.replace(/\W+/g, '-').toLowerCase() || 'item'}.png`, b, 'image/png')) } }, '{{download}} PNG'),
           h('button', { class: 'btn sm', on: { click: () => { const c2 = h('canvas'); c2.width = canvas.width; c2.height = canvas.height; c2.getContext('2d').drawImage(canvas, 0, 0); printNodes([h('h1', { text: 'VaultManager — encrypted QR' }), h('div', { class: 'pq' }, c2, h('div', { text: it.name })), h('p', { text: 'Scan in VaultManager (QR tools → Open) or QR Seal and enter the password. The password is not on this page.' })]); } } }, '{{print}} Print')));
     } catch (e) { clear(out); err.textContent = /too (long|large|big)|capacity|data/i.test(e.message) ? 'This item is too large for one QR code. Remove long notes or use QR tools → Backup to QR, which splits big data over several codes.' : e.message; }
@@ -504,6 +543,7 @@ export function shareItem(ctx, it, only = null) {
   };
   modal({ title: only ? 'Seal “' + only.label + '” as QR' : 'Seal as QR code', sub: it.name, wide: true,
     body: h('div', null, h('p', { class: 'note warn', text: 'Anyone with the QR image AND this password can read the item. Pick a password you can tell the recipient separately.' }),
+      h('details', { class: 'how' }, h('summary', { text: 'How does this work?' }), h('ol', null, h('li', { text: only ? 'Only this one value is encrypted (AES-256-GCM) into the QR.' : 'The WHOLE item — every field, notes, custom fields and tags — is encrypted (AES-256-GCM) into the QR with the password below. Attached files are not included.' }), h('li', { text: 'Save, print or show the picture. It is useless without the password, so give the password through a different channel.' }), h('li', { text: 'To restore: Tools → QR tools → Open QR → scan it (or choose the image) → enter the password. You see the full card and press “Add to my vault”.' }))),
       pwRow, err, out),
     actions: [{ label: 'Close' }, { label: 'Create QR', kind: 'primary', onClick: make, close: false }] });
 }

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VaultManager v0.17.0 — single-file offline build. Verify with the .sha256 file next to it. -->
+<!-- VaultManager v0.18.0 — single-file offline build. Verify with the .sha256 file next to it. -->
 <html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
@@ -11,7 +11,7 @@
 <meta name="application-name" content="VaultManager">
 <meta name="format-detection" content="telephone=no">
 <meta name="referrer" content="no-referrer">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-a2i3Zl7p9iBt+ltL8rlVaQyt0eidqUzHX/dz8TiOR8U=' blob:; style-src 'sha256-hUIXXJJJu5ArI1zNj63oEAz1aM6w2Nd5SKAE0HtqF/8='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-mII2jWiT+kYGa6+TysLp2J2hJ6I654GJB8F+Jcj46II=' blob:; style-src 'sha256-vn8pLubO0ZcoohoEV5q+Lw1579QrzjnMPqb3vDNzJwc='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
 <title>VaultManager | Zero-Knowledge Password Manager</title>
 <meta name="description" content="VaultManager: an offline-first, zero-knowledge, end-to-end encrypted password manager with a strong password generator, TOTP codes and QR-sealed sharing and backup. Runs entirely in your browser.">
 <meta name="theme-color" content="#05080d">
@@ -765,6 +765,24 @@ html[data-barlabels="0"] .topbar .btn.primary { min-width: 56px; padding: 6px 12
 .topbar .btn .ico { margin: 0 !important; }
 .gate-foot { display: grid; gap: 8px; justify-items: center; }
 .linkbtn .ico { width: 1.25em; height: 1.25em; padding: .14em; border-radius: .38em; }
+
+/* ---- explanations ---- */
+.how-panel h4 { margin: 10px 0 4px; font-size: 13px; } .how-panel ul, .how-panel ol, details.how ol { margin: 4px 0 8px 18px; padding: 0; font-size: 13px; } .how-panel li, details.how li { margin: 3px 0; }
+.howgrid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+details.how { margin: 8px 0; padding: 8px 12px; border: 1px solid var(--line); border-radius: 10px; font-size: 13px; } details.how summary { cursor: pointer; font-weight: 600; }
+.itemcard { border: 1px solid var(--line); border-radius: 12px; padding: 12px; margin: 10px 0; } .itemcard .fields { margin-top: 8px; }
+
+/* ---- custom cursor (ulyOS style) ---- */
+html[data-cursor=on], html[data-cursor=on] body { cursor: var(--cur-default); }
+html[data-cursor=on] :is(a, button, [role=button], [role=tab], [role=switch], select, label, summary, .nav, .dock-item, .item, .msheet-item, .wall, input[type=checkbox], input[type=range], input[type=color], .wgrip) { cursor: var(--cur-pointer); }
+html[data-cursor=on] :is(input:not([type=checkbox]):not([type=range]):not([type=color]), textarea) { cursor: text; }
+#cursor-ring { --ring-c: var(--accent); position: fixed; left: 0; top: 0; width: 32px; height: 32px; margin: 0; border-radius: 50%; z-index: 30000; pointer-events: none; border: 1.5px solid color-mix(in srgb, var(--ring-c) 55%, transparent); opacity: 0; transform: translate3d(-100px, -100px, 0) scale(var(--ring-scale, 1)); transition: width .15s, height .15s, opacity .2s, background .15s, border-color .15s; }
+html[data-cursorring=on] #cursor-ring { opacity: .9; } #cursor-ring.hidden { opacity: 0 !important; }
+#cursor-ring.hot { width: 44px; height: 44px; margin: -6px 0 0 -6px; border-color: color-mix(in srgb, var(--ring-c) 80%, transparent); background: color-mix(in srgb, var(--ring-c) 14%, transparent); }
+#cursor-ring.down { width: 22px; height: 22px; margin: 5px 0 0 5px; }
+@media (pointer: coarse) { #cursor-ring { display: none; } }
+.curprev { margin-top: 10px; padding: 18px; border: 1px dashed var(--line); border-radius: 12px; display: flex; gap: 16px; align-items: center; justify-content: space-around; color: var(--muted); font-size: 12px; cursor: var(--pc1, default); }
+.curprev b { padding: 8px 14px; border-radius: 8px; border: 1px solid var(--line); color: var(--ink); font-weight: 500; cursor: var(--pc2, pointer); }
 </style>
 </head>
 <body>
@@ -1796,7 +1814,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   }
 
   // js/version.js
-  var APP_VERSION = "0.17.0";
+  var APP_VERSION = "0.18.0";
   var APP_NAME = "VaultManager";
   var REPO_URL = "https://github.com/ulyweb/vaultmanager";
   var FORMATS = [
@@ -1810,6 +1828,12 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     ["Attachments at rest", "AES-256-GCM per file, bound to vault + file id"]
   ];
   var CHANGELOG = [
+    { v: "0.18.0", date: "2026-11-10", notes: [
+      "Open QR now shows the WHOLE item as a full card (every field, notes, custom fields, tags) before you add it \u2014 before, only name, type, username and website were listed, which looked like \u201Cjust the name\u201D for items such as Crypto wallets.",
+      "Seal as QR checks itself: it reads the QR back, lists exactly what is inside (and that attached files are not), and has a \u201CPreview what a scan restores\u201D button. Explanations added to the dialog.",
+      "Backup to QR explains what is backed up, what is not and how to restore, and verifies the codes would restore every item. Open QR has a short restore guide.",
+      "Mouse cursor settings like ulyOS: style (classic, dot, crosshair, neon, ring, solid, target, system), size, colour and a trailing ring (Settings \u2192 Effects)."
+    ] },
     { v: "0.17.0", date: "2026-11-10", notes: [
       "Contact Admin now works like ulyOS: a form that sends your message through the same relay to the administrator (sign-in screen, Help, menu, Settings \u2192 About). Never includes passwords or vault data.",
       "The administrator is emailed when a profile is created or restored \u2014 with an on-screen disclosure and an optional contact-email field (not sent from localhost or the offline copy).",
@@ -1911,6 +1935,86 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     ] }
   ];
 
+  // js/cursor.js
+  var CURSOR_STYLES = [["classic", "Classic arrow"], ["dot", "Dot"], ["cross", "Crosshair"], ["neon", "Neon arrow"], ["ring", "Ring"], ["solid", "Solid arrow"], ["target", "Target"], ["system", "System default"]];
+  var HEX = /^#[0-9a-f]{6}$/i;
+  var ARROW = "M6 4l15 8.2-6.6 1.9-2.9 6.4z";
+  function cursorImages(style, accent, color, size) {
+    const ac = HEX.test(color) ? color : accent, fc = HEX.test(color) ? color : "#fff";
+    const scale = Math.min(3, Math.max(0.5, (+size || 100) / 100)), px = Math.min(96, Math.round(28 * scale)), kk = px / 28;
+    const svg = (body, hx, hy, fb) => 'url("data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="' + px + '" height="' + px + '" viewBox="0 0 28 28">' + body + "</svg>") + '") ' + Math.round(hx * kk) + " " + Math.round(hy * kk) + ", " + fb;
+    const SETS2 = {
+      classic: [
+        svg('<path d="' + ARROW + '" fill="' + fc + '" stroke="#000" stroke-opacity=".85" stroke-width="1.3" stroke-linejoin="round"/>', 6, 4, "default"),
+        svg('<circle cx="14" cy="14" r="7" fill="rgba(255,255,255,.14)" stroke="#fff" stroke-width="1.4"/><circle cx="14" cy="14" r="2" fill="' + fc + '"/>', 14, 14, "pointer")
+      ],
+      dot: [
+        svg('<circle cx="14" cy="14" r="4.2" fill="' + fc + '" stroke="#000" stroke-opacity=".75" stroke-width="1.3"/>', 14, 14, "default"),
+        svg('<circle cx="14" cy="14" r="8" fill="none" stroke="' + ac + '" stroke-width="1.8"/><circle cx="14" cy="14" r="2.6" fill="' + ac + '"/>', 14, 14, "pointer")
+      ],
+      cross: [
+        svg('<path d="M14 3v22M3 14h22" stroke="#000" stroke-opacity=".7" stroke-width="3.2"/><path d="M14 3v22M3 14h22" stroke="#fff" stroke-width="1.3"/>', 14, 14, "crosshair"),
+        svg('<circle cx="14" cy="14" r="6" fill="none" stroke="' + ac + '" stroke-width="1.6"/><path d="M14 2v6M14 20v6M2 14h6M20 14h6" stroke="' + ac + '" stroke-width="1.6"/>', 14, 14, "pointer")
+      ],
+      neon: [
+        svg('<path d="' + ARROW + '" fill="rgba(0,0,0,.55)" stroke="' + ac + '" stroke-opacity=".35" stroke-width="4.5" stroke-linejoin="round"/><path d="' + ARROW + '" fill="rgba(0,0,0,.4)" stroke="' + ac + '" stroke-width="1.6" stroke-linejoin="round"/>', 6, 4, "default"),
+        svg('<circle cx="14" cy="14" r="8" fill="' + ac + '" fill-opacity=".18" stroke="' + ac + '" stroke-opacity=".4" stroke-width="4"/><circle cx="14" cy="14" r="8" fill="none" stroke="' + ac + '" stroke-width="1.6"/>', 14, 14, "pointer")
+      ],
+      solid: [
+        svg('<path d="' + ARROW + '" fill="' + ac + '" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/>', 6, 4, "default"),
+        svg('<path d="' + ARROW + '" fill="' + ac + '" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/><circle cx="21" cy="21" r="4" fill="#fff" stroke="' + ac + '" stroke-width="1.6"/>', 6, 4, "pointer")
+      ],
+      target: [
+        svg('<circle cx="14" cy="14" r="8.5" fill="none" stroke="#000" stroke-opacity=".6" stroke-width="3.4"/><circle cx="14" cy="14" r="8.5" fill="none" stroke="' + ac + '" stroke-width="1.8"/><path d="M14 2.5v6M14 19.5v6M2.5 14h6M19.5 14h6" stroke="' + ac + '" stroke-width="1.8"/><circle cx="14" cy="14" r="1.6" fill="' + ac + '"/>', 14, 14, "crosshair"),
+        svg('<circle cx="14" cy="14" r="8.5" fill="' + ac + '" fill-opacity=".3" stroke="' + ac + '" stroke-width="2"/><circle cx="14" cy="14" r="2.4" fill="#fff"/>', 14, 14, "pointer")
+      ],
+      ring: [
+        svg('<circle cx="14" cy="14" r="7" fill="none" stroke="#000" stroke-opacity=".6" stroke-width="3.2"/><circle cx="14" cy="14" r="7" fill="none" stroke="#fff" stroke-width="1.5"/>', 14, 14, "default"),
+        svg('<circle cx="14" cy="14" r="7" fill="' + ac + '" stroke="#fff" stroke-width="1.5"/>', 14, 14, "pointer")
+      ]
+    };
+    return SETS2[style] || null;
+  }
+  function applyCursor(look, el = document.documentElement) {
+    const on = !!look.cursor && look.cursorStyle !== "system";
+    const set = on ? cursorImages(look.cursorStyle, look.accent, look.cursorColor, look.cursorSize) : null;
+    el.dataset.cursor = set ? "on" : "off";
+    el.dataset.cursorring = set && look.cursorRing ? "on" : "off";
+    el.style.setProperty("--cur-default", set ? set[0] : "default");
+    el.style.setProperty("--cur-pointer", set ? set[1] : "pointer");
+    el.style.setProperty("--ring-c", HEX.test(look.cursorColor) ? look.cursorColor : look.accent);
+    el.style.setProperty("--ring-scale", String(Math.min(3, Math.max(0.5, (+look.cursorSize || 100) / 100)).toFixed(2)));
+  }
+  function initCursor() {
+    if (document.getElementById("cursor-ring")) return;
+    const ring = document.createElement("div");
+    ring.id = "cursor-ring";
+    ring.setAttribute("aria-hidden", "true");
+    document.body.append(ring);
+    let tx = -100, ty = -100, x = -100, y = -100, raf = 0, sc = 1;
+    const loop = () => {
+      x += (tx - x) * 0.22;
+      y += (ty - y) * 0.22;
+      ring.style.transform = "translate3d(" + (x - 16) + "px," + (y - 16) + "px,0) scale(" + sc + ")";
+      raf = Math.abs(tx - x) + Math.abs(ty - y) > 0.3 ? requestAnimationFrame(loop) : 0;
+    };
+    const HOT = "a,button,.nav,.dock-item,.item,.msheet-item,[role=tab],[role=switch],select,label,summary,.wall,.widget .wpin";
+    document.addEventListener("pointermove", (e) => {
+      if (document.documentElement.dataset.cursorring !== "on" || e.pointerType === "touch") return;
+      tx = e.clientX;
+      ty = e.clientY;
+      const t = e.target;
+      sc = parseFloat(document.documentElement.style.getPropertyValue("--ring-scale")) || 1;
+      ring.classList.toggle("hot", !!(t && t.closest && t.closest(HOT)));
+      ring.classList.toggle("down", e.buttons > 0);
+      ring.classList.remove("hidden");
+      if (!raf) raf = requestAnimationFrame(loop);
+    }, { passive: true });
+    document.addEventListener("pointerdown", () => ring.classList.add("down"), true);
+    document.addEventListener("pointerup", () => ring.classList.remove("down"), true);
+    document.documentElement.addEventListener("mouseleave", () => ring.classList.add("hidden"));
+  }
+
   // js/look.js
   var ACCENTS = [["Teal", "#2fe6d0"], ["Mint", "#7dff9b"], ["Sky", "#59b4ff"], ["Violet", "#8b7dff"], ["Pink", "#ff7ad9"], ["Amber", "#ffb547"], ["Coral", "#ff6b6b"], ["Orange", "#ff8a4c"], ["Silver", "#d6e2ee"]];
   var ICON_STYLES = [["vivid", "Colourful & animated"], ["glass", "Glass"], ["gradient", "Gradient tile"], ["neon", "Neon"], ["tint", "Tinted (accent)"], ["flat", "Flat (grey)"]];
@@ -1932,6 +2036,11 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   var LOOK_DEFAULTS = {
     // appearance
     accent: "#2fe6d0",
+    cursor: false,
+    cursorStyle: "neon",
+    cursorSize: 100,
+    cursorColor: "",
+    cursorRing: true,
     hiddenCats: [],
     hiddenNav: [],
     bg: "default",
@@ -1975,6 +2084,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   var num = (v, lo, hi, d) => Number.isFinite(+v) ? Math.min(hi, Math.max(lo, +v)) : d;
   var oneOf = (v, list, d) => list.includes(v) ? v : d;
   var bool = (v, d) => typeof v === "boolean" ? v : d;
+  var CURSOR_STYLE_IDS = ["classic", "dot", "cross", "neon", "ring", "solid", "target", "system"];
   var HIDEABLE = ["fav", "trash", "health", "gen", "qr", "beam", "data", "tm", "cats"];
   function normalizeLook(o = {}, wallIds = null) {
     const D2 = LOOK_DEFAULTS;
@@ -1982,6 +2092,11 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     for (const w of Array.isArray(o.widgets) ? o.widgets : []) if (w && WIDGET_DEFS.some((d) => d.id === w.id) && !widgets.some((x) => x.id === w.id)) widgets.push({ id: w.id, on: bool(w.on, true), size: oneOf(w.size, ["s", "m", "l"], WIDGET_DEFS.find((d) => d.id === w.id).size), pinned: bool(w.pinned, false), cw: Math.round(num(w.cw, 0, 4, 0)), ch: w.ch ? Math.round(num(w.ch, 100, 700, 0)) : 0 });
     for (const d of WIDGET_DEFS) if (!widgets.some((x) => x.id === d.id)) widgets.push({ id: d.id, on: true, size: d.size, pinned: false, cw: 0, ch: 0 });
     return {
+      cursor: bool(o.cursor, D2.cursor),
+      cursorStyle: oneOf(o.cursorStyle, CURSOR_STYLE_IDS, D2.cursorStyle),
+      cursorSize: Math.round(num(o.cursorSize, 50, 300, D2.cursorSize)),
+      cursorColor: typeof o.cursorColor === "string" && /^#[0-9a-fA-F]{6}$/.test(o.cursorColor) ? o.cursorColor.toLowerCase() : "",
+      cursorRing: bool(o.cursorRing, D2.cursorRing),
       hiddenCats: Array.isArray(o.hiddenCats) ? [...new Set(o.hiddenCats.filter((k) => typeof k === "string" && /^[a-z0-9]{2,20}$/.test(k)))].slice(0, 60) : [],
       hiddenNav: Array.isArray(o.hiddenNav) ? [...new Set(o.hiddenNav.filter((k) => HIDEABLE.includes(k)))] : [],
       accent: /^#[0-9a-fA-F]{6}$/.test(o.accent) ? o.accent.toLowerCase() : D2.accent,
@@ -2065,6 +2180,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     set("--dock", look.dockSize + "px");
     set("--wall-dim", String(look.bgDim / 100));
     set("--wall-dim-rgb", theme === "light" ? "238,242,246" : "2,6,12");
+    applyCursor(look, el);
     const d = el.dataset;
     d.theme = theme;
     d.icons = look.iconStyle;
@@ -4048,6 +4164,35 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     );
     return f;
   }
+  function itemCard(ctx2, it) {
+    currentItem = null;
+    const rows = [];
+    if (it.type === "login") {
+      rows.push(field("Username", it.username, { copy: true, ctx: ctx2 }), field("Password", it.password, { secret: true, copy: true, ctx: ctx2 }), field("Website", it.url, { link: true, copy: true, ctx: ctx2 }));
+      if (it.totp) rows.push(field("One-time code secret", it.totp, { secret: true, copy: true, ctx: ctx2 }));
+    } else if (it.type === "card") {
+      const c = it.card || {};
+      rows.push(field("Cardholder", c.holder, { copy: true, ctx: ctx2 }), field("Number", c.number, { secret: true, copy: true, ctx: ctx2 }), field("Expiry", c.expiry, { copy: true, ctx: ctx2 }), field("CVV", c.cvv, { secret: true, copy: true, ctx: ctx2 }), field("PIN", c.pin, { secret: true, copy: true, ctx: ctx2 }));
+    } else if (TEMPLATES[it.type]) {
+      for (const f of TEMPLATES[it.type].fields) rows.push(templateRow(ctx2, it, f));
+    }
+    rows.push(field("Notes", it.notes, { pre: true, copy: it.type === "note", ctx: ctx2, stats: STATS_TYPES.has(it.type) }));
+    for (const c of it.custom || []) rows.push(field(c.label || "Custom field", c.value, { secret: c.secret, copy: true, ctx: ctx2, pre: true }));
+    if ((it.tags || []).length) rows.push(h("div", { class: "f" }, h("div", { class: "k", text: "Tags" }), h("div", { class: "v" }, h("div", { class: "tags" }, it.tags.map((t) => h("span", { class: "chip", text: "#" + t }))))));
+    return h("div", { class: "itemcard" }, h("div", { class: "detail-head" }, avatar(it.name, it.type), h("div", null, h("h2", { text: it.name || "(untitled)" }), h("span", { class: "chip" }, h("span", { class: "icn", text: TYPE_ICON[it.type] || "" }), " " + (TYPES[it.type] || it.type)))), h("div", { class: "fields" }, rows));
+  }
+  function describeContents(it) {
+    const t = TEMPLATES[it.type], filled = t ? t.fields.filter((f) => (it.fields || {})[f.k]) : [];
+    const secrets = filled.filter((f) => isSecretField(f)).length + (it.password ? 1 : 0) + (it.card && (it.card.number || it.card.cvv || it.card.pin) ? 1 : 0) + (it.custom || []).filter((c) => c.secret && c.value).length;
+    const parts = [];
+    if (filled.length) parts.push(filled.length + " filled field" + (filled.length === 1 ? "" : "s") + (secrets ? " (" + secrets + " secret)" : ""));
+    if (it.username || it.password || it.url || it.totp) parts.push("login details");
+    if (it.card && (it.card.number || it.card.holder)) parts.push("card details");
+    if (it.notes) parts.push("notes");
+    if ((it.custom || []).length) parts.push(it.custom.length + " custom field" + (it.custom.length === 1 ? "" : "s"));
+    if ((it.tags || []).length) parts.push(it.tags.length + " tag" + (it.tags.length === 1 ? "" : "s"));
+    return { included: parts.length ? parts.join(", ") : "the name only (this item has no other details filled in)", attachments: (it.attachments || []).length };
+  }
   function detailPanel(ctx2, it0) {
     const { store: store2 } = ctx2;
     const it = store2.reveal(it0);
@@ -4706,8 +4851,20 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
         const sealed = await sealText(JSON.stringify(payload), pwBox.value);
         canvas = h("canvas", { role: "img", "aria-label": "Encrypted QR code" });
         const r = await drawQR(canvas, sealed, { scale: 6 });
+        const back = JSON.parse(await openText(sealed, pwBox.value));
+        const verified = only ? back.field && back.field.value === only.value : back.item && back.item.name === it.name && JSON.stringify(back.item.fields || {}) === JSON.stringify(it.fields || {}) && back.item.notes === it.notes && back.item.password === it.password;
+        if (!verified) throw new Error("The QR did not read back correctly \u2014 nothing was changed. Try again.");
+        const dc = only ? null : describeContents(it);
         clear(out).append(
           h("div", { class: "qrbox" }, canvas),
+          h(
+            "div",
+            { class: "note ok", role: "status" },
+            h("b", { text: "\u2713 Checked: this QR opens again with the password. " }),
+            only ? "It holds this single value." : ["It holds the WHOLE item: ", h("b", { text: dc.included }), ".", dc.attachments ? ` Not included: ${dc.attachments} attached file${dc.attachments === 1 ? "" : "s"} (QR codes are far too small for files \u2014 they stay in your vault; a whole-profile backup includes them).` : " This item has no attached files."],
+            it.lock ? h("p", { class: "hint", text: "This item has a secondary passcode in your vault. The QR is protected by the QR password only \u2014 whoever has the picture and that password can read it." }) : null,
+            only ? null : h("div", { class: "row" }, h("button", { class: "btn sm", on: { click: () => modal({ title: "What a scan restores", sub: "Exactly what \u201COpen QR\u201D will show", wide: true, body: itemCard(ctx2, sanitiseItem(back.item)), actions: [{ label: "Close" }] }) } }, "{{search}} Preview what a scan restores"))
+          ),
           h("p", { class: "hint", text: `QR version ${r.version} \xB7 ECC ${r.ecc} \xB7 AES-256-GCM \xB7 PBKDF2-SHA256 600,000 rounds. The password is NOT in the code \u2014 share it by a different channel.` }),
           h(
             "div",
@@ -4736,6 +4893,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
         "div",
         null,
         h("p", { class: "note warn", text: "Anyone with the QR image AND this password can read the item. Pick a password you can tell the recipient separately." }),
+        h("details", { class: "how" }, h("summary", { text: "How does this work?" }), h("ol", null, h("li", { text: only ? "Only this one value is encrypted (AES-256-GCM) into the QR." : "The WHOLE item \u2014 every field, notes, custom fields and tags \u2014 is encrypted (AES-256-GCM) into the QR with the password below. Attached files are not included." }), h("li", { text: "Save, print or show the picture. It is useless without the password, so give the password through a different channel." }), h("li", { text: "To restore: Tools \u2192 QR tools \u2192 Open QR \u2192 scan it (or choose the image) \u2192 enter the password. You see the full card and press \u201CAdd to my vault\u201D." }))),
         pwRow,
         err,
         out
@@ -5172,21 +5330,35 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
           const info = inspectSeal(p);
           if (!info.ok) throw new Error(info.why);
           const text = await openText(p, pw.value);
-          let item = null;
+          let item = null, single = null;
           try {
             const j = JSON.parse(text);
             if (j && j.vm === 1 && j.item) item = sanitiseItem(j.item);
+            else if (j && j.vm === 1 && j.field && typeof j.field.value === "string") single = { name: String(j.name || ""), field: { label: String(j.field.label || "Value").slice(0, 80), value: j.field.value } };
           } catch {
           }
           if (item) {
+            const dc = describeContents(item);
             out.append(
-              h("div", { class: "note", text: "Opened a VaultManager item." }),
-              h("div", { class: "kv" }, h("span", { text: "Name" }), h("b", { text: item.name }), h("span", { text: "Type" }), h("b", { text: item.type }), item.username ? [h("span", { text: "Username" }), h("b", { text: item.username })] : null, item.url ? [h("span", { text: "Website" }), h("b", { text: item.url })] : null),
-              h("div", { class: "row wrap", style: null }, h("button", { class: "btn primary", on: { click: async () => {
-                await ctx2.store.add(item);
-                ctx2.showItem(item.id);
-                toast("Added to your vault");
-              } } }, "{{plus}} Add to my vault"))
+              h("div", { class: "note ok", text: "Opened a VaultManager item \u2014 this is everything the QR contained: " + dc.included + "." }),
+              itemCard(ctx2, item),
+              h(
+                "div",
+                { class: "row wrap" },
+                h("button", { class: "btn primary", on: { click: async () => {
+                  await ctx2.store.add(item);
+                  ctx2.showItem(item.id);
+                  toast("Added to your vault");
+                } } }, "{{plus}} Add to my vault"),
+                h("button", { class: "btn", on: { click: () => copyText(JSON.stringify(item, null, 2), "Item copied as text", ctx2.store.settings.clipboard) } }, "{{copy}} Copy as text")
+              ),
+              h("p", { class: "hint", text: "Attached files are never inside a QR. Nothing is added to your vault until you press the button." })
+            );
+          } else if (single) {
+            out.append(
+              h("div", { class: "note ok", text: "Opened a single value sealed from \u201C" + (single.name || "an item") + "\u201D." }),
+              h("div", { class: "kv" }, h("span", { text: single.field.label }), h("b", { class: "mono", text: single.field.value })),
+              h("div", { class: "row wrap" }, h("button", { class: "btn sm", on: { click: () => copyText(single.field.value, "Copied", ctx2.store.settings.clipboard) } }, "{{copy}} Copy"))
             );
           } else {
             const pre = h("div", { class: "genout", text });
@@ -5212,11 +5384,54 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       scanBox,
       prog,
       status,
+      qrBackupGuide(ctx2, { short: true }),
       field2("Sealed payload", payload),
       field2("Password", pw),
       h("div", { class: "row" }, open),
       err,
       out
+    );
+  }
+  function qrBackupGuide(ctx2, { short = false } = {}) {
+    const items = ctx2.store.active(), by = {};
+    for (const i of items) by[i.type] = (by[i.type] || 0) + 1;
+    const cats = Object.entries(by).sort((a, b) => b[1] - a[1]).map(([k, n]) => `${(TYPE_META[k] || { plural: k }).plural} ${n}`).join(" \xB7 ");
+    const locked = items.filter((i) => i.lock).length, files = items.reduce((n, i) => n + (i.attachments || []).length, 0);
+    const restore = h(
+      "ol",
+      null,
+      h("li", { text: "On the new device, create or open a profile." }),
+      h("li", { text: "Tools \u2192 QR tools \u2192 Open QR." }),
+      h("li", { text: "Scan every code with the camera (any order), or choose the saved / photographed images. A counter shows what is still missing." }),
+      h("li", { text: "Type the backup password and press Open." }),
+      h("li", { text: "Press \u201CImport N items\u201D. Duplicates are skipped; nothing in the vault is deleted or overwritten." })
+    );
+    if (short) return h("details", { class: "how" }, h("summary", { text: "How do I restore a \u201CBackup to QR\u201D?" }), restore);
+    return h(
+      "div",
+      { class: "panel pad how-panel" },
+      h("h3", { text: "How Backup to QR works" }),
+      h(
+        "div",
+        { class: "howgrid" },
+        h("div", null, h("h4", { text: "What is backed up" }), h(
+          "ul",
+          null,
+          h("li", null, h("b", { text: `All ${items.length} item${items.length === 1 ? "" : "s"}` }), items.length ? " \u2014 " + cats : ""),
+          h("li", { text: "Every field of every category (wallet seed phrases, bank numbers, card details\u2026), notes, custom fields, tags and favourites." }),
+          locked ? h("li", { text: `${locked} passcode-locked item${locked === 1 ? "" : "s"} are included still locked \u2014 you need each item\u2019s own passcode after restoring.` }) : null
+        )),
+        h("div", null, h("h4", { text: "What is NOT in it" }), h(
+          "ul",
+          null,
+          h("li", { text: files ? `Attached files (${files} in your vault) \u2014 paper QR codes are too small for files.` : "Attached files (QR codes are too small for files)." }),
+          h("li", { text: "Settings, look & feel, the profile itself, the audit trail, your sync token and passkeys." }),
+          h("li", null, h("b", { text: "For everything" }), " use Settings \u2192 General \u2192 Export whole profile (.vmprofile).")
+        ))
+      ),
+      h("h4", { text: "How to restore it" }),
+      restore,
+      h("p", { class: "hint", text: "The codes are encrypted with the backup password, which is not stored anywhere or printed on them. Keep the printout and the password in different places." })
     );
   }
   function backupTab(ctx2) {
@@ -5239,6 +5454,8 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
         const blob = await ctx2.store.exportEncrypted(pw.value);
         const chunks = chunkPayload(blob, 700);
         if (chunks.length > 120) throw new Error("This vault is too large for QR backup \u2014 use an encrypted backup file instead.");
+        const vcheck = await decryptBackup(blob, pw.value);
+        if (vcheck.items.length !== ctx2.store.active().length) throw new Error("The backup did not read back completely \u2014 nothing was created. Try again.");
         const canvases = [];
         const grid = h("div", { class: "qrgrid" });
         for (let i = 0; i < chunks.length; i++) {
@@ -5248,6 +5465,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
           grid.append(h("figure", null, c, h("figcaption", { text: `${i + 1} / ${chunks.length}` })));
         }
         out.append(
+          h("div", { class: "note ok", role: "status", text: `\u2713 Checked: these codes decrypt again and would restore all ${vcheck.items.length} item${vcheck.items.length === 1 ? "" : "s"}.` }),
           h("div", { class: "note", text: `${ctx2.store.active().length} items \u2192 ${chunks.length} QR code${chunks.length > 1 ? "s" : ""}. Scan all of them (any order) in QR tools \u2192 Open QR on the new device. The backup password is NOT in the codes.` }),
           grid,
           h(
@@ -5268,7 +5486,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       }
       btn.disabled = false;
     } } }, "{{qr}} Create QR backup");
-    return h("div", { class: "panel pad" }, h("p", { class: "note warn", text: "A paper QR backup (without attachments) lets you rebuild your vault with nothing but a camera. Whoever holds the codes AND the backup password can read everything \u2014 store them apart." }), bkRow, h("div", { class: "row" }, btn), err, out);
+    return h("div", null, qrBackupGuide(ctx2), h("div", { class: "panel pad" }, h("p", { class: "note warn", text: "A paper QR backup (without attachments) lets you rebuild your vault with nothing but a camera. Whoever holds the codes AND the backup password can read everything \u2014 store them apart." }), bkRow, h("div", { class: "row" }, btn), err, out));
   }
   var BACKUP_KINDS = [
     {
@@ -6182,6 +6400,60 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     paint();
     return panel("Show or hide", h("p", { class: "hint", text: "Tidy the side bar, dock and menu. Nothing is deleted: hidden categories still appear in All items and in search, and you can still create items in them." }), wrap2);
   }
+  function cursorPanel(ctx2) {
+    const { sw, range, select, L, set } = ctls(ctx2);
+    const prev = h("div", { class: "curprev", "aria-hidden": "true" });
+    const paintPrev = () => {
+      const l = L(), im = l.cursor && l.cursorStyle !== "system" ? cursorImages(l.cursorStyle, l.accent, l.cursorColor, l.cursorSize) : null;
+      prev.style.setProperty("--pc1", im ? im[0] : "default");
+      prev.style.setProperty("--pc2", im ? im[1] : "pointer");
+      clear(prev).append(h("span", { text: "Move here: normal" }), h("b", { text: "and over a button" }));
+    };
+    const ci = h("input", { type: "color", value: L().cursorColor || L().accent, "aria-label": "Pointer colour", on: { input: (e) => {
+      set("cursorColor", e.target.value, { live: true });
+      paintPrev();
+    }, change: () => paintPrev() } });
+    const color = h(
+      "div",
+      { class: "row wrap" },
+      ci,
+      h("button", { class: "btn sm", type: "button", on: { click: () => {
+        set("cursorColor", "");
+        ci.value = L().accent;
+        paintPrev();
+      } } }, "Follow accent"),
+      h("button", { class: "btn sm", type: "button", title: "Random colour", on: { click: () => {
+        const c = "#" + [0, 0, 0].map(() => (80 + Math.floor(Math.random() * 175)).toString(16).padStart(2, "0")).join("");
+        set("cursorColor", c);
+        ci.value = c;
+        paintPrev();
+      } } }, "\u{1F3B2}")
+    );
+    const onChange = (fn) => (...a) => {
+      const r = fn(...a);
+      setTimeout(paintPrev, 0);
+      return r;
+    };
+    paintPrev();
+    const swc = sw("cursor");
+    swc.addEventListener("click", () => setTimeout(paintPrev, 0));
+    const styleSel = select("cursorStyle", CURSOR_STYLES);
+    styleSel.addEventListener("change", () => setTimeout(paintPrev, 0));
+    const sizeCtl = range("cursorSize", 60, 250, 10, (v) => v + "%");
+    sizeCtl[0].addEventListener("input", () => setTimeout(paintPrev, 0));
+    sizeCtl[0].addEventListener("change", () => setTimeout(paintPrev, 0));
+    void onChange;
+    return panel(
+      "Mouse cursor",
+      h("p", { class: "hint", text: "Only for a mouse or pen \u2014 touch screens are not affected. Pick \u201CSystem default\u201D (or turn it off) to get your normal pointer back." }),
+      row("Custom cursor", "Replace the pointer with a styled one", swc),
+      row("Cursor style", "Classic, dot, crosshair, neon, ring, solid, target \u2014 or your system default", styleSel),
+      row("Pointer size", "Scales the cursor and its trailing ring", sizeCtl),
+      row("Pointer colour", "\u201CFollow accent\u201D uses your accent colour (tints Neon, Dot, Solid, Target, Crosshair)", color),
+      row("Trailing ring", "A soft ring that follows the pointer and grows over buttons", sw("cursorRing")),
+      prev
+    );
+  }
   function effects(ctx2) {
     const { sw, range, select, L } = ctls(ctx2);
     return h(
@@ -6196,6 +6468,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
         row("Boot animation", "Show the unlock log when you sign in (click or press a key to skip)", sw("bootAnim")),
         row("Haptic feedback", "A tiny vibration on taps in the phone layout (Android; iPhone Safari does not allow it)", sw("haptics"))
       ),
+      cursorPanel(ctx2),
       panel(
         "Telemetry FX",
         row("Aurora intensity", "Soft animated glow floating behind everything", range("fxAurora", 0, 100, 1)),
@@ -9415,6 +9688,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     ctx.installEvent = null;
     return r && r.outcome === "accepted";
   };
+  initCursor();
   {
     const last = env.profiles.last();
     openProfile(last ? last.id : null);

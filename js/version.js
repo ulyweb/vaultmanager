@@ -1,6 +1,6 @@
 /* Application version, data-format versions and changelog (shown in Settings → About). */
 
-export const APP_VERSION = '0.17.0';
+export const APP_VERSION = '0.18.0';
 export const APP_NAME = 'VaultManager';
 export const REPO_URL = 'https://github.com/ulyweb/vaultmanager';
 
@@ -16,6 +16,12 @@ export const FORMATS = [
 ];
 
 export const CHANGELOG = [
+  { v: '0.18.0', date: '2026-11-10', notes: [
+    'Open QR now shows the WHOLE item as a full card (every field, notes, custom fields, tags) before you add it — before, only name, type, username and website were listed, which looked like “just the name” for items such as Crypto wallets.',
+    'Seal as QR checks itself: it reads the QR back, lists exactly what is inside (and that attached files are not), and has a “Preview what a scan restores” button. Explanations added to the dialog.',
+    'Backup to QR explains what is backed up, what is not and how to restore, and verifies the codes would restore every item. Open QR has a short restore guide.',
+    'Mouse cursor settings like ulyOS: style (classic, dot, crosshair, neon, ring, solid, target, system), size, colour and a trailing ring (Settings → Effects).',
+  ] },
   { v: '0.17.0', date: '2026-11-10', notes: [
     'Contact Admin now works like ulyOS: a form that sends your message through the same relay to the administrator (sign-in screen, Help, menu, Settings → About). Never includes passwords or vault data.',
     'The administrator is emailed when a profile is created or restored — with an on-screen disclosure and an optional contact-email field (not sent from localhost or the offline copy).',

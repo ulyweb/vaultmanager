@@ -3,11 +3,12 @@
 import { h, clear, modal, toast, confirmDialog, askPassword, copyText, download, readFileText } from './dom.js';
 import { generatePassword, generatePassphrase, generatePin, passwordEntropy, passphraseEntropy } from './generator.js';
 import { estimate, crackTime } from './strength.js';
+import { TYPE_META } from './templates.js';
 import { health, importAny, exportCSV, decryptBackup, newItem, sanitiseItem, OLD_DAYS } from './vault.js';
 import { ITER_DEFAULT, sealText, openText, inspectSeal, available } from './crypto.js';
 import { drawQR, decodeFile, startScanner, chunkPayload, ChunkAssembler, parseChunk } from './qr.js';
 import { runSelfTest } from './selftest.js';
-import { meter, liveMeter, passwordRow, avatar, printNodes, showRecoveryKit } from './views.js';
+import { meter, liveMeter, passwordRow, itemCard, describeContents, avatar, printNodes, showRecoveryKit } from './views.js';
 import { fmtDate, fmtInt, hostOf } from './util.js';
 
 export const page = (title, sub, ...kids) => h('div', { class: 'page' }, h('h2', { text: title }), sub ? h('p', { class: 'sub', text: sub }) : null, ...kids);
@@ -176,11 +177,17 @@ function openTab(ctx) {
         const info = inspectSeal(p);
         if (!info.ok) throw new Error(info.why);
         const text = await openText(p, pw.value);
-        let item = null;
-        try { const j = JSON.parse(text); if (j && j.vm === 1 && j.item) item = sanitiseItem(j.item); } catch { /* plain text */ }
+        let item = null, single = null;
+        try { const j = JSON.parse(text); if (j && j.vm === 1 && j.item) item = sanitiseItem(j.item); else if (j && j.vm === 1 && j.field && typeof j.field.value === 'string') single = { name: String(j.name || ''), field: { label: String(j.field.label || 'Value').slice(0, 80), value: j.field.value } }; } catch { /* plain text */ }
         if (item) {
-          out.append(h('div', { class: 'note', text: 'Opened a VaultManager item.' }), h('div', { class: 'kv' }, h('span', { text: 'Name' }), h('b', { text: item.name }), h('span', { text: 'Type' }), h('b', { text: item.type }), item.username ? [h('span', { text: 'Username' }), h('b', { text: item.username })] : null, item.url ? [h('span', { text: 'Website' }), h('b', { text: item.url })] : null),
-            h('div', { class: 'row wrap', style: null }, h('button', { class: 'btn primary', on: { click: async () => { await ctx.store.add(item); ctx.showItem(item.id); toast('Added to your vault'); } } }, '{{plus}} Add to my vault')));
+          const dc = describeContents(item);
+          out.append(h('div', { class: 'note ok', text: 'Opened a VaultManager item — this is everything the QR contained: ' + dc.included + '.' }), itemCard(ctx, item),
+            h('div', { class: 'row wrap' }, h('button', { class: 'btn primary', on: { click: async () => { await ctx.store.add(item); ctx.showItem(item.id); toast('Added to your vault'); } } }, '{{plus}} Add to my vault'),
+              h('button', { class: 'btn', on: { click: () => copyText(JSON.stringify(item, null, 2), 'Item copied as text', ctx.store.settings.clipboard) } }, '{{copy}} Copy as text')),
+            h('p', { class: 'hint', text: 'Attached files are never inside a QR. Nothing is added to your vault until you press the button.' }));
+        } else if (single) {
+          out.append(h('div', { class: 'note ok', text: 'Opened a single value sealed from “' + (single.name || 'an item') + '”.' }), h('div', { class: 'kv' }, h('span', { text: single.field.label }), h('b', { class: 'mono', text: single.field.value })),
+            h('div', { class: 'row wrap' }, h('button', { class: 'btn sm', on: { click: () => copyText(single.field.value, 'Copied', ctx.store.settings.clipboard) } }, '{{copy}} Copy')));
         } else {
           const pre = h('div', { class: 'genout', text: text });
           out.append(h('div', { class: 'note', text: `Opened (v${info.version}, ${fmtInt(info.iterations)} rounds).` }), pre, h('div', { class: 'row wrap' }, h('button', { class: 'btn sm', on: { click: () => copyText(text, 'Copied', ctx.store.settings.clipboard) } }, '{{copy}} Copy'), h('button', { class: 'btn sm', on: { click: () => { clear(out); payload.value = ''; pw.value = ''; } } }, 'Purge from screen')));
@@ -192,7 +199,29 @@ function openTab(ctx) {
   };
   const open = h('button', { class: 'btn primary', on: { click: doOpen } }, '{{unlock}} Open');
   return h('div', { class: 'panel pad' }, h('div', { class: 'row wrap' }, scan, h('button', { class: 'btn', on: { click: () => file.click() } }, '{{photoid}} Image file(s)'), file), scanBox, prog, status,
-    field('Sealed payload', payload), field('Password', pw), h('div', { class: 'row' }, open), err, out);
+    qrBackupGuide(ctx, { short: true }), field('Sealed payload', payload), field('Password', pw), h('div', { class: 'row' }, open), err, out);
+}
+
+
+/* What Backup to QR holds and how to get it back — shown on the Backup tab and (short form) on Open QR. */
+function qrBackupGuide(ctx, { short = false } = {}) {
+  const items = ctx.store.active(), by = {};
+  for (const i of items) by[i.type] = (by[i.type] || 0) + 1;
+  const cats = Object.entries(by).sort((a, b) => b[1] - a[1]).map(([k, n]) => `${(TYPE_META[k] || { plural: k }).plural} ${n}`).join(' · ');
+  const locked = items.filter((i) => i.lock).length, files = items.reduce((n, i) => n + (i.attachments || []).length, 0);
+  const restore = h('ol', null, h('li', { text: 'On the new device, create or open a profile.' }), h('li', { text: 'Tools → QR tools → Open QR.' }), h('li', { text: 'Scan every code with the camera (any order), or choose the saved / photographed images. A counter shows what is still missing.' }),
+    h('li', { text: 'Type the backup password and press Open.' }), h('li', { text: 'Press “Import N items”. Duplicates are skipped; nothing in the vault is deleted or overwritten.' }));
+  if (short) return h('details', { class: 'how' }, h('summary', { text: 'How do I restore a “Backup to QR”?' }), restore);
+  return h('div', { class: 'panel pad how-panel' }, h('h3', { text: 'How Backup to QR works' }),
+    h('div', { class: 'howgrid' },
+      h('div', null, h('h4', { text: 'What is backed up' }), h('ul', null,
+        h('li', null, h('b', { text: `All ${items.length} item${items.length === 1 ? '' : 's'}` }), items.length ? ' — ' + cats : ''), h('li', { text: 'Every field of every category (wallet seed phrases, bank numbers, card details…), notes, custom fields, tags and favourites.' }),
+        locked ? h('li', { text: `${locked} passcode-locked item${locked === 1 ? '' : 's'} are included still locked — you need each item’s own passcode after restoring.` }) : null)),
+      h('div', null, h('h4', { text: 'What is NOT in it' }), h('ul', null,
+        h('li', { text: files ? `Attached files (${files} in your vault) — paper QR codes are too small for files.` : 'Attached files (QR codes are too small for files).' }), h('li', { text: 'Settings, look & feel, the profile itself, the audit trail, your sync token and passkeys.' }),
+        h('li', null, h('b', { text: 'For everything' }), ' use Settings → General → Export whole profile (.vmprofile).')))),
+    h('h4', { text: 'How to restore it' }), restore,
+    h('p', { class: 'hint', text: 'The codes are encrypted with the backup password, which is not stored anywhere or printed on them. Keep the printout and the password in different places.' }));
 }
 
 function backupTab(ctx) {
@@ -208,16 +237,18 @@ function backupTab(ctx) {
       const blob = await ctx.store.exportEncrypted(pw.value);
       const chunks = chunkPayload(blob, 700);
       if (chunks.length > 120) throw new Error('This vault is too large for QR backup — use an encrypted backup file instead.');
+      const vcheck = await decryptBackup(blob, pw.value);   // read it back exactly as a restore would
+      if (vcheck.items.length !== ctx.store.active().length) throw new Error('The backup did not read back completely — nothing was created. Try again.');
       const canvases = [];
       const grid = h('div', { class: 'qrgrid' });
       for (let i = 0; i < chunks.length; i++) { const c = h('canvas', { role: 'img', 'aria-label': `Backup QR ${i + 1} of ${chunks.length}` }); await drawQR(c, chunks[i], { scale: 4 }); canvases.push(c); grid.append(h('figure', null, c, h('figcaption', { text: `${i + 1} / ${chunks.length}` }))); }
-      out.append(h('div', { class: 'note', text: `${ctx.store.active().length} items → ${chunks.length} QR code${chunks.length > 1 ? 's' : ''}. Scan all of them (any order) in QR tools → Open QR on the new device. The backup password is NOT in the codes.` }), grid,
+      out.append(h('div', { class: 'note ok', role: 'status', text: `✓ Checked: these codes decrypt again and would restore all ${vcheck.items.length} item${vcheck.items.length === 1 ? '' : 's'}.` }), h('div', { class: 'note', text: `${ctx.store.active().length} items → ${chunks.length} QR code${chunks.length > 1 ? 's' : ''}. Scan all of them (any order) in QR tools → Open QR on the new device. The backup password is NOT in the codes.` }), grid,
         h('div', { class: 'row wrap', style: null }, h('button', { class: 'btn sm', on: { click: () => printNodes([h('h1', { text: 'VaultManager — encrypted QR backup' }), h('p', { text: `${fmtDate(Date.now())} · ${chunks.length} codes · AES-256-GCM, PBKDF2 600,000 rounds. Keep the backup password separately.` }), ...canvases.map((c, i) => { const c2 = h('canvas'); c2.width = c.width; c2.height = c.height; c2.getContext('2d').drawImage(c, 0, 0); return h('div', { class: 'pq' }, c2, h('div', { text: `${i + 1} / ${chunks.length}` })); })]) } }, '{{print}} Print all'),
           h('button', { class: 'btn sm', on: { click: () => download('vaultmanager-backup.vmvault', blob, 'text/plain') } }, '{{download}} Also save as file')));
     } catch (e) { err.textContent = e.message; }
     btn.disabled = false;
   } } }, '{{qr}} Create QR backup');
-  return h('div', { class: 'panel pad' }, h('p', { class: 'note warn', text: 'A paper QR backup (without attachments) lets you rebuild your vault with nothing but a camera. Whoever holds the codes AND the backup password can read everything — store them apart.' }), bkRow, h('div', { class: 'row' }, btn), err, out);
+  return h('div', null, qrBackupGuide(ctx), h('div', { class: 'panel pad' }, h('p', { class: 'note warn', text: 'A paper QR backup (without attachments) lets you rebuild your vault with nothing but a camera. Whoever holds the codes AND the backup password can read everything — store them apart.' }), bkRow, h('div', { class: 'row' }, btn), err, out));
 }
 
 
