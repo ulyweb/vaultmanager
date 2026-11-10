@@ -33,11 +33,11 @@ export async function cropPhoto(file) {
 }
 
 /* get() → a sanitised avatar. nameOf() supplies the name for the letter preview. */
-export function avatarPicker(initial, nameOf = () => '') {
+export function avatarPicker(initial, nameOf = () => '', onChange = null) {
   let state = sanitizeAvatar(initial);
   const prev = h('div', { class: 'avprev' }), grid = h('div', { class: 'emojigrid', hidden: true }), err = h('p', { class: 'err photo-err', role: 'alert' });
   const draw = () => clear(prev).append(profileAvatar({ name: nameOf(), avatar: state }, 72));
-  const set = (a) => { state = sanitizeAvatar(a); draw(); };
+  const set = (a) => { state = sanitizeAvatar(a); draw(); if (onChange) onChange(state); };
   for (const e of EMOJIS) grid.append(h('button', { type: 'button', class: 'emo', 'aria-label': 'Emoji ' + e, on: { click: () => { set({ type: 'emoji', value: e }); grid.hidden = true; } } }, e));
   const file = h('input', { type: 'file', accept: 'image/*', class: 'offscreen', 'aria-label': 'Profile photo', on: { change: async (ev) => {
     err.textContent = ''; const f = ev.target.files[0]; ev.target.value = ''; if (!f) return;

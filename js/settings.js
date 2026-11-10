@@ -14,6 +14,7 @@ import { KEY } from './vault.js';
 import { fmtDate, fmtInt, stamp } from './util.js';
 import { canOfferCopy, saveOfflineCopy, OFFLINE_NAME } from './offline.js';
 import { enabled as adminEnabled } from './admin.js';
+import { avatarPicker } from './profile-ui.js';
 
 const TABS = [['general', '{{gear}} General'], ['appearance', '{{palette}} Appearance'], ['effects', '{{sparkles}} Effects'], ['layout', '{{compass}} Dock & menu bar'], ['widgets', '{{puzzle}} Widgets'], ['security', '{{shieldlock}} Security'], ['sync', '{{sync}} Sync'], ['audit', '{{scroll}} Audit trail'], ['about', 'ⓘ About']];
 
@@ -77,7 +78,12 @@ function general(ctx) {
         h('button', { class: 'btn sm', on: { click: () => ctx.switchProfile() } }, '{{contact}} Switch profile')),
       h('h4', { text: 'Which one do I need?' }), backupGuide({ compact: true }), h('button', { class: 'btn', on: { click: () => ctx.go('data') } }, '{{swap}} Open Tools → Import & export')),
     panel('Welcome & help',
-      field('Profile name', h('input', { class: 'inp', value: (ctx.profile() || {}).name || '', maxlength: '40', autocomplete: 'off', 'aria-label': 'Profile name', on: { change: (e) => { const v = e.target.value.trim(); if (v) { ctx.updateProfile({ name: v }); s.displayName = v; persist(ctx); } } } })),
+      (() => {
+        const nameBox = h('input', { class: 'inp', value: (ctx.profile() || {}).name || '', maxlength: '40', autocomplete: 'off', 'aria-label': 'Profile name', on: { change: (e) => { const v = e.target.value.trim(); if (v) { ctx.updateProfile({ name: v }); s.displayName = v; persist(ctx); picker.refresh(); } } } });
+        const picker = avatarPicker((ctx.profile() || {}).avatar, () => nameBox.value.trim() || (ctx.profile() || {}).name || '', (a) => { ctx.updateProfile({ avatar: a }); store.log('settings', 'Profile picture changed (' + a.type + ')'); persist(ctx); toast('Profile picture saved'); });
+        nameBox.addEventListener('input', () => picker.refresh());
+        return h('div', null, field('Profile name', nameBox), field('Profile picture', picker.el, 'Shown on the sign-in screen and in the menu. Choose the first letter of your name, an emoji, or a photo (it is cropped to a small square and kept on this device, outside the encrypted vault).'));
+      })(),
       chk('Show the welcome screen every time I unlock', s.welcomeAlways, (v) => set('welcomeAlways', v, 'Welcome screen')),
       h('div', { class: 'row wrap' }, h('button', { class: 'btn', on: { click: () => ctx.tour.welcome() } }, '{{wave}} Welcome screen'), h('button', { class: 'btn', on: { click: () => ctx.tour.start() } }, '{{compass}} Guided tour'), h('button', { class: 'btn', on: { click: () => ctx.tour.help() } }, '{{help}} Help & shortcuts'))),
     panel('Look & feel', h('p', { class: 'hint', text: 'Theme, accent colour, wallpaper, icons, animations, dock and widgets have their own tabs.' }), h('div', { class: 'row wrap' }, h('button', { class: 'btn', on: { click: () => { ctx.S.setTab = 'appearance'; ctx.refresh(); } } }, '{{palette}} Appearance'), h('button', { class: 'btn', on: { click: () => { ctx.S.setTab = 'effects'; ctx.refresh(); } } }, '{{sparkles}} Effects'))),

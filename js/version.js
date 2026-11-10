@@ -1,6 +1,6 @@
 /* Application version, data-format versions and changelog (shown in Settings → About). */
 
-export const APP_VERSION = '0.23.1';
+export const APP_VERSION = '0.24.0';
 export const APP_NAME = 'VaultManager';
 export const REPO_URL = 'https://github.com/ulyweb/vaultmanager';
 
@@ -16,6 +16,9 @@ export const FORMATS = [
 ];
 
 export const CHANGELOG = [
+  { v: '0.24.0', date: '2026-11-10', notes: [
+    'You can now change your profile picture after creating the profile: Settings → General → Profile picture (letter, emoji or photo). The name there also updates the letter picture live. Clicking your profile at the top of the system menu opens it.',
+  ] },
   { v: '0.23.1', date: '2026-11-10', notes: [
     'The offline copy now carries its version: the download link and button name it, the file is saved as VaultManager-offline_v<version>.html, and when you run it the sign-in screen, the system menu (About) and Settings say “offline copy” with the version.',
     'Explained browser storage: the limit is set by the browser, not by VaultManager, and nothing in a web page can raise it; keep an exported profile as a backup.',

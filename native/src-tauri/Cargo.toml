@@ -1,6 +1,6 @@
 [package]
 name = "vaultmanager"
-version = "0.23.1"
+version = "0.24.0"
 description = "VaultManager — zero-knowledge, end-to-end encrypted password manager (native shell)"
 authors = ["ulyweb"]
 edition = "2021"
