@@ -1,6 +1,6 @@
 /* VaultManager — application shell: lock screen, navigation, auto-lock, routing. */
 
-import { h, clear, setLabel, clearClipboardNow, buzz, closeAllModals, closeTopModal, modalOpen, modal, toast, copyText } from './dom.js';
+import { h, clear, setLabel, clearClipboardNow, confirmDialog, buzz, closeAllModals, closeTopModal, modalOpen, modal, toast, copyText } from './dom.js';
 import { VaultStore } from './vault.js';
 import { available } from './crypto.js';
 import { estimate } from './strength.js';
@@ -135,7 +135,13 @@ function showBoot(L, done) {
   document.body.append(el);
   let finished = false;
   const finish = () => { if (finished) return; finished = true; el.remove(); window.removeEventListener('keydown', finish, true); done(); };
-  el.addEventListener('click', finish); window.addEventListener('keydown', finish, true);
+  /* a click on the boot screen skips it — and if it was aimed at a menu item underneath (the side bar is already there), that item opens too, so the click is never lost */
+  el.addEventListener('pointerdown', (e) => {
+    const x = e.clientX, y = e.clientY; finish();
+    const t = document.elementFromPoint(x, y), target = t && t.closest && t.closest('.nav, .dock-item, .mbar-item, .mbar-fab');
+    if (target) setTimeout(() => target.click(), 0);
+  });
+  window.addEventListener('keydown', finish, true);
   requestAnimationFrame(() => { const i = el.querySelector('.bar i'); if (i) i.style.width = '100%'; });
   setTimeout(finish, ((lines.length * 0.12 + 0.35) / L.animSpeed) * 1000);
 }
@@ -144,6 +150,8 @@ function showBoot(L, done) {
 function onUnlocked(note) {
   const L = curLook(); ctx.S.since = Date.now();
   ctx.S.view = L.startPage === 'home' ? 'home' : 'all';
+  if (ctx.S.lastView && ctx.S.lastProfile === ctx.S.profileId) ctx.S.view = ctx.S.lastView;   // after an auto-lock you land where you were, not back on Home
+  ctx.S.lastView = null;
   applyTheme(); armAutolock(); draw();
   const after = () => { armSync(); tour.maybeWelcome(); if (note === 'recovery') toast('Unlocked with your recovery key — set a new master password in Settings.', 'ok', 7000); };
   if (L.animations && L.bootAnim && !reducedMotion()) showBoot(L, after); else after();
@@ -161,10 +169,11 @@ function armAutolock() {
 document.addEventListener('visibilitychange', () => { if (document.hidden && store.unlocked && store.settings.lockOnHide) lock(false, 'Locked because the tab was hidden'); });
 
 function lock(erased, why) {
-  clearTimeout(idleTimer); stopSync(); clearInterval(clockTimer); tour.stop();
+  closeSystemMenu(); clearTimeout(idleTimer); stopSync(); clearInterval(clockTimer); tour.stop();
   if (store.unlocked && !erased) store.log('security', why || 'Vault locked');
   ctx.runCleanup(); closeAllModals();
   clear(document.getElementById('printArea'));
+  if (store.unlocked && !erased) { ctx.S.lastView = ctx.S.view; ctx.S.lastSel = ctx.S.sel; ctx.S.lastProfile = ctx.S.profileId; } else ctx.S.lastView = null;
   store.lock();
   Object.assign(ctx.S, { view: 'all', q: '', sel: null });
   if (erased && !env.profiles.get(ctx.S.profileId)) { const next = env.profiles.last(); openProfile(next ? next.id : null); ctx.S.gate = next ? 'picker' : null; }
@@ -415,7 +424,7 @@ function moreSheet() {
     h('p', { class: 'lbl', text: 'Vault' }), h('div', { class: 'mgrid' }, hid.nav('fav') ? null : item('{{star}}', 'Favorites', go('fav'), c.fav), hid.nav('trash') ? null : item('{{trash}}', 'Trash', go('trash'), c.trash), store.conflictCount() ? item('{{alert}}', 'Needs review', go('conflicts'), store.conflictCount()) : null),
     h('p', { class: 'lbl', text: 'Tools' }), h('div', { class: 'mgrid' }, visTools().map(([id, ic, l]) => item(ic, l, go(id)))),
     visGroups().map(([g, keys]) => h('div', null, h('p', { class: 'lbl', text: g }), h('div', { class: 'mgrid' }, keys.map((k) => item(TYPE_META[k].icon, TYPE_META[k].plural, go(k), c[k]))))),
-    h('p', { class: 'lbl', text: 'More' }), h('div', { class: 'mgrid' }, item('{{help}}', 'Help & tour', () => { closeAllModals(); tour.help(); }), admin.enabled() ? item('{{mailsend}}', 'Contact admin', () => { closeAllModals(); contactAdminDialog(); }) : null, item('{{lock}}', 'Lock now', () => { closeAllModals(); lock(false); }))), actions: [{ label: 'Close' }] });
+    h('p', { class: 'lbl', text: 'More' }), h('div', { class: 'mgrid' }, item('{{help}}', 'Help & tour', () => { closeAllModals(); tour.help(); }), item('{{trash}}', 'Purge memory now', () => { closeAllModals(); ctx.purgeMemory(); }), item('{{swap}}', 'Switch profile', () => { closeAllModals(); ctx.switchProfile(); }), item('{{refresh}}', 'Restart…', () => { closeAllModals(); restartApp(); }), admin.enabled() ? item('{{mailsend}}', 'Contact admin', () => { closeAllModals(); contactAdminDialog(); }) : null, item('{{lock}}', 'Lock now', () => { closeAllModals(); lock(false); }))), actions: [{ label: 'Close' }] });
   return m;
 }
 
@@ -449,12 +458,41 @@ function drawDock() {
   clear(shell.dock).append(items);
 }
 
+
+/* The system menu (like ulyOS): About, shortcuts, tour, settings, task manager, lock, purge memory, switch profile, restart. */
+let sysMenuEl = null, sysMenuOff = null;
+function closeSystemMenu() { if (sysMenuOff) { document.removeEventListener('pointerdown', sysMenuOff, true); sysMenuOff = null; } if (sysMenuEl) { sysMenuEl.remove(); sysMenuEl = null; } document.querySelectorAll('.sysbtn[aria-expanded=true]').forEach((b) => b.setAttribute('aria-expanded', 'false')); }
+async function restartApp() {
+  const ok = await confirmDialog({ title: 'Restart VaultManager?', text: 'This locks your vault, forgets everything held in memory and reloads the app. Nothing stored is changed.', okLabel: 'Restart', danger: true });
+  if (!ok) return;
+  ctx.purgeMemory(); lock(false, 'Restarting…'); setTimeout(() => location.reload(), 350);
+}
+function systemMenu(anchor) {
+  if (sysMenuEl) { closeSystemMenu(); return; }
+  const item = (ic, label, fn, { danger = false, hint = '' } = {}) => h('button', { class: 'sm-item' + (danger ? ' danger' : ''), role: 'menuitem', type: 'button', on: { click: () => { closeSystemMenu(); fn(); } } }, h('span', { class: 'ic icn', text: ic }), h('span', { class: 'grow', text: label }), hint ? h('kbd', { text: hint }) : null);
+  const sep = () => h('div', { class: 'sm-sep', role: 'separator' });
+  const m = h('div', { class: 'sysmenu', role: 'menu', 'aria-label': 'VaultManager menu' },
+    item('{{info}}', 'About VaultManager ' + APP_VERSION, () => { ctx.S.setTab = 'about'; ctx.go('settings'); }), item('{{keyboard}}', 'Keyboard shortcuts…', () => tour.help(), { hint: 'F1' }), item('{{compass}}', 'Guided tour', () => tour.start()), sep(),
+    item('{{gear}}', 'Settings…', () => ctx.go('settings')), item('{{chip}}', 'Task manager', () => ctx.go('tm')), sep(),
+    item('{{lock}}', 'Lock screen', () => lock(false), { hint: 'Alt+L' }), item('{{trash}}', 'Purge memory now', () => ctx.purgeMemory()), item('{{swap}}', 'Switch profile…', () => ctx.switchProfile()),
+    admin.enabled() ? item('{{mailsend}}', 'Contact admin…', () => contactAdminDialog()) : null, item('{{refresh}}', 'Restart…', restartApp, { danger: true }));
+  document.body.append(m); sysMenuEl = m; anchor.setAttribute('aria-expanded', 'true');
+  const r = anchor.getBoundingClientRect(); m.style.left = Math.max(8, Math.min(r.left, innerWidth - m.offsetWidth - 8)) + 'px'; m.style.top = (r.bottom + 6) + 'px';
+  const first = m.querySelector('.sm-item'); if (first) first.focus();
+  const off = (e) => { if (!m.contains(e.target) && !anchor.contains(e.target)) closeSystemMenu(); };
+  sysMenuOff = off; document.addEventListener('pointerdown', off, true);
+  m.addEventListener('keydown', (e) => {
+    const items = [...m.querySelectorAll('.sm-item')], i = items.indexOf(document.activeElement);
+    if (e.key === 'ArrowDown') { e.preventDefault(); items[(i + 1) % items.length].focus(); } else if (e.key === 'ArrowUp') { e.preventDefault(); items[(i - 1 + items.length) % items.length].focus(); } else if (e.key === 'Escape') { e.stopPropagation(); closeSystemMenu(); anchor.focus(); }
+  });
+}
+
 function buildShell() {
   const L = curLook();
   const search = h('input', { class: 'inp search', type: 'search', placeholder: 'Search your vault  ( / )', 'aria-label': 'Search your vault', autocomplete: 'off', spellcheck: 'false', on: { input: (e) => { ctx.S.q = e.target.value; if (!isVaultView(ctx.S.view)) ctx.S.view = 'all'; drawMain(); drawSide(); } } });
   const clock = L.clock ? h('div', { class: 'barclock', 'aria-label': 'Clock' }, h('b'), h('span')) : null;
   const title = h('div', { class: 'apptitle', role: 'heading', 'aria-level': '1' });
-  const top = h('header', { class: 'topbar' }, title, h('div', { class: 'logo' }, h('img', { src: 'icons/icon.svg', alt: '', width: '26', height: '26' }), h('b', null, 'Vault', h('span', { text: 'Manager' }))), search, clock,
+  const top = h('header', { class: 'topbar' }, title, h('button', { class: 'logo sysbtn', type: 'button', 'aria-haspopup': 'menu', 'aria-expanded': 'false', 'aria-label': 'VaultManager menu', title: 'VaultManager menu', on: { click: (e) => systemMenu(e.currentTarget) } }, h('img', { src: 'icons/icon.svg', alt: '', width: '26', height: '26' }), h('b', null, 'Vault', h('span', { text: 'Manager' }))), search, clock,
     h('button', { class: 'btn primary', on: { click: () => newItemMenu(ctx) } }, '{{plus}}', h('span', { class: 'lbl', text: ' New' })), h('button', { class: 'btn', title: 'Lock now (Alt+L)', on: { click: () => lock(false) } }, '{{lock}}', h('span', { class: 'lbl', text: ' Lock' })), h('button', { class: 'btn icon', title: 'Help, tour and shortcuts', 'aria-label': 'Help', on: { click: () => tour.help() } }, '{{help}}'));
   const side = h('nav', { class: 'side', 'aria-label': 'Sections' }), main = h('main', { class: 'main' });
   const dock = h('nav', { class: 'dock', 'aria-label': 'Dock' });
@@ -506,7 +544,8 @@ function draw() {
 /* ---------- keyboard ---------- */
 document.addEventListener('keydown', (e) => {
   const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement && document.activeElement.tagName);
-  if (e.key === 'Escape') { if (closeTopModal()) e.preventDefault(); return; }
+  if (e.key === 'F1' && store.unlocked) { e.preventDefault(); tour.help(); return; }
+  if (e.key === 'Escape') { if (sysMenuEl) { closeSystemMenu(); e.preventDefault(); return; } if (closeTopModal()) e.preventDefault(); return; }
   if (!store.unlocked || modalOpen()) return;
   if (e.altKey && (e.key === 'l' || e.key === 'L')) { e.preventDefault(); lock(false); }
   else if (e.key === '/' && !typing) { e.preventDefault(); if (!isVaultView(ctx.S.view)) ctx.go('all'); shell.search.focus(); }

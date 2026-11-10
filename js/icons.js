@@ -57,6 +57,8 @@ const G = {
   shield: ['<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/>', '🛡'],
   mailsend: ['<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/>', '✉️'],
   pin: ['<path d="M9 3h6l-1 6 3 3v2H7v-2l3-3z"/><path d="M12 14v7"/>', '📌'],
+  refresh: ['<path d="M20 11a8 8 0 0 0-14.5-4M4 5v4h4"/><path d="M4 13a8 8 0 0 0 14.5 4M20 19v-4h-4"/>', '🔄'],
+  keyboard: ['<rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10"/>', '⌨️'],
   chip: ['<rect x="6" y="6" width="12" height="12" rx="2"/><rect x="9.5" y="9.5" width="5" height="5"/><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3"/>', '🧠'],
   eye: ['<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>', '👁'],
   copy: ['<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 012-2h9"/>', '⧉'],
@@ -110,7 +112,7 @@ export const emojiOf = (n) => EMOJI_OF[n] || '';
 /* signature colours for the app-style icon tiles in the side bar, dock and menus (the "real desktop icon" look) */
 const UI_TILE = { home: ['#2fe6d0', '#0ea5e9'], vault: ['#8b7dff', '#6366f1'], star: ['#fbbf24', '#f59e0b'], starline: ['#fbbf24', '#f59e0b'], trash: ['#fb7185', '#ef4444'], pulse: ['#34d399', '#16a34a'], bolt: ['#fde047', '#f97316'],
   qr: ['#60a5fa', '#2563eb'], beam: ['#c084fc', '#ec4899'], swap: ['#2dd4bf', '#16a34a'], chip: ['#f472b6', '#e11d48'], gear: ['#94a3b8', '#475569'], alert: ['#fbbf24', '#ef4444'], help: ['#f59e0b', '#ea580c'], lock: ['#a78bfa', '#7c3aed'],
-  plus: ['#2fe6d0', '#22c55e'], menu: ['#94a3b8', '#64748b'], puzzle: ['#fb923c', '#f43f5e'], sync: ['#38bdf8', '#6366f1'], contact: ['#38bdf8', '#2563eb'], mailsend: ['#38bdf8', '#6366f1'], download: ['#34d399', '#0ea5e9'], importfile: ['#34d399', '#0ea5e9'] };
+  plus: ['#2fe6d0', '#22c55e'], menu: ['#94a3b8', '#64748b'], puzzle: ['#fb923c', '#f43f5e'], sync: ['#38bdf8', '#6366f1'], contact: ['#38bdf8', '#2563eb'], mailsend: ['#38bdf8', '#6366f1'], refresh: ['#38bdf8', '#2563eb'], keyboard: ['#94a3b8', '#475569'], download: ['#34d399', '#0ea5e9'], importfile: ['#34d399', '#0ea5e9'] };
 const hash = (str) => { let x = 7; for (let i = 0; i < str.length; i++) x = (x * 31 + str.charCodeAt(i)) >>> 0; return x; };
 const VIVID = [['#ff7a59', '#ffb347'], ['#2fe6d0', '#0ea5e9'], ['#a78bfa', '#6366f1'], ['#f472b6', '#fb7185'], ['#34d399', '#22c55e'], ['#fbbf24', '#f59e0b'], ['#60a5fa', '#3b82f6'], ['#f87171', '#ef4444']];
 const cache = new Map();

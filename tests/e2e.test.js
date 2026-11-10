@@ -1411,3 +1411,47 @@ for (const [label, o] of [['single file · desktop', { offline: true }], ['singl
   assert.deepEqual(problems.filter((p) => !/Failed to load resource/.test(p)), [], label);
   await ctx.close();
 });
+
+test('v0.20: system menu (about, shortcuts, tour, settings, task manager, lock, purge, switch profile, restart); an auto-lock returns you to the page you were on', async () => {
+  const { ctx, page, problems } = await newPage();
+  await createVault(page);
+  await page.getByRole('button', { name: 'VaultManager menu' }).click();
+  const labels = await page.locator('.sysmenu .sm-item').allTextContents();
+  for (const w of ['About VaultManager', 'Keyboard shortcuts', 'Guided tour', 'Settings', 'Task manager', 'Lock screen', 'Purge memory now', 'Switch profile', 'Restart']) assert.ok(labels.some((l) => l.includes(w)), 'menu has ' + w);
+  await page.keyboard.press('ArrowDown'); await page.keyboard.press('Escape'); assert.equal(await page.locator('.sysmenu').count(), 0, 'Escape closes it');
+  await page.keyboard.press('F1'); await page.waitForSelector('.modal-sheet'); assert.match(await page.textContent('.modal-sheet'), /Keyboard shortcuts/); await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: 'VaultManager menu' }).click(); await page.locator('.sysmenu').getByRole('menuitem', { name: /Task manager/ }).click(); await page.waitForSelector('.tmtable', { timeout: 5000 });
+  await page.getByRole('button', { name: 'VaultManager menu' }).click(); await page.locator('.sysmenu').getByRole('menuitem', { name: /Purge memory now/ }).click(); await page.waitForFunction(() => /Memory purged/.test(document.body.textContent));
+  // lock from the menu while on QR tools; unlocking again returns to QR tools, not Home
+  await page.locator('.side .nav', { hasText: 'QR tools' }).click(); await page.waitForSelector('textarea[aria-label="Text to seal"]');
+  await page.getByRole('button', { name: 'VaultManager menu' }).click(); await page.locator('.sysmenu').getByRole('menuitem', { name: /Lock screen/ }).click(); await page.waitForSelector('#upw');
+  await page.fill('#upw', MASTER); await page.keyboard.press('Enter'); await page.waitForSelector('.topbar', { timeout: 30000 }); await page.waitForTimeout(2500);
+  assert.equal(await page.textContent('.apptitle'), 'QR tools', 'back on the page you were on');
+  // restart reloads the app to the sign-in screen
+  await page.getByRole('button', { name: 'VaultManager menu' }).click(); await page.locator('.sysmenu').getByRole('menuitem', { name: /Restart/ }).click();
+  await page.getByRole('button', { name: 'Restart', exact: true }).click(); await page.waitForSelector('#upw', { timeout: 15000 });
+  assert.deepEqual(problems.filter((p) => !/Failed to load resource/.test(p)), []);
+  await ctx.close();
+});
+
+test('v0.20 on a phone: Purge memory now, Switch profile and Restart are in the menu', async () => {
+  const { defaultBrowserType, ...d } = devices['iPhone 13']; void defaultBrowserType;
+  const { ctx, page } = await newPage({ ...d, colorScheme: 'dark', reducedMotion: 'reduce' });
+  await page.goto(base); await page.waitForSelector('#pw1'); await page.fill('#pw1', MASTER); await page.fill('#pw2', MASTER); await page.check('#ack'); await page.click('button[type=submit]');
+  await page.getByRole('button', { name: 'Skip for now' }).click(); await page.waitForSelector('.welcome.in').catch(() => {}); await page.keyboard.press('Escape'); await page.waitForTimeout(250);
+  await page.getByRole('button', { name: 'More' }).click(); await page.waitForSelector('.msheet');
+  for (const w of ['Purge memory now', 'Switch profile', 'Restart']) assert.ok(await page.locator('.msheet-item', { hasText: w }).count(), w);
+  await page.locator('.msheet-item', { hasText: 'Purge memory now' }).click(); await page.waitForFunction(() => /Memory purged/.test(document.body.textContent));
+  await ctx.close();
+});
+
+test('a click on a menu item while the unlock screen is still showing is not lost', async () => {
+  const { ctx, page } = await newPage({ reducedMotion: 'no-preference' });
+  await createVault(page);
+  await page.getByRole('button', { name: /Lock/ }).first().click(); await page.waitForSelector('#upw'); await page.fill('#upw', MASTER); await page.keyboard.press('Enter');
+  await page.waitForSelector('#boot', { timeout: 30000 });
+  const box = await page.locator('.side .nav', { hasText: 'Favorites' }).boundingBox();
+  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+  await page.waitForFunction(() => document.querySelector('.apptitle')?.textContent === 'Favorites', null, { timeout: 5000 });
+  await ctx.close();
+});
