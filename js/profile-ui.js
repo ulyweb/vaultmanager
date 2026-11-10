@@ -6,7 +6,7 @@ import { decryptProfile } from './vault.js';
 import { createProfileFromImport, sanitizeAvatar } from './profiles.js';
 import { meter, passwordRow } from './views.js';
 import { generatePassphrase } from './generator.js';
-import { fmtDate, fmtInt } from './util.js';
+import { fmtDate, fmtInt, stamp } from './util.js';
 
 const hue = (s) => { let x = 0; for (const c of String(s || '?')) x = (x * 31 + c.codePointAt(0)) >>> 0; return x % 360; };
 
@@ -72,7 +72,7 @@ export function exportProfileDialog(ctx) {
       if (!pwRow.match()) { err.textContent = 'The two backup passwords do not match.'; return false; }
       if (pw.value.length < 10) { err.textContent = 'Use at least 10 characters for the backup password.'; return false; }
       e.target.disabled = true;
-      try { const text = await store.exportProfile(pw.value, { profile: { name: prof && prof.name, avatar: prof && prof.avatar && prof.avatar.type === 'photo' ? null : prof && prof.avatar }, attachments: att.checked }); download(`vaultmanager-profile-${slug(prof && prof.name)}-${fmtDate(Date.now())}.vmprofile`, text, 'text/plain'); toast('Profile backup saved — keep the password safe!', 'ok', 6000); m.close(); }
+      try { const text = await store.exportProfile(pw.value, { profile: { name: prof && prof.name, avatar: prof && prof.avatar && prof.avatar.type === 'photo' ? null : prof && prof.avatar }, attachments: att.checked }); download(`vaultmanager-profile-${slug(prof && prof.name)}-${stamp()}.vmprofile`, text, 'text/plain'); toast('Profile backup saved — keep the password safe!', 'ok', 6000); m.close(); }
       catch (x) { err.textContent = x.message; e.target.disabled = false; }
       return false;
     } }] });

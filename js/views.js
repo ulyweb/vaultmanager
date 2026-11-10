@@ -8,7 +8,7 @@ import { generatePassword, generatePassphrase } from './generator.js';
 import { totpNow, parseTotp } from './totp.js';
 import { sealText, openText } from './crypto.js';
 import { drawQR } from './qr.js';
-import { fmtDate, hostOf, safeHref } from './util.js';
+import { fmtDate, hostOf, safeHref, stamp } from './util.js';
 
 export const TYPE_ICON = Object.fromEntries(Object.entries(TYPE_META).map(([k, m]) => [k, m.icon]));
 
@@ -42,6 +42,17 @@ export function statChip(value) {
   const e = estimate(value), n = [...value].length;
   return h('small', { class: 'sbits', title: 'Estimated strength: ' + e.label, text: `${n} characters · ~${Math.round(e.bits)} bits · ${e.label}` });
 }
+
+
+/* The sealed text behind a QR (Base64): view it, copy it, save it. Paste it into Open QR on any device instead of scanning. */
+export function payloadBox(ctx, text, { label = 'Payload text (Base64)', file = 'vaultmanager-payload' } = {}) {
+  const ta = h('textarea', { class: 'ta mono payload', rows: '3', readonly: true, spellcheck: 'false', 'aria-label': label }, text);
+  return h('details', { class: 'how payloadbox', open: true }, h('summary', { text: label + ' — ' + text.length.toLocaleString('en-US') + ' characters' }),
+    h('p', { class: 'hint', text: 'This is exactly what is inside the QR. Without the password it is unreadable. Paste it into Tools → QR tools → Open QR to restore without scanning.' }), ta,
+    h('div', { class: 'row wrap' }, h('button', { class: 'btn sm', type: 'button', on: { click: () => copyText(text, 'Payload text copied') } }, '{{copy}} Copy payload text'),
+      h('button', { class: 'btn sm', type: 'button', on: { click: () => download(`${file}-${stamp()}.txt`, text, 'text/plain') } }, '{{download}} Save as .txt')));
+}
+export const purgeButton = (ctx) => h('button', { class: 'btn', type: 'button', title: 'Wipe revealed values, QR codes, passwords typed here, opened locked items and the clipboard from memory', on: { click: () => ctx.purgeMemory() } }, '{{trash}} Purge memory');
 
 /* ---------- hidden password + confirm ---------- */
 /* A hidden password field with a "confirm" field, a show / copy toggle and a generator. The generated passphrase fills both fields. */
@@ -534,9 +545,9 @@ export function shareItem(ctx, it, only = null) {
       const verified = only ? back.field && back.field.value === only.value : back.item && back.item.name === it.name && JSON.stringify(back.item.fields || {}) === JSON.stringify(it.fields || {}) && back.item.notes === it.notes && back.item.password === it.password;
       if (!verified) throw new Error('The QR did not read back correctly — nothing was changed. Try again.');
       const dc = only ? null : describeContents(it);
-      clear(out).append(h('div', { class: 'qrbox' }, canvas), h('div', { class: 'note ok', role: 'status' }, h('b', { text: '✓ Checked: this QR opens again with the password. ' }), only ? 'It holds this single value.' : ['It holds the WHOLE item: ', h('b', { text: dc.included }), '.', dc.attachments ? ` Not included: ${dc.attachments} attached file${dc.attachments === 1 ? '' : 's'} (QR codes are far too small for files — they stay in your vault; a whole-profile backup includes them).` : ' This item has no attached files.'], it.lock ? h('p', { class: 'hint', text: 'This item has a secondary passcode in your vault. The QR is protected by the QR password only — whoever has the picture and that password can read it.' }) : null,
+      clear(out).append(h('div', { class: 'qrbox' }, canvas), payloadBox(ctx, sealed, { file: 'vaultmanager-' + (it.name.replace(/\W+/g, '-').toLowerCase() || 'item') + '-payload' }), h('div', { class: 'note ok', role: 'status' }, h('b', { text: '✓ Checked: this QR opens again with the password. ' }), only ? 'It holds this single value.' : ['It holds the WHOLE item: ', h('b', { text: dc.included }), '.', dc.attachments ? ` Not included: ${dc.attachments} attached file${dc.attachments === 1 ? '' : 's'} (QR codes are far too small for files — they stay in your vault; a whole-profile backup includes them).` : ' This item has no attached files.'], it.lock ? h('p', { class: 'hint', text: 'This item has a secondary passcode in your vault. The QR is protected by the QR password only — whoever has the picture and that password can read it.' }) : null,
         only ? null : h('div', { class: 'row' }, h('button', { class: 'btn sm', on: { click: () => modal({ title: 'What a scan restores', sub: 'Exactly what “Open QR” will show', wide: true, body: itemCard(ctx, sanitiseItem(back.item)), actions: [{ label: 'Close' }] }) } }, '{{search}} Preview what a scan restores'))), h('p', { class: 'hint', text: `QR version ${r.version} · ECC ${r.ecc} · AES-256-GCM · PBKDF2-SHA256 600,000 rounds. The password is NOT in the code — share it by a different channel.` }),
-        h('div', { class: 'row wrap' }, h('button', { class: 'btn sm', on: { click: () => canvas.toBlob((b) => download(`vaultmanager-${it.name.replace(/\W+/g, '-').toLowerCase() || 'item'}.png`, b, 'image/png')) } }, '{{download}} PNG'),
+        h('div', { class: 'row wrap' }, h('button', { class: 'btn sm', on: { click: () => canvas.toBlob((b) => download(`vaultmanager-${it.name.replace(/\W+/g, '-').toLowerCase() || 'item'}-${stamp()}.png`, b, 'image/png')) } }, '{{download}} PNG'),
           h('button', { class: 'btn sm', on: { click: () => { const c2 = h('canvas'); c2.width = canvas.width; c2.height = canvas.height; c2.getContext('2d').drawImage(canvas, 0, 0); printNodes([h('h1', { text: 'VaultManager — encrypted QR' }), h('div', { class: 'pq' }, c2, h('div', { text: it.name })), h('p', { text: 'Scan in VaultManager (QR tools → Open) or QR Seal and enter the password. The password is not on this page.' })]); } } }, '{{print}} Print')));
     } catch (e) { clear(out); err.textContent = /too (long|large|big)|capacity|data/i.test(e.message) ? 'This item is too large for one QR code. Remove long notes or use QR tools → Backup to QR, which splits big data over several codes.' : e.message; }
     return false;
@@ -545,7 +556,7 @@ export function shareItem(ctx, it, only = null) {
     body: h('div', null, h('p', { class: 'note warn', text: 'Anyone with the QR image AND this password can read the item. Pick a password you can tell the recipient separately.' }),
       h('details', { class: 'how' }, h('summary', { text: 'How does this work?' }), h('ol', null, h('li', { text: only ? 'Only this one value is encrypted (AES-256-GCM) into the QR.' : 'The WHOLE item — every field, notes, custom fields and tags — is encrypted (AES-256-GCM) into the QR with the password below. Attached files are not included.' }), h('li', { text: 'Save, print or show the picture. It is useless without the password, so give the password through a different channel.' }), h('li', { text: 'To restore: Tools → QR tools → Open QR → scan it (or choose the image) → enter the password. You see the full card and press “Add to my vault”.' }))),
       pwRow, err, out),
-    actions: [{ label: 'Close' }, { label: 'Create QR', kind: 'primary', onClick: make, close: false }] });
+    actions: [{ label: 'Close' }, { label: 'Purge memory', onClick: () => ctx.purgeMemory() }, { label: 'Create QR', kind: 'primary', onClick: make, close: false }] });
 }
 
 /* ---------- emergency kit ---------- */

@@ -765,3 +765,8 @@ html[data-cursorring=on] #cursor-ring { opacity: .9; } #cursor-ring.hidden { opa
 @media (pointer: coarse) { #cursor-ring { display: none; } }
 .curprev { margin-top: 10px; padding: 18px; border: 1px dashed var(--line); border-radius: 12px; display: flex; gap: 16px; align-items: center; justify-content: space-around; color: var(--muted); font-size: 12px; cursor: var(--pc1, default); }
 .curprev b { padding: 8px 14px; border-radius: 8px; border: 1px solid var(--line); color: var(--ink); font-weight: 500; cursor: var(--pc2, pointer); }
+
+/* ---- version badge, payload box ---- */
+.brand h1 .ver { font-size: 11px; font-weight: 500; color: var(--muted); letter-spacing: .04em; margin-left: 4px; vertical-align: middle; }
+.gate-ver { color: var(--muted); font-size: 11px; letter-spacing: .06em; font-family: var(--mono); }
+.payloadbox .payload { width: 100%; font-size: 11px; word-break: break-all; resize: vertical; max-height: 160px; }

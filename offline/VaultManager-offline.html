@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VaultManager v0.18.0 — single-file offline build. Verify with the .sha256 file next to it. -->
+<!-- VaultManager v0.19.0 — single-file offline build. Verify with the .sha256 file next to it. -->
 <html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
@@ -11,7 +11,7 @@
 <meta name="application-name" content="VaultManager">
 <meta name="format-detection" content="telephone=no">
 <meta name="referrer" content="no-referrer">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-mII2jWiT+kYGa6+TysLp2J2hJ6I654GJB8F+Jcj46II=' blob:; style-src 'sha256-vn8pLubO0ZcoohoEV5q+Lw1579QrzjnMPqb3vDNzJwc='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-0A5KPeCWa2Uh8rSqGnFF5EpM4wAxmST0FBXSTaeOoTM=' blob:; style-src 'sha256-qM2DqSa0KQuovDKQOl+G8KIc9vXfVLj5wJTjN8OejmA='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
 <title>VaultManager | Zero-Knowledge Password Manager</title>
 <meta name="description" content="VaultManager: an offline-first, zero-knowledge, end-to-end encrypted password manager with a strong password generator, TOTP codes and QR-sealed sharing and backup. Runs entirely in your browser.">
 <meta name="theme-color" content="#05080d">
@@ -783,6 +783,11 @@ html[data-cursorring=on] #cursor-ring { opacity: .9; } #cursor-ring.hidden { opa
 @media (pointer: coarse) { #cursor-ring { display: none; } }
 .curprev { margin-top: 10px; padding: 18px; border: 1px dashed var(--line); border-radius: 12px; display: flex; gap: 16px; align-items: center; justify-content: space-around; color: var(--muted); font-size: 12px; cursor: var(--pc1, default); }
 .curprev b { padding: 8px 14px; border-radius: 8px; border: 1px solid var(--line); color: var(--ink); font-weight: 500; cursor: var(--pc2, pointer); }
+
+/* ---- version badge, payload box ---- */
+.brand h1 .ver { font-size: 11px; font-weight: 500; color: var(--muted); letter-spacing: .04em; margin-left: 4px; vertical-align: middle; }
+.gate-ver { color: var(--muted); font-size: 11px; letter-spacing: .06em; font-family: var(--mono); }
+.payloadbox .payload { width: 100%; font-size: 11px; word-break: break-all; resize: vertical; max-height: 160px; }
 </style>
 </head>
 <body>
@@ -1294,6 +1299,10 @@ html[data-cursorring=on] #cursor-ring { opacity: .9; } #cursor-ring.hidden { opa
     }
   }
   var fmtTime = (ts) => new Date(ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  var stamp = (d = /* @__PURE__ */ new Date()) => {
+    const p = (n) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}_${p(d.getHours())}-${p(d.getMinutes())}-${p(d.getSeconds())}`;
+  };
 
   // js/crypto.js
   var ITER_DEFAULT = 6e5;
@@ -1814,7 +1823,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   }
 
   // js/version.js
-  var APP_VERSION = "0.18.0";
+  var APP_VERSION = "0.19.0";
   var APP_NAME = "VaultManager";
   var REPO_URL = "https://github.com/ulyweb/vaultmanager";
   var FORMATS = [
@@ -1828,6 +1837,11 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     ["Attachments at rest", "AES-256-GCM per file, bound to vault + file id"]
   ];
   var CHANGELOG = [
+    { v: "0.19.0", date: "2026-11-10", notes: [
+      "The version number is shown on the create-profile and locked sign-in screens.",
+      "Every file the app saves now carries the date and time in its name (\u2026-2026-11-10_14-32-05.vmprofile / .png / .vmvault / .vmsync / .csv / .json / .txt).",
+      "Wherever you seal something into a QR (Seal as QR on an item, Seal text, Backup to QR) you get the Base64 payload text with Copy and Save as .txt; Open QR has a Paste payload text button. Purge memory sits next to all of them."
+    ] },
     { v: "0.18.0", date: "2026-11-10", notes: [
       "Open QR now shows the WHOLE item as a full card (every field, notes, custom fields, tags) before you add it \u2014 before, only name, type, username and website were listed, which looked like \u201Cjust the name\u201D for items such as Crypto wallets.",
       "Seal as QR checks itself: it reads the QR back, lists exactly what is inside (and that attached files are not), and has a \u201CPreview what a scan restores\u201D button. Explanations added to the dialog.",
@@ -3977,6 +3991,23 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     const e = estimate(value), n = [...value].length;
     return h("small", { class: "sbits", title: "Estimated strength: " + e.label, text: `${n} characters \xB7 ~${Math.round(e.bits)} bits \xB7 ${e.label}` });
   }
+  function payloadBox(ctx2, text, { label = "Payload text (Base64)", file = "vaultmanager-payload" } = {}) {
+    const ta = h("textarea", { class: "ta mono payload", rows: "3", readonly: true, spellcheck: "false", "aria-label": label }, text);
+    return h(
+      "details",
+      { class: "how payloadbox", open: true },
+      h("summary", { text: label + " \u2014 " + text.length.toLocaleString("en-US") + " characters" }),
+      h("p", { class: "hint", text: "This is exactly what is inside the QR. Without the password it is unreadable. Paste it into Tools \u2192 QR tools \u2192 Open QR to restore without scanning." }),
+      ta,
+      h(
+        "div",
+        { class: "row wrap" },
+        h("button", { class: "btn sm", type: "button", on: { click: () => copyText(text, "Payload text copied") } }, "{{copy}} Copy payload text"),
+        h("button", { class: "btn sm", type: "button", on: { click: () => download(`${file}-${stamp()}.txt`, text, "text/plain") } }, "{{download}} Save as .txt")
+      )
+    );
+  }
+  var purgeButton = (ctx2) => h("button", { class: "btn", type: "button", title: "Wipe revealed values, QR codes, passwords typed here, opened locked items and the clipboard from memory", on: { click: () => ctx2.purgeMemory() } }, "{{trash}} Purge memory");
   function passwordRow(label, input, withGen = true) {
     input.type = "password";
     input.autocomplete = "new-password";
@@ -4857,6 +4888,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
         const dc = only ? null : describeContents(it);
         clear(out).append(
           h("div", { class: "qrbox" }, canvas),
+          payloadBox(ctx2, sealed, { file: "vaultmanager-" + (it.name.replace(/\W+/g, "-").toLowerCase() || "item") + "-payload" }),
           h(
             "div",
             { class: "note ok", role: "status" },
@@ -4869,7 +4901,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
           h(
             "div",
             { class: "row wrap" },
-            h("button", { class: "btn sm", on: { click: () => canvas.toBlob((b) => download(`vaultmanager-${it.name.replace(/\W+/g, "-").toLowerCase() || "item"}.png`, b, "image/png")) } }, "{{download}} PNG"),
+            h("button", { class: "btn sm", on: { click: () => canvas.toBlob((b) => download(`vaultmanager-${it.name.replace(/\W+/g, "-").toLowerCase() || "item"}-${stamp()}.png`, b, "image/png")) } }, "{{download}} PNG"),
             h("button", { class: "btn sm", on: { click: () => {
               const c2 = h("canvas");
               c2.width = canvas.width;
@@ -4898,7 +4930,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
         err,
         out
       ),
-      actions: [{ label: "Close" }, { label: "Create QR", kind: "primary", onClick: make, close: false }]
+      actions: [{ label: "Close" }, { label: "Purge memory", onClick: () => ctx2.purgeMemory() }, { label: "Create QR", kind: "primary", onClick: make, close: false }]
     });
   }
   function showRecoveryKit(ctx2, key, { onDone } = {}) {
@@ -5186,7 +5218,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     return h(
       "div",
       { class: "row wrap" },
-      h("button", { class: "btn sm", on: { click: () => canvas.toBlob((b) => download(name + ".png", b, "image/png")) } }, "{{download}} PNG"),
+      h("button", { class: "btn sm", on: { click: () => canvas.toBlob((b) => download(name + "-" + stamp() + ".png", b, "image/png")) } }, "{{download}} PNG"),
       h("button", { class: "btn sm", on: { click: () => {
         const c2 = h("canvas");
         c2.width = canvas.width;
@@ -5222,7 +5254,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
         const c = h("canvas", { role: "img", "aria-label": "Encrypted QR code" });
         const r = await drawQR(c, sealed, { scale: 6 });
         if (await openText(sealed, pw.value) !== text.value) throw new Error("Round-trip check failed.");
-        out.append(h("div", { class: "qrbox" }, c), h("p", { class: "hint", text: `QR version ${r.version} \xB7 ECC ${r.ecc} \xB7 ${sealed.length} characters \xB7 sealed in ${Math.round(performance.now() - t0)} ms \xB7 round-trip verified` }), qrOutputs(c, "vaultmanager-qr"));
+        out.append(h("div", { class: "qrbox" }, c), payloadBox(ctx2, sealed, { file: "vaultmanager-qr-payload" }), h("p", { class: "hint", text: `QR version ${r.version} \xB7 ECC ${r.ecc} \xB7 ${sealed.length} characters \xB7 sealed in ${Math.round(performance.now() - t0)} ms \xB7 round-trip verified` }), qrOutputs(c, "vaultmanager-qr"));
       } catch (e) {
         err.textContent = e.message;
       }
@@ -5235,7 +5267,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     };
     text.addEventListener("input", paintTxt);
     const pwRow = passwordRow("Password", pw);
-    return h("div", { class: "panel pad" }, field2("Secret text", text), txtStats, pwRow, h("div", { class: "row wrap" }, btn, h("button", { class: "btn", type: "button", title: "Wipe the text, passwords and QR codes from this screen, close opened items and clear the clipboard", on: { click: () => ctx2.purgeMemory() } }, "{{trash}} Purge memory")), err, out);
+    return h("div", { class: "panel pad" }, field2("Secret text", text), txtStats, pwRow, h("div", { class: "row wrap" }, btn, purgeButton(ctx2)), err, out);
   }
   function openTab(ctx2) {
     const payload = h("textarea", { class: "ta", rows: "4", placeholder: "Scan a QR, choose an image, or paste the sealed text (base64 or VMX1:\u2026)", "aria-label": "Sealed payload", spellcheck: "false" });
@@ -5380,14 +5412,27 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     return h(
       "div",
       { class: "panel pad" },
-      h("div", { class: "row wrap" }, scan, h("button", { class: "btn", on: { click: () => file.click() } }, "{{photoid}} Image file(s)"), file),
+      h("div", { class: "row wrap" }, scan, h("button", { class: "btn", on: { click: () => file.click() } }, "{{photoid}} Image file(s)"), file, h("button", { class: "btn", type: "button", title: "Paste the payload text (Base64) you copied when sealing", on: { click: async () => {
+        try {
+          const t = (await navigator.clipboard.readText()).trim();
+          if (!t) {
+            err.textContent = "The clipboard is empty.";
+            return;
+          }
+          payload.value = t;
+          payload.dispatchEvent(new Event("input"));
+          status.textContent = "Pasted " + t.length.toLocaleString("en-US") + " characters. Enter the password and press Open.";
+        } catch {
+          err.textContent = "The browser did not allow reading the clipboard \u2014 paste into the box below instead.";
+        }
+      } } }, "{{copy}} Paste payload text")),
       scanBox,
       prog,
       status,
       qrBackupGuide(ctx2, { short: true }),
       field2("Sealed payload", payload),
       field2("Password", pw),
-      h("div", { class: "row" }, open),
+      h("div", { class: "row wrap" }, open, purgeButton(ctx2)),
       err,
       out
     );
@@ -5465,6 +5510,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
           grid.append(h("figure", null, c, h("figcaption", { text: `${i + 1} / ${chunks.length}` })));
         }
         out.append(
+          payloadBox(ctx2, blob, { label: "Backup text (VMX1, Base64)", file: "vaultmanager-backup-payload" }),
           h("div", { class: "note ok", role: "status", text: `\u2713 Checked: these codes decrypt again and would restore all ${vcheck.items.length} item${vcheck.items.length === 1 ? "" : "s"}.` }),
           h("div", { class: "note", text: `${ctx2.store.active().length} items \u2192 ${chunks.length} QR code${chunks.length > 1 ? "s" : ""}. Scan all of them (any order) in QR tools \u2192 Open QR on the new device. The backup password is NOT in the codes.` }),
           grid,
@@ -5478,7 +5524,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
               c2.getContext("2d").drawImage(c, 0, 0);
               return h("div", { class: "pq" }, c2, h("div", { text: `${i + 1} / ${chunks.length}` }));
             })]) } }, "{{print}} Print all"),
-            h("button", { class: "btn sm", on: { click: () => download("vaultmanager-backup.vmvault", blob, "text/plain") } }, "{{download}} Also save as file")
+            h("button", { class: "btn sm", on: { click: () => download(`vaultmanager-backup-${stamp()}.vmvault`, blob, "text/plain") } }, "{{download}} Also save as file")
           )
         );
       } catch (e) {
@@ -5486,7 +5532,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       }
       btn.disabled = false;
     } } }, "{{qr}} Create QR backup");
-    return h("div", null, qrBackupGuide(ctx2), h("div", { class: "panel pad" }, h("p", { class: "note warn", text: "A paper QR backup (without attachments) lets you rebuild your vault with nothing but a camera. Whoever holds the codes AND the backup password can read everything \u2014 store them apart." }), bkRow, h("div", { class: "row" }, btn), err, out));
+    return h("div", null, qrBackupGuide(ctx2), h("div", { class: "panel pad" }, h("p", { class: "note warn", text: "A paper QR backup (without attachments) lets you rebuild your vault with nothing but a camera. Whoever holds the codes AND the backup password can read everything \u2014 store them apart." }), bkRow, h("div", { class: "row wrap" }, btn, purgeButton(ctx2)), err, out));
   }
   var BACKUP_KINDS = [
     {
@@ -5640,7 +5686,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
             return;
           }
           try {
-            download(`vaultmanager-${fmtDate(Date.now())}.vmvault`, await store2.exportEncrypted(bkPw.value, { attachments: bkAtt.checked }), "text/plain");
+            download(`vaultmanager-${stamp()}.vmvault`, await store2.exportEncrypted(bkPw.value, { attachments: bkAtt.checked }), "text/plain");
             toast("Backup saved \u2014 remember the password!");
           } catch (e) {
             bkErr.textContent = e.message;
@@ -5679,7 +5725,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
         h("button", { class: "btn danger", on: { click: async () => {
           const ok = await askPassword({ title: "Export unencrypted CSV", text: "Enter your master password to confirm.", okLabel: "Export", verify: (p) => store2.session.verifyPassword(p) });
           if (ok) {
-            download(`vaultmanager-plaintext-${fmtDate(Date.now())}.csv`, exportCSV(store2.active()), "text/csv");
+            download(`vaultmanager-plaintext-${stamp()}.csv`, exportCSV(store2.active()), "text/csv");
             toast("Exported \u2014 delete the file after use", "err", 6e3);
           }
         } } }, "{{alert}} Export CSV\u2026")
@@ -7287,7 +7333,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
           fileErr.textContent = "";
           if (!needPass()) return;
           try {
-            download(`vaultmanager-${fmtDate(Date.now())}.vmsync`, await exportSyncFile(store2, c.passphrase), "text/plain");
+            download(`vaultmanager-${stamp()}.vmsync`, await exportSyncFile(store2, c.passphrase), "text/plain");
             toast("Sync file saved");
           } catch (x) {
             fileErr.textContent = x.message;
@@ -7380,7 +7426,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
           "div",
           { class: "row wrap" },
           h("button", { class: "btn", on: { click: () => {
-            download(`vaultmanager-audit-${fmtDate(Date.now())}.json`, JSON.stringify(store2.auditLog().map((e) => ({ time: new Date(e.t).toISOString(), kind: e.k, level: e.l, event: e.m })), null, 2), "application/json");
+            download(`vaultmanager-audit-${stamp()}.json`, JSON.stringify(store2.auditLog().map((e) => ({ time: new Date(e.t).toISOString(), kind: e.k, level: e.l, event: e.m })), null, 2), "application/json");
             store2.log("data", "Exported the audit trail");
           } } }, "{{download}} Export log"),
           h("button", { class: "btn danger", on: { click: async () => {
@@ -7691,7 +7737,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
         e.target.disabled = true;
         try {
           const text = await store2.exportProfile(pw.value, { profile: { name: prof && prof.name, avatar: prof && prof.avatar && prof.avatar.type === "photo" ? null : prof && prof.avatar }, attachments: att.checked });
-          download(`vaultmanager-profile-${slug(prof && prof.name)}-${fmtDate(Date.now())}.vmprofile`, text, "text/plain");
+          download(`vaultmanager-profile-${slug(prof && prof.name)}-${stamp()}.vmprofile`, text, "text/plain");
           toast("Profile backup saved \u2014 keep the password safe!", "ok", 6e3);
           m.close();
         } catch (x) {
@@ -9164,7 +9210,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   function trustChips() {
     return h("div", { class: "trust" }, ["Zero-knowledge", "End-to-end encrypted", "AES-256-GCM", "Works offline", "No account \xB7 no server"].map((t) => h("span", { class: "chip accent", text: "{{check}} " + t })));
   }
-  var brand = (sub) => h("div", { class: "brand" }, h("img", { src: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImciIHgxPSIwIiB5MT0iMCIgeDI9IjEiIHkyPSIxIj48c3RvcCBvZmZzZXQ9IjAiIHN0b3AtY29sb3I9IiMyZmU2ZDAiLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiM1OWI0ZmYiLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz48cmVjdCB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgcng9IjExMiIgZmlsbD0iIzA1MDgwZCIvPjxyZWN0IHg9IjQwIiB5PSI0MCIgd2lkdGg9IjQzMiIgaGVpZ2h0PSI0MzIiIHJ4PSI4NCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMTUyNTM0IiBzdHJva2Utd2lkdGg9IjYiLz48cGF0aCBkPSJNMjU2IDk2bDEzMiA0OHYxMDJjMCA4OC01NiAxNDQtMTMyIDE3MC03Ni0yNi0xMzItODItMTMyLTE3MFYxNDR6IiBmaWxsPSJub25lIiBzdHJva2U9InVybCgjZykiIHN0cm9rZS13aWR0aD0iMjIiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz48Y2lyY2xlIGN4PSIyNTYiIGN5PSIyMzIiIHI9IjM4IiBmaWxsPSJ1cmwoI2cpIi8+PHBhdGggZD0iTTI1NiAyNjJ2NzQiIHN0cm9rZT0idXJsKCNnKSIgc3Ryb2tlLXdpZHRoPSIyNiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+PC9zdmc+Cg==", alt: "", width: "44", height: "44" }), h("div", null, h("h1", null, "Vault", h("span", { text: "Manager" })), h("p", { text: sub })));
+  var brand = (sub) => h("div", { class: "brand" }, h("img", { src: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImciIHgxPSIwIiB5MT0iMCIgeDI9IjEiIHkyPSIxIj48c3RvcCBvZmZzZXQ9IjAiIHN0b3AtY29sb3I9IiMyZmU2ZDAiLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiM1OWI0ZmYiLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz48cmVjdCB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgcng9IjExMiIgZmlsbD0iIzA1MDgwZCIvPjxyZWN0IHg9IjQwIiB5PSI0MCIgd2lkdGg9IjQzMiIgaGVpZ2h0PSI0MzIiIHJ4PSI4NCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMTUyNTM0IiBzdHJva2Utd2lkdGg9IjYiLz48cGF0aCBkPSJNMjU2IDk2bDEzMiA0OHYxMDJjMCA4OC01NiAxNDQtMTMyIDE3MC03Ni0yNi0xMzItODItMTMyLTE3MFYxNDR6IiBmaWxsPSJub25lIiBzdHJva2U9InVybCgjZykiIHN0cm9rZS13aWR0aD0iMjIiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz48Y2lyY2xlIGN4PSIyNTYiIGN5PSIyMzIiIHI9IjM4IiBmaWxsPSJ1cmwoI2cpIi8+PHBhdGggZD0iTTI1NiAyNjJ2NzQiIHN0cm9rZT0idXJsKCNnKSIgc3Ryb2tlLXdpZHRoPSIyNiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+PC9zdmc+Cg==", alt: "", width: "44", height: "44" }), h("div", null, h("h1", null, "Vault", h("span", { text: "Manager" }), h("small", { class: "ver", text: " v" + APP_VERSION })), h("p", { text: sub })));
   function pwInput(id, label, auto) {
     const i = h("input", { id, type: "password", class: "inp mono", autocomplete: auto, spellcheck: "false", "aria-label": label, required: true });
     const eye = h("button", { type: "button", class: "icon-btn eye", "aria-label": "Show or hide " + label, title: "Show / hide", on: { click: () => {
@@ -9173,13 +9219,14 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     return { input: i, el: h("div", { class: "pwwrap" }, i, eye) };
   }
   var contactAdminDialog = () => contactAdmin({ profileName: store && store.unlocked ? (ctx.profile() || {}).name || "" : "" });
-  var gateFoot = () => enabled() || canOfferCopy() ? h("p", { class: "gate-foot" }, enabled() ? h("button", { type: "button", class: "linkbtn", on: { click: contactAdminDialog } }, "{{mailsend}} Contact admin") : null, canOfferCopy() ? h("button", { type: "button", class: "linkbtn", on: { click: async () => {
+  var gateFoot = () => h("p", { class: "gate-foot" }, h("span", { class: "gate-ver", text: "VaultManager v" + APP_VERSION }), ...gateFootLinks());
+  var gateFootLinks = () => enabled() || canOfferCopy() ? [enabled() ? h("button", { type: "button", class: "linkbtn", on: { click: contactAdminDialog } }, "{{mailsend}} Contact admin") : null, canOfferCopy() ? h("button", { type: "button", class: "linkbtn", on: { click: async () => {
     try {
       await saveOfflineCopy();
     } catch (e) {
       toast(e.message, "err", 7e3);
     }
-  } } }, "{{download}} Download the offline copy \u2014 one file, VaultManager-offline.html") : null) : null;
+  } } }, "{{download}} Download the offline copy \u2014 one file, VaultManager-offline.html") : null] : [];
   function profileHead(p, sub) {
     return h("div", { class: "brand prof" }, profileAvatar(p, 52), h("div", null, h("h1", { text: p.name }), h("p", { text: sub })));
   }

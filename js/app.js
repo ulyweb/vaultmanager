@@ -220,7 +220,7 @@ function armSync() {
 function trustChips() {
   return h('div', { class: 'trust' }, ['Zero-knowledge', 'End-to-end encrypted', 'AES-256-GCM', 'Works offline', 'No account · no server'].map((t) => h('span', { class: 'chip accent', text: '{{check}} ' + t })));
 }
-const brand = (sub) => h('div', { class: 'brand' }, h('img', { src: 'icons/icon.svg', alt: '', width: '44', height: '44' }), h('div', null, h('h1', null, 'Vault', h('span', { text: 'Manager' })), h('p', { text: sub })));
+const brand = (sub) => h('div', { class: 'brand' }, h('img', { src: 'icons/icon.svg', alt: '', width: '44', height: '44' }), h('div', null, h('h1', null, 'Vault', h('span', { text: 'Manager' }), h('small', { class: 'ver', text: ' v' + APP_VERSION })), h('p', { text: sub })));
 
 function pwInput(id, label, auto) {
   const i = h('input', { id, type: 'password', class: 'inp mono', autocomplete: auto, spellcheck: 'false', 'aria-label': label, required: true });
@@ -231,7 +231,8 @@ function pwInput(id, label, auto) {
 
 const contactAdminDialog = () => admin.contactAdmin({ profileName: store && store.unlocked ? (ctx.profile() || {}).name || '' : '' });
 
-const gateFoot = () => (admin.enabled() || canOfferCopy() ? h('p', { class: 'gate-foot' }, admin.enabled() ? h('button', { type: 'button', class: 'linkbtn', on: { click: contactAdminDialog } }, '{{mailsend}} Contact admin') : null, canOfferCopy() ? h('button', { type: 'button', class: 'linkbtn', on: { click: async () => { try { await saveOfflineCopy(); } catch (e) { toast(e.message, 'err', 7000); } } } }, '{{download}} Download the offline copy — one file, VaultManager-offline.html') : null) : null);
+const gateFoot = () => h('p', { class: 'gate-foot' }, h('span', { class: 'gate-ver', text: 'VaultManager v' + APP_VERSION }), ...gateFootLinks());
+const gateFootLinks = () => (admin.enabled() || canOfferCopy() ? [ admin.enabled() ? h('button', { type: 'button', class: 'linkbtn', on: { click: contactAdminDialog } }, '{{mailsend}} Contact admin') : null, canOfferCopy() ? h('button', { type: 'button', class: 'linkbtn', on: { click: async () => { try { await saveOfflineCopy(); } catch (e) { toast(e.message, 'err', 7000); } } } }, '{{download}} Download the offline copy — one file, VaultManager-offline.html') : null] : []);
 
 function profileHead(p, sub) {
   return h('div', { class: 'brand prof' }, profileAvatar(p, 52), h('div', null, h('h1', { text: p.name }), h('p', { text: sub })));

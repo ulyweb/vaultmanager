@@ -11,7 +11,7 @@ import { wipe } from './crypto.js';
 import { exportSyncFile, importSyncFile, validateSyncPassphrase } from './sync.js';
 import { APP_NAME, APP_VERSION, CHANGELOG, FORMATS, REPO_URL } from './version.js';
 import { KEY } from './vault.js';
-import { fmtDate, fmtInt } from './util.js';
+import { fmtDate, fmtInt, stamp } from './util.js';
 import { canOfferCopy, saveOfflineCopy } from './offline.js';
 import { enabled as adminEnabled } from './admin.js';
 
@@ -223,7 +223,7 @@ function sync(ctx) {
       h('p', { class: 'hint', text: 'Export a .vmsync file, carry it however you like (USB stick, AirDrop, cloud drive, email), and import it on the other device. Importing merges; it never wipes what is already there.' }),
       h('div', { class: 'row wrap' }, h('button', { class: 'btn primary', on: { click: async () => {
         fileErr.textContent = ''; if (!needPass()) return;
-        try { download(`vaultmanager-${fmtDate(Date.now())}.vmsync`, await exportSyncFile(store, c.passphrase), 'text/plain'); toast('Sync file saved'); } catch (x) { fileErr.textContent = x.message; }
+        try { download(`vaultmanager-${stamp()}.vmsync`, await exportSyncFile(store, c.passphrase), 'text/plain'); toast('Sync file saved'); } catch (x) { fileErr.textContent = x.message; }
       } } }, '{{download}} Export sync file'), h('button', { class: 'btn', on: { click: () => fileIn.click() } }, '{{upload}} Import sync file'), fileIn), fileErr),
     panel('2b · Beam — device to device, no cloud, no account',
       h('p', { class: 'hint', text: 'Pair your PC and phone directly (QR code or copy / paste, same Wi-Fi) and merge both vaults over an end-to-end encrypted connection. Nothing is uploaded anywhere. This is the ulyOS Beam engine, built into VaultManager.' }),
@@ -260,7 +260,7 @@ function audit(ctx) {
       h('div', { class: 'row wrap' }, h('div', { class: 'grow' }, sel('all', KINDS, (v) => { kind = v; draw(); })),
         h('div', { class: 'grow' }, h('input', { class: 'inp', type: 'search', placeholder: 'Filter text…', 'aria-label': 'Filter audit trail', on: { input: (e) => { q = e.target.value.toLowerCase(); draw(); } } }))),
       chk('Warnings only', false, (v) => { warnOnly = v; draw(); }), list,
-      h('div', { class: 'row wrap' }, h('button', { class: 'btn', on: { click: () => { download(`vaultmanager-audit-${fmtDate(Date.now())}.json`, JSON.stringify(store.auditLog().map((e) => ({ time: new Date(e.t).toISOString(), kind: e.k, level: e.l, event: e.m })), null, 2), 'application/json'); store.log('data', 'Exported the audit trail'); } } }, '{{download}} Export log'),
+      h('div', { class: 'row wrap' }, h('button', { class: 'btn', on: { click: () => { download(`vaultmanager-audit-${stamp()}.json`, JSON.stringify(store.auditLog().map((e) => ({ time: new Date(e.t).toISOString(), kind: e.k, level: e.l, event: e.m })), null, 2), 'application/json'); store.log('data', 'Exported the audit trail'); } } }, '{{download}} Export log'),
         h('button', { class: 'btn danger', on: { click: async () => { if (await confirmDialog({ title: 'Clear the audit trail?', text: 'All recorded events will be deleted. A single entry noting the clearing is kept.', okLabel: 'Clear', danger: true })) { await store.clearAudit(); ctx.refresh(); } } } }, 'Clear log'))));
 }
 

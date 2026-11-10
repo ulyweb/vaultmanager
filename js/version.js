@@ -1,6 +1,6 @@
 /* Application version, data-format versions and changelog (shown in Settings → About). */
 
-export const APP_VERSION = '0.18.0';
+export const APP_VERSION = '0.19.0';
 export const APP_NAME = 'VaultManager';
 export const REPO_URL = 'https://github.com/ulyweb/vaultmanager';
 
@@ -16,6 +16,11 @@ export const FORMATS = [
 ];
 
 export const CHANGELOG = [
+  { v: '0.19.0', date: '2026-11-10', notes: [
+    'The version number is shown on the create-profile and locked sign-in screens.',
+    'Every file the app saves now carries the date and time in its name (…-2026-11-10_14-32-05.vmprofile / .png / .vmvault / .vmsync / .csv / .json / .txt).',
+    'Wherever you seal something into a QR (Seal as QR on an item, Seal text, Backup to QR) you get the Base64 payload text with Copy and Save as .txt; Open QR has a Paste payload text button. Purge memory sits next to all of them.',
+  ] },
   { v: '0.18.0', date: '2026-11-10', notes: [
     'Open QR now shows the WHOLE item as a full card (every field, notes, custom fields, tags) before you add it — before, only name, type, username and website were listed, which looked like “just the name” for items such as Crypto wallets.',
     'Seal as QR checks itself: it reads the QR back, lists exactly what is inside (and that attached files are not), and has a “Preview what a scan restores” button. Explanations added to the dialog.',

@@ -1350,3 +1350,64 @@ test('v0.18 on iPhone SE: QR tool tabs, the Seal-as-QR dialog and cursor setting
   assert.deepEqual(problems.filter((p) => !/Failed to load resource/.test(p)), []);
   await ctx.close();
 });
+
+test('v0.19: version on the sign-in screens; every saved file name carries date and time; QR payload text can be copied; Purge memory next to every QR tool', async () => {
+  const { ctx, page, problems } = await newPage();
+  await page.goto(base); await page.waitForSelector('#pw1');
+  assert.match(await page.textContent('.gate'), /VaultManager v\d+\.\d+\.\d+/, 'version on the create screen');
+  await page.fill('#pw1', MASTER); await page.fill('#pw2', MASTER); await page.check('#ack'); await page.click('button[type=submit]');
+  await page.getByRole('button', { name: 'Skip for now' }).click(); await dismissWelcome(page); await page.waitForSelector('.topbar');
+  const STAMP = /\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}/;
+  // whole profile
+  await settingsTab(page, 'General'); await page.getByRole('button', { name: /Export whole profile/ }).first().click();
+  await page.fill('input[aria-label="Backup password"]', 'backup-pass-phrase-1'); await page.fill('input[aria-label="Confirm Backup password"]', 'backup-pass-phrase-1');
+  const [d1] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Download backup' }).click()]); assert.match(d1.suggestedFilename(), /^vaultmanager-profile-.+-\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}\.vmprofile$/); await page.keyboard.press('Escape');
+  // QR tools: seal text → PNG + payload copy + purge
+  await page.locator('.side .nav', { hasText: 'QR tools' }).click();
+  await page.fill('textarea[aria-label="Text to seal"]', 'hello'); await page.fill('input[aria-label="QR password"]', 'qr-test-password'); await page.fill('input[aria-label="Confirm QR password"]', 'qr-test-password');
+  await page.getByRole('button', { name: /Seal into QR/ }).click(); await page.waitForSelector('.payloadbox textarea', { timeout: 30000 });
+  const payload = await page.inputValue('.payloadbox textarea'); assert.ok(payload.length > 40 && /^[A-Za-z0-9+/=]+$/.test(payload), 'the Base64 payload is shown');
+  await page.getByRole('button', { name: /Copy payload text/ }).click(); await page.waitForFunction(async (p) => (await navigator.clipboard.readText()) === p, payload, { timeout: 5000 });
+  const [d2] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'PNG' }).click()]); assert.match(d2.suggestedFilename(), /^vaultmanager-qr-\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}\.png$/);
+  const [d3] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: /Save as \.txt/ }).click()]); assert.match(d3.suggestedFilename(), STAMP);
+  assert.ok(await page.getByRole('button', { name: /Purge memory/ }).count());
+  // open tab: paste + purge, and the pasted payload opens
+  await page.getByRole('tab', { name: 'Open QR' }).click(); assert.ok(await page.getByRole('button', { name: /Purge memory/ }).count() && await page.getByRole('button', { name: /Paste payload text/ }).count());
+  await page.getByRole('button', { name: /Paste payload text/ }).click(); await page.waitForFunction((p) => document.querySelector('textarea[aria-label="Sealed payload"]').value === p, payload, { timeout: 5000 });
+  await page.fill('input[aria-label="Password"]', 'qr-test-password'); await page.getByRole('button', { name: /^.*Open$/ }).last().click(); await page.waitForSelector('.genout', { timeout: 30000 });
+  // backup tab
+  await page.getByRole('tab', { name: 'Backup to QR' }).click(); assert.ok(await page.getByRole('button', { name: /Purge memory/ }).count());
+  await page.fill('input[aria-label="Backup password"]', 'backup-pass-phrase-1'); await page.fill('input[aria-label="Confirm Backup password"]', 'backup-pass-phrase-1'); await page.getByRole('button', { name: /Create QR backup/ }).click(); await page.waitForSelector('.payloadbox textarea', { timeout: 60000 });
+  assert.match(await page.inputValue('.payloadbox textarea'), /^VMX1:/);
+  const [d4] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: /Also save as file/ }).click()]); assert.match(d4.suggestedFilename(), /^vaultmanager-backup-\d{4}-\d{2}-\d{2}_.+\.vmvault$/);
+  // item QR: png name, payload, purge
+  await page.getByRole('button', { name: '＋ New' }).click(); await page.locator('.modal-sheet .cats .btn', { hasText: 'Crypto wallet' }).click(); await page.fill('#f_name', 'W1'); await page.fill('#tf_seed', 'a b c d'); await page.getByRole('button', { name: 'Save', exact: true }).click(); await page.waitForSelector('.detail h2:has-text("W1")');
+  await page.getByRole('button', { name: /Seal as QR/ }).first().click(); assert.ok(await page.locator('.modal-sheet').getByRole('button', { name: 'Purge memory' }).count());
+  await page.getByRole('button', { name: 'Create QR' }).click(); await page.waitForSelector('.modal-sheet .payloadbox textarea', { timeout: 30000 });
+  const [d5] = await Promise.all([page.waitForEvent('download'), page.locator('.modal-sheet').getByRole('button', { name: 'PNG' }).click()]); assert.match(d5.suggestedFilename(), /^vaultmanager-w1-\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}\.png$/);
+  await page.keyboard.press('Escape');
+  // locked screen shows the version too
+  await page.getByRole('button', { name: /Lock/ }).first().click(); await page.waitForSelector('#upw'); assert.match(await page.textContent('.gate'), /VaultManager v\d+\.\d+\.\d+/, 'version on the locked screen');
+  assert.deepEqual(problems.filter((p) => !/Failed to load resource/.test(p)), []);
+  await ctx.close();
+});
+
+for (const [label, o] of [['single file · desktop', { offline: true }], ['single file · iPhone 13', { offline: true, device: 'iPhone 13' }], ['served · iPhone SE', { device: 'iPhone SE' }]]) test('v0.19 payload text, stamped file names and version are the same in: ' + label, async () => {
+  if (o.offline) execFileSync(process.execPath, [path.join(ROOT, 'tools/build-offline.mjs')], { stdio: 'pipe' });
+  const opts = o.device ? (({ defaultBrowserType, ...d }) => ({ ...d, colorScheme: 'dark', reducedMotion: 'reduce' }))(devices[o.device]) : {};
+  const phone = !!o.device && devices[o.device].viewport.width < 700;
+  const { ctx, page, problems } = await newPage(opts);
+  const fits = async (w) => { const x = await page.evaluate(() => ({ sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth })); assert.ok(x.sw <= x.cw + 1, `${label} · ${w}: overflow ${x.sw}>${x.cw}`); };
+  await page.goto(o.offline ? 'file://' + path.join(ROOT, 'offline/VaultManager-offline.html') : base); await page.waitForSelector('#pw1');
+  assert.match(await page.textContent('.gate'), /VaultManager v\d+\.\d+\.\d+/); await fits('create screen');
+  await page.fill('#pw1', MASTER); await page.fill('#pw2', MASTER); await page.check('#ack'); await page.click('button[type=submit]');
+  await page.getByRole('button', { name: 'Skip for now' }).click(); await page.waitForSelector('.welcome.in').catch(() => {}); await page.keyboard.press('Escape'); await page.waitForTimeout(250);
+  if (phone) { await page.getByRole('button', { name: 'More' }).click(); await page.locator('.msheet-item', { hasText: 'QR tools' }).first().click(); } else await page.locator('.side .nav', { hasText: 'QR tools' }).click();
+  await page.fill('textarea[aria-label="Text to seal"]', 'hello'); await page.fill('input[aria-label="QR password"]', 'qr-test-password'); await page.fill('input[aria-label="Confirm QR password"]', 'qr-test-password');
+  await page.getByRole('button', { name: /Seal into QR/ }).click(); await page.waitForSelector('.payloadbox textarea', { timeout: 30000 }); await fits('seal result');
+  const [d] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'PNG' }).click()]); assert.match(d.suggestedFilename(), /^vaultmanager-qr-\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}\.png$/);
+  assert.ok(await page.getByRole('button', { name: /Copy payload text/ }).count() && await page.getByRole('button', { name: /Purge memory/ }).count());
+  await page.getByRole('tab', { name: 'Open QR' }).click(); await fits('open tab'); assert.ok(await page.getByRole('button', { name: /Paste payload text/ }).isVisible());
+  assert.deepEqual(problems.filter((p) => !/Failed to load resource/.test(p)), [], label);
+  await ctx.close();
+});
