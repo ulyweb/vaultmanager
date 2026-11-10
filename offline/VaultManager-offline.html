@@ -11,7 +11,7 @@
 <meta name="application-name" content="VaultManager">
 <meta name="format-detection" content="telephone=no">
 <meta name="referrer" content="no-referrer">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-HKuUxW32ftpiwMdCOaJ4y27y8O460TUn1ry2vv3+jyw=' blob:; style-src 'sha256-m4Gm6oZmDjBOonKt8RFAn5rWinHfOZnVf8Hga4mZ1Vo='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-my0iDgAq9CKtIbhPSNI+KDJ3CrRF5BnnI78IbOZgDNs=' blob:; style-src 'sha256-m4Gm6oZmDjBOonKt8RFAn5rWinHfOZnVf8Hga4mZ1Vo='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
 <title>VaultManager | Zero-Knowledge Password Manager</title>
 <meta name="description" content="VaultManager: an offline-first, zero-knowledge, end-to-end encrypted password manager with a strong password generator, TOTP codes and QR-sealed sharing and backup. Runs entirely in your browser.">
 <meta name="theme-color" content="#05080d">
@@ -9830,7 +9830,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       h("button", { class: "logo sysbtn", type: "button", "aria-haspopup": "menu", "aria-expanded": "false", "aria-label": "VaultManager menu", title: "VaultManager menu", on: { click: (e) => systemMenu(e.currentTarget) } }, h("img", { src: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImciIHgxPSIwIiB5MT0iMCIgeDI9IjEiIHkyPSIxIj48c3RvcCBvZmZzZXQ9IjAiIHN0b3AtY29sb3I9IiMyZmU2ZDAiLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiM1OWI0ZmYiLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz48cmVjdCB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgcng9IjExMiIgZmlsbD0iIzA1MDgwZCIvPjxyZWN0IHg9IjQwIiB5PSI0MCIgd2lkdGg9IjQzMiIgaGVpZ2h0PSI0MzIiIHJ4PSI4NCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMTUyNTM0IiBzdHJva2Utd2lkdGg9IjYiLz48cGF0aCBkPSJNMjU2IDk2bDEzMiA0OHYxMDJjMCA4OC01NiAxNDQtMTMyIDE3MC03Ni0yNi0xMzItODItMTMyLTE3MFYxNDR6IiBmaWxsPSJub25lIiBzdHJva2U9InVybCgjZykiIHN0cm9rZS13aWR0aD0iMjIiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz48Y2lyY2xlIGN4PSIyNTYiIGN5PSIyMzIiIHI9IjM4IiBmaWxsPSJ1cmwoI2cpIi8+PHBhdGggZD0iTTI1NiAyNjJ2NzQiIHN0cm9rZT0idXJsKCNnKSIgc3Ryb2tlLXdpZHRoPSIyNiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+PC9zdmc+Cg==", alt: "", width: "26", height: "26" }), h("b", null, "Vault", h("span", { text: "Manager" }))),
       search,
       clock,
-      h("button", { class: "btn primary newbtn", "aria-label": "New item", on: { click: () => newItemMenu(ctx) } }, h("span", { class: "newico", "aria-hidden": "true" }, "{{plus}}"), h("span", { class: "lbl", text: "New" })),
+      h("button", { class: "btn primary newbtn", on: { click: () => newItemMenu(ctx) } }, h("span", { class: "newico" }, "{{plus}}"), h("span", { class: "lbl", text: " New" })),
       h("button", { class: "btn", title: "Lock now (Alt+L)", on: { click: () => lock(false) } }, "{{lock}}", h("span", { class: "lbl", text: " Lock" })),
       h("button", { class: "btn icon", title: "Help, tour and shortcuts", "aria-label": "Help", on: { click: () => tour.help() } }, "{{help}}")
     );
