@@ -11,7 +11,7 @@
 <meta name="application-name" content="VaultManager">
 <meta name="format-detection" content="telephone=no">
 <meta name="referrer" content="no-referrer">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-5JeFtqNOYujPLDWjnNfwf9Wgm/ueWlX/Jfwh7d0abCs=' blob:; style-src 'sha256-AcCjF9/REsUgfwz3Hce9JLVO6x9kcZsU4vKadv2iM8Y='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-I79TePw7tu9eyE7xSmT44GucFxDAwqbMXMt4NnlmldA=' blob:; style-src 'sha256-AcCjF9/REsUgfwz3Hce9JLVO6x9kcZsU4vKadv2iM8Y='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
 <title>VaultManager | Zero-Knowledge Password Manager</title>
 <meta name="description" content="VaultManager: an offline-first, zero-knowledge, end-to-end encrypted password manager with a strong password generator, TOTP codes and QR-sealed sharing and backup. Runs entirely in your browser.">
 <meta name="theme-color" content="#05080d">
@@ -5026,7 +5026,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
         "div",
         null,
         h("p", { class: "note warn", text: "Anyone with the QR image AND this password can read the item. Pick a password you can tell the recipient separately." }),
-        h("details", { class: "how" }, h("summary", { text: "How does this work?" }), h("ol", null, h("li", { text: only ? "Only this one value is encrypted (AES-256-GCM) into the QR." : "The WHOLE item \u2014 every field, notes, custom fields and tags \u2014 is encrypted (AES-256-GCM) into the QR with the password below. Attached files are not included." }), h("li", { text: "Save, print or show the picture. It is useless without the password, so give the password through a different channel." }), h("li", { text: "To restore: Tools \u2192 QR tools \u2192 Open QR \u2192 scan it (or choose the image) \u2192 enter the password. You see the full card and press \u201CAdd to my vault\u201D." }))),
+        h("details", { class: "how" }, h("summary", { text: "How does this work?" }), h("ol", null, h("li", { text: only ? "Only this one value is encrypted (AES-256-GCM) into the QR." : "The WHOLE item \u2014 every field, notes, custom fields and tags \u2014 is encrypted (AES-256-GCM) into the QR with the password below." }), h("li", { text: only ? "Attached files can never go into a QR." : "Attached files are NOT included, and this cannot be changed: a QR code holds at most about 2\u20133 KB (roughly 2,900 bytes) once encrypted, while even a small photo or PDF is hundreds of KB to several MB \u2014 a thousand times too big. Splitting a file over many QR codes would mean scanning hundreds of them, so it is not offered. The files stay safely in your vault. To move them, use Export profile (an encrypted .vmprofile file that includes attachments)." }), h("li", { text: "Save, print or show the picture. It is useless without the password, so give the password through a different channel." }), h("li", { text: "To restore: Tools \u2192 QR tools \u2192 Open QR \u2192 scan it (or choose the image) \u2192 enter the password. You see the full card and press \u201CAdd to my vault\u201D." }))),
         pwRow,
         err,
         out
