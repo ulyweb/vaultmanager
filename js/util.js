@@ -52,3 +52,7 @@ export function safeHref(url) {
   const u = /^[a-z][a-z0-9+.-]*:/i.test(url) ? url : 'https://' + url;
   try { const p = new URL(u); return p.protocol === 'https:' || p.protocol === 'http:' ? p.href : ''; } catch { return ''; }
 }
+export const fmtTime = (ts) => new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+/* local date and time for file names: 2026-11-10_14-32-05 */
+export const stamp = (d = new Date()) => { const p = (n) => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}_${p(d.getHours())}-${p(d.getMinutes())}-${p(d.getSeconds())}`; };

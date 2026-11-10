@@ -1,0 +1,137 @@
+name: native-apps
+# Builds the installable apps from the same web code:
+#   Windows (.msi / .exe), macOS (.dmg), Linux (.deb / .AppImage), Android (.apk), and — on request — iOS.
+# Run it from the Actions tab ("Run workflow") or push a tag such as v0.10.0. Downloads appear as run artifacts.
+on:
+  workflow_dispatch:
+    inputs:
+      ios:
+        description: "Also build iOS (needs the Apple secrets described in docs/OFFLINE-APPS.md)"
+        type: boolean
+        default: false
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  desktop:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: windows-latest, name: windows, args: "" }
+          - { os: macos-latest, name: macos-apple-silicon, args: "--target aarch64-apple-darwin", rust_targets: "aarch64-apple-darwin" }
+          - { os: macos-15-intel, name: macos-intel, args: "--target x86_64-apple-darwin", rust_targets: "x86_64-apple-darwin" }
+          - { os: ubuntu-22.04, name: linux, args: "" }
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - uses: dtolnay/rust-toolchain@stable
+        with: { targets: "${{ matrix.rust_targets }}" }
+      - uses: swatinem/rust-cache@v2
+        with: { workspaces: "native/src-tauri -> target" }
+      - name: Linux system libraries
+        if: matrix.os == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libssl-dev
+      - run: npm install --no-audit --no-fund
+      - run: npm install --no-audit --no-fund
+        working-directory: native
+      - name: Check the app first (lint, unit tests)
+        run: npm run lint && npm run test:unit
+      - name: Build the installers
+        working-directory: native
+        run: npm run build -- ${{ matrix.args }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: VaultManager-${{ matrix.name }}
+          path: |
+            native/src-tauri/target/**/release/bundle/**/*.msi
+            native/src-tauri/target/**/release/bundle/**/*.exe
+            native/src-tauri/target/**/release/bundle/**/*.dmg
+            native/src-tauri/target/**/release/bundle/**/*.deb
+            native/src-tauri/target/**/release/bundle/**/*.AppImage
+            native/src-tauri/target/**/release/bundle/**/*.rpm
+          if-no-files-found: error
+
+  android:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: 17 }
+      - name: Android SDK and NDK (the runner already ships the SDK)
+        run: |
+          SDKM=$(ls -d "$ANDROID_HOME"/cmdline-tools/*/bin/sdkmanager | sort -V | tail -1)
+          yes | "$SDKM" --licenses > /dev/null || true
+          "$SDKM" "platform-tools" "platforms;android-34" "build-tools;34.0.0" "ndk;26.1.10909125"
+          echo "NDK_HOME=$ANDROID_HOME/ndk/26.1.10909125" >> "$GITHUB_ENV"
+      - uses: dtolnay/rust-toolchain@stable
+        with: { targets: "aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android" }
+      - uses: swatinem/rust-cache@v2
+        with: { workspaces: "native/src-tauri -> target" }
+      - run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+      - run: npm install --no-audit --no-fund
+      - run: npm install --no-audit --no-fund
+        working-directory: native
+      - name: Check the app first (lint, unit tests)
+        run: npm run lint && npm run test:unit
+      - name: Create the Android project and allow the camera (QR scanning)
+        working-directory: native
+        run: |
+          npx tauri android init
+          MANIFEST=src-tauri/gen/android/app/src/main/AndroidManifest.xml
+          sed -i 's#<application#<uses-permission android:name="android.permission.CAMERA" />\n    <uses-feature android:name="android.hardware.camera" android:required="false" />\n    <application#' "$MANIFEST"
+          grep -n "CAMERA" "$MANIFEST"
+      - name: Build the APK
+        working-directory: native
+        # Debug-signed so it installs for your own use. For store releases or stable in-place updates, sign with
+        # your own keystore (see docs/OFFLINE-APPS.md).
+        run: npm run android:build -- --apk --debug
+      - uses: actions/upload-artifact@v4
+        with:
+          name: VaultManager-android
+          path: native/src-tauri/gen/android/app/build/outputs/apk/**/*.apk
+          if-no-files-found: error
+
+  ios:
+    if: ${{ inputs.ios }}
+    runs-on: macos-latest
+    timeout-minutes: 75
+    # EXPERIMENTAL — needs an Apple Developer account. Secrets: APPLE_CERTIFICATE (base64 .p12),
+    # APPLE_CERTIFICATE_PASSWORD, APPLE_PROVISIONING_PROFILE (base64), APPLE_DEVELOPMENT_TEAM.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - uses: dtolnay/rust-toolchain@stable
+        with: { targets: "aarch64-apple-ios" }
+      - run: npm install --no-audit --no-fund
+      - run: npm install --no-audit --no-fund
+        working-directory: native
+      - name: Create the iOS project
+        working-directory: native
+        env:
+          APPLE_DEVELOPMENT_TEAM: ${{ secrets.APPLE_DEVELOPMENT_TEAM }}
+        run: npx tauri ios init
+      - name: Build the IPA
+        working-directory: native
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_DEVELOPMENT_TEAM: ${{ secrets.APPLE_DEVELOPMENT_TEAM }}
+        run: npm run ios:build -- --export-method app-store-connect
+      - uses: actions/upload-artifact@v4
+        with:
+          name: VaultManager-ios
+          path: native/src-tauri/gen/apple/build/**/*.ipa
+          if-no-files-found: error

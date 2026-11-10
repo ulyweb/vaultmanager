@@ -15,7 +15,7 @@ import { te, td, b64, concat } from './util.js';
 
 export const ITER_DEFAULT = 600000;
 export const ITER_MIN = 100000;
-export const ITER_MAX = 10000000;
+export const ITER_MAX = 5000000;   // a hostile QR / backup must not be able to stall the page for minutes
 const SALT = 16, IV = 12, TAG = 16, HDR = 5;
 
 const subtle = () => {
@@ -117,6 +117,7 @@ const wrapAad = (id, type) => te.encode('VaultManager-wrap-v1:' + id + ':' + typ
 const dataAad = (id) => te.encode('VaultManager-data-v1:' + id);
 const DATA_INFO = 'VaultManager data key v1';
 const RECOVERY_INFO = 'VaultManager recovery wrap v1';
+const PASSKEY_INFO = 'VaultManager passkey wrap v1';
 
 async function wrapMaster(kek, mk, id, type) {
   const { iv, ct } = await gcmSeal(kek, mk, wrapAad(id, type));
@@ -133,7 +134,20 @@ async function recoveryWrap(recoveryBytes, mk, id) {
 }
 
 const validWrap = (w) => w && typeof w.iv === 'string' && typeof w.ct === 'string' &&
-  ((w.type === 'password' && typeof w.salt === 'string' && Number.isInteger(w.iter) && w.iter >= ITER_MIN && w.iter <= ITER_MAX) || w.type === 'recovery');
+  ((w.type === 'password' && typeof w.salt === 'string' && Number.isInteger(w.iter) && w.iter >= ITER_MIN && w.iter <= ITER_MAX) || w.type === 'recovery' ||
+   (w.type === 'passkey' && typeof w.cred === 'string' && typeof w.prf === 'string'));
+
+/* Second layer for locked items: file bytes sealed under a random per-item key that lives inside the item's passcode seal. */
+const INNER_AAD = new TextEncoder().encode('VaultManager-itemlock-att-v1');
+export async function innerSeal(rawKey, bytes) {
+  const k = await subtle().importKey('raw', rawKey, 'AES-GCM', false, ['encrypt']);
+  const { iv, ct } = await gcmSeal(k, bytes, INNER_AAD);
+  const out = new Uint8Array(iv.length + ct.length); out.set(iv); out.set(ct, iv.length); return out;
+}
+export async function innerOpen(rawKey, data) {
+  const k = await subtle().importKey('raw', rawKey, 'AES-GCM', false, ['decrypt']);
+  return gcmOpen(k, data.slice(0, IV), data.slice(IV), INNER_AAD);
+}
 
 /* A session holds the unlocked secrets. lock() zeroes the raw master key. */
 export class Session {
@@ -144,6 +158,15 @@ export class Session {
   async seal(data) {
     const { iv, ct } = await gcmSeal(this.dataKey, te.encode(JSON.stringify(data)), dataAad(this.id));
     return { v: 1, id: this.id, wraps: this.wraps, iv: b64.enc(iv), ct: b64.enc(ct) };
+  }
+
+  /* Attachments: each file is its own AES-GCM message under the data key, bound to this vault and file id. */
+  async sealBlob(attId, bytes) {
+    const { iv, ct } = await gcmSeal(this.dataKey, bytes, te.encode('VaultManager-att-v1:' + this.id + ':' + attId));
+    return { iv, ct };
+  }
+  async openBlob(attId, rec) {
+    return gcmOpen(this.dataKey, rec.iv, rec.ct, te.encode('VaultManager-att-v1:' + this.id + ':' + attId));
   }
 
   async verifyPassword(password) {
@@ -167,6 +190,18 @@ export class Session {
     return text;
   }
   removeRecovery() { this.wraps = this.wraps.filter((x) => x.type !== 'recovery'); }
+
+  /* Passkeys (WebAuthn PRF): the authenticator returns a 256-bit secret for `prfSalt`; it never leaves the
+     authenticator except as this derived value, and it wraps the master key via HKDF. No offline guessing is
+     possible without the authenticator. The wrap is bound to the credential id. */
+  async addPasskey(credB64, prfSaltB64, prfOutput, label) {
+    const kek = await hkdfKey(prfOutput, PASSKEY_INFO, ['encrypt']);
+    const w = { type: 'passkey', cred: credB64, prf: prfSaltB64, label: String(label || 'Passkey').slice(0, 40), added: Date.now(), ...(await wrapMaster(kek, this.mk, this.id, 'passkey:' + credB64)) };
+    this.wraps = this.wraps.filter((x) => !(x.type === 'passkey' && x.cred === credB64)).concat(w);
+    return w;
+  }
+  removePasskey(credB64) { this.wraps = this.wraps.filter((x) => !(x.type === 'passkey' && x.cred === credB64)); }
+  passkeys() { return this.wraps.filter((x) => x.type === 'passkey'); }
   hasRecovery() { return this.wraps.some((x) => x.type === 'recovery'); }
   iterations() { const w = this.wraps.find((x) => x.type === 'password'); return w ? w.iter : 0; }
 }
@@ -182,14 +217,18 @@ export async function createVault(password, data, opt = {}) {
   return { session, record: await session.seal(data) };
 }
 
-/* secret = { password } or { recovery } . Throws Error('bad-secret') when it does not open the vault. */
+/* secret = { password } | { recovery } | { passkey: { cred, prf } } . Throws Error('bad-secret') when it does not open the vault. */
 export async function openVault(record, secret) {
   if (!record || record.v !== 1 || !Array.isArray(record.wraps) || !record.wraps.every(validWrap) || typeof record.iv !== 'string' || typeof record.ct !== 'string' || typeof record.id !== 'string') {
     throw new Error('The stored vault looks corrupted.');
   }
   let mk;
   try {
-    if (secret.recovery) {
+    if (secret.passkey) {
+      const w = record.wraps.find((x) => x.type === 'passkey' && x.cred === secret.passkey.cred);
+      if (!w) throw new Error('no passkey wrap');
+      mk = await unwrap(await hkdfKey(secret.passkey.prf, PASSKEY_INFO, ['decrypt']), w, record.id, 'passkey:' + w.cred);
+    } else if (secret.recovery) {
       const w = record.wraps.find((x) => x.type === 'recovery');
       if (!w) throw new Error('no recovery wrap');
       const bytes = recoveryDecode(secret.recovery);

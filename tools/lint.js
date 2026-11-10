@@ -10,7 +10,7 @@ const fail = [];
 const rd = (f) => fs.readFileSync(path.join(root, f), 'utf8');
 const walk = (d, out = []) => {
   for (const e of fs.readdirSync(path.join(root, d), { withFileTypes: true })) {
-    if (['node_modules', '.git', 'test-results', 'playwright-report'].includes(e.name)) continue;
+    if (['node_modules', '.git', 'test-results', 'playwright-report', 'dist', 'target', 'gen'].includes(e.name)) continue;
     const rel = path.posix.join(d, e.name);
     if (e.isDirectory()) walk(rel, out); else out.push(rel);
   }
@@ -26,13 +26,14 @@ for (const f of files.filter((f) => f.endsWith('.js') && f !== 'playwright.confi
 }
 
 // 2. HTML: strict CSP, no inline script/style/handlers, no remote URLs
-for (const f of files.filter((f) => f.endsWith('.html'))) {
+for (const f of files.filter((f) => f.endsWith('.html') && !f.startsWith('offline/'))) {   // offline/ is verified by rebuild + hash below
   const html = rd(f);
   const csp = (html.match(/Content-Security-Policy"\s+content="([^"]*)"/) || [])[1] || '';
   if (!csp) fail.push(f + ': no Content-Security-Policy');
   if (/unsafe-inline|unsafe-eval/.test(csp)) fail.push(f + ': CSP allows unsafe-inline / unsafe-eval');
   if (!/default-src 'none'/.test(csp)) fail.push(f + ': CSP must start from default-src \'none\'');
-  if (/connect-src[^;]*(https?:|\*)/.test(csp)) fail.push(f + ': CSP connect-src must stay same-origin — a password manager must not phone home');
+  const conn = (csp.match(/connect-src ([^;]*)/) || [])[1] || '';
+  if (conn.split(/\s+/).some((t) => t && t !== "'self'" && !['https://api.github.com', 'https://script.google.com', 'https://script.googleusercontent.com'].includes(t))) fail.push(f + ': CSP connect-src may only allow \'self\', https://api.github.com (gist sync) and the Contact Admin relay (script.google.com) — a password manager must not phone home');
   for (const m of html.matchAll(/<script(?![^>]*\bsrc=)[^>]*>/g)) fail.push(f + ': inline <script>');
   if (/\son[a-z]+=["']/.test(html)) fail.push(f + ': inline event handler');
   if (/<style[\s>]/.test(html) || /\sstyle=["']/.test(html)) fail.push(f + ': inline style');
@@ -44,8 +45,9 @@ for (const f of files.filter((f) => /^js\/.*\.js$/.test(f) || f === 'sw.js')) {
   const s = rd(f).replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
   if (/\.(innerHTML|outerHTML)\s*=|insertAdjacentHTML|document\.write/.test(s)) fail.push(f + ': HTML string injection API');
   if (/\beval\(|new Function\(/.test(s)) fail.push(f + ': eval / Function constructor');
-  if (f !== 'sw.js' && f !== 'js/wordlist.js' && /\b(fetch|XMLHttpRequest|WebSocket|EventSource|sendBeacon)\b/.test(s.replace(/'[^']*'|"[^"]*"/g, ''))) fail.push(f + ': network API used — VaultManager must make no network requests');
+  if (f !== 'sw.js' && f !== 'js/wordlist.js' && f !== 'js/sync.js' && f !== 'js/offline.js' && f !== 'js/admin.js' && f !== 'js/devcheck.js' && /\b(fetch|XMLHttpRequest|WebSocket|EventSource|sendBeacon)\b/.test(s.replace(/'[^']*'|"[^"]*"/g, ''))) fail.push(f + ': network API used — VaultManager must make no network requests');
   if (/localStorage\.setItem\([^)]*(password|passphrase|secret|recovery)\b/i.test(s)) fail.push(f + ': secret-looking value written straight to localStorage');
+  if (f !== 'js/beam.js' && /RTCPeerConnection/.test(s)) fail.push(f + ': WebRTC is only allowed in js/beam.js');
   if (/console\.(log|debug|info)\(/.test(s)) fail.push(f + ': console logging (could leak secrets)');
 }
 
@@ -57,9 +59,21 @@ for (const f of files.filter((f) => /^js\/.*\.js$/.test(f) || f === 'sw.js')) {
   for (const f of files.filter((f) => /^js\/.*\.js$/.test(f))) if (!list.includes(f)) fail.push('sw.js does not precache ' + f + ' (offline use would break)');
 }
 
+// 4b. the committed single-file offline copy is built from the current source
+{
+  const { buildOffline, OUT_FILE } = await import('./build-offline.mjs');
+  const built = await buildOffline();
+  const have = fs.existsSync(OUT_FILE) ? fs.readFileSync(OUT_FILE, 'utf8') : '';
+  if (have !== built.html) fail.push('offline/VaultManager-offline.html is out of date — run "npm run build:offline" and commit it');
+  const sum = fs.existsSync(OUT_FILE + '.sha256') ? fs.readFileSync(OUT_FILE + '.sha256', 'utf8') : '';
+  if (!sum.startsWith(built.digest)) fail.push('offline/VaultManager-offline.html.sha256 does not match — run "npm run build:offline"');
+  const off = fs.readFileSync(path.join(root, 'js/offline.js'), 'utf8');
+  if (/https?:\/\//.test(off.replace(/\/\*[\s\S]*?\*\//g, ''))) fail.push('js/offline.js must only request same-origin files');
+}
+
 // 5. nothing that looks like a secret is committed
 const SECRET = [/ghp_[A-Za-z0-9]{30,}/, /github_pat_[A-Za-z0-9_]{30,}/, /-----BEGIN [A-Z ]*PRIVATE KEY-----/, /AKIA[0-9A-Z]{16}/, /xox[bap]-[0-9A-Za-z-]{20,}/, /sk-[A-Za-z0-9]{32,}/];
-for (const f of files.filter((f) => own(f) && /\.(js|html|json|md|yml|webmanifest|css)$/.test(f) && !f.startsWith('node_modules/') && f !== 'package-lock.json')) {
+for (const f of files.filter((f) => own(f) && !f.startsWith('offline/') && /\.(js|html|json|md|yml|webmanifest|css)$/.test(f) && !f.startsWith('node_modules/') && f !== 'package-lock.json')) {
   const s = rd(f); for (const re of SECRET) if (re.test(s)) fail.push(f + ': looks like a committed secret (' + re + ')');
 }
 
