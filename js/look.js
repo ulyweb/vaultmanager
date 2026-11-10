@@ -32,7 +32,7 @@ export const LOOK_DEFAULTS = {
   animations: true, animStyle: 'scale', animSpeed: 1, bootAnim: true, fxAnim: true, fxAurora: 65, fxTilt: 0, fxGlow: 35, fxScan: false, blur: 12, glassAlpha: 0.72,
   // layout (dock & menu bar)
   haptics: true, nav: 'sidebar', dockSize: 46, dockMagnify: true, dockLabels: false, dockAutoHide: false,
-  clock: true, clock24: false, dateFmt: 'short', barLabels: true, startPage: 'home',
+  clock: true, clockPos: 'right', clock24: false, dateFmt: 'short', barLabels: true, startPage: 'home',
   widgets: WIDGET_DEFS.map((w) => ({ id: w.id, on: true, size: w.size, pinned: false, cw: 0, ch: 0 })),
 };
 
@@ -66,7 +66,7 @@ export function normalizeLook(o = {}, wallIds = null) {
     animations: bool(o.animations, D.animations), animStyle: oneOf(o.animStyle, [...ANIM_STYLES.map((x) => x[0]), 'random'], D.animStyle), animSpeed: num(o.animSpeed, 0.5, 2, D.animSpeed), bootAnim: bool(o.bootAnim, D.bootAnim), fxAnim: bool(o.fxAnim, D.fxAnim),
     fxAurora: num(o.fxAurora, 0, 100, D.fxAurora), fxTilt: num(o.fxTilt, 0, 10, D.fxTilt), fxGlow: num(o.fxGlow, 0, 100, D.fxGlow), fxScan: bool(o.fxScan, D.fxScan), blur: num(o.blur, 0, 40, D.blur), glassAlpha: num(o.glassAlpha, 0.4, 0.98, D.glassAlpha),
     haptics: bool(o.haptics, D.haptics), nav: oneOf(o.nav, NAV_MODES.map((x) => x[0]), D.nav), dockSize: num(o.dockSize, 32, 72, D.dockSize), dockMagnify: bool(o.dockMagnify, D.dockMagnify), dockLabels: bool(o.dockLabels, D.dockLabels), dockAutoHide: bool(o.dockAutoHide, D.dockAutoHide),
-    clock: bool(o.clock, D.clock), clock24: bool(o.clock24, D.clock24), dateFmt: oneOf(o.dateFmt, ['none', 'short', 'long'], D.dateFmt), barLabels: bool(o.barLabels, D.barLabels), startPage: oneOf(o.startPage, ['all', 'home'], D.startPage),
+    clock: bool(o.clock, D.clock), clockPos: oneOf(o.clockPos, ['left', 'center', 'right'], D.clockPos), clock24: bool(o.clock24, D.clock24), dateFmt: oneOf(o.dateFmt, ['none', 'short', 'long'], D.dateFmt), barLabels: bool(o.barLabels, D.barLabels), startPage: oneOf(o.startPage, ['all', 'home'], D.startPage),
     widgets,
   };
 }
@@ -102,7 +102,7 @@ export function applyLook(look, theme, landscapes = null) {
   const d = el.dataset;
   d.theme = theme; d.icons = look.iconStyle; d.iconsize = look.iconSize; d.density = look.density; d.avatar = look.avatar;
   d.motion = look.animations ? 'on' : 'off'; d.fxanim = look.fxAnim && look.animations ? 'on' : 'off'; d.anim = look.animStyle; d.scan = look.fxScan ? 'on' : 'off';
-  d.bg = look.bg === 'wallpaper' && landscapes ? 'wallpaper' : look.bg === 'plain' ? 'plain' : 'default'; d.wstyle = look.widgetStyle; d.nav = look.nav; d.dockautohide = look.dockAutoHide ? '1' : '0'; d.dockmagnify = look.dockMagnify ? '1' : '0'; d.barlabels = look.barLabels ? '1' : '0'; d.haptics = look.haptics ? '1' : '0';
+  d.bg = look.bg === 'wallpaper' && landscapes ? 'wallpaper' : look.bg === 'plain' ? 'plain' : 'default'; d.wstyle = look.widgetStyle; d.nav = look.nav; d.clockpos = look.clockPos; d.dockautohide = look.dockAutoHide ? '1' : '0'; d.dockmagnify = look.dockMagnify ? '1' : '0'; d.barlabels = look.barLabels ? '1' : '0'; d.haptics = look.haptics ? '1' : '0';
   if (landscapes && look.bg === 'wallpaper') { const u = landscapes.url(look.wallpaper, look) || landscapes.url('forest'); set('--wall', `url("${u}")`); } else el.style.removeProperty('--wall');
 }
 

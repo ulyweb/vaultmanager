@@ -15,7 +15,7 @@ import { te, td, b64, concat } from './util.js';
 
 export const ITER_DEFAULT = 600000;
 export const ITER_MIN = 100000;
-export const ITER_MAX = 10000000;
+export const ITER_MAX = 5000000;   // a hostile QR / backup must not be able to stall the page for minutes
 const SALT = 16, IV = 12, TAG = 16, HDR = 5;
 
 const subtle = () => {

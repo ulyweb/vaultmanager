@@ -1457,3 +1457,28 @@ test('a click on a menu item while the unlock screen is still showing is not los
   await page.waitForFunction(() => document.querySelector('.apptitle')?.textContent === 'Favorites', null, { timeout: 5000 });
   await ctx.close();
 });
+
+test('v0.21: centred unlock screen, side-bar auto-hide, clock position, live New icon', async () => {
+  const { ctx, page, problems } = await newPage({ reducedMotion: 'no-preference' });
+  await createVault(page);
+  assert.ok(await page.locator('.topbar .newbtn .newico .ico svg').count(), 'New is a real icon, not a plain +');
+  // unlock screen is centred
+  await page.getByRole('button', { name: /Lock/ }).first().click(); await page.waitForSelector('#upw'); await page.fill('#upw', MASTER); await page.keyboard.press('Enter');
+  await page.waitForSelector('#boot .boot-box', { timeout: 30000 });
+  const b = await page.locator('#boot .boot-box').boundingBox(), vw = 1280;
+  assert.ok(Math.abs(b.x + b.width / 2 - vw / 2) < 4, 'boot content is centred: ' + (b.x + b.width / 2)); await page.keyboard.press('Escape'); await page.waitForSelector('#boot', { state: 'detached' });
+  // clock position
+  const cx = async () => { const r = await page.locator('.barclock').boundingBox(); return r.x + r.width / 2; };
+  const right = await cx(); assert.ok(right > 900);
+  await settingsTab(page, 'Dock & menu bar'); await page.getByRole('button', { name: 'Left', exact: true }).click(); assert.equal(await page.evaluate(() => document.documentElement.dataset.clockpos), 'left'); assert.ok(await cx() < 500, 'clock moved left');
+  await page.getByRole('button', { name: 'Middle', exact: true }).click(); const mid = await cx(); assert.ok(Math.abs(mid - 640) < 40, 'clock in the middle: ' + mid);
+  await page.getByRole('button', { name: 'Right', exact: true }).click();
+  // auto-hide the side bar
+  const left0 = (await page.locator('.side').boundingBox()).x; assert.ok(left0 >= 0);
+  await page.getByRole('switch', { name: /dockAutoHide/ }).click(); await page.waitForTimeout(400);
+  assert.ok((await page.locator('.side').boundingBox()).x < -150, 'side bar slid away');
+  await page.mouse.move(2, 300); await page.waitForTimeout(400); assert.ok((await page.locator('.side').boundingBox()).x > -5, 'side bar comes back when the pointer reaches the edge');
+  await page.mouse.move(900, 400); await page.waitForTimeout(400); assert.ok((await page.locator('.side').boundingBox()).x < -150);
+  assert.deepEqual(problems.filter((p) => !/Failed to load resource/.test(p)), []);
+  await ctx.close();
+});

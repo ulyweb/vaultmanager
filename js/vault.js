@@ -501,7 +501,7 @@ export class VaultStore {
     const ts = {}; for (const [k, v] of Object.entries(d.tombstones || {})) if (/^[0-9a-f]{24}$/.test(k) && Number.isFinite(v)) ts[k] = v;
     this.data.tombstones = ts;
     const set = portableSettings(d.settings || {});
-    this.data.settings = { ...this.data.settings, ...set, gen: { ...this.data.settings.gen, ...(set.gen || {}) }, look: normalizeLook({ ...this.data.settings.look, ...(set.look || {}) }) };
+    this.data.settings = { ...this.data.settings, ...set, sync: { ...this.data.settings.sync, ...(set.sync || {}) }, gen: { ...this.data.settings.gen, ...(set.gen || {}) }, look: normalizeLook({ ...this.data.settings.look, ...(set.look || {}) }) };
     if (Array.isArray(d.audit)) this.data.audit = d.audit.filter((e) => e && typeof e.m === 'string').slice(0, AUDIT_MAX).map((e) => ({ t: Number(e.t) || 0, k: String(e.k || '').slice(0, 20), m: e.m.slice(0, 300), l: e.l === 'warn' ? 'warn' : 'info' }));
     if (Number.isFinite(d.created)) this.data.created = d.created;
     this.log('data', `Profile restored from a backup (${this.data.items.length} items)`, 'warn');
@@ -576,14 +576,34 @@ export class VaultStore {
 
 /* Settings that travel in a profile backup. Deliberately NOT included: the GitHub token, the sync passphrase and the
    gist id (secrets / device-specific) — set up sync again on the new device. */
+/* Settings that travel in a backup. A backup file is untrusted input, so every value is type-checked and bounded:
+   a hostile file must not be able to switch off auto-lock, switch off audit logging of reveals or freeze the generator. */
+const clampInt = (v, lo, hi, d) => (Number.isFinite(+v) ? Math.min(hi, Math.max(lo, Math.round(+v))) : d);
+const flag = (v, d) => (typeof v === 'boolean' ? v : d);
+export function sanitizeGen(g = {}) {
+  const o = {};
+  if (['password', 'passphrase', 'pin'].includes(g.mode)) o.mode = g.mode;
+  if (g.length !== undefined) o.length = clampInt(g.length, 4, 128, 20);
+  if (g.words !== undefined) o.words = clampInt(g.words, 3, 12, 5);
+  for (const k of ['lower', 'upper', 'digits', 'symbols', 'noAmbiguous', 'capitalize', 'number']) if (typeof g[k] === 'boolean') o[k] = g[k];
+  if (typeof g.separator === 'string') o.separator = g.separator.replace(/[\u0000-\u001f]/g, '').slice(0, 4);
+  if (typeof g.customSymbols === 'string') o.customSymbols = g.customSymbols.replace(/[\u0000-\u001f\s]/g, '').slice(0, 64);
+  return o;
+}
 export function portableSettings(st = {}) {
-  const out = {};
-  for (const k of ['autolock', 'clipboard', 'theme', 'lockOnHide', 'trashDays', 'logReveal', 'displayName', 'tourSeen', 'welcomeAlways']) if (st[k] !== undefined) out[k] = st[k];
-  if (st.gen && typeof st.gen === 'object') out.gen = st.gen;
+  const out = {}, D = DEFAULT_SETTINGS_FOR_IMPORT;
+  if (st.autolock !== undefined) out.autolock = clampInt(st.autolock, 0, 240, D.autolock);
+  if (st.clipboard !== undefined) out.clipboard = clampInt(st.clipboard, 0, 300, D.clipboard);
+  if (st.theme !== undefined) out.theme = ['auto', 'dark', 'light'].includes(st.theme) ? st.theme : 'auto';
+  if (st.trashDays !== undefined) out.trashDays = [0, 7, 30, 90].includes(+st.trashDays) ? +st.trashDays : D.trashDays;
+  for (const k of ['lockOnHide', 'logReveal', 'tourSeen', 'welcomeAlways']) if (st[k] !== undefined) out[k] = flag(st[k], D[k]);
+  if (typeof st.displayName === 'string') out.displayName = st.displayName.replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, 40);
+  if (st.gen && typeof st.gen === 'object') out.gen = sanitizeGen(st.gen);
   if (st.look && typeof st.look === 'object') out.look = normalizeLook(st.look);
   if (st.sync && typeof st.sync === 'object') out.sync = { auto: !!st.sync.auto, attachments: st.sync.attachments !== false };
   return out;
 }
+const DEFAULT_SETTINGS_FOR_IMPORT = { autolock: 5, clipboard: 30, lockOnHide: false, trashDays: 30, logReveal: true, tourSeen: false, welcomeAlways: false };
 
 /* Opens a profile backup (VMP1) or an items-only backup (VMX1). */
 export async function decryptProfile(text, password) {
@@ -625,7 +645,7 @@ export function sanitiseItem(r, { keepMeta = false, keepAttachments = false } = 
   if (Array.isArray(r.history)) it.history = r.history.filter((h) => h && typeof h.pw === 'string').slice(0, HISTORY_MAX).map((h) => ({ pw: s(h.pw, 2000), at: num(Number(h.at)) }));
   if (keepAttachments && Array.isArray(r.attachments)) {
     it.attachments = r.attachments.filter((a) => a && /^[0-9a-f]{24}$/.test(a.id)).slice(0, MAX_ATTACHMENTS_PER_ITEM)
-      .map((a) => ({ id: a.id, name: s(a.name, 200) || 'file', type: s(a.type, 100), size: num(a.size), added: num(a.added), ...(a.lk ? { lk: true } : {}) }));
+      .map((a) => ({ id: a.id, name: s(a.name, 200).replace(/[\\/\u0000-\u001f]/g, '_') || 'file', type: s(a.type, 100), size: num(a.size), added: num(a.added), ...(a.lk ? { lk: true } : {}) }));
   } else it.attachments = [];
   if (keepMeta) {
     it.id = s(r.id, 40); it.updated = num(r.updated, it.updated); it.deleted = num(r.deleted);

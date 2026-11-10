@@ -781,3 +781,41 @@ html[data-cursorring=on] #cursor-ring { opacity: .9; } #cursor-ring.hidden { opa
 @media (max-width: 699px) { .topbar .logo.sysbtn { display: none; } }
 .sm-who { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 10px; border: 0; border-radius: 8px; background: none; color: var(--ink); font: inherit; text-align: left; cursor: pointer; }
 .sm-who:hover, .sm-who:focus-visible { background: rgba(var(--accent-rgb), .14); outline: none; } .sm-who b { display: block; font-size: 14px; } .sm-who small { color: var(--muted); font-size: 11px; }
+
+/* ---- unlock screen: centred, like ulyOS ---- */
+#boot { align-items: center; justify-content: center; padding: 24px; text-align: center; background: radial-gradient(ellipse at 50% 40%, #0a1520, #04060a 70%); }
+#boot .boot-box { display: flex; flex-direction: column; align-items: center; gap: 14px; width: min(440px, 100%); }
+#boot .boot-logo { width: 64px; height: 64px; filter: drop-shadow(0 0 18px color-mix(in srgb, var(--accent) 55%, transparent)); }
+#boot .boot-title { font-size: 22px; font-weight: 800; letter-spacing: .06em; color: #d6e6f2; } #boot .boot-title span { color: var(--accent); }
+#boot .bar { margin: 0; width: 100%; } #boot .boot-lines { width: 100%; display: grid; gap: 4px; text-align: left; font-size: 12.5px; }
+#boot .hint { position: absolute; bottom: 5vh; left: 0; right: 0; margin: 0; text-align: center; }
+
+/* ---- auto-hide also works for the side bar (desktop / tablet) ---- */
+@media (min-width: 700px) {
+  html[data-nav=sidebar][data-dockautohide="1"] .shell { grid-template-columns: 1fr; }
+  html[data-nav=sidebar][data-dockautohide="1"] .side { position: fixed; left: 0; top: 56px; bottom: 0; width: 230px; max-height: none; z-index: 40; transform: translateX(calc(-100% + 10px)); opacity: .55; transition: transform .22s ease, opacity .2s; box-shadow: 8px 0 30px rgba(0,0,0,.35); }
+  html[data-nav=sidebar][data-dockautohide="1"] .side:hover, html[data-nav=sidebar][data-dockautohide="1"] .side:focus-within { transform: none; opacity: 1; }
+  html[data-nav=sidebar][data-dockautohide="1"] .main { padding-left: 24px; }
+}
+
+/* ---- clock position in the top bar ---- */
+html[data-clockpos=left] .topbar .logo { order: 0; } html[data-clockpos=left] .topbar .barclock { order: 1; text-align: left; margin-left: 6px; } html[data-clockpos=left] .topbar .search { order: 2; margin: 0 auto 0 12px; } html[data-clockpos=left] .topbar > .btn { order: 3; }
+html[data-clockpos=center] .topbar .barclock { position: absolute; left: 50%; transform: translateX(-50%); text-align: center; pointer-events: none; } html[data-clockpos=center] .topbar .search { max-width: min(520px, 28vw); }
+@media (max-width: 1023px) { html[data-clockpos=center] .topbar .barclock { display: none; } }
+
+/* ---- the New button: a real, live icon ---- */
+.topbar .newbtn { position: relative; overflow: hidden; gap: 8px; padding-left: 8px; isolation: isolate; }
+.topbar .newbtn .newico { position: relative; display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 10px; background: linear-gradient(145deg, rgba(255,255,255,.55), rgba(255,255,255,.14)); box-shadow: inset 0 1px 0 rgba(255,255,255,.7), 0 2px 8px rgba(0,0,0,.25); flex: none; }
+.topbar .newbtn .newico .ico { width: 1.25em; height: 1.25em; padding: 0; margin: 0; font-size: 18px; background: none; box-shadow: none; color: #04221d; filter: none; transition: transform .35s cubic-bezier(.34,1.6,.5,1); }
+.topbar .newbtn .newico .ico svg { stroke-width: 2.6; filter: none; animation: none; }
+.topbar .newbtn:hover .newico .ico { transform: rotate(90deg) scale(1.15); }
+.topbar .newbtn::after { content: ''; position: absolute; inset: 0; background: linear-gradient(110deg, transparent 30%, rgba(255,255,255,.45) 50%, transparent 70%); transform: translateX(-130%); pointer-events: none; z-index: -1; }
+html[data-fxanim=on] .topbar .newbtn::after { animation: vm-shine 4.2s ease-in-out infinite; }
+html[data-fxanim=on] .topbar .newbtn .newico { animation: vm-float 3s ease-in-out infinite; }
+html[data-fxanim=on] .topbar .newbtn .newico::before { content: ''; position: absolute; inset: -4px; border-radius: 13px; border: 2px solid rgba(255,255,255,.7); opacity: 0; animation: vm-ring 2.6s ease-out infinite; }
+@keyframes vm-ring { 0% { transform: scale(.85); opacity: .8; } 100% { transform: scale(1.5); opacity: 0; } }
+html[data-fxanim=on] .mbar-fab { animation: vm-float 3.2s ease-in-out infinite; }
+html[data-fxanim=on] .mbar-fab::before { content: ''; position: absolute; inset: -4px; border-radius: inherit; border: 2px solid var(--accent); opacity: 0; animation: vm-ring 2.8s ease-out infinite; pointer-events: none; }
+html[data-barlabels="0"] .topbar .newbtn { padding: 6px 10px 6px 8px; }
+@media (prefers-reduced-motion: reduce) { .topbar .newbtn::after, .topbar .newbtn .newico, .topbar .newbtn .newico::before, .mbar-fab, .mbar-fab::before { animation: none !important; } }
+.mbar-fab { position: relative; }

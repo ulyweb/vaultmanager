@@ -48,3 +48,23 @@ Any item can have a secondary passcode. Its username, password, website, one-tim
 ## Network use
 
 VaultManager makes no network requests of its own except: (1) optional GitHub gist sync (`api.github.com`) when you set it up; (2) Contact admin / the new-profile notice to the administrator's relay (`script.google.com`), only on a deliberate action and without any vault data; (3) loading a background image from an address you typed. The single-file offline copy has no network permission at all.
+
+## Security review (v0.21.0)
+
+A review of all scripts (crypto, vault, sync, Beam, import / export, profiles, item lock, UI helpers, service worker, build and CI):
+
+**Checked and fine:** no `innerHTML` / `eval` / inline script or style (lint-enforced); strict CSP on every build; secrets are only written to storage inside AES-256-GCM records (plus non-secret profile names, cosmetic look and failed-attempt counters); fresh random IV per encryption, key-wrapping bound to vault id; unbiased random generator (`getRandomValues` with rejection sampling), `Math.random` only for cosmetics; links are scheme-checked (`http(s)` only) and opened with `noopener noreferrer`; no-referrer policy; service worker caches same-origin GETs only; Beam pairing is confirmed with a 6-digit code derived from both DTLS fingerprints; 0 known vulnerabilities in the npm dependencies; CI workflow has read-only permissions.
+
+**Fixed in 0.21.0:**
+- A crafted backup (`.vmprofile`) could silently change settings — switch off auto-lock, stop logging reveals, or give the password generator absurd lengths. All imported settings are now type-checked and bounded; the sync token is never imported.
+- Attachment names from imported files are cleaned of path characters.
+- A crafted QR / backup could demand up to 10,000,000 PBKDF2 rounds and stall the page; the limit is now 5,000,000.
+- The app refuses to run inside someone else's page (clickjacking; a `<meta>` CSP cannot set `frame-ancestors`).
+
+**Known limits (by design or outside the app's control):**
+- Anyone who can run JavaScript on the page (a malicious browser extension, a compromised device) can read an unlocked vault. Lock when you leave; use a device you trust.
+- Failed-attempt throttling and lockouts are client-side; someone with the encrypted file can try passwords offline at the speed of PBKDF2 (600,000 rounds). Use a long master password or passphrase.
+- Profile names and pictures are stored unencrypted so the sign-in screen can show them. Removing a profile from the sign-in screen needs its name typed, not its password (so a forgotten-password profile can be removed).
+- Beam with "internet" enabled asks a public STUN server (Google) for your address; the default is same-Wi-Fi only.
+- Contact admin / the new-profile notice send what is described on screen to the administrator's relay; the relay's own handling is outside this app.
+- GitHub Actions in the native-build workflow are referenced by version tag, not commit hash (a supply-chain risk for the installers).

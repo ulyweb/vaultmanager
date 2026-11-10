@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VaultManager v0.20.1 — single-file offline build. Verify with the .sha256 file next to it. -->
+<!-- VaultManager v0.21.0 — single-file offline build. Verify with the .sha256 file next to it. -->
 <html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
@@ -11,7 +11,7 @@
 <meta name="application-name" content="VaultManager">
 <meta name="format-detection" content="telephone=no">
 <meta name="referrer" content="no-referrer">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-biwOLW+CWtChdL40DSIuEe6invmozIKSKWjK5SAn3j4=' blob:; style-src 'sha256-PQGAVXFqK5VwazLkWOhEBBR3uhKJLZkWdGbzhst8EL8='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-HKuUxW32ftpiwMdCOaJ4y27y8O460TUn1ry2vv3+jyw=' blob:; style-src 'sha256-m4Gm6oZmDjBOonKt8RFAn5rWinHfOZnVf8Hga4mZ1Vo='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
 <title>VaultManager | Zero-Knowledge Password Manager</title>
 <meta name="description" content="VaultManager: an offline-first, zero-knowledge, end-to-end encrypted password manager with a strong password generator, TOTP codes and QR-sealed sharing and backup. Runs entirely in your browser.">
 <meta name="theme-color" content="#05080d">
@@ -799,6 +799,44 @@ html[data-cursorring=on] #cursor-ring { opacity: .9; } #cursor-ring.hidden { opa
 @media (max-width: 699px) { .topbar .logo.sysbtn { display: none; } }
 .sm-who { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 10px; border: 0; border-radius: 8px; background: none; color: var(--ink); font: inherit; text-align: left; cursor: pointer; }
 .sm-who:hover, .sm-who:focus-visible { background: rgba(var(--accent-rgb), .14); outline: none; } .sm-who b { display: block; font-size: 14px; } .sm-who small { color: var(--muted); font-size: 11px; }
+
+/* ---- unlock screen: centred, like ulyOS ---- */
+#boot { align-items: center; justify-content: center; padding: 24px; text-align: center; background: radial-gradient(ellipse at 50% 40%, #0a1520, #04060a 70%); }
+#boot .boot-box { display: flex; flex-direction: column; align-items: center; gap: 14px; width: min(440px, 100%); }
+#boot .boot-logo { width: 64px; height: 64px; filter: drop-shadow(0 0 18px color-mix(in srgb, var(--accent) 55%, transparent)); }
+#boot .boot-title { font-size: 22px; font-weight: 800; letter-spacing: .06em; color: #d6e6f2; } #boot .boot-title span { color: var(--accent); }
+#boot .bar { margin: 0; width: 100%; } #boot .boot-lines { width: 100%; display: grid; gap: 4px; text-align: left; font-size: 12.5px; }
+#boot .hint { position: absolute; bottom: 5vh; left: 0; right: 0; margin: 0; text-align: center; }
+
+/* ---- auto-hide also works for the side bar (desktop / tablet) ---- */
+@media (min-width: 700px) {
+  html[data-nav=sidebar][data-dockautohide="1"] .shell { grid-template-columns: 1fr; }
+  html[data-nav=sidebar][data-dockautohide="1"] .side { position: fixed; left: 0; top: 56px; bottom: 0; width: 230px; max-height: none; z-index: 40; transform: translateX(calc(-100% + 10px)); opacity: .55; transition: transform .22s ease, opacity .2s; box-shadow: 8px 0 30px rgba(0,0,0,.35); }
+  html[data-nav=sidebar][data-dockautohide="1"] .side:hover, html[data-nav=sidebar][data-dockautohide="1"] .side:focus-within { transform: none; opacity: 1; }
+  html[data-nav=sidebar][data-dockautohide="1"] .main { padding-left: 24px; }
+}
+
+/* ---- clock position in the top bar ---- */
+html[data-clockpos=left] .topbar .logo { order: 0; } html[data-clockpos=left] .topbar .barclock { order: 1; text-align: left; margin-left: 6px; } html[data-clockpos=left] .topbar .search { order: 2; margin: 0 auto 0 12px; } html[data-clockpos=left] .topbar > .btn { order: 3; }
+html[data-clockpos=center] .topbar .barclock { position: absolute; left: 50%; transform: translateX(-50%); text-align: center; pointer-events: none; } html[data-clockpos=center] .topbar .search { max-width: min(520px, 28vw); }
+@media (max-width: 1023px) { html[data-clockpos=center] .topbar .barclock { display: none; } }
+
+/* ---- the New button: a real, live icon ---- */
+.topbar .newbtn { position: relative; overflow: hidden; gap: 8px; padding-left: 8px; isolation: isolate; }
+.topbar .newbtn .newico { position: relative; display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 10px; background: linear-gradient(145deg, rgba(255,255,255,.55), rgba(255,255,255,.14)); box-shadow: inset 0 1px 0 rgba(255,255,255,.7), 0 2px 8px rgba(0,0,0,.25); flex: none; }
+.topbar .newbtn .newico .ico { width: 1.25em; height: 1.25em; padding: 0; margin: 0; font-size: 18px; background: none; box-shadow: none; color: #04221d; filter: none; transition: transform .35s cubic-bezier(.34,1.6,.5,1); }
+.topbar .newbtn .newico .ico svg { stroke-width: 2.6; filter: none; animation: none; }
+.topbar .newbtn:hover .newico .ico { transform: rotate(90deg) scale(1.15); }
+.topbar .newbtn::after { content: ''; position: absolute; inset: 0; background: linear-gradient(110deg, transparent 30%, rgba(255,255,255,.45) 50%, transparent 70%); transform: translateX(-130%); pointer-events: none; z-index: -1; }
+html[data-fxanim=on] .topbar .newbtn::after { animation: vm-shine 4.2s ease-in-out infinite; }
+html[data-fxanim=on] .topbar .newbtn .newico { animation: vm-float 3s ease-in-out infinite; }
+html[data-fxanim=on] .topbar .newbtn .newico::before { content: ''; position: absolute; inset: -4px; border-radius: 13px; border: 2px solid rgba(255,255,255,.7); opacity: 0; animation: vm-ring 2.6s ease-out infinite; }
+@keyframes vm-ring { 0% { transform: scale(.85); opacity: .8; } 100% { transform: scale(1.5); opacity: 0; } }
+html[data-fxanim=on] .mbar-fab { animation: vm-float 3.2s ease-in-out infinite; }
+html[data-fxanim=on] .mbar-fab::before { content: ''; position: absolute; inset: -4px; border-radius: inherit; border: 2px solid var(--accent); opacity: 0; animation: vm-ring 2.8s ease-out infinite; pointer-events: none; }
+html[data-barlabels="0"] .topbar .newbtn { padding: 6px 10px 6px 8px; }
+@media (prefers-reduced-motion: reduce) { .topbar .newbtn::after, .topbar .newbtn .newico, .topbar .newbtn .newico::before, .mbar-fab, .mbar-fab::before { animation: none !important; } }
+.mbar-fab { position: relative; }
 </style>
 </head>
 <body>
@@ -1322,7 +1360,7 @@ html[data-cursorring=on] #cursor-ring { opacity: .9; } #cursor-ring.hidden { opa
   // js/crypto.js
   var ITER_DEFAULT = 6e5;
   var ITER_MIN = 1e5;
-  var ITER_MAX = 1e7;
+  var ITER_MAX = 5e6;
   var SALT = 16;
   var IV = 12;
   var TAG = 16;
@@ -1838,7 +1876,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   }
 
   // js/version.js
-  var APP_VERSION = "0.20.1";
+  var APP_VERSION = "0.21.0";
   var APP_NAME = "VaultManager";
   var REPO_URL = "https://github.com/ulyweb/vaultmanager";
   var FORMATS = [
@@ -1852,6 +1890,13 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     ["Attachments at rest", "AES-256-GCM per file, bound to vault + file id"]
   ];
   var CHANGELOG = [
+    { v: "0.21.0", date: "2026-11-10", notes: [
+      "Security review of all scripts (see SECURITY.md). Fixed: a crafted backup could weaken settings (auto-lock, reveal logging, generator); imported file names are cleaned; PBKDF2 limit for untrusted payloads lowered to 5,000,000; the app refuses to be framed.",
+      "The unlock screen is centred, like ulyOS.",
+      "Auto-hide now also works for the side bar (slides to the left edge), not only the dock.",
+      "Time & date can sit on the left, middle or right of the top bar.",
+      "The New button is a live icon tile with a glow ring, shine and spinning plus \u2014 not a plain \u201C+ New\u201D."
+    ] },
     { v: "0.20.1", date: "2026-11-10", notes: [
       "The system menu (and the phone menu) now show the current profile\u2019s picture and name at the top; clicking it opens the profile settings."
     ] },
@@ -2112,6 +2157,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     dockLabels: false,
     dockAutoHide: false,
     clock: true,
+    clockPos: "right",
     clock24: false,
     dateFmt: "short",
     barLabels: true,
@@ -2167,6 +2213,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       dockLabels: bool(o.dockLabels, D2.dockLabels),
       dockAutoHide: bool(o.dockAutoHide, D2.dockAutoHide),
       clock: bool(o.clock, D2.clock),
+      clockPos: oneOf(o.clockPos, ["left", "center", "right"], D2.clockPos),
       clock24: bool(o.clock24, D2.clock24),
       dateFmt: oneOf(o.dateFmt, ["none", "short", "long"], D2.dateFmt),
       barLabels: bool(o.barLabels, D2.barLabels),
@@ -2231,6 +2278,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     d.bg = look.bg === "wallpaper" && landscapes2 ? "wallpaper" : look.bg === "plain" ? "plain" : "default";
     d.wstyle = look.widgetStyle;
     d.nav = look.nav;
+    d.clockpos = look.clockPos;
     d.dockautohide = look.dockAutoHide ? "1" : "0";
     d.dockmagnify = look.dockMagnify ? "1" : "0";
     d.barlabels = look.barLabels ? "1" : "0";
@@ -3421,7 +3469,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       for (const [k, v] of Object.entries(d.tombstones || {})) if (/^[0-9a-f]{24}$/.test(k) && Number.isFinite(v)) ts[k] = v;
       this.data.tombstones = ts;
       const set = portableSettings(d.settings || {});
-      this.data.settings = { ...this.data.settings, ...set, gen: { ...this.data.settings.gen, ...set.gen || {} }, look: normalizeLook({ ...this.data.settings.look, ...set.look || {} }) };
+      this.data.settings = { ...this.data.settings, ...set, sync: { ...this.data.settings.sync, ...set.sync || {} }, gen: { ...this.data.settings.gen, ...set.gen || {} }, look: normalizeLook({ ...this.data.settings.look, ...set.look || {} }) };
       if (Array.isArray(d.audit)) this.data.audit = d.audit.filter((e) => e && typeof e.m === "string").slice(0, AUDIT_MAX).map((e) => ({ t: Number(e.t) || 0, k: String(e.k || "").slice(0, 20), m: e.m.slice(0, 300), l: e.l === "warn" ? "warn" : "info" }));
       if (Number.isFinite(d.created)) this.data.created = d.created;
       this.log("data", `Profile restored from a backup (${this.data.items.length} items)`, "warn");
@@ -3521,14 +3569,32 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       return res;
     }
   };
+  var clampInt = (v, lo, hi, d) => Number.isFinite(+v) ? Math.min(hi, Math.max(lo, Math.round(+v))) : d;
+  var flag = (v, d) => typeof v === "boolean" ? v : d;
+  function sanitizeGen(g = {}) {
+    const o = {};
+    if (["password", "passphrase", "pin"].includes(g.mode)) o.mode = g.mode;
+    if (g.length !== void 0) o.length = clampInt(g.length, 4, 128, 20);
+    if (g.words !== void 0) o.words = clampInt(g.words, 3, 12, 5);
+    for (const k of ["lower", "upper", "digits", "symbols", "noAmbiguous", "capitalize", "number"]) if (typeof g[k] === "boolean") o[k] = g[k];
+    if (typeof g.separator === "string") o.separator = g.separator.replace(/[\u0000-\u001f]/g, "").slice(0, 4);
+    if (typeof g.customSymbols === "string") o.customSymbols = g.customSymbols.replace(/[\u0000-\u001f\s]/g, "").slice(0, 64);
+    return o;
+  }
   function portableSettings(st = {}) {
-    const out = {};
-    for (const k of ["autolock", "clipboard", "theme", "lockOnHide", "trashDays", "logReveal", "displayName", "tourSeen", "welcomeAlways"]) if (st[k] !== void 0) out[k] = st[k];
-    if (st.gen && typeof st.gen === "object") out.gen = st.gen;
+    const out = {}, D2 = DEFAULT_SETTINGS_FOR_IMPORT;
+    if (st.autolock !== void 0) out.autolock = clampInt(st.autolock, 0, 240, D2.autolock);
+    if (st.clipboard !== void 0) out.clipboard = clampInt(st.clipboard, 0, 300, D2.clipboard);
+    if (st.theme !== void 0) out.theme = ["auto", "dark", "light"].includes(st.theme) ? st.theme : "auto";
+    if (st.trashDays !== void 0) out.trashDays = [0, 7, 30, 90].includes(+st.trashDays) ? +st.trashDays : D2.trashDays;
+    for (const k of ["lockOnHide", "logReveal", "tourSeen", "welcomeAlways"]) if (st[k] !== void 0) out[k] = flag(st[k], D2[k]);
+    if (typeof st.displayName === "string") out.displayName = st.displayName.replace(/[\u0000-\u001f<>]/g, "").trim().slice(0, 40);
+    if (st.gen && typeof st.gen === "object") out.gen = sanitizeGen(st.gen);
     if (st.look && typeof st.look === "object") out.look = normalizeLook(st.look);
     if (st.sync && typeof st.sync === "object") out.sync = { auto: !!st.sync.auto, attachments: st.sync.attachments !== false };
     return out;
   }
+  var DEFAULT_SETTINGS_FOR_IMPORT = { autolock: 5, clipboard: 30, lockOnHide: false, trashDays: 30, logReveal: true, tourSeen: false, welcomeAlways: false };
   async function decryptProfile(text, password) {
     const t = String(text).trim();
     if (t.startsWith("VMP1:")) {
@@ -3578,7 +3644,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     if (Number.isFinite(r.pwChanged)) it.pwChanged = r.pwChanged;
     if (Array.isArray(r.history)) it.history = r.history.filter((h2) => h2 && typeof h2.pw === "string").slice(0, HISTORY_MAX).map((h2) => ({ pw: s(h2.pw, 2e3), at: num2(Number(h2.at)) }));
     if (keepAttachments && Array.isArray(r.attachments)) {
-      it.attachments = r.attachments.filter((a) => a && /^[0-9a-f]{24}$/.test(a.id)).slice(0, MAX_ATTACHMENTS_PER_ITEM).map((a) => ({ id: a.id, name: s(a.name, 200) || "file", type: s(a.type, 100), size: num2(a.size), added: num2(a.added), ...a.lk ? { lk: true } : {} }));
+      it.attachments = r.attachments.filter((a) => a && /^[0-9a-f]{24}$/.test(a.id)).slice(0, MAX_ATTACHMENTS_PER_ITEM).map((a) => ({ id: a.id, name: s(a.name, 200).replace(/[\\/\u0000-\u001f]/g, "_") || "file", type: s(a.type, 100), size: num2(a.size), added: num2(a.added), ...a.lk ? { lk: true } : {} }));
     } else it.attachments = [];
     if (keepMeta) {
       it.id = s(r.id, 40);
@@ -6567,20 +6633,21 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       panel(
         "Navigation",
         row("Navigation style", "A side bar (default) or a macOS-style dock at the bottom of the screen", select("nav", NAV_MODES, { shell: true })),
-        row("Start page", "What you see right after unlocking", select("startPage", [["all", "All items"], ["home", "Home (widgets)"]]))
+        row("Start page", "What you see right after unlocking", select("startPage", [["all", "All items"], ["home", "Home (widgets)"]])),
+        row("Auto-hide the side bar / dock", "Slides the side bar to the left edge (or the dock to the bottom) until the pointer reaches it. Works in both styles", sw("dockAutoHide"))
       ),
       visibilityPanel(ctx2),
       panel(
         "Dock",
-        h("p", { class: "hint", text: "Only used when Navigation style is \u201CDock\u201D." }),
+        h("p", { class: "hint", text: "Only used when Navigation style is \u201CDock\u201D. Auto-hide (above) works for the dock and the side bar." }),
         row("Dock icon size", null, range("dockSize", 32, 72, 2, (v) => v + "px")),
         row("Magnify on hover", "Icons grow as the pointer passes over them", sw("dockMagnify")),
-        row("Show labels", "Names under the icons", sw("dockLabels", { shell: true })),
-        row("Auto-hide", "Slide the dock away until the pointer reaches the bottom edge", sw("dockAutoHide"))
+        row("Show labels", "Names under the icons", sw("dockLabels", { shell: true }))
       ),
       panel(
         "Menu bar (top bar)",
-        row("Show clock", "Time and date at the top right", sw("clock", { shell: true })),
+        row("Show clock", "Time and date in the top bar", sw("clock", { shell: true })),
+        row("Clock position", "Left, centre or right of the top bar", seg("clockPos", [["left", "Left"], ["center", "Middle"], ["right", "Right"]])),
         row("24-hour time", null, sw("clock24", { shell: true })),
         row("Date", "Format shown next to the time", select("dateFmt", [["none", "Hidden"], ["short", "Short (Mon 9 Nov)"], ["long", "Long (Monday 9 November 2026)"]], { shell: true })),
         row("Button labels", "Show the words next to \u201CNew\u201D and \u201CLock\u201D (off = icons only)", sw("barLabels"))
@@ -8913,6 +8980,10 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   }
 
   // js/app.js
+  if (window.top !== window.self) {
+    document.documentElement.textContent = "VaultManager cannot be shown inside another page.";
+    throw new Error("framed");
+  }
   var root = document.getElementById("app");
   var storage;
   try {
@@ -9102,11 +9173,18 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   function showBoot(L, done) {
     const iter = store.session ? store.session.iterations() : 0, n = store.active().length;
     const lines = [["VaultManager " + APP_VERSION, ""], ["Unwrapping master key", "PBKDF2-SHA256 \xB7 " + fmtInt(iter) + " rounds \u2713"], ["Decrypting vault", "AES-256-GCM \u2713"], ["Verifying integrity tag", "{{check}}"], ["Loading " + n + " item" + (n === 1 ? "" : "s"), "{{check}}"], ["Audit trail & auto-lock", "armed \u2713"], ["Ready", ""]];
-    const el = h("div", { id: "boot", role: "status", "aria-label": "Starting" }, lines.map(([a, b], i) => {
-      const l = h("div", { class: "l" }, "> ", h("b", { text: a }), b ? "  " + b : "");
-      l.style.animationDelay = i * 0.12 / L.animSpeed + "s";
-      return l;
-    }), h("div", { class: "bar" }, h("i")), h("div", { class: "hint", text: "Click or press any key to skip" }));
+    const el = h("div", { id: "boot", role: "status", "aria-label": "Starting" }, h(
+      "div",
+      { class: "boot-box" },
+      h("img", { class: "boot-logo", src: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImciIHgxPSIwIiB5MT0iMCIgeDI9IjEiIHkyPSIxIj48c3RvcCBvZmZzZXQ9IjAiIHN0b3AtY29sb3I9IiMyZmU2ZDAiLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiM1OWI0ZmYiLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz48cmVjdCB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgcng9IjExMiIgZmlsbD0iIzA1MDgwZCIvPjxyZWN0IHg9IjQwIiB5PSI0MCIgd2lkdGg9IjQzMiIgaGVpZ2h0PSI0MzIiIHJ4PSI4NCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMTUyNTM0IiBzdHJva2Utd2lkdGg9IjYiLz48cGF0aCBkPSJNMjU2IDk2bDEzMiA0OHYxMDJjMCA4OC01NiAxNDQtMTMyIDE3MC03Ni0yNi0xMzItODItMTMyLTE3MFYxNDR6IiBmaWxsPSJub25lIiBzdHJva2U9InVybCgjZykiIHN0cm9rZS13aWR0aD0iMjIiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz48Y2lyY2xlIGN4PSIyNTYiIGN5PSIyMzIiIHI9IjM4IiBmaWxsPSJ1cmwoI2cpIi8+PHBhdGggZD0iTTI1NiAyNjJ2NzQiIHN0cm9rZT0idXJsKCNnKSIgc3Ryb2tlLXdpZHRoPSIyNiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+PC9zdmc+Cg==", alt: "", width: "64", height: "64" }),
+      h("div", { class: "boot-title" }, "Vault", h("span", { text: "Manager" })),
+      h("div", { class: "bar" }, h("i")),
+      h("div", { class: "boot-lines" }, lines.map(([a, b], i) => {
+        const l = h("div", { class: "l" }, "> ", h("b", { text: a }), b ? "  " + b : "");
+        l.style.animationDelay = i * 0.12 / L.animSpeed + "s";
+        return l;
+      }))
+    ), h("div", { class: "hint", text: "Click or press any key to skip" }));
     document.body.append(el);
     let finished = false;
     const finish2 = () => {
@@ -9752,7 +9830,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       h("button", { class: "logo sysbtn", type: "button", "aria-haspopup": "menu", "aria-expanded": "false", "aria-label": "VaultManager menu", title: "VaultManager menu", on: { click: (e) => systemMenu(e.currentTarget) } }, h("img", { src: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImciIHgxPSIwIiB5MT0iMCIgeDI9IjEiIHkyPSIxIj48c3RvcCBvZmZzZXQ9IjAiIHN0b3AtY29sb3I9IiMyZmU2ZDAiLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiM1OWI0ZmYiLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz48cmVjdCB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgcng9IjExMiIgZmlsbD0iIzA1MDgwZCIvPjxyZWN0IHg9IjQwIiB5PSI0MCIgd2lkdGg9IjQzMiIgaGVpZ2h0PSI0MzIiIHJ4PSI4NCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMTUyNTM0IiBzdHJva2Utd2lkdGg9IjYiLz48cGF0aCBkPSJNMjU2IDk2bDEzMiA0OHYxMDJjMCA4OC01NiAxNDQtMTMyIDE3MC03Ni0yNi0xMzItODItMTMyLTE3MFYxNDR6IiBmaWxsPSJub25lIiBzdHJva2U9InVybCgjZykiIHN0cm9rZS13aWR0aD0iMjIiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz48Y2lyY2xlIGN4PSIyNTYiIGN5PSIyMzIiIHI9IjM4IiBmaWxsPSJ1cmwoI2cpIi8+PHBhdGggZD0iTTI1NiAyNjJ2NzQiIHN0cm9rZT0idXJsKCNnKSIgc3Ryb2tlLXdpZHRoPSIyNiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+PC9zdmc+Cg==", alt: "", width: "26", height: "26" }), h("b", null, "Vault", h("span", { text: "Manager" }))),
       search,
       clock,
-      h("button", { class: "btn primary", on: { click: () => newItemMenu(ctx) } }, "{{plus}}", h("span", { class: "lbl", text: " New" })),
+      h("button", { class: "btn primary newbtn", "aria-label": "New item", on: { click: () => newItemMenu(ctx) } }, h("span", { class: "newico", "aria-hidden": "true" }, "{{plus}}"), h("span", { class: "lbl", text: "New" })),
       h("button", { class: "btn", title: "Lock now (Alt+L)", on: { click: () => lock(false) } }, "{{lock}}", h("span", { class: "lbl", text: " Lock" })),
       h("button", { class: "btn icon", title: "Help, tour and shortcuts", "aria-label": "Help", on: { click: () => tour.help() } }, "{{help}}")
     );

@@ -1,5 +1,7 @@
 /* VaultManager — application shell: lock screen, navigation, auto-lock, routing. */
 
+/* clickjacking: a vault page must never be shown inside someone else's page (a <meta> CSP cannot set frame-ancestors) */
+if (window.top !== window.self) { document.documentElement.textContent = 'VaultManager cannot be shown inside another page.'; throw new Error('framed'); }
 import { h, clear, setLabel, clearClipboardNow, confirmDialog, buzz, closeAllModals, closeTopModal, modalOpen, modal, toast, copyText } from './dom.js';
 import { VaultStore } from './vault.js';
 import { available } from './crypto.js';
@@ -131,7 +133,9 @@ document.addEventListener('pointerleave', (e) => { if (e.target.classList && e.t
 function showBoot(L, done) {
   const iter = store.session ? store.session.iterations() : 0, n = store.active().length;
   const lines = [['VaultManager ' + APP_VERSION, ''], ['Unwrapping master key', 'PBKDF2-SHA256 · ' + fmtInt(iter) + ' rounds ✓'], ['Decrypting vault', 'AES-256-GCM ✓'], ['Verifying integrity tag', '{{check}}'], ['Loading ' + n + ' item' + (n === 1 ? '' : 's'), '{{check}}'], ['Audit trail & auto-lock', 'armed ✓'], ['Ready', '']];
-  const el = h('div', { id: 'boot', role: 'status', 'aria-label': 'Starting' }, lines.map(([a, b], i) => { const l = h('div', { class: 'l' }, '> ', h('b', { text: a }), b ? '  ' + b : ''); l.style.animationDelay = (i * 0.12 / L.animSpeed) + 's'; return l; }), h('div', { class: 'bar' }, h('i')), h('div', { class: 'hint', text: 'Click or press any key to skip' }));
+  const el = h('div', { id: 'boot', role: 'status', 'aria-label': 'Starting' }, h('div', { class: 'boot-box' },
+    h('img', { class: 'boot-logo', src: 'icons/icon.svg', alt: '', width: '64', height: '64' }), h('div', { class: 'boot-title' }, 'Vault', h('span', { text: 'Manager' })), h('div', { class: 'bar' }, h('i')),
+    h('div', { class: 'boot-lines' }, lines.map(([a, b], i) => { const l = h('div', { class: 'l' }, '> ', h('b', { text: a }), b ? '  ' + b : ''); l.style.animationDelay = (i * 0.12 / L.animSpeed) + 's'; return l; }))), h('div', { class: 'hint', text: 'Click or press any key to skip' }));
   document.body.append(el);
   let finished = false;
   const finish = () => { if (finished) return; finished = true; el.remove(); window.removeEventListener('keydown', finish, true); done(); };
@@ -496,7 +500,7 @@ function buildShell() {
   const clock = L.clock ? h('div', { class: 'barclock', 'aria-label': 'Clock' }, h('b'), h('span')) : null;
   const title = h('div', { class: 'apptitle', role: 'heading', 'aria-level': '1' });
   const top = h('header', { class: 'topbar' }, title, h('button', { class: 'logo sysbtn', type: 'button', 'aria-haspopup': 'menu', 'aria-expanded': 'false', 'aria-label': 'VaultManager menu', title: 'VaultManager menu', on: { click: (e) => systemMenu(e.currentTarget) } }, h('img', { src: 'icons/icon.svg', alt: '', width: '26', height: '26' }), h('b', null, 'Vault', h('span', { text: 'Manager' }))), search, clock,
-    h('button', { class: 'btn primary', on: { click: () => newItemMenu(ctx) } }, '{{plus}}', h('span', { class: 'lbl', text: ' New' })), h('button', { class: 'btn', title: 'Lock now (Alt+L)', on: { click: () => lock(false) } }, '{{lock}}', h('span', { class: 'lbl', text: ' Lock' })), h('button', { class: 'btn icon', title: 'Help, tour and shortcuts', 'aria-label': 'Help', on: { click: () => tour.help() } }, '{{help}}'));
+    h('button', { class: 'btn primary newbtn', 'aria-label': 'New item', on: { click: () => newItemMenu(ctx) } }, h('span', { class: 'newico', 'aria-hidden': 'true' }, '{{plus}}'), h('span', { class: 'lbl', text: 'New' })), h('button', { class: 'btn', title: 'Lock now (Alt+L)', on: { click: () => lock(false) } }, '{{lock}}', h('span', { class: 'lbl', text: ' Lock' })), h('button', { class: 'btn icon', title: 'Help, tour and shortcuts', 'aria-label': 'Help', on: { click: () => tour.help() } }, '{{help}}'));
   const side = h('nav', { class: 'side', 'aria-label': 'Sections' }), main = h('main', { class: 'main' });
   const dock = h('nav', { class: 'dock', 'aria-label': 'Dock' });
   const mbar = h('nav', { class: 'mbar', 'aria-label': 'Main navigation' });

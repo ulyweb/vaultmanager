@@ -1,6 +1,6 @@
 /* Application version, data-format versions and changelog (shown in Settings → About). */
 
-export const APP_VERSION = '0.20.1';
+export const APP_VERSION = '0.21.0';
 export const APP_NAME = 'VaultManager';
 export const REPO_URL = 'https://github.com/ulyweb/vaultmanager';
 
@@ -16,6 +16,13 @@ export const FORMATS = [
 ];
 
 export const CHANGELOG = [
+  { v: '0.21.0', date: '2026-11-10', notes: [
+    'Security review of all scripts (see SECURITY.md). Fixed: a crafted backup could weaken settings (auto-lock, reveal logging, generator); imported file names are cleaned; PBKDF2 limit for untrusted payloads lowered to 5,000,000; the app refuses to be framed.',
+    'The unlock screen is centred, like ulyOS.',
+    'Auto-hide now also works for the side bar (slides to the left edge), not only the dock.',
+    'Time & date can sit on the left, middle or right of the top bar.',
+    'The New button is a live icon tile with a glow ring, shine and spinning plus — not a plain “+ New”.',
+  ] },
   { v: '0.20.1', date: '2026-11-10', notes: [
     'The system menu (and the phone menu) now show the current profile’s picture and name at the top; clicking it opens the profile settings.',
   ] },

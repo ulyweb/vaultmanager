@@ -815,3 +815,16 @@ test('cursor: every style yields normal + pointer images that scale with size; s
   const n = normalizeLook({ cursor: true, cursorStyle: 'bogus', cursorSize: 9999, cursorColor: 'red' });
   assert.deepEqual([n.cursor, n.cursorStyle, n.cursorSize, n.cursorColor], [true, 'neon', 300, '']);
 });
+
+test('hostile backups cannot weaken the app: settings are typed and bounded, file names are cleaned, absurd iteration counts are refused', async () => {
+  const { portableSettings, sanitizeGen, sanitiseItem } = await import('../js/vault.js');
+  const { ITER_MAX, inspectSeal } = await import('../js/crypto.js');
+  const s = portableSettings({ autolock: 'never', clipboard: 99999, theme: '<x>', lockOnHide: 'yes', trashDays: 3, logReveal: 0, displayName: '<b>Al\u0000ex</b>'.repeat(20), gen: { length: 1e9, words: -4, separator: '\n\n\n\n\n\n', customSymbols: 'a b\u0000c', mode: 'evil', __proto__: { x: 1 } }, sync: { token: 'ghp_x', auto: 1 } });
+  assert.equal(s.autolock, 5); assert.equal(s.clipboard, 300); assert.equal(s.theme, 'auto'); assert.equal('lockOnHide' in s ? s.lockOnHide : false, false); assert.equal(s.trashDays, 30); assert.equal(s.logReveal, true);
+  assert.ok(s.displayName.length <= 40 && !/[<>\u0000]/.test(s.displayName)); assert.equal(s.gen.length, 128); assert.equal(s.gen.words, 3); assert.equal(s.gen.separator.length <= 4, true); assert.equal(s.gen.customSymbols, 'abc'); assert.equal('mode' in s.gen, false);
+  assert.deepEqual(s.sync, { auto: true, attachments: true }, 'the sync token never travels');
+  assert.equal(portableSettings({ autolock: 0 }).autolock, 0, 'a deliberate "never" still works'); assert.deepEqual(sanitizeGen(null || {}), {});
+  const it = sanitiseItem({ type: 'login', name: 'x', attachments: [{ id: 'a'.repeat(24), name: '../../etc/passwd\u0000.txt', type: 'text/plain', size: 1 }] }, { keepAttachments: true });
+  assert.ok(!/[\\/\u0000]/.test(it.attachments[0].name));
+  assert.equal(ITER_MAX, 5000000); assert.equal(inspectSeal(Buffer.from([2, 0x00, 0x98, 0x96, 0x81, ...new Array(40).fill(1)]).toString('base64')).ok, false, '10,000,001 rounds is refused');
+});
