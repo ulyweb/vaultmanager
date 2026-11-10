@@ -779,3 +779,5 @@ html[data-cursorring=on] #cursor-ring { opacity: .9; } #cursor-ring.hidden { opa
 .sm-item:hover, .sm-item:focus-visible { background: rgba(var(--accent-rgb), .14); outline: none; } .sm-item.danger { color: var(--bad, #ff6b6b); } .sm-item kbd { color: var(--muted); font-size: 11px; font-family: var(--mono); }
 .sm-sep { height: 1px; background: var(--line); margin: 4px 6px; }
 @media (max-width: 699px) { .topbar .logo.sysbtn { display: none; } }
+.sm-who { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 10px; border: 0; border-radius: 8px; background: none; color: var(--ink); font: inherit; text-align: left; cursor: pointer; }
+.sm-who:hover, .sm-who:focus-visible { background: rgba(var(--accent-rgb), .14); outline: none; } .sm-who b { display: block; font-size: 14px; } .sm-who small { color: var(--muted); font-size: 11px; }

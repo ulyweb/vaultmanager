@@ -1,6 +1,6 @@
 /* Application version, data-format versions and changelog (shown in Settings → About). */
 
-export const APP_VERSION = '0.20.0';
+export const APP_VERSION = '0.20.1';
 export const APP_NAME = 'VaultManager';
 export const REPO_URL = 'https://github.com/ulyweb/vaultmanager';
 
@@ -16,6 +16,9 @@ export const FORMATS = [
 ];
 
 export const CHANGELOG = [
+  { v: '0.20.1', date: '2026-11-10', notes: [
+    'The system menu (and the phone menu) now show the current profile’s picture and name at the top; clicking it opens the profile settings.',
+  ] },
   { v: '0.20.0', date: '2026-11-10', notes: [
     'System menu (click the VaultManager logo, like ulyOS): About, Keyboard shortcuts (F1), Guided tour, Settings, Task manager, Lock screen, Purge memory now, Switch profile, Contact admin and Restart. Purge memory now, Switch profile and Restart are also in the phone menu.',
     'Fixed the “QR tools sends me back to Home” glitch: after an inactivity lock you now land on the page you were on (not Home), and a click on a menu item while the unlock screen is still showing is no longer swallowed.',

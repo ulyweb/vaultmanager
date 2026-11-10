@@ -420,7 +420,8 @@ function moreSheet() {
   const go = (v) => () => { closeAllModals(); ctx.go(v); };
   const c = counts();
   const item = (ic, label, fn, n) => h('button', { class: 'btn msheet-item', on: { click: fn } }, ic, h('span', { class: 'grow', text: label }), n !== undefined ? h('span', { class: 'n', text: String(n) }) : null);
-  const m = modal({ title: 'Menu', wide: true, body: h('div', { class: 'msheet' },
+  const me = ctx.profile();
+  const m = modal({ title: 'Menu', sub: me ? 'Signed in as ' + me.name : '', wide: true, body: h('div', { class: 'msheet' },
     h('p', { class: 'lbl', text: 'Vault' }), h('div', { class: 'mgrid' }, hid.nav('fav') ? null : item('{{star}}', 'Favorites', go('fav'), c.fav), hid.nav('trash') ? null : item('{{trash}}', 'Trash', go('trash'), c.trash), store.conflictCount() ? item('{{alert}}', 'Needs review', go('conflicts'), store.conflictCount()) : null),
     h('p', { class: 'lbl', text: 'Tools' }), h('div', { class: 'mgrid' }, visTools().map(([id, ic, l]) => item(ic, l, go(id)))),
     visGroups().map(([g, keys]) => h('div', null, h('p', { class: 'lbl', text: g }), h('div', { class: 'mgrid' }, keys.map((k) => item(TYPE_META[k].icon, TYPE_META[k].plural, go(k), c[k]))))),
@@ -471,7 +472,9 @@ function systemMenu(anchor) {
   if (sysMenuEl) { closeSystemMenu(); return; }
   const item = (ic, label, fn, { danger = false, hint = '' } = {}) => h('button', { class: 'sm-item' + (danger ? ' danger' : ''), role: 'menuitem', type: 'button', on: { click: () => { closeSystemMenu(); fn(); } } }, h('span', { class: 'ic icn', text: ic }), h('span', { class: 'grow', text: label }), hint ? h('kbd', { text: hint }) : null);
   const sep = () => h('div', { class: 'sm-sep', role: 'separator' });
-  const m = h('div', { class: 'sysmenu', role: 'menu', 'aria-label': 'VaultManager menu' },
+  const me = ctx.profile();
+  const who = me ? h('button', { class: 'sm-who', role: 'menuitem', type: 'button', title: 'Profile settings', on: { click: () => { closeSystemMenu(); ctx.S.setTab = 'general'; ctx.go('settings'); } } }, profileAvatar(me, 38), h('span', { class: 'grow' }, h('b', { text: me.name }), h('small', { text: 'Signed in · ' + store.active().length + ' item' + (store.active().length === 1 ? '' : 's') }))) : null;
+  const m = h('div', { class: 'sysmenu', role: 'menu', 'aria-label': 'VaultManager menu' }, who, who ? sep() : null,
     item('{{info}}', 'About VaultManager ' + APP_VERSION, () => { ctx.S.setTab = 'about'; ctx.go('settings'); }), item('{{keyboard}}', 'Keyboard shortcuts…', () => tour.help(), { hint: 'F1' }), item('{{compass}}', 'Guided tour', () => tour.start()), sep(),
     item('{{gear}}', 'Settings…', () => ctx.go('settings')), item('{{chip}}', 'Task manager', () => ctx.go('tm')), sep(),
     item('{{lock}}', 'Lock screen', () => lock(false), { hint: 'Alt+L' }), item('{{trash}}', 'Purge memory now', () => ctx.purgeMemory()), item('{{swap}}', 'Switch profile…', () => ctx.switchProfile()),

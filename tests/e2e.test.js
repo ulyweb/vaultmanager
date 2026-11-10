@@ -1416,6 +1416,7 @@ test('v0.20: system menu (about, shortcuts, tour, settings, task manager, lock, 
   const { ctx, page, problems } = await newPage();
   await createVault(page);
   await page.getByRole('button', { name: 'VaultManager menu' }).click();
+  assert.match(await page.locator('.sysmenu .sm-who').textContent(), /My vault[\s\S]*Signed in/, 'the current profile is shown at the top of the menu');
   const labels = await page.locator('.sysmenu .sm-item').allTextContents();
   for (const w of ['About VaultManager', 'Keyboard shortcuts', 'Guided tour', 'Settings', 'Task manager', 'Lock screen', 'Purge memory now', 'Switch profile', 'Restart']) assert.ok(labels.some((l) => l.includes(w)), 'menu has ' + w);
   await page.keyboard.press('ArrowDown'); await page.keyboard.press('Escape'); assert.equal(await page.locator('.sysmenu').count(), 0, 'Escape closes it');
@@ -1440,6 +1441,7 @@ test('v0.20 on a phone: Purge memory now, Switch profile and Restart are in the 
   await page.goto(base); await page.waitForSelector('#pw1'); await page.fill('#pw1', MASTER); await page.fill('#pw2', MASTER); await page.check('#ack'); await page.click('button[type=submit]');
   await page.getByRole('button', { name: 'Skip for now' }).click(); await page.waitForSelector('.welcome.in').catch(() => {}); await page.keyboard.press('Escape'); await page.waitForTimeout(250);
   await page.getByRole('button', { name: 'More' }).click(); await page.waitForSelector('.msheet');
+  assert.match(await page.textContent('.modal-sheet'), /Signed in as My vault/);
   for (const w of ['Purge memory now', 'Switch profile', 'Restart']) assert.ok(await page.locator('.msheet-item', { hasText: w }).count(), w);
   await page.locator('.msheet-item', { hasText: 'Purge memory now' }).click(); await page.waitForFunction(() => /Memory purged/.test(document.body.textContent));
   await ctx.close();
