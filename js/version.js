@@ -1,6 +1,6 @@
 /* Application version, data-format versions and changelog (shown in Settings → About). */
 
-export const APP_VERSION = '0.22.0';
+export const APP_VERSION = '0.23.0';
 export const APP_NAME = 'VaultManager';
 export const REPO_URL = 'https://github.com/ulyweb/vaultmanager';
 
@@ -16,6 +16,9 @@ export const FORMATS = [
 ];
 
 export const CHANGELOG = [
+  { v: '0.23.0', date: '2026-11-10', notes: [
+    'Share one item together with its attached files: Seal as QR now has “Save item + files as encrypted file” (a QR is too small for files). The recipient restores it under Import & export → Restore from backup. The dialog explains why files cannot be inside the QR itself.',
+  ] },
   { v: '0.22.0', date: '2026-11-10', notes: [
     'Device & browser security check (Tools → Task manager → Security check): live detection of traces left by browser extensions in this page (injected elements and scripts, known password managers / writing assistants, replaced browser functions), a warning bar if something is clearly tampering, and plain recommendations. Browsers do not let websites list extensions, so it reports what a page can honestly see.',
     'Settings → Security now shows what is protected: everything is encrypted; only each profile’s name and picture (and harmless appearance choices) are visible on the sign-in screen.',

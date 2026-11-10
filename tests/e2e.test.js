@@ -1509,3 +1509,41 @@ test('v0.22: security check finds extension traces and replaced browser function
   assert.ok(await page.getByRole('button', { name: /device & browser check/ }).count());
   await ctx.close();
 });
+
+test('v0.23: share one item together with its attached files as an encrypted file; restored on another vault; explained in the QR dialog', async () => {
+  const { ctx, page, problems } = await newPage();
+  await createVault(page);
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'vm-share-'));
+  const txt = path.join(tmp, 'recovery-codes.txt'); fs.writeFileSync(txt, 'code-1\ncode-2\n');
+  const png = path.join(tmp, 'passport.png'); fs.writeFileSync(png, PNG);
+  await addLogin(page, 'Bank', async () => { await page.setInputFiles('input[aria-label="Choose files"]', [png, txt]); await page.waitForSelector('.modal-sheet .att >> nth=1'); });
+  await page.getByRole('button', { name: /Seal as QR/ }).first().click();
+  await page.locator('.how summary').click();
+  assert.match(await page.textContent('.how'), /Attached files are NOT included[\s\S]*Save item \+ files as encrypted file/);
+  const SHARE_PW = 'share-me-please-123';
+  await page.locator('.modal-sheet input[aria-label="QR password"]').fill(SHARE_PW);
+  await page.locator('.modal-sheet input[aria-label="Confirm QR password"]').fill(SHARE_PW);
+  const [dl] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: /Save item \+ files as encrypted file/ }).click()]);
+  assert.match(dl.suggestedFilename(), /^vaultmanager-bank-.*\.vmvault$/);
+  const fileText = fs.readFileSync(await dl.path(), 'utf8');
+  assert.ok(fileText.startsWith('VMX1:'));
+  assert.ok(!fileText.includes('code-1') && !fileText.includes('Bank'), 'the file must be encrypted');
+  await ctx.close();
+
+  // a different vault restores the item with both files
+  const b = await newPage();
+  await createVault(b.page);
+  const vf = path.join(tmp, 'bank.vmvault'); fs.writeFileSync(vf, fileText);
+  await b.page.locator('.side .nav', { hasText: 'Import & export' }).click();
+  await b.page.setInputFiles('input[aria-label="Backup file"]', vf);
+  await b.page.locator('input[aria-label="Backup password to open"]').fill(SHARE_PW);
+  await b.page.getByRole('button', { name: /^.*Restore$/ }).click();
+  await b.page.waitForSelector('.toast');
+  assert.match(await b.page.textContent('.toast'), /Restored 1/);
+  await b.page.locator('.side .nav', { hasText: 'All items' }).click(); await b.page.locator('.item', { hasText: 'Bank' }).first().click();
+  await b.page.waitForSelector('.detail .att >> nth=1');
+  const [dl2] = await Promise.all([b.page.waitForEvent('download'), b.page.getByRole('button', { name: 'Download recovery-codes.txt' }).click()]);
+  assert.equal(fs.readFileSync(await dl2.path(), 'utf8'), 'code-1\ncode-2\n');
+  assert.deepEqual(problems.concat(b.problems).filter((p) => !/Failed to load resource/.test(p)), []);
+  await b.ctx.close();
+});

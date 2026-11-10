@@ -481,6 +481,18 @@ export class VaultStore {
   }
 
   /* ----- whole-profile backup: the entire database, not just the items ----- */
+  /* One item plus its attached files, as a normal VMX1 (.vmvault) file — opens with "Restore from backup" on any device. */
+  async exportItemEncrypted(id, password, opt = {}) {
+    const it = this.get(id);
+    if (!it || it.deleted) throw new Error('That item no longer exists.');
+    const att = await this._attachmentMap([it]);
+    const missing = (it.attachments || []).filter((a) => !(a.id in att.map)).length;
+    const body = JSON.stringify({ format: 'VaultManager-export', v: 1, app: APP_VERSION, exported: Date.now(), items: [it], attachments: att.map });
+    this.log('data', 'Sealed one item into an encrypted file with ' + Object.keys(att.map).length + ' attached file(s)');
+    this._auditSave();
+    return { text: 'VMX1:' + (await sealText(body, password, opt)), files: Object.keys(att.map).length, missing, bytes: att.total };
+  }
+
   async exportProfile(password, { profile = {}, attachments = true, ...opt } = {}) {
     const all = this.data.items;
     const att = attachments ? await this._attachmentMap(all) : { map: {} };

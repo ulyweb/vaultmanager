@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VaultManager v0.22.0 — single-file offline build. Verify with the .sha256 file next to it. -->
+<!-- VaultManager v0.23.0 — single-file offline build. Verify with the .sha256 file next to it. -->
 <html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
@@ -11,7 +11,7 @@
 <meta name="application-name" content="VaultManager">
 <meta name="format-detection" content="telephone=no">
 <meta name="referrer" content="no-referrer">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-I79TePw7tu9eyE7xSmT44GucFxDAwqbMXMt4NnlmldA=' blob:; style-src 'sha256-AcCjF9/REsUgfwz3Hce9JLVO6x9kcZsU4vKadv2iM8Y='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-KZrFnca5qlPN39UORAX4m3LgbnPABdMcMG9pFCjC0zI=' blob:; style-src 'sha256-AcCjF9/REsUgfwz3Hce9JLVO6x9kcZsU4vKadv2iM8Y='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
 <title>VaultManager | Zero-Knowledge Password Manager</title>
 <meta name="description" content="VaultManager: an offline-first, zero-knowledge, end-to-end encrypted password manager with a strong password generator, TOTP codes and QR-sealed sharing and backup. Runs entirely in your browser.">
 <meta name="theme-color" content="#05080d">
@@ -1883,7 +1883,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   }
 
   // js/version.js
-  var APP_VERSION = "0.22.0";
+  var APP_VERSION = "0.23.0";
   var APP_NAME = "VaultManager";
   var REPO_URL = "https://github.com/ulyweb/vaultmanager";
   var FORMATS = [
@@ -1897,6 +1897,9 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     ["Attachments at rest", "AES-256-GCM per file, bound to vault + file id"]
   ];
   var CHANGELOG = [
+    { v: "0.23.0", date: "2026-11-10", notes: [
+      "Share one item together with its attached files: Seal as QR now has \u201CSave item + files as encrypted file\u201D (a QR is too small for files). The recipient restores it under Import & export \u2192 Restore from backup. The dialog explains why files cannot be inside the QR itself."
+    ] },
     { v: "0.22.0", date: "2026-11-10", notes: [
       "Device & browser security check (Tools \u2192 Task manager \u2192 Security check): live detection of traces left by browser extensions in this page (injected elements and scripts, known password managers / writing assistants, replaced browser functions), a warning bar if something is clearly tampering, and plain recommendations. Browsers do not let websites list extensions, so it reports what a page can honestly see.",
       "Settings \u2192 Security now shows what is protected: everything is encrypted; only each profile\u2019s name and picture (and harmless appearance choices) are visible on the sign-in screen.",
@@ -3449,6 +3452,17 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       return "VMX1:" + await sealText(body, password, opt);
     }
     /* ----- whole-profile backup: the entire database, not just the items ----- */
+    /* One item plus its attached files, as a normal VMX1 (.vmvault) file — opens with "Restore from backup" on any device. */
+    async exportItemEncrypted(id, password, opt = {}) {
+      const it = this.get(id);
+      if (!it || it.deleted) throw new Error("That item no longer exists.");
+      const att = await this._attachmentMap([it]);
+      const missing = (it.attachments || []).filter((a) => !(a.id in att.map)).length;
+      const body = JSON.stringify({ format: "VaultManager-export", v: 1, app: APP_VERSION, exported: Date.now(), items: [it], attachments: att.map });
+      this.log("data", "Sealed one item into an encrypted file with " + Object.keys(att.map).length + " attached file(s)");
+      this._auditSave();
+      return { text: "VMX1:" + await sealText(body, password, opt), files: Object.keys(att.map).length, missing, bytes: att.total };
+    }
     async exportProfile(password, { profile = {}, attachments = true, ...opt } = {}) {
       const all = this.data.items;
       const att = attachments ? await this._attachmentMap(all) : { map: {} };
@@ -4964,7 +4978,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   function shareItem(ctx2, it, only = null) {
     const pwBox = h("input", { class: "inp mono", value: generatePassphrase({ words: 4 }), autocomplete: "off", spellcheck: "false", "aria-label": "QR password" });
     const pwRow = passwordRow("QR password", pwBox);
-    const out = h("div"), err = h("p", { class: "err", role: "alert" });
+    const out = h("div"), err = h("p", { class: "err", role: "alert" }), fileErr = h("p", { class: "err", role: "alert" });
     let canvas = null;
     const make = async () => {
       err.textContent = "";
@@ -4994,7 +5008,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
             "div",
             { class: "note ok", role: "status" },
             h("b", { text: "\u2713 Checked: this QR opens again with the password. " }),
-            only ? "It holds this single value." : ["It holds the WHOLE item: ", h("b", { text: dc.included }), ".", dc.attachments ? ` Not included: ${dc.attachments} attached file${dc.attachments === 1 ? "" : "s"} (QR codes are far too small for files \u2014 they stay in your vault; a whole-profile backup includes them).` : " This item has no attached files."],
+            only ? "It holds this single value." : ["It holds the WHOLE item: ", h("b", { text: dc.included }), ".", dc.attachments ? ` Not included: ${dc.attachments} attached file${dc.attachments === 1 ? "" : "s"} (QR codes are far too small for files \u2014 use \u201CSave item + files as encrypted file\u201D below to share them).` : " This item has no attached files."],
             it.lock ? h("p", { class: "hint", text: "This item has a secondary passcode in your vault. The QR is protected by the QR password only \u2014 whoever has the picture and that password can read it." }) : null,
             only ? null : h("div", { class: "row" }, h("button", { class: "btn sm", on: { click: () => modal({ title: "What a scan restores", sub: "Exactly what \u201COpen QR\u201D will show", wide: true, body: itemCard(ctx2, sanitiseItem(back.item)), actions: [{ label: "Close" }] }) } }, "{{search}} Preview what a scan restores"))
           ),
@@ -5026,7 +5040,32 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
         "div",
         null,
         h("p", { class: "note warn", text: "Anyone with the QR image AND this password can read the item. Pick a password you can tell the recipient separately." }),
-        h("details", { class: "how" }, h("summary", { text: "How does this work?" }), h("ol", null, h("li", { text: only ? "Only this one value is encrypted (AES-256-GCM) into the QR." : "The WHOLE item \u2014 every field, notes, custom fields and tags \u2014 is encrypted (AES-256-GCM) into the QR with the password below." }), h("li", { text: only ? "Attached files can never go into a QR." : "Attached files are NOT included, and this cannot be changed: a QR code holds at most about 2\u20133 KB (roughly 2,900 bytes) once encrypted, while even a small photo or PDF is hundreds of KB to several MB \u2014 a thousand times too big. Splitting a file over many QR codes would mean scanning hundreds of them, so it is not offered. The files stay safely in your vault. To move them, use Export profile (an encrypted .vmprofile file that includes attachments)." }), h("li", { text: "Save, print or show the picture. It is useless without the password, so give the password through a different channel." }), h("li", { text: "To restore: Tools \u2192 QR tools \u2192 Open QR \u2192 scan it (or choose the image) \u2192 enter the password. You see the full card and press \u201CAdd to my vault\u201D." }))),
+        h("details", { class: "how" }, h("summary", { text: "How does this work?" }), h("ol", null, h("li", { text: only ? "Only this one value is encrypted (AES-256-GCM) into the QR." : "The WHOLE item \u2014 every field, notes, custom fields and tags \u2014 is encrypted (AES-256-GCM) into the QR with the password below." }), h("li", { text: only ? "Attached files can never go into a QR." : "Attached files are NOT included, and this cannot be changed: a QR code holds at most about 2\u20133 KB (roughly 2,900 bytes) once encrypted, while even a small photo or PDF is hundreds of KB to several MB \u2014 a thousand times too big. Splitting a file over many QR codes would mean scanning hundreds of them. Instead, use the \u201CSave item + files as encrypted file\u201D button below (when the item has files): it seals the item and its attachments into one file with the same password." }), h("li", { text: "Save, print or show the picture. It is useless without the password, so give the password through a different channel." }), h("li", { text: "To restore: Tools \u2192 QR tools \u2192 Open QR \u2192 scan it (or choose the image) \u2192 enter the password. You see the full card and press \u201CAdd to my vault\u201D." }))),
+        !only && (it.attachments || []).length ? h(
+          "div",
+          { class: "panel pad" },
+          h("h4", { text: `Share with its ${it.attachments.length} attached file${it.attachments.length === 1 ? "" : "s"}` }),
+          h("p", { class: "hint", text: "A QR picture is too small for files, so this makes one encrypted file instead: the whole item and its attachments, sealed with the QR password above. Send the file; the recipient opens Import & export \u2192 Restore from backup, chooses it and enters the password (the item and its files are added to their vault)." }),
+          h("div", { class: "row" }, h("button", { class: "btn", on: { click: async () => {
+            fileErr.textContent = "";
+            if (!pwRow.match()) {
+              fileErr.textContent = "The two QR passwords do not match.";
+              return;
+            }
+            if (pwBox.value.length < 10) {
+              fileErr.textContent = "Use at least 10 characters for a file password.";
+              return;
+            }
+            try {
+              const r = await ctx2.store.exportItemEncrypted(it.id, pwBox.value);
+              download(`vaultmanager-${it.name.replace(/\W+/g, "-").toLowerCase() || "item"}-${stamp()}.vmvault`, r.text, "text/plain");
+              toast(r.missing ? `Saved, but ${r.missing} file${r.missing === 1 ? " is" : "s are"} not on this device yet and could not be included.` : `Saved the item with ${r.files} file${r.files === 1 ? "" : "s"}. Share the password separately.`);
+            } catch (e) {
+              fileErr.textContent = e.message;
+            }
+          } } }, "{{download}} Save item + files as encrypted file")),
+          fileErr
+        ) : null,
         pwRow,
         err,
         out
