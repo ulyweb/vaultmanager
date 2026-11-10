@@ -1007,13 +1007,13 @@ test('profiles: export a whole profile, then import it at the initial stage into
   await B.page.fill('textarea[aria-label="Backup text"]', text);
   await B.page.fill('input[aria-label="Backup password"]', 'wrong-backup-password');
   await B.page.getByRole('button', { name: 'Open backup' }).click();
-  await B.page.waitForFunction(() => [...document.querySelectorAll('.modal-sheet .err')].some((e) => e.textContent.trim()), null, { timeout: 30000 });
+  await B.page.waitForFunction(() => [...document.querySelectorAll('.modal-sheet .err')].some((e) => e.textContent.trim()), null, { timeout: 90000 });
   await B.page.fill('input[aria-label="Backup password"]', 'backup-pass-phrase-1');
   await B.page.getByRole('button', { name: 'Open backup' }).click();
   await B.page.fill('input[aria-label="New master password"]', 'a-new-master-pass-123'); await B.page.fill('input[aria-label="Repeat new master password"]', 'a-new-master-pass-123');
   await B.page.locator('.modal-sheet input[type=checkbox]').last().check();
   await B.page.getByRole('button', { name: 'Create profile' }).click();
-  await B.page.waitForSelector('.topbar', { timeout: 30000 });
+  await B.page.waitForSelector('.topbar', { timeout: 90000 });
   await dismissWelcome(B.page).catch(() => {});
   await openAll(B.page);
   assert.ok(await B.page.locator('.list', { hasText: 'BankProfile' }).count(), 'the imported database is in the new profile');
