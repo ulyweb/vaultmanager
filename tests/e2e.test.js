@@ -1548,3 +1548,31 @@ test('v0.23: share one item together with its attached files as an encrypted fil
   assert.deepEqual(problems.concat(b.problems).filter((p) => !/Failed to load resource/.test(p)), []);
   await b.ctx.close();
 });
+
+test('v0.24: the profile picture (letter, emoji, photo) can be changed after the profile exists; shows in the menu and on the sign-in screen', async () => {
+  const { ctx, page, problems } = await newPage();
+  await createVault(page);
+  await page.getByRole('button', { name: 'VaultManager menu' }).click();
+  assert.equal(await page.locator('.sysmenu .sm-who .pav img').count(), 0);
+  await page.locator('.sysmenu .sm-who').click();
+  await page.waitForSelector('.avpick');
+  await page.locator('.avpick').getByRole('button', { name: 'Emoji', exact: true }).click();
+  await page.locator('.avpick .emo', { hasText: '🦊' }).click();
+  await page.waitForSelector('.toast:has-text("Profile picture saved")');
+  await page.getByRole('button', { name: 'VaultManager menu' }).click();
+  assert.match(await page.locator('.sysmenu .sm-who .pav').textContent(), /🦊/);
+  await page.keyboard.press('Escape');
+  // photo
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'vm-av-')); const png = path.join(tmp, 'me.png'); fs.writeFileSync(png, PNG);
+  await page.setInputFiles('input[aria-label="Profile photo"]', png);
+  await page.waitForTimeout(600);
+  await page.getByRole('button', { name: 'VaultManager menu' }).click();
+  assert.equal(await page.locator('.sysmenu .sm-who .pav img').count(), 1);
+  await page.keyboard.press('Escape');
+  // back to a letter, then it survives a lock
+  await page.locator('.avpick').getByRole('button', { name: 'Letter', exact: true }).click();
+  await page.getByRole('button', { name: 'VaultManager menu' }).click(); await page.locator('.sysmenu').getByRole('menuitem', { name: /Lock screen/ }).click(); await page.waitForSelector('#upw');
+  assert.equal(await page.locator('.brand .pav img').count(), 0); assert.match(await page.locator('.brand .pav').first().textContent(), /^M/);
+  assert.deepEqual(problems.filter((p) => !/Failed to load resource/.test(p)), []);
+  await ctx.close();
+});
