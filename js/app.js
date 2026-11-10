@@ -14,7 +14,7 @@ import { renderSettings } from './settings.js';
 import { createBlobStore } from './blobs.js';
 import { Profiles, keysFor, newProfileId } from './profiles.js';
 import { profileAvatar, avatarPicker, importProfileDialog, exportProfileDialog } from './profile-ui.js';
-import { canOfferCopy, saveOfflineCopy } from './offline.js';
+import { canOfferCopy, saveOfflineCopy, isSingleFile, OFFLINE_NAME } from './offline.js';
 import * as admin from './admin.js';
 import { initCursor } from './cursor.js';
 import { startWatch, onFinding, highCount } from './devcheck.js';
@@ -245,8 +245,8 @@ function pwInput(id, label, auto) {
 
 const contactAdminDialog = () => admin.contactAdmin({ profileName: store && store.unlocked ? (ctx.profile() || {}).name || '' : '' });
 
-const gateFoot = () => h('p', { class: 'gate-foot' }, h('span', { class: 'gate-ver', text: 'VaultManager v' + APP_VERSION }), ...gateFootLinks());
-const gateFootLinks = () => (admin.enabled() || canOfferCopy() ? [ admin.enabled() ? h('button', { type: 'button', class: 'linkbtn', on: { click: contactAdminDialog } }, '{{mailsend}} Contact admin') : null, canOfferCopy() ? h('button', { type: 'button', class: 'linkbtn', on: { click: async () => { try { await saveOfflineCopy(); } catch (e) { toast(e.message, 'err', 7000); } } } }, '{{download}} Download the offline copy — one file, VaultManager-offline.html') : null] : []);
+const gateFoot = () => h('p', { class: 'gate-foot' }, h('span', { class: 'gate-ver', text: 'VaultManager v' + APP_VERSION + (isSingleFile() ? ' · offline copy' : '') }), ...gateFootLinks());
+const gateFootLinks = () => (admin.enabled() || canOfferCopy() ? [ admin.enabled() ? h('button', { type: 'button', class: 'linkbtn', on: { click: contactAdminDialog } }, '{{mailsend}} Contact admin') : null, canOfferCopy() ? h('button', { type: 'button', class: 'linkbtn', on: { click: async () => { try { await saveOfflineCopy(); } catch (e) { toast(e.message, 'err', 7000); } } } }, '{{download}} Download the offline copy — one file, ' + OFFLINE_NAME + ' (v' + APP_VERSION + ')') : null] : []);
 
 function profileHead(p, sub) {
   return h('div', { class: 'brand prof' }, profileAvatar(p, 52), h('div', null, h('h1', { text: p.name }), h('p', { text: sub })));
@@ -480,7 +480,7 @@ function systemMenu(anchor) {
   const me = ctx.profile();
   const who = me ? h('button', { class: 'sm-who', role: 'menuitem', type: 'button', title: 'Profile settings', on: { click: () => { closeSystemMenu(); ctx.S.setTab = 'general'; ctx.go('settings'); } } }, profileAvatar(me, 38), h('span', { class: 'grow' }, h('b', { text: me.name }), h('small', { text: 'Signed in · ' + store.active().length + ' item' + (store.active().length === 1 ? '' : 's') }))) : null;
   const m = h('div', { class: 'sysmenu', role: 'menu', 'aria-label': 'VaultManager menu' }, who, who ? sep() : null,
-    item('{{info}}', 'About VaultManager ' + APP_VERSION, () => { ctx.S.setTab = 'about'; ctx.go('settings'); }), item('{{keyboard}}', 'Keyboard shortcuts…', () => tour.help(), { hint: 'F1' }), item('{{compass}}', 'Guided tour', () => tour.start()), sep(),
+    item('{{info}}', 'About VaultManager ' + APP_VERSION + (isSingleFile() ? ' (offline copy)' : ''), () => { ctx.S.setTab = 'about'; ctx.go('settings'); }), item('{{keyboard}}', 'Keyboard shortcuts…', () => tour.help(), { hint: 'F1' }), item('{{compass}}', 'Guided tour', () => tour.start()), sep(),
     item('{{gear}}', 'Settings…', () => ctx.go('settings')), item('{{chip}}', 'Task manager', () => ctx.go('tm')), sep(),
     item('{{lock}}', 'Lock screen', () => lock(false), { hint: 'Alt+L' }), item('{{trash}}', 'Purge memory now', () => ctx.purgeMemory()), item('{{swap}}', 'Switch profile…', () => ctx.switchProfile()),
     admin.enabled() ? item('{{mailsend}}', 'Contact admin…', () => contactAdminDialog()) : null, item('{{refresh}}', 'Restart…', restartApp, { danger: true }));

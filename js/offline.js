@@ -3,7 +3,10 @@
    This module only ever requests files from the app's own address (no other host). */
 
 import { download, toast } from './dom.js';
+import { APP_VERSION } from './version.js';
 
+/* The saved file carries the version, so copies of different versions can be told apart. */
+export const OFFLINE_NAME = `VaultManager-offline_v${APP_VERSION}.html`;
 export const isSingleFile = () => location.protocol === 'file:';
 export const canOfferCopy = () => !isSingleFile() && !window.__TAURI__;
 
@@ -20,10 +23,10 @@ export async function fetchOfflineCopy() {
   return { bytes, digest: got };
 }
 
-/* Verifies, then saves "VaultManager-offline.html". Resolves to the SHA-256 digest. */
+/* Verifies, then saves "VaultManager-offline_v<version>.html". Resolves to the SHA-256 digest. */
 export async function saveOfflineCopy() {
   const { bytes, digest } = await fetchOfflineCopy();
-  download('VaultManager-offline.html', bytes, 'text/html');
-  toast('VaultManager-offline.html saved — checksum ' + digest.slice(0, 12) + '… verified', 'ok', 6000);
+  download(OFFLINE_NAME, bytes, 'text/html');
+  toast(OFFLINE_NAME + ' saved — checksum ' + digest.slice(0, 12) + '… verified', 'ok', 6000);
   return digest;
 }

@@ -968,6 +968,7 @@ test('single-file offline build: offline/VaultManager-offline.html runs straight
   assert.ok(/^[0-9a-f]{64}  VaultManager-offline\.html/.test(fs.readFileSync(file + '.sha256', 'utf8')));
   const { ctx, page, problems } = await newPage();
   await page.goto('file://' + file); await page.waitForSelector('#pw1');
+  assert.match(await page.textContent('.gate-ver'), /v\d+\.\d+\.\d+ · offline copy/);
   assert.equal(await page.evaluate(() => window.isSecureContext), true, 'file:// is a secure context, so WebCrypto works');
   await page.fill('#pw1', MASTER); await page.fill('#pw2', MASTER); await page.check('#ack'); await page.click('button[type=submit]');
   await page.getByRole('button', { name: 'Skip for now' }).click(); await dismissWelcome(page);
@@ -984,7 +985,7 @@ test('single-file offline build: offline/VaultManager-offline.html runs straight
   await ctx.close();
 });
 
-test('profiles: export a whole profile, then import it at the initial stage into a fresh browser; USB download is VaultManager-offline.html', async () => {
+test('profiles: export a whole profile, then import it at the initial stage into a fresh browser; USB download is VaultManager-offline_v<version>.html', async () => {
   const A = await newPage(); await createVault(A.page);
   await addLogin(A.page, 'BankProfile');
   await settingsTab(A.page, 'General');
@@ -998,8 +999,8 @@ test('profiles: export a whole profile, then import it at the initial stage into
   const text = fs.readFileSync(await dl.path(), 'utf8'); assert.ok(text.startsWith('VMP1:'));
   assert.ok(!text.includes('BankProfile'), 'the backup is encrypted');
   // the USB option downloads the single file
-  const usb = A.page.getByRole('button', { name: /Download VaultManager-offline\.html/ });
-  if (await usb.count()) { const [d2] = await Promise.all([A.page.waitForEvent('download'), usb.first().click()]); assert.equal(d2.suggestedFilename(), 'VaultManager-offline.html'); }
+  const usb = A.page.getByRole('button', { name: /Download VaultManager-offline_v\d+\.\d+\.\d+\.html/ });
+  if (await usb.count()) { const [d2] = await Promise.all([A.page.waitForEvent('download'), usb.first().click()]); assert.match(d2.suggestedFilename(), /^VaultManager-offline_v\d+\.\d+\.\d+\.html$/); }
   await A.ctx.close();
 
   const B = await newPage(); await B.page.goto(base); await B.page.waitForSelector('#pw1');

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VaultManager v0.23.0 — single-file offline build. Verify with the .sha256 file next to it. -->
+<!-- VaultManager v0.23.1 — single-file offline build. Verify with the .sha256 file next to it. -->
 <html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
@@ -11,7 +11,7 @@
 <meta name="application-name" content="VaultManager">
 <meta name="format-detection" content="telephone=no">
 <meta name="referrer" content="no-referrer">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-KZrFnca5qlPN39UORAX4m3LgbnPABdMcMG9pFCjC0zI=' blob:; style-src 'sha256-AcCjF9/REsUgfwz3Hce9JLVO6x9kcZsU4vKadv2iM8Y='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-znO8P04O09BN3FwoZ0y3jfsbn1tepcQC4hcujf/4goI=' blob:; style-src 'sha256-AcCjF9/REsUgfwz3Hce9JLVO6x9kcZsU4vKadv2iM8Y='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
 <title>VaultManager | Zero-Knowledge Password Manager</title>
 <meta name="description" content="VaultManager: an offline-first, zero-knowledge, end-to-end encrypted password manager with a strong password generator, TOTP codes and QR-sealed sharing and backup. Runs entirely in your browser.">
 <meta name="theme-color" content="#05080d">
@@ -1883,7 +1883,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   }
 
   // js/version.js
-  var APP_VERSION = "0.23.0";
+  var APP_VERSION = "0.23.1";
   var APP_NAME = "VaultManager";
   var REPO_URL = "https://github.com/ulyweb/vaultmanager";
   var FORMATS = [
@@ -1897,6 +1897,10 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     ["Attachments at rest", "AES-256-GCM per file, bound to vault + file id"]
   ];
   var CHANGELOG = [
+    { v: "0.23.1", date: "2026-11-10", notes: [
+      "The offline copy now carries its version: the download link and button name it, the file is saved as VaultManager-offline_v<version>.html, and when you run it the sign-in screen, the system menu (About) and Settings say \u201Coffline copy\u201D with the version.",
+      "Explained browser storage: the limit is set by the browser, not by VaultManager, and nothing in a web page can raise it; keep an exported profile as a backup."
+    ] },
     { v: "0.23.0", date: "2026-11-10", notes: [
       "Share one item together with its attached files: Seal as QR now has \u201CSave item + files as encrypted file\u201D (a QR is too small for files). The recipient restores it under Import & export \u2192 Restore from backup. The dialog explains why files cannot be inside the QR itself."
     ] },
@@ -7083,6 +7087,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   }
 
   // js/offline.js
+  var OFFLINE_NAME = `VaultManager-offline_v${APP_VERSION}.html`;
   var isSingleFile = () => location.protocol === "file:";
   var canOfferCopy = () => !isSingleFile() && !window.__TAURI__;
   var hex2 = (buf) => Array.from(new Uint8Array(buf), (b) => b.toString(16).padStart(2, "0")).join("");
@@ -7102,8 +7107,8 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   }
   async function saveOfflineCopy() {
     const { bytes: bytes2, digest } = await fetchOfflineCopy();
-    download("VaultManager-offline.html", bytes2, "text/html");
-    toast("VaultManager-offline.html saved \u2014 checksum " + digest.slice(0, 12) + "\u2026 verified", "ok", 6e3);
+    download(OFFLINE_NAME, bytes2, "text/html");
+    toast(OFFLINE_NAME + " saved \u2014 checksum " + digest.slice(0, 12) + "\u2026 verified", "ok", 6e3);
     return digest;
   }
 
@@ -7259,7 +7264,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
         "div",
         { class: "usb" },
         h("h4", { text: "Keep one file on a USB stick" }),
-        h("p", { class: "hint", text: "One single file \u2014 VaultManager-offline.html \u2014 that contains the whole app. Copy it to a USB stick, e-mail it to yourself or put it on any device; double-click it and it opens in the browser with no internet, no install and no server. (This is different from \u201Cinstalling\u201D the app, which creates a browser app entry instead of a file.)" }),
+        h("p", { class: "hint", text: "One single file \u2014 " + OFFLINE_NAME + " (this is version " + APP_VERSION + "; the version is part of the file name so you can tell copies apart) \u2014 that contains the whole app. Copy it to a USB stick, e-mail it to yourself or put it on any device; double-click it and it opens in the browser with no internet, no install and no server. (This is different from \u201Cinstalling\u201D the app, which creates a browser app entry instead of a file.)" }),
         (() => {
           const note = h("p", { class: "hint", "aria-live": "polite" });
           return h("div", null, h("button", { class: "btn primary", on: { click: async (e) => {
@@ -7271,7 +7276,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
               note.textContent = x.message;
             }
             e.target.disabled = false;
-          } } }, "{{download}} Download VaultManager-offline.html"), note);
+          } } }, "{{download}} Download " + OFFLINE_NAME), note);
         })()
       ) : null,
       status
@@ -7758,7 +7763,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
         h("span", { text: "Attachments" }),
         h("b", { text: `${st.count} file${st.count === 1 ? "" : "s"} \xB7 ${fmtSize(st.bytes)} (stored in ${store2.blobs.kind})` }),
         quota ? [h("span", { text: "Browser storage" }), h("b", { text: `${fmtSize(quota.usage || 0)} used of ~${fmtSize(quota.quota || 0)}` })] : null,
-        persisted !== null ? [h("span", { text: "Eviction protection" }), h("b", { text: persisted ? "granted \u2014 the browser will not clear this data automatically" : "not granted \u2014 the browser may clear data if the disk is full" })] : null
+        persisted !== null ? [h("span", { text: "Eviction protection" }), h("b", { text: persisted ? "granted \u2014 the browser will not clear this data automatically" : "not granted \u2014 the browser may clear data if the disk is full (keep an exported profile as a backup)" })] : null
       );
     })();
     const sess = store2.session;
@@ -7784,7 +7789,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       panel2("Data formats", h("div", { class: "kv" }, FORMATS.map(([k, v]) => [h("span", { text: k }), h("b", { text: v })]))),
       panel2(
         "This device",
-        h("div", { class: "kv" }, h("span", { text: "Running as" }), h("b", { text: window.__TAURI__ ? "Native app (Tauri)" : location.protocol === "file:" ? "Single-file offline copy" : ctx2.isStandalone() ? "Installed web app (offline-capable)" : "Web page in a browser" }), h("span", { text: "Vault ID" }), h("b", { text: sess.id }), h("span", { text: "Created" }), h("b", { text: fmtDate(store2.data.created) }), h("span", { text: "Key derivation" }), h("b", { text: fmtInt(sess.iterations()) + " PBKDF2 rounds" }), h("span", { text: "Recovery key" }), h("b", { text: sess.hasRecovery() ? "set" : "not set" }), h("span", { text: "Sync" }), h("b", { text: store2.settings.sync.token ? "gist sync configured" + (store2.settings.sync.last ? " \xB7 last " + new Date(store2.settings.sync.last.at).toLocaleString() : "") : "file only / off" })),
+        h("div", { class: "kv" }, h("span", { text: "Running as" }), h("b", { text: window.__TAURI__ ? "Native app (Tauri)" : location.protocol === "file:" ? "Single-file offline copy v" + APP_VERSION : ctx2.isStandalone() ? "Installed web app (offline-capable)" : "Web page in a browser" }), h("span", { text: "Vault ID" }), h("b", { text: sess.id }), h("span", { text: "Created" }), h("b", { text: fmtDate(store2.data.created) }), h("span", { text: "Key derivation" }), h("b", { text: fmtInt(sess.iterations()) + " PBKDF2 rounds" }), h("span", { text: "Recovery key" }), h("b", { text: sess.hasRecovery() ? "set" : "not set" }), h("span", { text: "Sync" }), h("b", { text: store2.settings.sync.token ? "gist sync configured" + (store2.settings.sync.last ? " \xB7 last " + new Date(store2.settings.sync.last.at).toLocaleString() : "") : "file only / off" })),
         storage2,
         h(
           "div",
@@ -9545,14 +9550,14 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     return { input: i, el: h("div", { class: "pwwrap" }, i, eye) };
   }
   var contactAdminDialog = () => contactAdmin({ profileName: store && store.unlocked ? (ctx.profile() || {}).name || "" : "" });
-  var gateFoot = () => h("p", { class: "gate-foot" }, h("span", { class: "gate-ver", text: "VaultManager v" + APP_VERSION }), ...gateFootLinks());
+  var gateFoot = () => h("p", { class: "gate-foot" }, h("span", { class: "gate-ver", text: "VaultManager v" + APP_VERSION + (isSingleFile() ? " \xB7 offline copy" : "") }), ...gateFootLinks());
   var gateFootLinks = () => enabled() || canOfferCopy() ? [enabled() ? h("button", { type: "button", class: "linkbtn", on: { click: contactAdminDialog } }, "{{mailsend}} Contact admin") : null, canOfferCopy() ? h("button", { type: "button", class: "linkbtn", on: { click: async () => {
     try {
       await saveOfflineCopy();
     } catch (e) {
       toast(e.message, "err", 7e3);
     }
-  } } }, "{{download}} Download the offline copy \u2014 one file, VaultManager-offline.html") : null] : [];
+  } } }, "{{download}} Download the offline copy \u2014 one file, " + OFFLINE_NAME + " (v" + APP_VERSION + ")") : null] : [];
   function profileHead(p, sub) {
     return h("div", { class: "brand prof" }, profileAvatar(p, 52), h("div", null, h("h1", { text: p.name }), h("p", { text: sub })));
   }
@@ -9981,7 +9986,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       { class: "sysmenu", role: "menu", "aria-label": "VaultManager menu" },
       who,
       who ? sep() : null,
-      item("{{info}}", "About VaultManager " + APP_VERSION, () => {
+      item("{{info}}", "About VaultManager " + APP_VERSION + (isSingleFile() ? " (offline copy)" : ""), () => {
         ctx.S.setTab = "about";
         ctx.go("settings");
       }),

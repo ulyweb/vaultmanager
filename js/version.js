@@ -1,6 +1,6 @@
 /* Application version, data-format versions and changelog (shown in Settings → About). */
 
-export const APP_VERSION = '0.23.0';
+export const APP_VERSION = '0.23.1';
 export const APP_NAME = 'VaultManager';
 export const REPO_URL = 'https://github.com/ulyweb/vaultmanager';
 
@@ -16,6 +16,10 @@ export const FORMATS = [
 ];
 
 export const CHANGELOG = [
+  { v: '0.23.1', date: '2026-11-10', notes: [
+    'The offline copy now carries its version: the download link and button name it, the file is saved as VaultManager-offline_v<version>.html, and when you run it the sign-in screen, the system menu (About) and Settings say “offline copy” with the version.',
+    'Explained browser storage: the limit is set by the browser, not by VaultManager, and nothing in a web page can raise it; keep an exported profile as a backup.',
+  ] },
   { v: '0.23.0', date: '2026-11-10', notes: [
     'Share one item together with its attached files: Seal as QR now has “Save item + files as encrypted file” (a QR is too small for files). The recipient restores it under Import & export → Restore from backup. The dialog explains why files cannot be inside the QR itself.',
   ] },
