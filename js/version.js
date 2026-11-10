@@ -1,6 +1,6 @@
 /* Application version, data-format versions and changelog (shown in Settings → About). */
 
-export const APP_VERSION = '0.16.0';
+export const APP_VERSION = '0.17.0';
 export const APP_NAME = 'VaultManager';
 export const REPO_URL = 'https://github.com/ulyweb/vaultmanager';
 
@@ -16,6 +16,11 @@ export const FORMATS = [
 ];
 
 export const CHANGELOG = [
+  { v: '0.17.0', date: '2026-11-10', notes: [
+    'Contact Admin now works like ulyOS: a form that sends your message through the same relay to the administrator (sign-in screen, Help, menu, Settings → About). Never includes passwords or vault data.',
+    'The administrator is emailed when a profile is created or restored — with an on-screen disclosure and an optional contact-email field (not sent from localhost or the offline copy).',
+    'Fixed: the sign-in card and the top-bar icons were not centred.',
+  ] },
   { v: '0.16.0', date: '2026-11-09', notes: [
     'Side bar, dock and menu icons are now real app-style icon tiles (glossy, coloured, bigger), like the ulyOS desktop. Top-bar icons are larger too.',
     'First login: Home page, and in Categories only “Everyday” is expanded (the other groups open with one click).',

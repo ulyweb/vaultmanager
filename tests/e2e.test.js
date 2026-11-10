@@ -1186,7 +1186,7 @@ for (const [label, o] of [['served · iPhone 13', { device: 'iPhone 13' }], ['si
   test('locked item with a file survives a whole-profile export and import: ' + label, async () => { await roundTripWalk(label, o); });
 
 test('v0.15: QR tools hide the password and ask twice; Purge memory; backup guide; task manager; hide categories; contact admin', async () => {
-  const { ctx, page, problems } = await newPage();
+  const { ctx, page, problems } = await newPage({}, ['script.google.com']);
   await createVault(page);
   // QR tools: hidden password + confirm + purge
   await page.locator('.side .nav', { hasText: 'QR tools' }).click();
@@ -1220,11 +1220,18 @@ test('v0.15: QR tools hide the password and ask twice; Purge memory; backup guid
   await page.getByRole('button', { name: 'Show everything' }).click(); assert.ok(await page.locator('.side .nav', { hasText: 'QR tools' }).count());
   await page.getByRole('button', { name: 'Hide empty categories' }).click(); assert.equal(await page.locator('.side .ngroup').count(), 0, 'every category is empty, so every group is hidden');
   await page.getByRole('button', { name: 'Show everything' }).click();
-  // contact admin: per-device address, shown on the sign-in screen and in the profile form
-  await settingsTab(page, 'About'); await page.fill('input[aria-label="Administrator email"]', 'admin@example.com'); await page.getByRole('button', { name: 'Save address' }).click();
+  // contact admin: same relay as ulyOS — sign-in footer, Help, Settings → About; the message is a POST to the relay
+  const posts = [];
+  await page.route('https://script.google.com/**', async (route) => { posts.push(route.request().postData() || ''); await route.fulfill({ status: 200, body: 'ok' }); });
+  await settingsTab(page, 'About'); assert.ok(await page.getByRole('button', { name: /Write a message/ }).count());
   await page.getByRole('button', { name: /Lock/ }).first().click(); await page.waitForSelector('#upw');
-  assert.equal(await page.getAttribute('.gate-foot a[href^="mailto:"]', 'href').then((h) => h.split('?')[0]), 'mailto:admin@example.com');
-  await page.getByRole('button', { name: /Add a profile/ }).click(); await page.waitForSelector('#notifyadmin');
+  await page.locator('.gate-foot').getByRole('button', { name: /Contact admin/ }).click();
+  await page.getByRole('button', { name: 'Send', exact: true }).click(); assert.match(await page.locator('.modal-sheet .err:not(:empty)').first().textContent(), /subject/i);
+  await page.fill('input[aria-label="Subject"]', 'Hello admin'); await page.fill('textarea[aria-label="Message to the administrator"]', 'Testing the relay'); await page.getByRole('button', { name: 'Send', exact: true }).click();
+  await page.waitForFunction(() => /Message sent/.test(document.body.textContent), null, { timeout: 15000 });
+  assert.equal(posts.length, 1); assert.match(posts[0], /Hello admin/); assert.match(posts[0], /Testing the relay/); assert.ok(!/upw|master/i.test(posts[0]));
+  await page.getByRole('button', { name: /Add a profile/ }).click(); await page.waitForSelector('#pw1');
+  assert.equal(await page.locator('#notifynote').count(), 0, 'no profile notice from localhost (it is only sent from the hosted site)');
   assert.deepEqual(problems.filter((p) => !/Failed to load resource/.test(p)), []);
   await ctx.close();
 });

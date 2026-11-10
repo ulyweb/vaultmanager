@@ -651,7 +651,7 @@ test('native shell scaffold: versions agree, config is strict, only two plugins,
   assert.match(fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8'), new RegExp("vm-" + pkg.version.replace(/\./g, '\\.')));
   const csp = conf.app.security.csp;
   assert.ok(/default-src 'none'/.test(csp) && !/unsafe-/.test(csp) && /script-src 'self'/.test(csp), 'native CSP is as strict as the web CSP');
-  assert.deepEqual([...csp.matchAll(/https?:\/\/[^\s;]+/g)].map((m) => m[0]).filter((u) => !/ipc\.localhost|asset\.localhost|api\.github\.com/.test(u)), [], 'no other hosts');
+  assert.deepEqual([...csp.matchAll(/https?:\/\/[^\s;]+/g)].map((m) => m[0]).filter((u) => !/ipc\.localhost|asset\.localhost|api\.github\.com|script\.google(usercontent)?\.com/.test(u)), [], 'no other hosts');
   assert.deepEqual(cap.permissions.slice().sort(), ['core:default', 'dialog:allow-save', 'fs:allow-write-file'], 'minimal capability set');
   assert.equal([...cargo.matchAll(/^tauri-plugin-[a-z]+/gm)].length, 2, 'only the dialog and fs plugins');
   for (const i of conf.bundle.icon) assert.ok(fs.existsSync(path.join(ROOT, 'native/src-tauri', i)), 'icon ' + i);
@@ -668,7 +668,7 @@ test('web and single-file builds: complete, hash-pinned, self-contained; native 
   assert.ok(!files.some((f) => /icon-1024/.test(f)));
   const webHtml = fs.readFileSync(path.join(web, 'index.html'), 'utf8'); assert.ok(!/ipc:/.test(webHtml));
   execFileSync(process.execPath, [path.join(ROOT, 'tools/build-web.mjs'), '--native'], { stdio: 'pipe' });
-  const nat = fs.readFileSync(path.join(web, 'index.html'), 'utf8'); assert.ok(/connect-src 'self' https:\/\/api\.github\.com ipc: http:\/\/ipc\.localhost;/.test(nat));
+  const nat = fs.readFileSync(path.join(web, 'index.html'), 'utf8'); assert.ok(/connect-src 'self' https:\/\/api\.github\.com https:\/\/script\.google\.com https:\/\/script\.googleusercontent\.com ipc: http:\/\/ipc\.localhost;/.test(nat));
   assert.equal(nat.replace(/ ipc: http:\/\/ipc\.localhost/, ''), webHtml, 'the native build differs only by the IPC origins');
 
   execFileSync(process.execPath, [path.join(ROOT, 'tools/build-offline.mjs')], { stdio: 'pipe' });
@@ -782,13 +782,22 @@ test('item locked before files were covered: opening it seals the existing files
   assert.ok(att);
 });
 
-test('contact admin helpers: validation, mailto link and a profile notice that carries no secrets; hide lists are sanitised', async () => {
-  const { validEmail, mailtoLink, newProfileMessage, adminEmail, setAdminEmail } = await import('../js/admin.js');
+test('contact admin: same relay as ulyOS, notice carries no secrets, only fires when allowed; hide lists are sanitised', async () => {
+  globalThis.location = { protocol: 'https:', hostname: 'example.github.io', host: 'example.github.io', pathname: '/vaultmanager/' };
+  const { validEmail, newProfileFields, notifyNewProfile, enabled, notifyEnabled } = await import('../js/admin.js');
+  const { CONTACT_ENDPOINT } = await import('../js/config.js');
   const { normalizeLook } = await import('../js/look.js');
   assert.ok(validEmail('admin@example.com')); assert.ok(!validEmail('nope')); assert.ok(!validEmail('a b@c.de')); assert.ok(!validEmail('x@y.z"><script>'));
-  const st = new MemStorage(); assert.equal(adminEmail(st), ''); assert.equal(setAdminEmail(st, 'bad'), false); setAdminEmail(st, 'admin@example.com'); assert.equal(adminEmail(st), 'admin@example.com');
-  const m = newProfileMessage('Alex'); assert.match(m.subject, /Alex/); assert.ok(!/password|master/i.test(m.body.replace('No passwords or vault data are included in this message.', '')));
-  assert.match(mailtoLink('admin@example.com', 'Hi there', 'a&b'), /^mailto:admin@example\.com\?subject=Hi%20there&body=a%26b$/);
+  assert.match(CONTACT_ENDPOINT, /^https:\/\/script\.google\.com\/macros\/s\/.+\/exec$/);
+  const f = newProfileFields('Alex', { contact: 'a@b.co' }); assert.match(f.subject, /New profile: Alex/); assert.match(f.message, /Contact email.*a@b\.co/);
+  assert.ok(!/master password:|vault data:/i.test(f.message) && /ever included/.test(f.message));
+  assert.ok(enabled() && notifyEnabled());
+  const calls = []; const ok = await notifyNewProfile('Alex', {}, { fetchImpl: async (u, o) => { calls.push([u, o.method, o.body.get('subject'), o.body.get('email')]); } });
+  assert.equal(ok, true); assert.equal(calls.length, 1); assert.equal(calls[0][0], CONTACT_ENDPOINT); assert.equal(calls[0][1], 'POST'); assert.match(calls[0][2], /New profile: Alex/); assert.match(calls[0][3], /@/);
+  assert.equal(await notifyNewProfile('Alex', {}, { fetchImpl: async () => { throw new Error('offline'); } }), false, 'a failed send never throws');
+  globalThis.location = { protocol: 'http:', hostname: 'localhost', host: 'localhost:8000', pathname: '/' };
+  assert.equal(notifyEnabled(), false, 'no notification from localhost'); assert.equal(await notifyNewProfile('Alex', {}, { fetchImpl: async () => { calls.push('x'); } }), false); assert.equal(calls.length, 1);
+  globalThis.location = { protocol: 'file:', hostname: '', host: '', pathname: '/x.html' }; assert.equal(enabled(), false, 'the single-file copy never contacts anyone');
   const l = normalizeLook({ hiddenCats: ['crypto', 'crypto', '<x>', 5, 'bank'], hiddenNav: ['qr', 'home', 'settings', 'tm', 'zzz'] });
   assert.deepEqual(l.hiddenCats, ['crypto', 'bank']); assert.deepEqual(l.hiddenNav, ['qr', 'tm']);
 });

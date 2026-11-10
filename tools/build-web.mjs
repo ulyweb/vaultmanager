@@ -20,7 +20,7 @@ if (native) {
   const f = path.join(out, 'index.html');
   let html = fs.readFileSync(f, 'utf8');
   const before = html;
-  html = html.replace("connect-src 'self' https://api.github.com;", "connect-src 'self' https://api.github.com ipc: http://ipc.localhost;");
+  html = html.replace("https://script.googleusercontent.com;", "https://script.googleusercontent.com ipc: http://ipc.localhost;");
   if (html === before) throw new Error('could not adjust the CSP for the native build');
   fs.writeFileSync(f, html);
 }

@@ -13,7 +13,8 @@ import { createBlobStore } from './blobs.js';
 import { Profiles, keysFor, newProfileId } from './profiles.js';
 import { profileAvatar, avatarPicker, importProfileDialog, exportProfileDialog } from './profile-ui.js';
 import { canOfferCopy, saveOfflineCopy } from './offline.js';
-import { adminEmail, newProfileMessage, openMail } from './admin.js';
+import * as admin from './admin.js';
+import { APP_VERSION } from './version.js';
 import { renderBeam } from './beam.js';
 import { TYPE_META, GROUPS } from './templates.js';
 import { syncGist } from './sync.js';
@@ -24,7 +25,6 @@ import { normalizeLook, applyLook, resolveTheme, loadCosmetic, saveCosmetic } fr
 import { landscapes } from './landscapes.js';
 import { renderHome } from './widgets.js';
 import { createTour } from './tour.js';
-import { APP_VERSION } from './version.js';
 import { fmtInt, fmtDate } from './util.js';
 
 const root = document.getElementById('app');
@@ -67,6 +67,7 @@ const ctx = {
     toast('Memory purged — ' + n + ' opened item' + (n === 1 ? '' : 's') + ' locked again, clipboard cleared, fields and previews wiped');
     return n;
   },
+  contactAdmin: () => contactAdminDialog(),
   exportProfile: () => exportProfileDialog(ctx),
   importProfile: (onDone) => importProfileDialog(ctx, { onDone }),
   look: () => curLook(), setLook, setTheme, newItem: () => newItemMenu(ctx),
@@ -226,7 +227,10 @@ function pwInput(id, label, auto) {
   return { input: i, el: h('div', { class: 'pwwrap' }, i, eye) };
 }
 
-const gateFoot = () => (canOfferCopy() || adminEmail(env.storage) ? h('p', { class: 'gate-foot' }, adminEmail(env.storage) ? h('a', { class: 'linkbtn', href: 'mailto:' + adminEmail(env.storage) + '?subject=' + encodeURIComponent('VaultManager help') }, '{{contact}} Contact admin') : null, adminEmail(env.storage) && canOfferCopy() ? ' · ' : null, canOfferCopy() ? h('button', { type: 'button', class: 'linkbtn', on: { click: async () => { try { await saveOfflineCopy(); } catch (e) { toast(e.message, 'err', 7000); } } } }, '{{download}} Download the offline copy — one file, VaultManager-offline.html') : null) : null);
+
+const contactAdminDialog = () => admin.contactAdmin({ profileName: store && store.unlocked ? (ctx.profile() || {}).name || '' : '' });
+
+const gateFoot = () => (admin.enabled() || canOfferCopy() ? h('p', { class: 'gate-foot' }, admin.enabled() ? h('button', { type: 'button', class: 'linkbtn', on: { click: contactAdminDialog } }, '{{mailsend}} Contact admin') : null, canOfferCopy() ? h('button', { type: 'button', class: 'linkbtn', on: { click: async () => { try { await saveOfflineCopy(); } catch (e) { toast(e.message, 'err', 7000); } } } }, '{{download}} Download the offline copy — one file, VaultManager-offline.html') : null) : null);
 
 function profileHead(p, sub) {
   return h('div', { class: 'brand prof' }, profileAvatar(p, 52), h('div', null, h('h1', { text: p.name }), h('p', { text: sub })));
@@ -234,6 +238,7 @@ function profileHead(p, sub) {
 
 /* After a profile has been created or imported on the sign-in screen: open it and go straight in. */
 async function enterProfile(profile, masterPassword) {
+  admin.notifyNewProfile(profile.name, { source: 'import' });
   env.profiles.setLast(profile.id); openProfile(profile.id); ctx.S.gate = null;
   await store.unlock({ password: masterPassword });
   onUnlocked();
@@ -246,7 +251,7 @@ function gateCreate({ first }) {
   const p1 = pwInput('pw1', 'Master password', 'new-password'), p2 = pwInput('pw2', 'Repeat master password', 'new-password');
   const m = h('div'), err = h('p', { class: 'err', role: 'alert' });
   const ack = h('input', { type: 'checkbox', id: 'ack' });
-  const admin = adminEmail(env.storage), notify = h('input', { type: 'checkbox', id: 'notifyadmin', checked: true });
+  const notifyOn = admin.notifyEnabled(), contact = h('input', { class: 'inp', id: 'contactemail', type: 'email', maxlength: '120', autocomplete: 'email', placeholder: 'Your email (optional — lets the admin reach you)', 'aria-label': 'Optional contact email' });
   p1.input.addEventListener('input', () => clear(m).append(meter(p1.input.value).el));
   const btn = h('button', { class: 'btn primary', type: 'submit', style: null }, first ? 'Create my vault' : 'Create profile');
   const suggest = h('button', { type: 'button', class: 'btn sm', on: { click: () => { const pw = generatePassphrase({ words: 6 }); p1.input.value = p2.input.value = pw; p1.input.type = p2.input.type = 'text'; p1.input.dispatchEvent(new Event('input')); } } }, '{{bolt}} Suggest a passphrase');
@@ -260,7 +265,7 @@ function gateCreate({ first }) {
     const id = newProfileId(), k = keysFor(id), st = new VaultStore(env.storage, k.vault, env.blobs, k.fails);
     try { await st.create(p1.input.value); st.data.settings.displayName = nm; await st.save(); } catch (x) { err.textContent = x.message; btn.disabled = false; btn.textContent = first ? 'Create my vault' : 'Create profile'; return; }
     env.profiles.add({ id, name: nm, avatar: picker.get() }); env.profiles.setLast(id);
-    if (admin && notify.checked) { const m = newProfileMessage(nm); try { openMail(admin, m.subject, m.body); } catch { /* ignore */ } }
+    if (notifyOn) admin.notifyNewProfile(nm, { contact: contact.value.trim().slice(0, 120) });
     store = st; ctx.S.profileId = id; ctx.S.gate = null;
     p1.input.value = p2.input.value = ''; ctx.S.since = Date.now();
     ctx.S.view = curLook().startPage === 'home' ? 'home' : 'all';
@@ -275,7 +280,7 @@ function gateCreate({ first }) {
     h('div', { class: 'field' }, h('label', { for: 'pw2', text: 'Repeat master password' }), p2.el),
     h('div', { class: 'row wrap' }, suggest),
     h('label', { class: 'chk', for: 'ack' }, ack, 'I understand that if I forget this password, nobody can recover my data.'),
-    admin ? h('label', { class: 'chk', for: 'notifyadmin' }, notify, 'Email the administrator that I created this profile (opens your mail app; only the profile name is included — never passwords)') : null,
+    notifyOn ? h('div', { class: 'note', id: 'notifynote' }, 'ℹ ' + admin.DISCLOSURE, contact) : null,
     err, h('div', { class: 'row' }, btn));
   return h('div', { class: 'panel gate-card' }, brand(first ? 'Create your profile and encrypted vault' : 'Add a profile'), form,
     h('div', { class: 'gate-links' }, h('button', { type: 'button', class: 'linkbtn', on: { click: () => ctx.importProfile(enterProfile) } }, '{{importfile}} Import a profile backup — restore a whole database'), list.length ? h('button', { type: 'button', class: 'linkbtn', on: { click: () => { ctx.S.gate = 'picker'; draw(); } } }, '← Back to profiles') : null),
@@ -408,7 +413,7 @@ function moreSheet() {
     h('p', { class: 'lbl', text: 'Vault' }), h('div', { class: 'mgrid' }, hid.nav('fav') ? null : item('{{star}}', 'Favorites', go('fav'), c.fav), hid.nav('trash') ? null : item('{{trash}}', 'Trash', go('trash'), c.trash), store.conflictCount() ? item('{{alert}}', 'Needs review', go('conflicts'), store.conflictCount()) : null),
     h('p', { class: 'lbl', text: 'Tools' }), h('div', { class: 'mgrid' }, visTools().map(([id, ic, l]) => item(ic, l, go(id)))),
     visGroups().map(([g, keys]) => h('div', null, h('p', { class: 'lbl', text: g }), h('div', { class: 'mgrid' }, keys.map((k) => item(TYPE_META[k].icon, TYPE_META[k].plural, go(k), c[k]))))),
-    h('p', { class: 'lbl', text: 'More' }), h('div', { class: 'mgrid' }, item('{{help}}', 'Help & tour', () => { closeAllModals(); tour.help(); }), item('{{lock}}', 'Lock now', () => { closeAllModals(); lock(false); }))), actions: [{ label: 'Close' }] });
+    h('p', { class: 'lbl', text: 'More' }), h('div', { class: 'mgrid' }, item('{{help}}', 'Help & tour', () => { closeAllModals(); tour.help(); }), admin.enabled() ? item('{{mailsend}}', 'Contact admin', () => { closeAllModals(); contactAdminDialog(); }) : null, item('{{lock}}', 'Lock now', () => { closeAllModals(); lock(false); }))), actions: [{ label: 'Close' }] });
   return m;
 }
 

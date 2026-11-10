@@ -13,7 +13,7 @@ import { APP_NAME, APP_VERSION, CHANGELOG, FORMATS, REPO_URL } from './version.j
 import { KEY } from './vault.js';
 import { fmtDate, fmtInt } from './util.js';
 import { canOfferCopy, saveOfflineCopy } from './offline.js';
-import { adminEmail, setAdminEmail, validEmail, openMail } from './admin.js';
+import { enabled as adminEnabled } from './admin.js';
 
 const TABS = [['general', '{{gear}} General'], ['appearance', '{{palette}} Appearance'], ['effects', '{{sparkles}} Effects'], ['layout', '{{compass}} Dock & menu bar'], ['widgets', '{{puzzle}} Widgets'], ['security', '{{shieldlock}} Security'], ['sync', '{{sync}} Sync'], ['audit', '{{scroll}} Audit trail'], ['about', 'ⓘ About']];
 
@@ -87,17 +87,12 @@ function general(ctx) {
     panel('Data', h('p', { class: 'hint', text: 'Import from other managers, encrypted backups and plaintext export are on their own page.' }), h('button', { class: 'btn', on: { click: () => ctx.go('data') } }, '{{swap}} Import & export')));
 }
 
-/* Contact admin: the address comes from js/config.js, or is set per device here. It is only used to open your mail app. */
+/* Contact admin: same relay as ulyOS (js/config.js). Only what you type is sent, and only after you press Send. */
 function contactPanel(ctx) {
-  const st = ctx.env.storage, cur = adminEmail(st);
-  const inp = h('input', { class: 'inp', type: 'email', value: cur, placeholder: 'admin@example.com', autocomplete: 'off', 'aria-label': 'Administrator email' }), err = h('p', { class: 'err', role: 'alert' });
-  const msg = h('textarea', { class: 'ta', rows: '3', placeholder: 'What do you need help with? (Do not include passwords.)', 'aria-label': 'Message to the administrator' });
+  if (!adminEnabled()) return panel('Contact admin', h('p', { class: 'hint', text: 'Not available in the offline copy, which never contacts anyone.' }));
   return panel('Contact admin',
-    h('p', { class: 'hint', text: 'Opens your mail app with a message to the administrator. Nothing is sent by VaultManager itself, and no vault data is included.' }),
-    field('Administrator email', inp),
-    h('div', { class: 'row wrap' }, h('button', { class: 'btn sm', on: { click: () => { err.textContent = ''; const v = inp.value.trim(); if (v && !validEmail(v)) { err.textContent = 'That does not look like an email address.'; return; } setAdminEmail(st, v); toast(v ? 'Administrator address saved on this device' : 'Administrator address cleared'); ctx.refresh(); } } }, 'Save address')), err,
-    field('Message', msg),
-    h('button', { class: 'btn primary', on: { click: () => { const to = adminEmail(st); if (!to) { err.textContent = 'Save an administrator address first.'; return; } openMail(to, APP_NAME + ' ' + APP_VERSION + ' — help', (msg.value || '') + '\n\n— ' + APP_NAME + ' ' + APP_VERSION + ', profile “' + ((ctx.profile() || {}).name || '') + '”'); } } }, '{{contact}} Email the administrator'));
+    h('p', { class: 'hint', text: 'Send a message to the person who runs this site. Only what you type is sent, and only after you press Send. Never include passwords.' }),
+    h('button', { class: 'btn primary', on: { click: () => ctx.contactAdmin() } }, '{{mailsend}} Write a message'));
 }
 
 /* ======================= Security ======================= */

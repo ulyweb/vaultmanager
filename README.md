@@ -89,4 +89,4 @@ Code: see repository owner. EFF short wordlist: CC BY 3.0 US. `vendor/qrcode.js`
 
 ## Contact admin
 
-Set `ADMIN_EMAIL` in `js/config.js` (or per device in Settings → About → Contact admin). A browser-only app has no server, so the "new profile" notice is an email that opens in the person's own mail app and contains only the profile name, version, date and platform. Automatic, server-side notification would need a mail service, which this app deliberately does not include.
+Contact admin and the new-profile notice use the same Google Apps Script relay and administrator as ulyOS (`js/config.js`). They are the only things in the app that can send anything over the network (besides optional gist sync), and only when a person presses **Send** in Contact admin or creates / restores a profile — the profile screen shows a disclosure line and an optional contact-email field. A message never contains passwords, keys, items, files or settings. They are not available in the single-file offline copy and are not sent from `localhost`. Set `CONTACT_ENDPOINT` to `''` in `js/config.js` to remove them.

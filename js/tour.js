@@ -8,6 +8,7 @@
 import { h, clear, modalOpen, modal } from './dom.js';
 import { TYPE_META } from './templates.js';
 import { APP_VERSION } from './version.js';
+import { enabled as adminOn } from './admin.js';
 
 const visible = (el) => (el && el.getBoundingClientRect().width > 0 ? el : null);
 const q = (sel) => visible(document.querySelector(sel));
@@ -150,7 +151,7 @@ export function createTour(ctx) {
     const row = (k, d) => h('div', { class: 'f' }, h('div', { class: 'k mono', text: k }), h('div', { class: 'v', text: d }));
     const m = modal({ title: 'Help', sub: 'VaultManager ' + APP_VERSION, wide: false, body: h('div', null,
       h('div', { class: 'row wrap' }, h('button', { class: 'btn primary', on: { click: () => { m.close(); start(); } } }, '{{compass}} Guided tour'), h('button', { class: 'btn', on: { click: () => { m.close(); welcome(); } } }, '{{wave}} Welcome screen'),
-        h('button', { class: 'btn', on: { click: () => { m.close(); ctx.S.setTab = 'about'; ctx.go('settings'); } } }, 'ⓘ About & versions')),
+        h('button', { class: 'btn', on: { click: () => { m.close(); ctx.S.setTab = 'about'; ctx.go('settings'); } } }, 'ⓘ About & versions'), adminOn() ? h('button', { class: 'btn', on: { click: () => { m.close(); ctx.contactAdmin(); } } }, '{{mailsend}} Contact admin') : null),
       h('h3', { class: 'lbl', text: 'Keyboard shortcuts' }),
       row('/', 'Jump to search'), row('Alt + L', 'Lock the vault now'), row('Esc', 'Close a dialog, the tour or this screen'), row('← →  Enter', 'Move through the tour'),
       h('h3', { class: 'lbl', text: 'Tips' }),

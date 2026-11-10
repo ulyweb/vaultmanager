@@ -734,3 +734,16 @@ html[data-icons=vivid] .topbar .btn .ico { width: 1.45em; height: 1.45em; paddin
 html[data-icons=vivid] .topbar .btn:not(.primary) .ico { width: 1.9em; height: 1.9em; padding: .4em; border-radius: .6em; color: #fff; position: relative; overflow: hidden;
   background: linear-gradient(150deg, var(--v1), var(--v2)); box-shadow: 0 3px 9px color-mix(in srgb, var(--v2) 50%, transparent), inset 0 1px 0 rgba(255,255,255,.4); filter: none; }
 .topbar .btn:not(.primary) { padding: 6px 12px 6px 8px; }
+
+/* centring fixes: the sign-in column is its own centred grid (the card used to sit at the left of a wider wrapper) */
+.gate > div { width: 100%; display: grid; justify-items: center; }
+.gate-card { margin-inline: auto; }
+.gate-card.wide { width: min(560px, 100%); max-width: none; }
+/* icon-only top-bar buttons are symmetric, so the icon sits exactly in the middle */
+.topbar .btn { display: inline-flex; align-items: center; justify-content: center; }
+html[data-barlabels="0"] .topbar .btn, html[data-barlabels="0"] .topbar .btn:not(.primary) { padding: 6px; gap: 0; min-width: 46px; }
+html[data-barlabels="0"] .topbar .btn.primary { min-width: 56px; padding: 6px 12px; }
+.topbar .btn:not(.primary):not(:has(.lbl)) { padding: 6px; }
+.topbar .btn .ico { margin: 0 !important; }
+.gate-foot { display: grid; gap: 8px; justify-items: center; }
+.linkbtn .ico { width: 1.25em; height: 1.25em; padding: .14em; border-radius: .38em; }
