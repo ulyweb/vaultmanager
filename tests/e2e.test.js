@@ -40,11 +40,13 @@ after(async () => { await browser.close(); server.close(); });
 async function newPage(opts = {}, allowHosts = []) {
   // Playwright's Firefox sends no pointer events while touch emulation is on (real Firefox does), so phone-sized runs there use the narrow viewport only.
   if (ENGINE === 'firefox') { opts = { ...opts }; delete opts.hasTouch; delete opts.isMobile; }
+  // Playwright's WebKit cannot intercept requests that a page's service worker handles, which would hide the mocked GitHub / relay calls; offline mode is the only test that needs the worker, and it is skipped there.
+  if (ENGINE === 'webkit') opts = { serviceWorkers: 'block', ...opts };
   const ctx = await browser.newContext({ reducedMotion: 'reduce', colorScheme: 'dark', viewport: { width: 1280, height: 800 }, acceptDownloads: true, ...(ENGINE === 'chromium' ? { permissions: ['clipboard-read', 'clipboard-write'] } : {}), ...opts });
   const page = await ctx.newPage();
   const problems = [];
   page.on('pageerror', (e) => problems.push('pageerror: ' + e.message));
-  page.on('console', (m) => { if (['error', 'warning'].includes(m.type()) && !/chrome:\/\/juggler/.test(m.text())) problems.push(m.type() + ': ' + m.text()); });
+  page.on('console', (m) => { if (['error', 'warning'].includes(m.type()) && !/chrome:\/\/juggler|blocked by Playwright/.test(m.text())) problems.push(m.type() + ': ' + m.text()); });
   page.on('request', (r) => { const u = new URL(r.url()); if (u.origin !== new URL(base).origin && !allowHosts.includes(u.host) && !r.url().startsWith('file:') && !r.url().startsWith('data:') && !r.url().startsWith('blob:')) problems.push('EXTERNAL REQUEST: ' + r.url()); });
   return { ctx, page, problems };
 }
@@ -1284,8 +1286,9 @@ test('v0.16: first login lands on Home with only Everyday expanded; app-style ic
   await page.waitForFunction((l) => document.querySelector(`.widget[aria-label="${l}"]`).dataset.ch, 'Vault health');
   assert.ok((await w.boundingBox()).height >= h0 + 60, 'taller after two arrow presses');
   // resize by dragging
+  await grip.scrollIntoViewIfNeeded(); await page.waitForTimeout(150);   // after the keyboard resize the grip can sit below the fold, where a mouse drag cannot reach it
   const g = await grip.boundingBox(); const before = await w.boundingBox();
-  await page.mouse.move(g.x + 10, g.y + 10); await page.mouse.down(); await page.mouse.move(g.x + 260, g.y + 120, { steps: 8 }); await page.mouse.up();
+  await page.mouse.move(g.x + 10, g.y + 10); await page.mouse.down(); await page.mouse.move(Math.min(g.x + 260, page.viewportSize().width - 4), g.y + 120, { steps: 8 }); await page.mouse.up();   // stay inside the window: Firefox reports odd coordinates beyond its edge
   const after = await w.boundingBox(); assert.ok(after.width > before.width + 100 || after.height > before.height + 40, 'dragging changed the size');
   // persists across lock / unlock
   await page.getByRole('button', { name: /Lock/ }).first().click(); await page.fill('#upw', MASTER); await page.click('button[type=submit]'); await page.waitForSelector('.widgets');
@@ -1380,7 +1383,10 @@ test('v0.19: version on the sign-in screens; every saved file name carries date 
   assert.ok(await page.getByRole('button', { name: /Purge memory/ }).count());
   // open tab: paste + purge, and the pasted payload opens
   await page.getByRole('tab', { name: 'Open QR' }).click(); assert.ok(await page.getByRole('button', { name: /Purge memory/ }).count() && await page.getByRole('button', { name: /Paste payload text/ }).count());
-  await page.getByRole('button', { name: /Paste payload text/ }).click(); await page.waitForFunction((p) => document.querySelector('textarea[aria-label="Sealed payload"]').value === p, payload, { timeout: 5000 });
+  await page.getByRole('button', { name: /Paste payload text/ }).click();
+  if (ENGINE === 'chromium') await page.waitForFunction((p) => document.querySelector('textarea[aria-label="Sealed payload"]').value === p, payload, { timeout: 5000 });
+  else await page.waitForFunction((p) => document.querySelector('textarea[aria-label="Sealed payload"]').value === p || /did not allow reading the clipboard/.test(document.body.textContent), payload, { timeout: 5000 });   // Firefox and Safari may refuse to let a page read the clipboard; the app then asks you to paste into the box, which is what the next line does
+  if (ENGINE !== 'chromium') await page.fill('textarea[aria-label="Sealed payload"]', payload);
   await page.fill('input[aria-label="Password"]', 'qr-test-password'); await page.getByRole('button', { name: /^.*Open$/ }).last().click(); await page.waitForSelector('.genout', { timeout: 30000 });
   // backup tab
   await page.getByRole('tab', { name: 'Backup to QR' }).click(); assert.ok(await page.getByRole('button', { name: /Purge memory/ }).count());
