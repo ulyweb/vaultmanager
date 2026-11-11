@@ -25,6 +25,12 @@ for (const f of files.filter((f) => f.endsWith('.js') && f !== 'playwright.confi
   if (r.status !== 0) fail.push('syntax error in ' + f + '\n' + r.stderr.split('\n').slice(0, 4).join('\n'));
 }
 
+// 1b. js/compat.js runs first, in any browser, so it must stay old-style JavaScript (no arrow functions, let / const, classes, template strings)
+{
+  const code = rd('js/compat.js').replace(/\/\*[\s\S]*?\*\//g, '').replace(/'(?:[^'\\\n]|\\.)*'/g, "''");
+  if (/=>|\b(let|const|class)\b|`|\?\.|\?\?/.test(code)) fail.push('js/compat.js must be old-style JavaScript (no =>, let, const, class, template strings, ?. or ??)');
+}
+
 // 2. HTML: strict CSP, no inline script/style/handlers, no remote URLs
 for (const f of files.filter((f) => f.endsWith('.html') && !f.startsWith('offline/'))) {   // offline/ is verified by rebuild + hash below
   const html = rd(f);

@@ -67,7 +67,8 @@ function createLink({ internet = false, onState, onMessage, onBinary }) {
     };
   };
   pc.ondatachannel = (e) => wire(e.channel);
-  pc.onconnectionstatechange = () => { if (['failed', 'disconnected', 'closed'].includes(pc.connectionState)) { link.open = false; onState(pc.connectionState === 'failed' ? 'failed' : 'closed'); } };
+  // Some engines (Firefox) report ICE "failed" before any peer has joined; that is not a lost connection, so only react once the other side's code has been applied.
+  pc.onconnectionstatechange = () => { if (['failed', 'disconnected', 'closed'].includes(pc.connectionState) && (pc.remoteDescription || link.open)) { link.open = false; onState(pc.connectionState === 'failed' ? 'failed' : 'closed'); } };
   const gathered = () => new Promise((res) => {
     if (pc.iceGatheringState === 'complete') return res();
     const t = setTimeout(res, 5000);
