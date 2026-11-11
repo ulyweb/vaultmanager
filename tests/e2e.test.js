@@ -11,8 +11,12 @@ import { TEMPLATES, GROUPS } from '../js/templates.js';
 import { execFileSync } from 'node:child_process';
 
 const require = createRequire(import.meta.url);
-let chromium, devices;
-try { ({ chromium, devices } = require('playwright')); } catch { ({ chromium, devices } = require('/opt/node-tools/node_modules/playwright')); }
+let pw, devices;
+try { pw = require('playwright'); } catch { pw = require('/opt/node-tools/node_modules/playwright'); }
+devices = pw.devices;
+/* VM_BROWSER=chromium (default) | firefox | webkit  — the same suite runs on every engine (Safari = WebKit; Edge, Brave, Helium = Chromium). */
+const ENGINE = process.env.VM_BROWSER || 'chromium';
+const chromium = pw[ENGINE];
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.webmanifest': 'application/manifest+json' };
@@ -29,12 +33,12 @@ before(async () => {
   });
   await new Promise((r) => server.listen(0, '127.0.0.1', r));
   base = 'http://localhost:' + server.address().port + '/';
-  browser = await chromium.launch({ args: ['--no-sandbox', '--allow-loopback-in-peer-connection', '--disable-features=WebRtcHideLocalIpsWithMdns'] });
+  browser = await chromium.launch(ENGINE === 'chromium' ? { args: ['--no-sandbox', '--allow-loopback-in-peer-connection', '--disable-features=WebRtcHideLocalIpsWithMdns'] } : {});
 });
 after(async () => { await browser.close(); server.close(); });
 
 async function newPage(opts = {}, allowHosts = []) {
-  const ctx = await browser.newContext({ reducedMotion: 'reduce', colorScheme: 'dark', viewport: { width: 1280, height: 800 }, acceptDownloads: true, permissions: ['clipboard-read', 'clipboard-write'], ...opts });
+  const ctx = await browser.newContext({ reducedMotion: 'reduce', colorScheme: 'dark', viewport: { width: 1280, height: 800 }, acceptDownloads: true, ...(ENGINE === 'chromium' ? { permissions: ['clipboard-read', 'clipboard-write'] } : {}), ...opts });
   const page = await ctx.newPage();
   const problems = [];
   page.on('pageerror', (e) => problems.push('pageerror: ' + e.message));
