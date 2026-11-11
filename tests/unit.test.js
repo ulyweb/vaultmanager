@@ -674,10 +674,11 @@ test('web and single-file builds: complete, hash-pinned, self-contained; native 
   execFileSync(process.execPath, [path.join(ROOT, 'tools/build-offline.mjs')], { stdio: 'pipe' });
   const one = fs.readFileSync(path.join(ROOT, 'offline/VaultManager-offline.html'), 'utf8');
   const csp = one.match(/Content-Security-Policy" content="([^"]*)"/)[1];
-  assert.ok(/script-src 'sha256-[A-Za-z0-9+/=]+' blob:/.test(csp) && /style-src 'sha256-/.test(csp) && !/unsafe-/.test(csp) && /connect-src https:\/\/api\.github\.com;/.test(csp));
+  assert.ok(/script-src ('sha256-[A-Za-z0-9+/=]+' ){2}blob:/.test(csp) && /style-src 'sha256-/.test(csp) && !/unsafe-/.test(csp) && /connect-src https:\/\/api\.github\.com;/.test(csp));
   const crypto = awaitableCrypto();
-  const inline = [...one.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((m) => m[1]); assert.equal(inline.length, 1);
-  assert.ok(csp.includes(crypto.createHash('sha256').update(inline[0]).digest('base64')), 'the inline script matches its CSP hash');
+  const inline = [...one.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((m) => m[1]); assert.equal(inline.length, 2, 'the browser check and the app');
+  for (const code of inline) assert.ok(csp.includes(crypto.createHash('sha256').update(code).digest('base64')), 'each inline script matches its CSP hash');
+  inline.reverse(); inline.length = 1;   // the rest of this test inspects the app bundle (the larger, second script)
   const style = one.match(/<style>([\s\S]*?)<\/style>/)[1]; assert.ok(csp.includes(crypto.createHash('sha256').update(style).digest('base64')), 'the stylesheet matches its CSP hash');
   assert.ok(!/<script[^>]+src=|<link[^>]+href="(?!data:)/.test(one), 'no external references');
   assert.ok(one.includes('vendor/qrcode.js') && one.includes('vendor/jsQR.js'), 'QR libraries are embedded');

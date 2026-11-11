@@ -34,7 +34,25 @@ npm run build:web         # dist/web — the static app (host it anywhere / wrap
 ```bash
 npm run serve        # python3 -m http.server 8080
 ```
-Open <http://localhost:8080> in Chrome, Edge, Firefox or Safari. Use `localhost` or HTTPS — browsers disable WebCrypto on plain-HTTP origins. Host it anywhere static (GitHub Pages, a NAS, a USB stick with a local server).
+Open <http://localhost:8080> in Chrome, Edge, Brave, Helium, Firefox or Safari. Use `localhost` or HTTPS — browsers disable WebCrypto on plain-HTTP origins. Host it anywhere static (GitHub Pages, a NAS, a USB stick with a local server).
+
+## Browser support
+The same end-to-end test suite (`npm run test:e2e`) runs on **all three browser engines** in CI. Set `VM_BROWSER=firefox` or `VM_BROWSER=webkit` to run it on one locally.
+
+| Browser | Engine | How it is covered |
+| --- | --- | --- |
+| Google Chrome, Microsoft Edge, Brave, Helium | Chromium | tested on Chromium (they share the engine; Brave and Helium add privacy features on top) |
+| Mozilla Firefox | Gecko | tested on Firefox |
+| Apple Safari (Mac, iPhone, iPad) | WebKit | tested on WebKit (the engine Safari uses) |
+
+Minimum versions are set by the web features the app uses (CSS `color-mix()` and `:has()`, `structuredClone`, WebCrypto, IndexedDB): Chrome / Edge / Brave 111+, Firefox 121+, Safari 16.4+. Older browsers show a plain "please update your browser" message instead of a blank page.
+
+Things that depend on the browser or device, and are not covered by the automated tests:
+- **Passkey unlock** needs the WebAuthn PRF extension (Chrome / Edge / Brave 116+, Safari 18+; Firefox depends on the system and the authenticator). The app checks this and says so if it is missing. The automated test uses Chromium's virtual authenticator only.
+- **Beam** (device-to-device sync) was tested between Chromium and between Firefox pages. It could not be run between WebKit pages in the test machine, so check Safari to Safari on a real network.
+- **Offline mode** was tested on Chromium only; check the installed app or offline file on Safari by hand.
+- **Safari clears website data** after about a week without a visit unless the site is added to the Home Screen (iPhone / iPad) or the browser is set to keep it. Keep an exported profile as a backup.
+- **Brave and Helium** may block or alter some browser features (for example camera access on a site, or fingerprinting-related APIs). If camera scanning does not start, allow the camera for the site in the browser's settings.
 
 ## How the encryption works
 ```

@@ -11,8 +11,12 @@ import { TEMPLATES, GROUPS } from '../js/templates.js';
 import { execFileSync } from 'node:child_process';
 
 const require = createRequire(import.meta.url);
-let chromium, devices;
-try { ({ chromium, devices } = require('playwright')); } catch { ({ chromium, devices } = require('/opt/node-tools/node_modules/playwright')); }
+let pw, devices;
+try { pw = require('playwright'); } catch { pw = require('/opt/node-tools/node_modules/playwright'); }
+devices = pw.devices;
+/* VM_BROWSER=chromium (default) | firefox | webkit  — the same suite runs on every engine (Safari = WebKit; Edge, Brave, Helium = Chromium). */
+const ENGINE = process.env.VM_BROWSER || 'chromium';
+const chromium = pw[ENGINE];
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.webmanifest': 'application/manifest+json' };
@@ -28,17 +32,21 @@ before(async () => {
     res.writeHead(200, { 'content-type': MIME[path.extname(f)] || 'application/octet-stream' }); fs.createReadStream(f).pipe(res);
   });
   await new Promise((r) => server.listen(0, '127.0.0.1', r));
-  base = 'http://localhost:' + server.address().port + '/';
-  browser = await chromium.launch({ args: ['--no-sandbox', '--allow-loopback-in-peer-connection', '--disable-features=WebRtcHideLocalIpsWithMdns'] });
+  base = 'http://' + (ENGINE === 'firefox' ? '127.0.0.1' : 'localhost') + ':' + server.address().port + '/';   // Firefox gathers no WebRTC host candidates for a "localhost" origin, which would make Beam untestable
+  browser = await chromium.launch(ENGINE === 'chromium' ? { args: ['--no-sandbox', '--allow-loopback-in-peer-connection', '--disable-features=WebRtcHideLocalIpsWithMdns'] } : ENGINE === 'firefox' ? { firefoxUserPrefs: { 'media.peerconnection.ice.loopback': true, 'media.peerconnection.ice.obfuscate_host_addresses': false } } : {});
 });
 after(async () => { await browser.close(); server.close(); });
 
 async function newPage(opts = {}, allowHosts = []) {
-  const ctx = await browser.newContext({ reducedMotion: 'reduce', colorScheme: 'dark', viewport: { width: 1280, height: 800 }, acceptDownloads: true, permissions: ['clipboard-read', 'clipboard-write'], ...opts });
+  // Playwright's Firefox sends no pointer events while touch emulation is on (real Firefox does), so phone-sized runs there use the narrow viewport only.
+  if (ENGINE === 'firefox') { opts = { ...opts }; delete opts.hasTouch; delete opts.isMobile; }
+  // Playwright's WebKit cannot intercept requests that a page's service worker handles, which would hide the mocked GitHub / relay calls; offline mode is the only test that needs the worker, and it is skipped there.
+  if (ENGINE === 'webkit') opts = { serviceWorkers: 'block', ...opts };
+  const ctx = await browser.newContext({ reducedMotion: 'reduce', colorScheme: 'dark', viewport: { width: 1280, height: 800 }, acceptDownloads: true, ...(ENGINE === 'chromium' ? { permissions: ['clipboard-read', 'clipboard-write'] } : {}), ...opts });
   const page = await ctx.newPage();
   const problems = [];
   page.on('pageerror', (e) => problems.push('pageerror: ' + e.message));
-  page.on('console', (m) => { if (['error', 'warning'].includes(m.type())) problems.push(m.type() + ': ' + m.text()); });
+  page.on('console', (m) => { if (['error', 'warning'].includes(m.type()) && !/chrome:\/\/juggler|blocked by Playwright/.test(m.text())) problems.push(m.type() + ': ' + m.text()); });
   page.on('request', (r) => { const u = new URL(r.url()); if (u.origin !== new URL(base).origin && !allowHosts.includes(u.host) && !r.url().startsWith('file:') && !r.url().startsWith('data:') && !r.url().startsWith('blob:')) problems.push('EXTERNAL REQUEST: ' + r.url()); });
   return { ctx, page, problems };
 }
@@ -479,7 +487,7 @@ test('sync file: export from one device, import on another (items + attachments)
 
 test('gist sync (mocked GitHub API): two devices converge; only ciphertext leaves the page', async () => {
   const gists = new Map(); const sent = [];
-  const cors = { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': '*' };
+  const cors = { 'access-control-allow-origin': '*', 'access-control-allow-headers': 'authorization, content-type, accept, x-github-api-version', 'access-control-allow-methods': 'GET, POST, PATCH, DELETE, OPTIONS' };
   const handler = async (route) => {
     const req = route.request(), u = new URL(req.url());
     if (req.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: cors });
@@ -536,7 +544,7 @@ test('gist sync (mocked GitHub API): two devices converge; only ciphertext leave
   await A.ctx.close(); await B.ctx.close();
 });
 
-test('passkey unlock: add (re-auth required), unlock with it, fall back to password, remove', async () => {
+test('passkey unlock: add (re-auth required), unlock with it, fall back to password, remove', { skip: ENGINE !== 'chromium' && 'needs the Chromium virtual authenticator (CDP); real-device passkeys are checked by hand' }, async () => {
   const { ctx, page, problems } = await newPage();
   const cdp = await ctx.newCDPSession(page);
   await cdp.send('WebAuthn.enable');
@@ -636,7 +644,7 @@ test('categories: every template is creatable; Wi-Fi QR, custom fields, expiry, 
   await ctx.close();
 });
 
-test('beam sync: pair two devices (real WebRTC), verify, merge both ways incl. attachments; wrong passphrase refused', async () => {
+test('beam sync: pair two devices (real WebRTC), verify, merge both ways incl. attachments; wrong passphrase refused', { skip: ENGINE === 'webkit' && "Playwright's Linux WebKit cannot resolve the mDNS candidates that Safari uses on a real network, so two local pages cannot pair; Safari-to-Safari Beam is checked by hand" }, async () => {
   const A = await newPage(), B = await newPage();
   await createVault(A.page, MASTER); await createVault(B.page, 'a-totally-different-master-pass-9');
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'vm-beam-')); const png = path.join(tmp, 'pic.png'); fs.writeFileSync(png, PNG);
@@ -801,7 +809,7 @@ test('look & feel: appearance, effects, dock & menu bar, widgets, start page, bo
   await page.fill('#upw', MASTER); await page.click('button[type=submit]');
   await page.waitForSelector('#boot');                                    // boot animation (motion allowed in this context)
   await shot(page, '27-boot');
-  await page.locator('#boot').click(); await page.waitForSelector('#boot', { state: 'detached' });
+  await page.locator('#boot').click({ force: true, timeout: 5000 }).catch(() => {}); await page.waitForSelector('#boot', { state: 'detached' });   // WebKit may finish the animation before the click lands
   await page.waitForSelector('.widgets');                                 // start page = Home
   assert.equal(await attr('nav'), 'dock'); assert.equal(await attr('bg'), 'wallpaper'); assert.equal(await attr('anim'), 'bounce');
 
@@ -935,7 +943,7 @@ test('v0.7 categories: all 15 new ones are visible, grouped, creatable from the 
   await ctx.close();
 });
 
-test('offline web app: after the first visit it loads, unlocks, creates items and seals QR codes with the network cut', async () => {
+test('offline web app: after the first visit it loads, unlocks, creates items and seals QR codes with the network cut', { skip: ENGINE === 'webkit' && "Playwright's WebKit crashes when a page is reloaded with the network switched off; Safari offline mode is checked by hand" }, async () => {
   const { ctx, page, problems } = await newPage({ serviceWorkers: 'allow' });
   await page.goto(base); await page.waitForSelector('#pw1');
   await page.evaluate(() => navigator.serviceWorker.ready.then(() => true));
@@ -1230,7 +1238,7 @@ test('v0.15: QR tools hide the password and ask twice; Purge memory; backup guid
   await page.getByRole('button', { name: 'Send', exact: true }).click(); assert.match(await page.locator('.modal-sheet .err:not(:empty)').first().textContent(), /subject/i);
   await page.fill('input[aria-label="Subject"]', 'Hello admin'); await page.fill('textarea[aria-label="Message to the administrator"]', 'Testing the relay'); await page.getByRole('button', { name: 'Send', exact: true }).click();
   await page.waitForFunction(() => /Message sent/.test(document.body.textContent), null, { timeout: 15000 });
-  assert.equal(posts.length, 1); assert.match(posts[0], /Hello admin/); assert.match(posts[0], /Testing the relay/); assert.ok(!/upw|master/i.test(posts[0]));
+  if (ENGINE !== 'webkit') { assert.equal(posts.length, 1); assert.match(posts[0], /Hello admin/); assert.match(posts[0], /Testing the relay/); assert.ok(!/upw|master/i.test(posts[0])); }   // Playwright's WebKit cannot intercept a keepalive no-cors request
   await page.getByRole('button', { name: /Add a profile/ }).click(); await page.waitForSelector('#pw1');
   assert.equal(await page.locator('#notifynote').count(), 0, 'no profile notice from localhost (it is only sent from the hosted site)');
   assert.deepEqual(problems.filter((p) => !/Failed to load resource/.test(p)), []);
@@ -1278,8 +1286,9 @@ test('v0.16: first login lands on Home with only Everyday expanded; app-style ic
   await page.waitForFunction((l) => document.querySelector(`.widget[aria-label="${l}"]`).dataset.ch, 'Vault health');
   assert.ok((await w.boundingBox()).height >= h0 + 60, 'taller after two arrow presses');
   // resize by dragging
+  await grip.scrollIntoViewIfNeeded(); await page.waitForTimeout(150);   // after the keyboard resize the grip can sit below the fold, where a mouse drag cannot reach it
   const g = await grip.boundingBox(); const before = await w.boundingBox();
-  await page.mouse.move(g.x + 10, g.y + 10); await page.mouse.down(); await page.mouse.move(g.x + 260, g.y + 120, { steps: 8 }); await page.mouse.up();
+  await page.mouse.move(g.x + 10, g.y + 10); await page.mouse.down(); await page.mouse.move(Math.min(g.x + 260, page.viewportSize().width - 4), g.y + 120, { steps: 8 }); await page.mouse.up();   // stay inside the window: Firefox reports odd coordinates beyond its edge
   const after = await w.boundingBox(); assert.ok(after.width > before.width + 100 || after.height > before.height + 40, 'dragging changed the size');
   // persists across lock / unlock
   await page.getByRole('button', { name: /Lock/ }).first().click(); await page.fill('#upw', MASTER); await page.click('button[type=submit]'); await page.waitForSelector('.widgets');
@@ -1368,13 +1377,16 @@ test('v0.19: version on the sign-in screens; every saved file name carries date 
   await page.fill('textarea[aria-label="Text to seal"]', 'hello'); await page.fill('input[aria-label="QR password"]', 'qr-test-password'); await page.fill('input[aria-label="Confirm QR password"]', 'qr-test-password');
   await page.getByRole('button', { name: /Seal into QR/ }).click(); await page.waitForSelector('.payloadbox textarea', { timeout: 30000 });
   const payload = await page.inputValue('.payloadbox textarea'); assert.ok(payload.length > 40 && /^[A-Za-z0-9+/=]+$/.test(payload), 'the Base64 payload is shown');
-  await page.getByRole('button', { name: /Copy payload text/ }).click(); await page.waitForFunction(async (p) => (await navigator.clipboard.readText()) === p, payload, { timeout: 5000 });
+  await page.getByRole('button', { name: /Copy payload text/ }).click(); if (ENGINE === 'chromium') await page.waitForFunction(async (p) => (await navigator.clipboard.readText()) === p, payload, { timeout: 5000 }); else await page.waitForSelector('.toast');   // Firefox and Safari do not let a page read the clipboard back
   const [d2] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'PNG' }).click()]); assert.match(d2.suggestedFilename(), /^vaultmanager-qr-\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}\.png$/);
   const [d3] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: /Save as \.txt/ }).click()]); assert.match(d3.suggestedFilename(), STAMP);
   assert.ok(await page.getByRole('button', { name: /Purge memory/ }).count());
   // open tab: paste + purge, and the pasted payload opens
   await page.getByRole('tab', { name: 'Open QR' }).click(); assert.ok(await page.getByRole('button', { name: /Purge memory/ }).count() && await page.getByRole('button', { name: /Paste payload text/ }).count());
-  await page.getByRole('button', { name: /Paste payload text/ }).click(); await page.waitForFunction((p) => document.querySelector('textarea[aria-label="Sealed payload"]').value === p, payload, { timeout: 5000 });
+  await page.getByRole('button', { name: /Paste payload text/ }).click();
+  if (ENGINE === 'chromium') await page.waitForFunction((p) => document.querySelector('textarea[aria-label="Sealed payload"]').value === p, payload, { timeout: 5000 });
+  else await page.waitForFunction((p) => document.querySelector('textarea[aria-label="Sealed payload"]').value === p || /did not allow reading the clipboard/.test(document.body.textContent), payload, { timeout: 5000 });   // Firefox and Safari may refuse to let a page read the clipboard; the app then asks you to paste into the box, which is what the next line does
+  if (ENGINE !== 'chromium') await page.fill('textarea[aria-label="Sealed payload"]', payload);
   await page.fill('input[aria-label="Password"]', 'qr-test-password'); await page.getByRole('button', { name: /^.*Open$/ }).last().click(); await page.waitForSelector('.genout', { timeout: 30000 });
   // backup tab
   await page.getByRole('tab', { name: 'Backup to QR' }).click(); assert.ok(await page.getByRole('button', { name: /Purge memory/ }).count());
@@ -1575,4 +1587,19 @@ test('v0.24: the profile picture (letter, emoji, photo) can be changed after the
   assert.equal(await page.locator('.brand .pav img').count(), 0); assert.match(await page.locator('.brand .pav').first().textContent(), /^M/);
   assert.deepEqual(problems.filter((p) => !/Failed to load resource/.test(p)), []);
   await ctx.close();
+});
+
+test('v0.25: a browser that lacks something VaultManager needs shows a clear "update your browser" message; a normal one does not', async () => {
+  const bad = await newPage();
+  await bad.page.addInitScript(() => { Object.defineProperty(window, 'structuredClone', { value: undefined, configurable: true }); });
+  await bad.page.goto(base);
+  await bad.page.waitForSelector('.noscript[role="alert"]');
+  const msg = await bad.page.textContent('.noscript[role="alert"]');
+  assert.match(msg, /needs a newer browser[\s\S]*Chrome, Edge, Brave, Firefox or Safari[\s\S]*structured cloning/);
+  await bad.ctx.close();
+  const good = await newPage();
+  await good.page.goto(base); await good.page.waitForSelector('#pw1');
+  assert.equal(await good.page.locator('.noscript[role="alert"]').count(), 0);
+  assert.equal(await good.page.evaluate(() => window.__vmUnsupported === undefined), true);
+  await good.ctx.close();
 });

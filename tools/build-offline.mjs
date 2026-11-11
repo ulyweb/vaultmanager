@@ -33,7 +33,9 @@ export async function buildOffline() {
   const LS = String.fromCharCode(0x2028), PS = String.fromCharCode(0x2029);   // line / paragraph separators break inline JSON in some parsers
   const embed = JSON.stringify(vendor).split('<').join('\\u003c').split(LS).join('\\u2028').split(PS).join('\\u2029');
 
-  const csp = `default-src 'none'; script-src '${sha(js)}' blob:; style-src '${sha(css)}'; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'`;
+  const compat = rd('js/compat.js');
+  if (/<\/script/i.test(compat)) throw new Error('compat.js contains "</script"');
+  const csp = `default-src 'none'; script-src '${sha(compat)}' '${sha(js)}' blob:; style-src '${sha(css)}'; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'`;
   let html = rd('index.html');
   const swap = (re, to) => { const n = html.replace(re, to); if (n === html) throw new Error('template changed: ' + re); html = n; };
   swap(/<meta http-equiv="Content-Security-Policy"[^>]*>/, () => `<meta http-equiv="Content-Security-Policy" content="${csp}">`);
@@ -41,7 +43,7 @@ export async function buildOffline() {
   swap(/\n<link rel="apple-touch-icon"[^>]*>/, () => '');
   swap(/\n<link rel="manifest"[^>]*>/, () => '');
   swap(/<link rel="stylesheet"[^>]*>/, () => `<style>${css}</style>`);
-  swap(/<script type="module" src="js\/app\.js"><\/script>/, () => `<script id="vm-embed" type="application/json">${embed}</script>\n<script>${js}</script>`);
+  swap(/<script src="js\/compat\.js"><\/script>\n<script type="module" src="js\/app\.js"><\/script>/, () => `<script>${compat}</script>\n` + `<script id="vm-embed" type="application/json">${embed}</script>\n<script>${js}</script>`);
   html = html.replace('<!DOCTYPE html>', `<!DOCTYPE html>\n<!-- VaultManager v${version} — single-file offline build. Verify with the .sha256 file next to it. -->`);
 
   const digest = crypto.createHash('sha256').update(html).digest('hex');

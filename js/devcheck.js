@@ -17,7 +17,7 @@ const KNOWN = [
 const brand = (s) => { for (const [re, name, kind] of KNOWN) if (re.test(s)) return { name, kind }; return null; };
 
 /* things the app itself puts in the page */
-const OWN_SCRIPT = (el) => !el.src || el.id === 'vm-embed' || el.src.startsWith('blob:') || /\/js\/app\.js(\?|$)/.test(el.src);
+const OWN_SCRIPT = (el) => !el.src || el.id === 'vm-embed' || el.src.startsWith('blob:') || /\/js\/(app|compat)\.js(\?|$)/.test(el.src);
 
 /* classify one element (and its attributes) — returns a finding or null */
 export function classifyNode(el) {

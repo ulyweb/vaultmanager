@@ -1,6 +1,6 @@
 /* Application version, data-format versions and changelog (shown in Settings → About). */
 
-export const APP_VERSION = '0.24.0';
+export const APP_VERSION = '0.25.0';
 export const APP_NAME = 'VaultManager';
 export const REPO_URL = 'https://github.com/ulyweb/vaultmanager';
 
@@ -16,6 +16,10 @@ export const FORMATS = [
 ];
 
 export const CHANGELOG = [
+  { v: '0.25.0', date: '2026-11-11', notes: [
+    'Browser compatibility: the full test suite now runs on Chromium (Chrome, Edge, Brave, Helium), Firefox and WebKit (Safari). Safari fixes: the blurred save bar and system menu and the select-all / no-select rules now carry the -webkit- prefixes. Beam no longer drops a connection when Firefox reports a failed ICE state before the other device has joined.',
+    'A browser that is too old (no WebCrypto, IndexedDB, modules, structuredClone or CSS color-mix) now shows a clear “update your browser” message listing what is missing, instead of a blank page. The README lists browser support and what cannot be tested automatically.',
+  ] },
   { v: '0.24.0', date: '2026-11-10', notes: [
     'You can now change your profile picture after creating the profile: Settings → General → Profile picture (letter, emoji or photo). The name there also updates the letter picture live. Clicking your profile at the top of the system menu opens it.',
   ] },
