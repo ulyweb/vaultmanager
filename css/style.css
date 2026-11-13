@@ -826,3 +826,13 @@ html[data-barlabels="0"] .topbar .newbtn { padding: 6px 10px 6px 8px; }
 .advlist { margin: 6px 0 0 18px; padding: 0; font-size: 13px; } .advlist li { margin: 6px 0; }
 .secbar { position: sticky; top: 56px; z-index: 19; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding: 8px 16px; background: color-mix(in srgb, #f87171 22%, var(--panel)); border-bottom: 1px solid #f87171; font-size: 13px; } .secbar[hidden] { display: none; }
 .protgrid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); margin: 8px 0 12px; } .prot { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; } .prot.ok { border-color: color-mix(in srgb, #34d399 55%, var(--line)); } .prot ul { margin: 6px 0 0 18px; padding: 0; font-size: 13px; } .prot li { margin: 3px 0; }
+
+/* sign-in / create-profile card: everything sits on the card's centre line */
+.gate-card .brand { justify-content: center; text-align: center; }
+.gate-card .brand.prof { flex-direction: column; gap: 8px; margin-bottom: 20px; }
+.gate-card .brand.prof h1, .gate-card .brand.prof p { text-align: center; }
+.gate-card form > p:has(> .linkbtn) { text-align: center; margin: 12px 0 0; }
+.gate-card .trust { justify-content: center; }
+.gate-card .or { text-align: center; }
+.gate-card .avpick { display: grid; justify-items: center; gap: 12px; }
+.gate-card .avpick .row { justify-content: center; }

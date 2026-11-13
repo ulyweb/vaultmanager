@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VaultManager v0.25.0 — single-file offline build. Verify with the .sha256 file next to it. -->
+<!-- VaultManager v0.25.1 — single-file offline build. Verify with the .sha256 file next to it. -->
 <html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
@@ -11,7 +11,7 @@
 <meta name="application-name" content="VaultManager">
 <meta name="format-detection" content="telephone=no">
 <meta name="referrer" content="no-referrer">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-tauzjAWYvkq2EEey6/r1GOXzEWNzSydbYj43JCIjd2U=' 'sha256-eVwMP2ixNfH79HIYfjDbjYcEpWt+e5QsAXWtsS1AX2o=' blob:; style-src 'sha256-l7v9/iY2AXNV12myt9gelC4swEqVrOiAe94k4i/zavY='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-tauzjAWYvkq2EEey6/r1GOXzEWNzSydbYj43JCIjd2U=' 'sha256-O3qdC0F8jzjK9ZZMwiCvEENsjd7mTTQO4QqfMGhicdM=' blob:; style-src 'sha256-ToyGZciOwniAv25nZhz9dZ4hjSWDB6kx8jzH9qTbDck='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
 <title>VaultManager | Zero-Knowledge Password Manager</title>
 <meta name="description" content="VaultManager: an offline-first, zero-knowledge, end-to-end encrypted password manager with a strong password generator, TOTP codes and QR-sealed sharing and backup. Runs entirely in your browser.">
 <meta name="theme-color" content="#05080d">
@@ -844,6 +844,16 @@ html[data-barlabels="0"] .topbar .newbtn { padding: 6px 10px 6px 8px; }
 .advlist { margin: 6px 0 0 18px; padding: 0; font-size: 13px; } .advlist li { margin: 6px 0; }
 .secbar { position: sticky; top: 56px; z-index: 19; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding: 8px 16px; background: color-mix(in srgb, #f87171 22%, var(--panel)); border-bottom: 1px solid #f87171; font-size: 13px; } .secbar[hidden] { display: none; }
 .protgrid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); margin: 8px 0 12px; } .prot { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; } .prot.ok { border-color: color-mix(in srgb, #34d399 55%, var(--line)); } .prot ul { margin: 6px 0 0 18px; padding: 0; font-size: 13px; } .prot li { margin: 3px 0; }
+
+/* sign-in / create-profile card: everything sits on the card's centre line */
+.gate-card .brand { justify-content: center; text-align: center; }
+.gate-card .brand.prof { flex-direction: column; gap: 8px; margin-bottom: 20px; }
+.gate-card .brand.prof h1, .gate-card .brand.prof p { text-align: center; }
+.gate-card form > p:has(> .linkbtn) { text-align: center; margin: 12px 0 0; }
+.gate-card .trust { justify-content: center; }
+.gate-card .or { text-align: center; }
+.gate-card .avpick { display: grid; justify-items: center; gap: 12px; }
+.gate-card .avpick .row { justify-content: center; }
 </style>
 </head>
 <body>
@@ -1905,7 +1915,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   }
 
   // js/version.js
-  var APP_VERSION = "0.25.0";
+  var APP_VERSION = "0.25.1";
   var APP_NAME = "VaultManager";
   var REPO_URL = "https://github.com/ulyweb/vaultmanager";
   var FORMATS = [
@@ -1919,6 +1929,9 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     ["Attachments at rest", "AES-256-GCM per file, bound to vault + file id"]
   ];
   var CHANGELOG = [
+    { v: "0.25.1", date: "2026-11-13", notes: [
+      "Sign-in screen: the profile picture, name, \u201CUse recovery key instead\u201D link and the feature badges are now centred on the card (the picture sits above the name)."
+    ] },
     { v: "0.25.0", date: "2026-11-11", notes: [
       "Browser compatibility: the full test suite now runs on Chromium (Chrome, Edge, Brave, Helium), Firefox and WebKit (Safari). Safari fixes: the blurred save bar and system menu and the select-all / no-select rules now carry the -webkit- prefixes. Beam no longer drops a connection when Firefox reports a failed ICE state before the other device has joined.",
       "A browser that is too old (no WebCrypto, IndexedDB, modules, structuredClone or CSS color-mix) now shows a clear \u201Cupdate your browser\u201D message listing what is missing, instead of a blank page. The README lists browser support and what cannot be tested automatically."
@@ -9600,7 +9613,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     }
   } } }, "{{download}} Download the offline copy \u2014 one file, " + OFFLINE_NAME + " (v" + APP_VERSION + ")") : null] : [];
   function profileHead(p, sub) {
-    return h("div", { class: "brand prof" }, profileAvatar(p, 52), h("div", null, h("h1", { text: p.name }), h("p", { text: sub })));
+    return h("div", { class: "brand prof" }, profileAvatar(p, 68), h("div", null, h("h1", { text: p.name }), h("p", { text: sub })));
   }
   async function enterProfile(profile, masterPassword) {
     notifyNewProfile(profile.name, { source: "import" });

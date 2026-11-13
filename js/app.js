@@ -249,7 +249,7 @@ const gateFoot = () => h('p', { class: 'gate-foot' }, h('span', { class: 'gate-v
 const gateFootLinks = () => (admin.enabled() || canOfferCopy() ? [ admin.enabled() ? h('button', { type: 'button', class: 'linkbtn', on: { click: contactAdminDialog } }, '{{mailsend}} Contact admin') : null, canOfferCopy() ? h('button', { type: 'button', class: 'linkbtn', on: { click: async () => { try { await saveOfflineCopy(); } catch (e) { toast(e.message, 'err', 7000); } } } }, '{{download}} Download the offline copy — one file, ' + OFFLINE_NAME + ' (v' + APP_VERSION + ')') : null] : []);
 
 function profileHead(p, sub) {
-  return h('div', { class: 'brand prof' }, profileAvatar(p, 52), h('div', null, h('h1', { text: p.name }), h('p', { text: sub })));
+  return h('div', { class: 'brand prof' }, profileAvatar(p, 68), h('div', null, h('h1', { text: p.name }), h('p', { text: sub })));
 }
 
 /* After a profile has been created or imported on the sign-in screen: open it and go straight in. */
