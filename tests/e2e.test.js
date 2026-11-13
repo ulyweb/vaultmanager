@@ -1488,10 +1488,12 @@ test('v0.21: centred unlock screen, side-bar auto-hide, clock position, live New
   await page.getByRole('button', { name: 'Right', exact: true }).click();
   // auto-hide the side bar
   const left0 = (await page.locator('.side').boundingBox()).x; assert.ok(left0 >= 0);
-  await page.getByRole('switch', { name: /dockAutoHide/ }).click(); await page.waitForTimeout(400);
-  assert.ok((await page.locator('.side').boundingBox()).x < -150, 'side bar slid away');
-  await page.mouse.move(2, 300); await page.waitForTimeout(400); assert.ok((await page.locator('.side').boundingBox()).x > -5, 'side bar comes back when the pointer reaches the edge');
-  await page.mouse.move(900, 400); await page.waitForTimeout(400); assert.ok((await page.locator('.side').boundingBox()).x < -150);
+  const sideX = () => page.evaluate(() => document.querySelector('.side').getBoundingClientRect().x);
+  const sideAt = (cmp, v, why) => page.waitForFunction(([c, n]) => { const x = document.querySelector('.side').getBoundingClientRect().x; return c === 'lt' ? x < n : x > n; }, [cmp, v], { timeout: 8000 }).catch(async () => { throw new Error(why + ' (side bar x = ' + (await sideX()) + ')'); });   // poll: the slide animation takes longer on a slow machine
+  await page.getByRole('switch', { name: /dockAutoHide/ }).click();
+  await sideAt('lt', -150, 'side bar slid away');
+  await page.mouse.move(2, 300); await sideAt('gt', -5, 'side bar comes back when the pointer reaches the edge');
+  await page.mouse.move(900, 400); await sideAt('lt', -150, 'side bar slides away again');
   assert.deepEqual(problems.filter((p) => !/Failed to load resource/.test(p)), []);
   await ctx.close();
 });
