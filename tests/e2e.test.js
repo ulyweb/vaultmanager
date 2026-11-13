@@ -1488,10 +1488,12 @@ test('v0.21: centred unlock screen, side-bar auto-hide, clock position, live New
   await page.getByRole('button', { name: 'Right', exact: true }).click();
   // auto-hide the side bar
   const left0 = (await page.locator('.side').boundingBox()).x; assert.ok(left0 >= 0);
-  await page.getByRole('switch', { name: /dockAutoHide/ }).click(); await page.waitForTimeout(400);
-  assert.ok((await page.locator('.side').boundingBox()).x < -150, 'side bar slid away');
-  await page.mouse.move(2, 300); await page.waitForTimeout(400); assert.ok((await page.locator('.side').boundingBox()).x > -5, 'side bar comes back when the pointer reaches the edge');
-  await page.mouse.move(900, 400); await page.waitForTimeout(400); assert.ok((await page.locator('.side').boundingBox()).x < -150);
+  const sideX = () => page.evaluate(() => document.querySelector('.side').getBoundingClientRect().x);
+  const sideAt = (cmp, v, why) => page.waitForFunction(([c, n]) => { const x = document.querySelector('.side').getBoundingClientRect().x; return c === 'lt' ? x < n : x > n; }, [cmp, v], { timeout: 8000 }).catch(async () => { throw new Error(why + ' (side bar x = ' + (await sideX()) + ')'); });   // poll: the slide animation takes longer on a slow machine
+  await page.getByRole('switch', { name: /dockAutoHide/ }).click();
+  await sideAt('lt', -150, 'side bar slid away');
+  await page.mouse.move(2, 300); await sideAt('gt', -5, 'side bar comes back when the pointer reaches the edge');
+  await page.mouse.move(900, 400); await sideAt('lt', -150, 'side bar slides away again');
   assert.deepEqual(problems.filter((p) => !/Failed to load resource/.test(p)), []);
   await ctx.close();
 });
@@ -1602,4 +1604,22 @@ test('v0.25: a browser that lacks something VaultManager needs shows a clear "up
   assert.equal(await good.page.locator('.noscript[role="alert"]').count(), 0);
   assert.equal(await good.page.evaluate(() => window.__vmUnsupported === undefined), true);
   await good.ctx.close();
+});
+
+test('v0.25.1: the sign-in card keeps picture, name, recovery link, links and badges on its centre line (desktop and phone)', async () => {
+  for (const [label, opts] of [['desktop', {}], ['phone', (({ defaultBrowserType, ...d }) => d)(devices['iPhone SE'])]]) {
+    const { ctx, page, problems } = await newPage(opts);
+    await createVault(page);
+    await page.reload(); await page.waitForSelector('#upw');   // a reload locks the vault, on any screen size
+    const off = await page.evaluate(() => {
+      const card = document.querySelector('.gate-card').getBoundingClientRect(), mid = card.left + card.width / 2;
+      const d = (el) => { const r = el.getBoundingClientRect(); return Math.round(Math.abs(r.left + r.width / 2 - mid)); };
+      const toggle = [...document.querySelectorAll('.gate-card form .linkbtn')][0];
+      return { avatar: d(document.querySelector('.gate-card .brand .pav')), name: d(document.querySelector('.gate-card .brand h1')), sub: d(document.querySelector('.gate-card .brand p')), recovery: d(toggle), links: d(document.querySelector('.gate-links')), trust: d(document.querySelector('.gate-card .trust')),
+        chips: [...document.querySelectorAll('.gate-card .trust')].map((t) => { const kids = [...t.children].map((c) => c.getBoundingClientRect()); const l = Math.min(...kids.map((k) => k.left)), r = Math.max(...kids.map((k) => k.right)); return Math.round(Math.abs((l + r) / 2 - mid)); })[0] };
+    });
+    for (const [k, v] of Object.entries(off)) assert.ok(v <= 8, `${label}: ${k} is ${v}px off the centre line`);
+    assert.deepEqual(problems.filter((p) => !/Failed to load resource/.test(p)), []);
+    await ctx.close();
+  }
 });
