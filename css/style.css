@@ -266,7 +266,9 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 .hl .ic { font-size: 18px; }
 
 .grid2 .full { grid-column: 1 / -1; }
-.cf { display: grid; grid-template-columns: 1fr 1.4fr auto auto; gap: 8px; align-items: center; margin-bottom: 8px; }
+.cf { display: grid; grid-template-columns: 1fr 1.4fr auto auto auto; gap: 8px; align-items: center; margin-bottom: 8px; }
+.cf .mv { display: inline-flex; gap: 2px; }
+.cf .mv .icon-btn:disabled { opacity: .3; cursor: default; }
 @media (max-width: 640px) { .cf { grid-template-columns: 1fr 1fr; } }
 .cats { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); }
 .side h4 + h4 { margin-top: 4px; }

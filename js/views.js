@@ -128,7 +128,7 @@ function emptyState(ctx, items) {
 }
 
 function itemRow(ctx, it) {
-  const sub = it.type === 'login' ? (it.username || hostOf(it.url)) : it.type === 'card' ? '•••• ' + (it.card.number || '').replace(/\D/g, '').slice(-4) : TEMPLATES[it.type] ? ((it.fields || {})[TEMPLATES[it.type].sub] || (it.notes || '').split('\n')[0].slice(0, 60)) : (it.notes || '').split('\n')[0].slice(0, 60);
+  const sub = it.type === 'login' ? (it.username || hostOf(it.url)) : it.type === 'card' ? '•••• ' + (it.card.number || '').replace(/\D/g, '').slice(-4) : TEMPLATES[it.type] ? ((it.fields || {})[TEMPLATES[it.type].sub] || (it.description || it.notes || '').split('\n')[0].slice(0, 60)) : (it.description || it.notes || '').split('\n')[0].slice(0, 60);
   return h('button', { class: 'item' + (ctx.S.sel === it.id ? ' on' : ''), role: 'option', 'aria-selected': String(ctx.S.sel === it.id), on: { click: () => { ctx.S.sel = it.id; ctx.refresh(); } } },
     avatar(it.name, it.type), h('div', { class: 't' }, h('b', { text: it.name || '(untitled)' }), h('small', { text: it.lock ? '🔒 Locked — passcode required' : sub })), (it.attachments || []).length ? h('span', { class: 'clip', text: '{{clip}}', title: it.attachments.length + ' attachment(s)' }) : null, it.favorite ? h('span', { class: 'star', text: '{{star}}', 'aria-label': 'Favorite' }) : null, h('span', { class: 'disc', 'aria-hidden': 'true', text: '{{chevright}}' }));
 }
@@ -182,6 +182,7 @@ export function itemCard(ctx, it) {
   } else if (TEMPLATES[it.type]) {
     for (const f of TEMPLATES[it.type].fields) rows.push(templateRow(ctx, it, f));
   }
+  rows.unshift(field('Description', it.description, { pre: true, ctx }));
   rows.push(field('Notes', it.notes, { pre: true, copy: it.type === 'note', ctx, stats: STATS_TYPES.has(it.type) }));
   for (const c of it.custom || []) rows.push(field(c.label || 'Custom field', c.value, { secret: c.secret, copy: true, ctx, pre: true }));
   if ((it.tags || []).length) rows.push(h('div', { class: 'f' }, h('div', { class: 'k', text: 'Tags' }), h('div', { class: 'v' }, h('div', { class: 'tags' }, it.tags.map((t) => h('span', { class: 'chip', text: '#' + t }))))));
@@ -196,6 +197,7 @@ export function describeContents(it) {
   if (filled.length) parts.push(filled.length + ' filled field' + (filled.length === 1 ? '' : 's') + (secrets ? ' (' + secrets + ' secret)' : ''));
   if (it.username || it.password || it.url || it.totp) parts.push('login details');
   if (it.card && (it.card.number || it.card.holder)) parts.push('card details');
+  if (it.description) parts.push('description');
   if (it.notes) parts.push('notes');
   if ((it.custom || []).length) parts.push(it.custom.length + ' custom field' + (it.custom.length === 1 ? '' : 's'));
   if ((it.tags || []).length) parts.push(it.tags.length + ' tag' + (it.tags.length === 1 ? '' : 's'));
@@ -213,6 +215,7 @@ function detailPanel(ctx, it0) {
     trashed ? [h('button', { class: 'btn primary sm', on: { click: async () => { await store.restore(it.id); toast('Restored'); ctx.refresh(); } } }, '{{undo}} Restore'),
       h('button', { class: 'btn danger sm', on: { click: async () => { if (await confirmDialog({ title: 'Delete forever?', text: `“${it.name}” will be permanently deleted.`, okLabel: 'Delete forever', danger: true })) { await store.purge(it.id); ctx.S.sel = null; ctx.refresh(); } } } }, '{{close}} Delete forever')] :
       lockedClosed ? [h('button', { class: 'btn primary sm', on: { click: () => unlockItemDialog(ctx, it) } }, '{{lock}} Unlock this item'),
+        h('button', { class: 'btn sm', title: 'Enter the item passcode, then seal it as an encrypted QR', on: { click: () => unlockItemDialog(ctx, it, { then: (open) => shareItem(ctx, open) }) } }, '{{qr}} Unlock & seal as QR'),
         h('button', { class: 'btn danger sm', on: { click: async () => { await store.trash(it.id); ctx.S.sel = null; toast('Moved to trash'); ctx.refresh(); } } }, '{{trash}} Delete')] :
       [h('button', { class: 'btn sm act-edit', on: { click: () => editItem(ctx, it) } }, '{{edit}} Edit'),
         h('button', { class: 'btn sm' + (it.favorite ? ' primary' : ''), 'aria-pressed': String(it.favorite), on: { click: async () => { await store.update(it.id, { favorite: !it.favorite }); ctx.refresh(); } } }, it.favorite ? '{{star}} Favorite' : '{{starline}} Favorite'),
@@ -245,6 +248,7 @@ function detailPanel(ctx, it0) {
   } else if (TEMPLATES[it.type]) {
     for (const f of TEMPLATES[it.type].fields) rows.push(templateRow(ctx, it, f));
   }
+  rows.unshift(field('Description', it.description, { pre: true, ctx }));
   rows.push(field('Notes', it.notes, { pre: true, copy: it.type === 'note', ctx, stats: STATS_TYPES.has(it.type) }));
   for (const c of it.custom || []) rows.push(field(c.label || 'Custom field', c.value, { secret: c.secret, copy: true, ctx, pre: true }));
   rows.push(attachmentsField(ctx, it));
@@ -378,7 +382,8 @@ export function editItem(ctx, item, type = 'login') {
   const err = h('p', { class: 'err', role: 'alert' });
 
   const body = [];
-  body.push(h('div', { class: 'field' }, h('label', { for: 'f_name', text: 'Name' }), h('input', { id: 'f_name', class: 'inp', value: it.name, autofocus: true, autocomplete: 'off', placeholder: ({ card: 'e.g. Visa ending 4242', note: 'e.g. Safe-deposit notes', network: 'e.g. Home Wi-Fi', app: 'e.g. Adobe Creative Cloud', computer: 'e.g. Work laptop', shopping: 'e.g. Amazon', insurance: 'e.g. Car insurance', locker: 'e.g. Gym locker', travel: 'e.g. Passport — Alex', identity: 'e.g. Driver licence', bank: 'e.g. Checking account', server: 'e.g. Production API', contact: 'e.g. Dr. Rivera', phone: 'e.g. My mobile', technical: 'e.g. AWS production', crypto: 'e.g. Ledger Nano', emergency: 'e.g. ICE — Sam', lens: 'e.g. Glasses 2026', membership: 'e.g. City Gym', internet: 'e.g. Home fibre', prescription: 'e.g. Amoxicillin', serial: 'e.g. MacBook Pro', voter: 'e.g. Voter card', photoid: 'e.g. Student ID', library: 'e.g. Central Library', health: 'e.g. Health insurance', car: 'e.g. Honda Civic' })[it.type] || 'e.g. GitHub', on: { input: (e) => { it.name = e.target.value; } } })));
+  body.push(h('div', { class: 'field' }, h('label', { for: 'f_name', text: 'Title' }), h('input', { id: 'f_name', class: 'inp', value: it.name, autofocus: true, autocomplete: 'off', placeholder: ({ card: 'e.g. Visa ending 4242', note: 'e.g. Safe-deposit notes', network: 'e.g. Home Wi-Fi', app: 'e.g. Adobe Creative Cloud', computer: 'e.g. Work laptop', shopping: 'e.g. Amazon', insurance: 'e.g. Car insurance', locker: 'e.g. Gym locker', travel: 'e.g. Passport — Alex', identity: 'e.g. Driver licence', bank: 'e.g. Checking account', server: 'e.g. Production API', contact: 'e.g. Dr. Rivera', phone: 'e.g. My mobile', technical: 'e.g. AWS production', crypto: 'e.g. Ledger Nano', emergency: 'e.g. ICE — Sam', lens: 'e.g. Glasses 2026', membership: 'e.g. City Gym', internet: 'e.g. Home fibre', prescription: 'e.g. Amoxicillin', serial: 'e.g. MacBook Pro', voter: 'e.g. Voter card', photoid: 'e.g. Student ID', library: 'e.g. Central Library', health: 'e.g. Health insurance', car: 'e.g. Honda Civic' })[it.type] || 'e.g. GitHub', on: { input: (e) => { it.name = e.target.value; } } })));
+  body.push(h('div', { class: 'field' }, h('label', { for: 'f_description', text: 'Description (optional)' }), h('textarea', { id: 'f_description', class: 'ta', rows: '2', maxlength: '2000', placeholder: 'A short summary: what this is for, which account, who it belongs to…', on: { input: (e) => { it.description = e.target.value; } } }, it.description || '')));
   if (it.type === 'login') {
     body.push(h('div', { class: 'grid2' }, inp('username', 'Username / email'), inp('url', 'Website', { ph: 'https://' })));
     const pf = pwField(it.password, { ctx, onInput: (v) => { it.password = v; } });
@@ -395,12 +400,21 @@ export function editItem(ctx, item, type = 'login') {
   }
   /* custom fields: any extra label / value (optionally secret) on any item */
   const customBox = h('div', { class: 'customs' });
+  const moveCustom = (i, d) => {
+    const j = i + d; if (j < 0 || j >= it.custom.length) return;
+    [it.custom[i], it.custom[j]] = [it.custom[j], it.custom[i]]; drawCustom();
+    const b = customBox.children[j] && customBox.children[j].querySelector('.mv .icon-btn[aria-label="Move custom field ' + (d < 0 ? 'up' : 'down') + '"]:not(:disabled)') || (customBox.children[j] && customBox.children[j].querySelector('.mv .icon-btn:not(:disabled)'));
+    if (b) b.focus();   // keep the keyboard on the field that just moved
+  };
   const drawCustom = () => {
     clear(customBox);
     (it.custom = it.custom || []).forEach((c, i) => customBox.append(h('div', { class: 'cf' },
       h('input', { class: 'inp', value: c.label, placeholder: 'Label', maxlength: '60', 'aria-label': 'Custom field label', on: { input: (e) => { c.label = e.target.value; } } }),
       h('input', { class: 'inp mono', type: c.secret ? 'password' : 'text', value: c.value, placeholder: 'Value', autocomplete: 'off', 'aria-label': 'Custom field value', on: { input: (e) => { c.value = e.target.value; } } }),
       h('label', { class: 'chk' }, h('input', { type: 'checkbox', checked: c.secret, on: { change: (e) => { c.secret = e.target.checked; drawCustom(); } } }), 'secret'),
+      h('span', { class: 'mv' },
+        h('button', { type: 'button', class: 'icon-btn', 'aria-label': 'Move custom field up', title: 'Move up', disabled: i === 0, on: { click: () => moveCustom(i, -1) } }, '{{chevup}}'),
+        h('button', { type: 'button', class: 'icon-btn', 'aria-label': 'Move custom field down', title: 'Move down', disabled: i === it.custom.length - 1, on: { click: () => moveCustom(i, 1) } }, '{{chevdown}}')),
       h('button', { type: 'button', class: 'icon-btn', 'aria-label': 'Remove custom field', title: 'Remove', on: { click: () => { it.custom.splice(i, 1); drawCustom(); } } }, '{{close}}'))));
   };
   drawCustom();
@@ -438,7 +452,7 @@ export function editItem(ctx, item, type = 'login') {
   body.push(err);
 
   const save = async () => {
-    if (!it.name.trim()) { err.textContent = 'Please give this item a name.'; document.getElementById('f_name').focus(); return false; }
+    if (!it.name.trim()) { err.textContent = 'Please give this item a title.'; document.getElementById('f_name').focus(); return false; }
     if (it.type === 'login' && it.totp.trim() && !totpValid(it.totp.trim())) { err.textContent = 'That one-time code secret is not valid (expected base32 or an otpauth://totp link).'; return false; }
     if (isNew && lockOn.checked) { if (lp1.value !== lp2.value) { err.textContent = 'The two item passcodes do not match.'; return false; } if (lp1.value.length < 6) { err.textContent = 'Use at least 6 characters for the item passcode.'; return false; } }
     it.name = it.name.trim(); it.totp = it.totp.trim();
@@ -479,12 +493,12 @@ export function newItemMenu(ctx) {
 
 
 /* ---------- secondary passcode lock (per item) ---------- */
-export function unlockItemDialog(ctx, it) {
+export function unlockItemDialog(ctx, it, { then = null } = {}) {
   const input = h('input', { type: 'password', class: 'inp mono', autocomplete: 'off', 'aria-label': 'Item passcode' }), err = h('p', { class: 'err', role: 'alert' });
   let m;
   const go = async () => {
     err.textContent = ''; const b = m && m.el && m.el.querySelector('.btn.primary'); if (b) b.disabled = true;
-    try { await ctx.store.openItem(it.id, input.value); m.close(); ctx.refresh(); } catch (e) { err.textContent = e.message === 'bad-passcode' ? 'That is not the passcode for this item.' : e.message; input.select(); if (b) b.disabled = false; }
+    try { await ctx.store.openItem(it.id, input.value); m.close(); ctx.refresh(); if (then) then(ctx.store.reveal(ctx.store.get(it.id))); } catch (e) { err.textContent = e.message === 'bad-passcode' ? 'That is not the passcode for this item.' : e.message; input.select(); if (b) b.disabled = false; }
     return false;
   };
   input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); go(); } });
@@ -535,7 +549,7 @@ export function shareItem(ctx, it, only = null) {
     err.textContent = ''; clear(out);
     if (!pwRow.match()) { err.textContent = 'The two QR passwords do not match.'; return false; }
     if (pwBox.value.length < 8) { err.textContent = 'Use at least 8 characters for the QR password.'; return false; }
-    const payload = only ? { vm: 1, name: it.name, field: { label: only.label, value: only.value } } : { vm: 1, item: { type: it.type, name: it.name, username: it.username, password: it.password, url: it.url, totp: it.totp, notes: it.notes, tags: it.tags, card: it.card, fields: it.fields, custom: it.custom } };
+    const payload = only ? { vm: 1, name: it.name, field: { label: only.label, value: only.value } } : { vm: 1, item: { type: it.type, name: it.name, description: it.description, username: it.username, password: it.password, url: it.url, totp: it.totp, notes: it.notes, tags: it.tags, card: it.card, fields: it.fields, custom: it.custom } };
     try {
       out.append(h('p', { class: 'hint', text: 'Deriving the key (600,000 rounds) and sealing…' }));
       const sealed = await sealText(JSON.stringify(payload), pwBox.value);
@@ -545,7 +559,7 @@ export function shareItem(ctx, it, only = null) {
       const verified = only ? back.field && back.field.value === only.value : back.item && back.item.name === it.name && JSON.stringify(back.item.fields || {}) === JSON.stringify(it.fields || {}) && back.item.notes === it.notes && back.item.password === it.password;
       if (!verified) throw new Error('The QR did not read back correctly — nothing was changed. Try again.');
       const dc = only ? null : describeContents(it);
-      clear(out).append(h('div', { class: 'qrbox' }, canvas), payloadBox(ctx, sealed, { file: 'vaultmanager-' + (it.name.replace(/\W+/g, '-').toLowerCase() || 'item') + '-payload' }), h('div', { class: 'note ok', role: 'status' }, h('b', { text: '✓ Checked: this QR opens again with the password. ' }), only ? 'It holds this single value.' : ['It holds the WHOLE item: ', h('b', { text: dc.included }), '.', dc.attachments ? ` Not included: ${dc.attachments} attached file${dc.attachments === 1 ? '' : 's'} (QR codes are far too small for files — use “Save item + files as encrypted file” below to share them).` : ' This item has no attached files.'], it.lock ? h('p', { class: 'hint', text: 'This item has a secondary passcode in your vault. The QR is protected by the QR password only — whoever has the picture and that password can read it.' }) : null,
+      clear(out).append(h('div', { class: 'qrbox' }, canvas), payloadBox(ctx, sealed, { file: 'vaultmanager-' + (it.name.replace(/\W+/g, '-').toLowerCase() || 'item') + '-payload' }), h('div', { class: 'note ok', role: 'status' }, h('b', { text: '✓ Checked: this QR opens again with the password. ' }), only ? 'It holds this single value.' : ['It holds the WHOLE item: ', h('b', { text: dc.included }), '.', dc.attachments ? ` Not included: ${dc.attachments} attached file${dc.attachments === 1 ? '' : 's'} (QR codes are far too small for files — use “Save item + files as encrypted file” below to share them).` : ' This item has no attached files.'], it.lock ? h('p', { class: 'hint', text: 'This item has a secondary passcode in your vault. The QR is protected by the QR password only — it does NOT carry the item passcode, so whoever has the picture and the QR password can read it. Pick a QR password as strong as the item passcode.' }) : null,
         only ? null : h('div', { class: 'row' }, h('button', { class: 'btn sm', on: { click: () => modal({ title: 'What a scan restores', sub: 'Exactly what “Open QR” will show', wide: true, body: itemCard(ctx, sanitiseItem(back.item)), actions: [{ label: 'Close' }] }) } }, '{{search}} Preview what a scan restores'))), h('p', { class: 'hint', text: `QR version ${r.version} · ECC ${r.ecc} · AES-256-GCM · PBKDF2-SHA256 600,000 rounds. The password is NOT in the code — share it by a different channel.` }),
         h('div', { class: 'row wrap' }, h('button', { class: 'btn sm', on: { click: () => canvas.toBlob((b) => download(`vaultmanager-${it.name.replace(/\W+/g, '-').toLowerCase() || 'item'}-${stamp()}.png`, b, 'image/png')) } }, '{{download}} PNG'),
           h('button', { class: 'btn sm', on: { click: () => { const c2 = h('canvas'); c2.width = canvas.width; c2.height = canvas.height; c2.getContext('2d').drawImage(canvas, 0, 0); printNodes([h('h1', { text: 'VaultManager — encrypted QR' }), h('div', { class: 'pq' }, c2, h('div', { text: it.name })), h('p', { text: 'Scan in VaultManager (QR tools → Open) or QR Seal and enter the password. The password is not on this page.' })]); } } }, '{{print}} Print')));
