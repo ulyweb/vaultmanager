@@ -1662,6 +1662,16 @@ test('v0.26.0: Title + Description on every item, reorderable custom fields, and
   await page.fill('input[aria-label="Item passcode"]', 'item-code-123'); await page.getByRole('button', { name: 'Unlock', exact: true }).click();
   await page.waitForSelector('.modal-sheet:has-text("Seal as QR code")', { timeout: 60000 });
   await page.getByRole('button', { name: 'Create QR' }).click(); await page.waitForSelector('.modal-sheet .note.ok', { timeout: 60000 });
+  await page.keyboard.press('Escape');
+
+  // optional: seal the QR with the item passcode itself (never stored in the QR)
+  await page.getByRole('button', { name: /^.?\s*Seal as QR/ }).first().click();
+  assert.ok(await page.locator('#f_usecode').isVisible(), 'the checkbox is offered for an opened locked item');
+  await page.check('#f_usecode'); assert.ok(await page.locator('input[aria-label="QR password"]').isHidden(), 'QR password box hides when the passcode is used');
+  await page.getByRole('button', { name: 'Create QR' }).click(); await page.waitForSelector('.modal-sheet .note.ok', { timeout: 60000 });
+  const sealed = await page.locator('.modal-sheet textarea').first().inputValue();
+  const opened = await page.evaluate(async (p) => JSON.parse(await (await import('/js/crypto.js')).openText(p, 'item-code-123')), sealed);
+  assert.equal(opened.item.name, 'Work mail'); assert.ok(!sealed.includes('item-code-123'), 'the passcode is not in the QR text');
   assert.deepEqual(problems.filter((p) => !/Failed to load resource/.test(p)), []);
   await ctx.close();
 });

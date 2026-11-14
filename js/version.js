@@ -19,7 +19,7 @@ export const CHANGELOG = [
   { v: '0.26.0', date: '2026-11-14', notes: [
     'Every item now has a Title and an optional Description. The old “Name” box is now called Title, and the new Description (a short summary of what the item is for) sits under it. It shows in the item list, the detail view, search, Seal as QR, backups and sync, and — like the other details — is hidden while an item is locked with a secondary passcode.',
     'Custom fields can be put in any order: each one has Move up / Move down buttons in the editor, and the order is kept in the detail view, QR codes, backups and sync.',
-    'Items with a secondary passcode now have an “Unlock & seal as QR” button while they are locked. Before, the Seal as QR button only appeared after you unlocked the item, so it looked as if locked items could not be sealed. The QR still uses its own QR password; it never contains the item passcode.',
+    'Items with a secondary passcode now have an “Unlock & seal as QR” button while they are locked. Before, the Seal as QR button only appeared after you unlocked the item, so it looked as if locked items could not be sealed. The QR uses its own QR password and never contains the item passcode; an optional “Use the item passcode as the QR password” box seals it with the passcode instead.',
   ] },
   { v: '0.25.1', date: '2026-11-13', notes: [
     'Sign-in screen: the profile picture, name, “Use recovery key instead” link and the feature badges are now centred on the card (the picture sits above the name).',

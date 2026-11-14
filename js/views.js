@@ -543,19 +543,26 @@ export function printNodes(nodes) {
 export function shareItem(ctx, it, only = null) {
   const pwBox = h('input', { class: 'inp mono', value: generatePassphrase({ words: 4 }), autocomplete: 'off', spellcheck: 'false', 'aria-label': 'QR password' });
   const pwRow = passwordRow('QR password', pwBox);
+  /* optional: reuse the item's own passcode as the QR password (only while the item is open, so the app knows it; it never goes into the QR) */
+  const ik = it.lock && ctx.store.itemKeys.get(it.id), itemCode = ik && ctx.store.isOpen(it) ? ik.code : '';
+  const useCode = h('input', { type: 'checkbox', id: 'f_usecode' });
+  const codeNote = h('p', { class: 'hint', hidden: true, text: 'The QR will be sealed with this item’s passcode instead of a separate QR password. The passcode itself is NOT stored in the QR. Whoever knows the item passcode can open the QR too, and the person you share it with needs that passcode.' });
+  if (itemCode) useCode.addEventListener('change', () => { pwRow.hidden = useCode.checked; codeNote.hidden = !useCode.checked; });
+  const qrPw = () => (itemCode && useCode.checked ? itemCode : pwBox.value);
+  const pwOk = () => (itemCode && useCode.checked) || pwRow.match();
   const out = h('div'), err = h('p', { class: 'err', role: 'alert' }), fileErr = h('p', { class: 'err', role: 'alert' });
   let canvas = null;
   const make = async () => {
     err.textContent = ''; clear(out);
-    if (!pwRow.match()) { err.textContent = 'The two QR passwords do not match.'; return false; }
-    if (pwBox.value.length < 8) { err.textContent = 'Use at least 8 characters for the QR password.'; return false; }
+    if (!pwOk()) { err.textContent = 'The two QR passwords do not match.'; return false; }
+    if (qrPw().length < 8) { err.textContent = 'Use at least 8 characters for the QR password' + (itemCode && useCode.checked ? ' (this item’s passcode is shorter — untick the box and choose a separate QR password).' : '.'); return false; }
     const payload = only ? { vm: 1, name: it.name, field: { label: only.label, value: only.value } } : { vm: 1, item: { type: it.type, name: it.name, description: it.description, username: it.username, password: it.password, url: it.url, totp: it.totp, notes: it.notes, tags: it.tags, card: it.card, fields: it.fields, custom: it.custom } };
     try {
       out.append(h('p', { class: 'hint', text: 'Deriving the key (600,000 rounds) and sealing…' }));
-      const sealed = await sealText(JSON.stringify(payload), pwBox.value);
+      const sealed = await sealText(JSON.stringify(payload), qrPw());
       canvas = h('canvas', { role: 'img', 'aria-label': 'Encrypted QR code' });
       const r = await drawQR(canvas, sealed, { scale: 6 });
-      const back = JSON.parse(await openText(sealed, pwBox.value));   // prove it opens again, exactly like the Open QR tab will
+      const back = JSON.parse(await openText(sealed, qrPw()));   // prove it opens again, exactly like the Open QR tab will
       const verified = only ? back.field && back.field.value === only.value : back.item && back.item.name === it.name && JSON.stringify(back.item.fields || {}) === JSON.stringify(it.fields || {}) && back.item.notes === it.notes && back.item.password === it.password;
       if (!verified) throw new Error('The QR did not read back correctly — nothing was changed. Try again.');
       const dc = only ? null : describeContents(it);
@@ -573,15 +580,15 @@ export function shareItem(ctx, it, only = null) {
         h('p', { class: 'hint', text: 'A QR picture is too small for files, so this makes one encrypted file instead: the whole item and its attachments, sealed with the QR password above. Send the file; the recipient opens Import & export → Restore from backup, chooses it and enters the password (the item and its files are added to their vault).' }),
         h('div', { class: 'row' }, h('button', { class: 'btn', on: { click: async () => {
           fileErr.textContent = '';
-          if (!pwRow.match()) { fileErr.textContent = 'The two QR passwords do not match.'; return; }
-          if (pwBox.value.length < 10) { fileErr.textContent = 'Use at least 10 characters for a file password.'; return; }
+          if (!pwOk()) { fileErr.textContent = 'The two QR passwords do not match.'; return; }
+          if (qrPw().length < 10) { fileErr.textContent = 'Use at least 10 characters for a file password.'; return; }
           try {
-            const r = await ctx.store.exportItemEncrypted(it.id, pwBox.value);
+            const r = await ctx.store.exportItemEncrypted(it.id, qrPw());
             download(`vaultmanager-${it.name.replace(/\W+/g, '-').toLowerCase() || 'item'}-${stamp()}.vmvault`, r.text, 'text/plain');
             toast(r.missing ? `Saved, but ${r.missing} file${r.missing === 1 ? ' is' : 's are'} not on this device yet and could not be included.` : `Saved the item with ${r.files} file${r.files === 1 ? '' : 's'}. Share the password separately.`);
           } catch (e) { fileErr.textContent = e.message; }
         } } }, '{{download}} Save item + files as encrypted file')), fileErr) : null,
-      pwRow, err, out),
+      itemCode ? h('label', { class: 'chk', for: 'f_usecode' }, useCode, '{{lock}} Use the item passcode as the QR password') : null, codeNote, pwRow, err, out),
     actions: [{ label: 'Close' }, { label: 'Purge memory', onClick: () => ctx.purgeMemory() }, { label: 'Create QR', kind: 'primary', onClick: make, close: false }] });
 }
 
