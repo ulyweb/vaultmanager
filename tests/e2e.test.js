@@ -1722,3 +1722,24 @@ test('v0.27.0: crypto wallet seed phrase in numbered boxes (hide each word), and
   assert.deepEqual(problems.filter((p) => !/Failed to load resource/.test(p)), []);
   await ctx.close();
 });
+
+test('v0.28.0: importing a profile backup can reuse the backup password as the master password (optional)', async () => {
+  const A = await newPage(); await createVault(A.page);
+  await settingsTab(A.page, 'General'); await A.page.getByRole('button', { name: /Export whole profile/ }).first().click();
+  await A.page.fill('input[aria-label="Backup password"]', 'backup-pass-phrase-1'); await A.page.fill('input[aria-label="Confirm Backup password"]', 'backup-pass-phrase-1');
+  const [dl] = await Promise.all([A.page.waitForEvent('download'), A.page.getByRole('button', { name: 'Download backup' }).click()]);
+  const text = fs.readFileSync(await dl.path(), 'utf8'); await A.ctx.close();
+  const B = await newPage(); await B.page.goto(base); await B.page.waitForSelector('#pw1');
+  await B.page.getByRole('button', { name: /Import a profile backup/ }).click();
+  await B.page.fill('textarea[aria-label="Backup text"]', text); await B.page.fill('input[aria-label="Backup password"]', 'backup-pass-phrase-1');
+  await B.page.getByRole('button', { name: 'Open backup' }).click(); await B.page.waitForSelector('#f_samepw');
+  assert.equal(await B.page.locator('#f_samepw').isChecked(), false, 'off by default');
+  await B.page.check('#f_samepw'); assert.ok(await B.page.locator('input[aria-label="New master password"]').isHidden(), 'the new-password boxes hide');
+  await B.page.locator('.modal-sheet input[type=checkbox]').last().check(); await B.page.getByRole('button', { name: 'Create profile' }).click();
+  await B.page.waitForSelector('.topbar', { timeout: 90000 });
+  // a fresh sign-in with the backup password opens the new profile
+  await B.page.reload(); await B.page.waitForSelector('#upw'); await B.page.fill('#upw', 'backup-pass-phrase-1'); await B.page.keyboard.press('Enter');
+  await B.page.waitForSelector('.topbar', { timeout: 90000 });
+  assert.deepEqual(B.problems.filter((p) => !/Failed to load resource/.test(p)), []);
+  await B.ctx.close();
+});

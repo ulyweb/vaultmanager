@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VaultManager v0.27.0 — single-file offline build. Verify with the .sha256 file next to it. -->
+<!-- VaultManager v0.28.0 — single-file offline build. Verify with the .sha256 file next to it. -->
 <html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
@@ -11,7 +11,7 @@
 <meta name="application-name" content="VaultManager">
 <meta name="format-detection" content="telephone=no">
 <meta name="referrer" content="no-referrer">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-tauzjAWYvkq2EEey6/r1GOXzEWNzSydbYj43JCIjd2U=' 'sha256-7UtqP0eKfoHpwpfpzOLY1Jt7kauqnz0wuiGcgQgO/cw=' blob:; style-src 'sha256-/taJibJcD/BnQjaH/bYkTvZbYbczvBYuIiXVXoQVReM='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-tauzjAWYvkq2EEey6/r1GOXzEWNzSydbYj43JCIjd2U=' 'sha256-ZK77sjwtCQeGT9th0hB8AWsGMDCl6m1/YcwHFlM4fV8=' blob:; style-src 'sha256-/taJibJcD/BnQjaH/bYkTvZbYbczvBYuIiXVXoQVReM='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
 <title>VaultManager | Zero-Knowledge Password Manager</title>
 <meta name="description" content="VaultManager: an offline-first, zero-knowledge, end-to-end encrypted password manager with a strong password generator, TOTP codes and QR-sealed sharing and backup. Runs entirely in your browser.">
 <meta name="theme-color" content="#05080d">
@@ -1979,7 +1979,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   }
 
   // js/version.js
-  var APP_VERSION = "0.27.0";
+  var APP_VERSION = "0.28.0";
   var APP_NAME = "VaultManager";
   var REPO_URL = "https://github.com/ulyweb/vaultmanager";
   var FORMATS = [
@@ -1993,6 +1993,9 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     ["Attachments at rest", "AES-256-GCM per file, bound to vault + file id"]
   ];
   var CHANGELOG = [
+    { v: "0.28.0", date: "2026-11-14", notes: [
+      "Importing a profile backup: a new optional box \u201CUse the backup password as this profile\u2019s master password\u201D (off by default). The backup file never contains your master password, so it cannot be copied over by itself, but the backup password you just typed can be reused. If it is too short or too easy to guess for a master password, you are told and can choose a new one instead."
+    ] },
     { v: "0.27.0", date: "2026-11-14", notes: [
       "Crypto wallet: the recovery seed phrase is now entered in numbered boxes, one per word (12, 15, 18, 21 or 24 words, or your own count). Every word is hidden and has its own show / hide button, plus Show all and Clear. Paste a whole phrase into any box and it spreads over the boxes. In the detail view each word is a numbered tile that stays hidden until you tap it.",
       "Passcode of their own: the recovery seed phrase and the extra passphrase (25th word) can each be locked with a separate passcode (\u201CLock with its own passcode\u201D in the editor). A locked value is encrypted again (PBKDF2 600,000 rounds, AES-256-GCM), stays hidden even when the vault and the item are open, opens for 10 minutes after you enter the passcode, and never leaves a readable copy in the version history. It stays locked through sync, backups and QR codes. If you forget that passcode nobody can recover the value."
@@ -7972,10 +7975,10 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     let picker = avatarPicker(null, () => name.value);
     name.addEventListener("input", () => picker.refresh());
     const createBtn = h("button", { class: "btn primary", type: "button" }, "Create profile");
-    step2.append(
-      summary,
-      h("div", { class: "field" }, h("label", { text: "Profile name" }), name),
-      picker.el,
+    const same2 = h("input", { type: "checkbox", id: "f_samepw" });
+    const own = h(
+      "div",
+      null,
       h("div", { class: "field" }, h("label", { text: "New master password for this profile" }), p1, meterBox, h("p", { class: "hint", text: "12+ characters. It can be different from the one the backup came from." })),
       h("div", { class: "field" }, h("label", { text: "Repeat master password" }), p2),
       h("button", { class: "btn sm", type: "button", on: { click: () => {
@@ -7983,7 +7986,20 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
         p1.value = p2.value = pw;
         p1.type = p2.type = "text";
         p1.dispatchEvent(new Event("input"));
-      } } }, "{{bolt}} Suggest a passphrase"),
+      } } }, "{{bolt}} Suggest a passphrase")
+    );
+    const sameNote = h("p", { class: "hint", hidden: true, text: "This profile will open with the same password you just typed to open the backup. Handy, but it means the backup file and the profile share one password, so keep that password strong." });
+    same2.addEventListener("change", () => {
+      own.hidden = same2.checked;
+      sameNote.hidden = !same2.checked;
+    });
+    step2.append(
+      summary,
+      h("div", { class: "field" }, h("label", { text: "Profile name" }), name),
+      picker.el,
+      h("label", { class: "chk", for: "f_samepw" }, same2, "{{lock}} Use the backup password as this profile\u2019s master password"),
+      sameNote,
+      own,
       h("label", { class: "chk" }, ack, "I understand that if I forget this master password, nobody can recover this profile."),
       err2,
       h("div", { class: "row" }, createBtn)
@@ -8037,13 +8053,14 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
         err2.textContent = "Give the profile a name.";
         return;
       }
-      if (p1.value !== p2.value) {
+      const master = same2.checked ? bpw.value : p1.value;
+      if (!same2.checked && p1.value !== p2.value) {
         err2.textContent = "The two passwords do not match.";
         return;
       }
-      const pol = ctx2.passwordPolicy(p1.value);
+      const pol = ctx2.passwordPolicy(master);
       if (pol) {
-        err2.textContent = pol;
+        err2.textContent = same2.checked ? "The backup password cannot be used as a master password: " + pol + " Untick the box and choose a new master password." : pol;
         return;
       }
       if (!ack.checked) {
@@ -8053,8 +8070,8 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       createBtn.disabled = true;
       createBtn.textContent = "Restoring everything\u2026";
       try {
-        const r = await createProfileFromImport(ctx2.env, data, { name: name.value.trim(), avatar: picker.get(), masterPassword: p1.value });
-        const pw = p1.value;
+        const r = await createProfileFromImport(ctx2.env, data, { name: name.value.trim(), avatar: picker.get(), masterPassword: master });
+        const pw = master;
         p1.value = p2.value = bpw.value = "";
         m.close();
         toast(`Profile \u201C${r.profile.name}\u201D restored: ${r.items} item${r.items === 1 ? "" : "s"}, ${r.attachments} attachment${r.attachments === 1 ? "" : "s"}`, "ok", 6e3);

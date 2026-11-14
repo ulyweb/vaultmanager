@@ -1,6 +1,6 @@
 /* Application version, data-format versions and changelog (shown in Settings → About). */
 
-export const APP_VERSION = '0.27.0';
+export const APP_VERSION = '0.28.0';
 export const APP_NAME = 'VaultManager';
 export const REPO_URL = 'https://github.com/ulyweb/vaultmanager';
 
@@ -16,6 +16,9 @@ export const FORMATS = [
 ];
 
 export const CHANGELOG = [
+  { v: '0.28.0', date: '2026-11-14', notes: [
+    'Importing a profile backup: a new optional box “Use the backup password as this profile’s master password” (off by default). The backup file never contains your master password, so it cannot be copied over by itself, but the backup password you just typed can be reused. If it is too short or too easy to guess for a master password, you are told and can choose a new one instead.',
+  ] },
   { v: '0.27.0', date: '2026-11-14', notes: [
     'Crypto wallet: the recovery seed phrase is now entered in numbered boxes, one per word (12, 15, 18, 21 or 24 words, or your own count). Every word is hidden and has its own show / hide button, plus Show all and Clear. Paste a whole phrase into any box and it spreads over the boxes. In the detail view each word is a numbered tile that stays hidden until you tap it.',
     'Passcode of their own: the recovery seed phrase and the extra passphrase (25th word) can each be locked with a separate passcode (“Lock with its own passcode” in the editor). A locked value is encrypted again (PBKDF2 600,000 rounds, AES-256-GCM), stays hidden even when the vault and the item are open, opens for 10 minutes after you enter the passcode, and never leaves a readable copy in the version history. It stays locked through sync, backups and QR codes. If you forget that passcode nobody can recover the value.',
