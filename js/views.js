@@ -9,6 +9,8 @@ import { totpNow, parseTotp } from './totp.js';
 import { sealText, openText } from './crypto.js';
 import { drawQR } from './qr.js';
 import { fmtDate, hostOf, safeHref, stamp } from './util.js';
+import { isFieldLocked, fieldValue } from './fieldlock.js';
+import { lockableField, lockedFieldRow, relockButton, seedView } from './secure-fields.js';
 
 export const TYPE_ICON = Object.fromEntries(Object.entries(TYPE_META).map(([k, m]) => [k, m.icon]));
 
@@ -138,7 +140,7 @@ let currentItem = null;   // set while a detail panel is being built, so field()
 /* Categories that always show how long and how strong their secret text is. */
 const STATS_TYPES = new Set(['bank', 'crypto', 'emergency', 'note']);
 
-function field(label, value, { secret, copy, ctx, pre, link, extra, stats } = {}) {
+function field(label, value, { secret, copy, ctx, pre, link, extra, stats, body } = {}) {
   const item = currentItem;
   if (!value && !extra) return null;
   let shown = !secret;
@@ -146,10 +148,10 @@ function field(label, value, { secret, copy, ctx, pre, link, extra, stats } = {}
   const set = () => { clear(v); if (link && safeHref(value)) v.append(h('a', { href: safeHref(value), target: '_blank', rel: 'noopener noreferrer nofollow' }, value)); else v.append(shown ? value : '•'.repeat(Math.min(16, Math.max(8, value.length)))); };
   if (value) set();
   const acts = h('div', { class: 'acts' });
-  if (secret) acts.append(h('button', { class: 'icon-btn', 'aria-label': 'Show or hide ' + label, title: 'Show / hide', on: { click: () => { shown = !shown; set(); if (shown && item && ctx.store.settings.logReveal) ctx.store.log('access', 'Revealed ' + label.toLowerCase() + ' of “' + item.name + '”'); } } }, '{{eye}}'));
+  if (secret && !body) acts.append(h('button', { class: 'icon-btn', 'aria-label': 'Show or hide ' + label, title: 'Show / hide', on: { click: () => { shown = !shown; set(); if (shown && item && ctx.store.settings.logReveal) ctx.store.log('access', 'Revealed ' + label.toLowerCase() + ' of “' + item.name + '”'); } } }, '{{eye}}'));
   if (value && item && !item.deleted && (secret || stats) && STATS_TYPES.has(item.type)) acts.append(h('button', { class: 'icon-btn', 'aria-label': 'Seal ' + label + ' as QR', title: 'Seal just this as an encrypted QR', on: { click: () => shareItem(ctx, item, { label, value }) } }, '{{qr}}'));
   if (copy) acts.append(h('button', { class: 'icon-btn', 'aria-label': 'Copy ' + label, title: 'Copy', on: { click: () => ctx.copySecret(value, label + ' copied', item, label) } }, '{{copy}}'));
-  return h('div', { class: 'f' }, h('div', { class: 'k', text: label }), extra ? h('div', { class: 'v' }, extra) : h('div', { class: 'vwrap' }, v, value && (secret || stats) ? statChip(value) : null), acts);
+  return h('div', { class: 'f' }, h('div', { class: 'k', text: label }), extra ? h('div', { class: 'v' }, extra) : h('div', { class: 'vwrap' }, body || v, value && (secret || stats) ? statChip(value) : null), acts);
 }
 
 function totpField(ctx, it) {
@@ -198,6 +200,8 @@ export function describeContents(it) {
   if (it.username || it.password || it.url || it.totp) parts.push('login details');
   if (it.card && (it.card.number || it.card.holder)) parts.push('card details');
   if (it.description) parts.push('description');
+  const lockedN = Object.values(it.fields || {}).filter(isFieldLocked).length;
+  if (lockedN) parts.push(lockedN + ' field' + (lockedN === 1 ? '' : 's') + ' that still need' + (lockedN === 1 ? 's' : '') + ' their own passcode');
   if (it.notes) parts.push('notes');
   if ((it.custom || []).length) parts.push(it.custom.length + ' custom field' + (it.custom.length === 1 ? '' : 's'));
   if ((it.tags || []).length) parts.push(it.tags.length + ' tag' + (it.tags.length === 1 ? '' : 's'));
@@ -298,6 +302,14 @@ export function conflictModal(ctx, it0) {
 function templateRow(ctx, it, f) {
   const value = (it.fields || {})[f.k];
   if (!value) return null;
+  if (isFieldLocked(value)) {   // a field with a passcode of its own: hidden until it is unlocked, readable for a few minutes after
+    const plain = fieldValue(value);
+    if (plain === null) return lockedFieldRow(ctx, it, f.l, value);
+    const row = f.words ? field(f.l, plain, { secret: true, copy: true, ctx, stats: true, body: seedView(ctx, it, f.l, plain) }) : field(f.l, plain, { secret: true, copy: true, ctx, stats: STATS_TYPES.has(it.type) });
+    if (row) row.querySelector('.acts').append(relockButton(ctx, value, f.l));
+    return row;
+  }
+  if (f.words) return field(f.l, value, { secret: true, copy: true, ctx, stats: true, body: seedView(ctx, it, f.l, value) });
   if (f.kind === 'date' && f.expiry) {
     const d = daysUntil(value), chip = d === null ? null : d < 0 ? h('span', { class: 'chip bad', text: 'expired ' + -d + ' day' + (d === -1 ? '' : 's') + ' ago' }) : d <= 60 ? h('span', { class: 'chip warn', text: 'in ' + d + ' day' + (d === 1 ? '' : 's') }) : null;
     return field(f.l, value, { copy: true, ctx, extra: h('span', null, value + ' ', chip) });
@@ -380,6 +392,7 @@ export function editItem(ctx, item, type = 'login') {
   const inp = (key, label, opts = {}) => h('div', { class: 'field' }, h('label', { for: 'f_' + key, text: label }),
     h('input', { id: 'f_' + key, class: 'inp' + (opts.mono ? ' mono' : ''), value: opts.get ? opts.get() : it[key] || '', autocomplete: 'off', spellcheck: 'false', inputmode: opts.inputmode, placeholder: opts.ph, on: { input: (e) => { opts.set ? opts.set(e.target.value) : (it[key] = e.target.value); } } }));
   const err = h('p', { class: 'err', role: 'alert' });
+  const locks = [];   // fields that can carry a passcode of their own (seed phrase, 25th word)
 
   const body = [];
   body.push(h('div', { class: 'field' }, h('label', { for: 'f_name', text: 'Title' }), h('input', { id: 'f_name', class: 'inp', value: it.name, autofocus: true, autocomplete: 'off', placeholder: ({ card: 'e.g. Visa ending 4242', note: 'e.g. Safe-deposit notes', network: 'e.g. Home Wi-Fi', app: 'e.g. Adobe Creative Cloud', computer: 'e.g. Work laptop', shopping: 'e.g. Amazon', insurance: 'e.g. Car insurance', locker: 'e.g. Gym locker', travel: 'e.g. Passport — Alex', identity: 'e.g. Driver licence', bank: 'e.g. Checking account', server: 'e.g. Production API', contact: 'e.g. Dr. Rivera', phone: 'e.g. My mobile', technical: 'e.g. AWS production', crypto: 'e.g. Ledger Nano', emergency: 'e.g. ICE — Sam', lens: 'e.g. Glasses 2026', membership: 'e.g. City Gym', internet: 'e.g. Home fibre', prescription: 'e.g. Amoxicillin', serial: 'e.g. MacBook Pro', voter: 'e.g. Voter card', photoid: 'e.g. Student ID', library: 'e.g. Central Library', health: 'e.g. Health insurance', car: 'e.g. Honda Civic' })[it.type] || 'e.g. GitHub', on: { input: (e) => { it.name = e.target.value; } } })));
@@ -396,7 +409,7 @@ export function editItem(ctx, item, type = 'login') {
       inp('pin', 'PIN', { mono: true, inputmode: 'numeric', get: () => c.pin, set: (v) => { c.pin = v; } })));
   } else if (TEMPLATES[it.type]) {
     if (TEMPLATES[it.type].tip) body.push(h('p', { class: 'note', text: TEMPLATES[it.type].tip }));
-    body.push(h('div', { class: 'grid2' }, TEMPLATES[it.type].fields.map((f) => tplInput(ctx, it, f))));
+    body.push(h('div', { class: 'grid2' }, TEMPLATES[it.type].fields.map((f) => tplInput(ctx, it, f, locks))));
   }
   /* custom fields: any extra label / value (optionally secret) on any item */
   const customBox = h('div', { class: 'customs' });
@@ -455,8 +468,11 @@ export function editItem(ctx, item, type = 'login') {
     if (!it.name.trim()) { err.textContent = 'Please give this item a title.'; document.getElementById('f_name').focus(); return false; }
     if (it.type === 'login' && it.totp.trim() && !totpValid(it.totp.trim())) { err.textContent = 'That one-time code secret is not valid (expected base32 or an otpauth://totp link).'; return false; }
     if (isNew && lockOn.checked) { if (lp1.value !== lp2.value) { err.textContent = 'The two item passcodes do not match.'; return false; } if (lp1.value.length < 6) { err.textContent = 'Use at least 6 characters for the item passcode.'; return false; } }
+    for (const c of locks) { const e = c.check(); if (e) { err.textContent = e; return false; } }
     it.name = it.name.trim(); it.totp = it.totp.trim();
     it.custom = (it.custom || []).filter((c) => c.label.trim() || c.value).map((c) => ({ label: c.label.trim(), value: c.value, secret: !!c.secret }));
+    if (locks.some((c) => c.el.querySelector('input[type=checkbox]:checked'))) toast('Sealing with the passcode…', 'ok', 2500);   // 600,000 rounds take a moment
+    try { for (const c of locks) { const v = await c.resolve(); if (v) (it.fields = it.fields || {})[c.key] = v; else delete (it.fields || {})[c.key]; } } catch (e) { err.textContent = e.message; return false; }
     for (const k of Object.keys(it.fields || {})) if (!it.fields[k]) delete it.fields[k];
     if (isNew) { it.created = it.updated = it.pwChanged = Date.now(); it.attachments = []; await store.add(it); }
     else if (it.lock) { const meta = { name: it.name, tags: it.tags, favorite: it.favorite }; await store.saveLocked(it.id, meta, it); }
@@ -471,7 +487,8 @@ export function editItem(ctx, item, type = 'login') {
   modal({ title: (isNew ? 'New ' : 'Edit ') + TYPES[it.type].toLowerCase(), body: h('div', null, body), actions: [{ label: 'Cancel' }, { label: 'Save', kind: 'primary', onClick: save }], wide: false });
 }
 
-function tplInput(ctx, it, f) {
+function tplInput(ctx, it, f, locks = []) {
+  if (f.lockable) { const c = lockableField(ctx, it, f); locks.push(c); return c.el; }   // seed phrase / 25th word: optional passcode of their own
   const set = (v) => { if (v) it.fields[f.k] = v; else delete it.fields[f.k]; };
   const val = (it.fields || {})[f.k] || '';
   const id = 'tf_' + f.k;

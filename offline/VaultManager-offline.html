@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VaultManager v0.26.0 — single-file offline build. Verify with the .sha256 file next to it. -->
+<!-- VaultManager v0.27.0 — single-file offline build. Verify with the .sha256 file next to it. -->
 <html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
@@ -11,7 +11,7 @@
 <meta name="application-name" content="VaultManager">
 <meta name="format-detection" content="telephone=no">
 <meta name="referrer" content="no-referrer">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-tauzjAWYvkq2EEey6/r1GOXzEWNzSydbYj43JCIjd2U=' 'sha256-/8Fo2R17isgUcueNSVLEYyl/O0irpxYOu/JNGoETZsU=' blob:; style-src 'sha256-zKM5hkUdlZf1/VW6s7MUaFGSy9fNlDNeIQIZnD+KtMA='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-tauzjAWYvkq2EEey6/r1GOXzEWNzSydbYj43JCIjd2U=' 'sha256-7UtqP0eKfoHpwpfpzOLY1Jt7kauqnz0wuiGcgQgO/cw=' blob:; style-src 'sha256-/taJibJcD/BnQjaH/bYkTvZbYbczvBYuIiXVXoQVReM='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
 <title>VaultManager | Zero-Knowledge Password Manager</title>
 <meta name="description" content="VaultManager: an offline-first, zero-knowledge, end-to-end encrypted password manager with a strong password generator, TOTP codes and QR-sealed sharing and backup. Runs entirely in your browser.">
 <meta name="theme-color" content="#05080d">
@@ -285,6 +285,21 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 
 .grid2 .full { grid-column: 1 / -1; }
 .cf { display: grid; grid-template-columns: 1fr 1.4fr auto auto auto; gap: 8px; align-items: center; margin-bottom: 8px; }
+.seedbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 8px; }
+.seedbar .sublbl { margin: 0; }
+.seedgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.seedcell { position: relative; display: flex; align-items: center; gap: 6px; min-width: 0; }
+.seedcell .n { flex: none; min-width: 22px; text-align: right; color: var(--muted); font-size: 11px; font-family: var(--mono); }
+.seedcell .inp { flex: 1; min-width: 0; padding-right: 8px; }
+.seedcell .eye { flex: none; }
+.seedgrid.view { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); }
+.seedcell.tile { border: 1px solid var(--line); border-radius: 8px; background: var(--panel2, var(--panel)); color: var(--ink); padding: 8px 10px; cursor: pointer; text-align: left; min-height: 38px; }
+.seedcell.tile .w { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.seedcell.tile[aria-pressed=true] { border-color: var(--accent); }
+.lockablefield .lockfields { margin-top: 8px; }
+.lockablefield .lockfields .inp { margin-bottom: 6px; }
+.lockablefield .chk { margin-top: 8px; }
+@media (max-width: 640px) { .seedgrid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .seedgrid.view { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 .cf .mv { display: inline-flex; gap: 2px; }
 .cf .mv .icon-btn:disabled { opacity: .3; cursor: default; }
 @media (max-width: 640px) { .cf { grid-template-columns: 1fr 1fr; } }
@@ -1658,6 +1673,52 @@ html[data-barlabels="0"] .topbar .newbtn { padding: 6px 10px 6px 8px; }
     return { session: new Session(record2.id, mk, dataKey, record2.wraps), data };
   }
 
+  // js/fieldlock.js
+  var FIELD_PREFIX = "VMFL1:";
+  var FIELD_CODE_MIN = 6;
+  var FIELD_OPEN_MS = 10 * 60 * 1e3;
+  var isFieldLocked = (v) => typeof v === "string" && v.startsWith(FIELD_PREFIX) && /^[A-Za-z0-9+/=]+$/.test(v.slice(FIELD_PREFIX.length));
+  var opened = /* @__PURE__ */ new Map();
+  var fails = /* @__PURE__ */ new Map();
+  async function sealField(value, code, opt = {}) {
+    if (String(code || "").length < FIELD_CODE_MIN) throw new Error("Use at least " + FIELD_CODE_MIN + " characters for the passcode.");
+    return FIELD_PREFIX + await sealText(JSON.stringify(String(value)), String(code), opt);
+  }
+  async function openField(sealed, code) {
+    if (!isFieldLocked(sealed)) throw new Error("This value is not locked.");
+    const f = fails.get(sealed) || { n: 0, until: 0 };
+    if (Date.now() < f.until) throw new Error("Too many wrong passcodes. Wait " + Math.ceil((f.until - Date.now()) / 1e3) + "s.");
+    let value;
+    try {
+      value = JSON.parse(await openText(sealed.slice(FIELD_PREFIX.length), String(code || "")));
+    } catch {
+      f.n++;
+      f.until = Date.now() + Math.min(6e4, 1e3 * 2 ** Math.min(f.n, 6));
+      fails.set(sealed, f);
+      throw new Error("bad-passcode");
+    }
+    fails.delete(sealed);
+    opened.set(sealed, { value, at: Date.now() });
+    return value;
+  }
+  function fieldValue(sealed) {
+    const o = opened.get(sealed);
+    if (!o) return null;
+    if (Date.now() - o.at > FIELD_OPEN_MS) {
+      opened.delete(sealed);
+      return null;
+    }
+    return o.value;
+  }
+  var relockField = (sealed) => {
+    opened.delete(sealed);
+  };
+  var clearOpenFields = () => {
+    const n = opened.size;
+    opened.clear();
+    return n;
+  };
+
   // js/wordlist.js
   var WORDS = `
 acid acorn acre acts afar affix aged agent agile aging agony ahead aide aids aim ajar alarm alias alibi alien
@@ -1918,7 +1979,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   }
 
   // js/version.js
-  var APP_VERSION = "0.26.0";
+  var APP_VERSION = "0.27.0";
   var APP_NAME = "VaultManager";
   var REPO_URL = "https://github.com/ulyweb/vaultmanager";
   var FORMATS = [
@@ -1932,6 +1993,10 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     ["Attachments at rest", "AES-256-GCM per file, bound to vault + file id"]
   ];
   var CHANGELOG = [
+    { v: "0.27.0", date: "2026-11-14", notes: [
+      "Crypto wallet: the recovery seed phrase is now entered in numbered boxes, one per word (12, 15, 18, 21 or 24 words, or your own count). Every word is hidden and has its own show / hide button, plus Show all and Clear. Paste a whole phrase into any box and it spreads over the boxes. In the detail view each word is a numbered tile that stays hidden until you tap it.",
+      "Passcode of their own: the recovery seed phrase and the extra passphrase (25th word) can each be locked with a separate passcode (\u201CLock with its own passcode\u201D in the editor). A locked value is encrypted again (PBKDF2 600,000 rounds, AES-256-GCM), stays hidden even when the vault and the item are open, opens for 10 minutes after you enter the passcode, and never leaves a readable copy in the version history. It stays locked through sync, backups and QR codes. If you forget that passcode nobody can recover the value."
+    ] },
     { v: "0.26.0", date: "2026-11-14", notes: [
       "Every item now has a Title and an optional Description. The old \u201CName\u201D box is now called Title, and the new Description (a short summary of what the item is for) sits under it. It shows in the item list, the detail view, search, Seal as QR, backups and sync, and \u2014 like the other details \u2014 is hidden while an item is locked with a secondary passcode.",
       "Custom fields can be put in any order: each one has Move up / Move down buttons in the editor, and the order is kept in the detail view, QR codes, backups and sync.",
@@ -2553,10 +2618,10 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       SEL("kind", "Type", ["Hardware wallet", "Software wallet", "Exchange account", "Paper wallet", "Other"]),
       T("network", "Blockchain / network"),
       T("address", "Public address", { mono: true }),
-      { k: "seed", l: "Recovery seed phrase", kind: "multiline", secret: true },
+      { k: "seed", l: "Recovery seed phrase", kind: "multiline", secret: true, words: true, lockable: true },
       S("privkey", "Private key"),
       S("pin", "Wallet PIN / password", { gen: true }),
-      S("passphrase", "Extra passphrase (25th word)"),
+      S("passphrase", "Extra passphrase (25th word)", { lockable: true }),
       U("url", "Website"),
       T("username", "Username / email"),
       S("password", "Account password", { gen: true })
@@ -2991,18 +3056,18 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       } catch {
         throw new Error("The stored vault looks corrupted.");
       }
-      let opened;
+      let opened2;
       try {
-        opened = await openVault(record2, secret);
+        opened2 = await openVault(record2, secret);
       } catch (e) {
         if (e.message === "bad-secret") this._fail();
         throw e;
       }
-      const fails = this.failState();
+      const fails2 = this.failState();
       this._clearFails();
-      this.session = opened.session;
-      this.data = this._prepare(opened.data);
-      if (fails.times && fails.times.length) this.log("security", `${fails.times.length} failed unlock attempt${fails.times.length > 1 ? "s" : ""} before this sign-in (latest ${new Date(fails.times[fails.times.length - 1]).toISOString().replace("T", " ").slice(0, 19)} UTC)`, "warn");
+      this.session = opened2.session;
+      this.data = this._prepare(opened2.data);
+      if (fails2.times && fails2.times.length) this.log("security", `${fails2.times.length} failed unlock attempt${fails2.times.length > 1 ? "s" : ""} before this sign-in (latest ${new Date(fails2.times[fails2.times.length - 1]).toISOString().replace("T", " ").slice(0, 19)} UTC)`, "warn");
       this.log("security", "Vault unlocked with " + (secret.recovery ? "the recovery key" : secret.passkey ? "a passkey" : "the master password"), secret.recovery ? "warn" : "info");
       this._purgeTrash();
       await this._gcBlobs();
@@ -3019,6 +3084,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       this.session = null;
       this.data = null;
       this.itemKeys.clear();
+      clearOpenFields();
       this.chain = this.chain.then(() => s.lock(), () => s.lock());
     }
     /* Serialised, atomic-ish write: previous record is kept as a .bak until the next successful write. */
@@ -3235,6 +3301,10 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
         it.pwChanged = Date.now();
       }
       Object.assign(it, patch, { updated: Date.now() });
+      for (const [fk, fv] of Object.entries(it.fields || {})) if (isFieldLocked(fv)) for (const r of it.revisions || []) {
+        const sf = r.snap && r.snap.fields;
+        if (sf && sf[fk] && !isFieldLocked(sf[fk])) sf[fk] = fv;
+      }
       if (changed.length) this.log("item", "Edited \u201C" + it.name + "\u201D (" + changed.join(", ") + ")");
       return this.save();
     }
@@ -3715,7 +3785,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     });
     if (TEMPLATES[type] && r.fields && typeof r.fields === "object") for (const f of TEMPLATES[type].fields) {
       const v = r.fields[f.k];
-      if (typeof v === "string" && v) it.fields[f.k] = v.slice(0, f.kind === "multiline" ? 2e4 : 1e3);
+      if (typeof v === "string" && v) it.fields[f.k] = v.slice(0, f.kind === "multiline" || isFieldLocked(v) ? 2e4 : 1e3);
     }
     if (Array.isArray(r.custom)) it.custom = r.custom.filter((c2) => c2 && typeof c2 === "object").slice(0, MAX_CUSTOM).map((c2) => ({ label: s(c2.label, 60), value: s(c2.value, 5e3), secret: !!c2.secret })).filter((c2) => c2.label || c2.value);
     if (typeof r.lock === "string" && r.lock.length <= 4e5 && /^[A-Za-z0-9+/=]+$/.test(r.lock)) {
@@ -4129,6 +4199,311 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     }
   };
 
+  // js/secure-fields.js
+  var WORD_COUNTS = [12, 15, 18, 21, 24];
+  var MAX_WORDS = 48;
+  function seedEditor(initial, { id = "seed" } = {}) {
+    let vals = String(initial || "").split(/\s+/).filter(Boolean).slice(0, MAX_WORDS);
+    let count = WORD_COUNTS.find((c) => c >= vals.length) || vals.length;
+    vals = Array.from({ length: count }, (_, i) => vals[i] || "");
+    const cells = [], shown = /* @__PURE__ */ new Set();
+    const grid = h("div", { class: "seedgrid", role: "group", "aria-label": "Recovery seed phrase, one box per word" });
+    const status = h("small", { class: "hint", "aria-live": "polite" });
+    const sel2 = h("select", { class: "sel", id: id + "_count", "aria-label": "Number of words", on: { change: () => resize(Number(sel2.value), true) } });
+    const fillSelect = () => {
+      clear(sel2).append(...[.../* @__PURE__ */ new Set([...WORD_COUNTS, count])].sort((a, b) => a - b).map((n) => h("option", { value: String(n), selected: n === count }, n + " words")));
+      sel2.value = String(count);
+    };
+    const filled = () => vals.filter((v) => v.trim()).length;
+    const last = () => {
+      for (let i = vals.length - 1; i >= 0; i--) if (vals[i].trim()) return i;
+      return -1;
+    };
+    const note = () => {
+      status.textContent = filled() + " of " + count + " words entered";
+    };
+    const showAll = h("button", { type: "button", class: "btn sm", "aria-pressed": "false", on: { click: () => {
+      const on = showAll.getAttribute("aria-pressed") !== "true";
+      for (let i = 0; i < count; i++) setShown(i, on);
+    } } }, "{{eye}} Show all");
+    const syncShowAll = () => {
+      const all = count > 0 && shown.size === count;
+      showAll.setAttribute("aria-pressed", String(all));
+      showAll.lastChild.textContent = all ? " Hide all" : " Show all";
+    };
+    const setShown = (i, on) => {
+      if (on) shown.add(i);
+      else shown.delete(i);
+      const c = cells[i];
+      if (!c) return;
+      c.input.type = on ? "text" : "password";
+      c.eye.setAttribute("aria-pressed", String(on));
+      c.eye.setAttribute("aria-label", (on ? "Hide" : "Show") + " word " + (i + 1));
+      syncShowAll();
+    };
+    const paint = () => {
+      cells.forEach((c, i) => {
+        c.input.value = vals[i] || "";
+      });
+      note();
+    };
+    const spread = (from, words) => {
+      const need = from + words.length;
+      if (need > count) {
+        const next = WORD_COUNTS.find((c) => c >= need) || Math.min(need, MAX_WORDS);
+        build2(next);
+      }
+      words.forEach((w, k) => {
+        if (from + k < count) vals[from + k] = w;
+      });
+      paint();
+      const target = Math.min(from + words.length, count - 1);
+      if (cells[target]) cells[target].input.focus();
+    };
+    function build2(n) {
+      count = n;
+      vals = Array.from({ length: n }, (_, i) => vals[i] || "");
+      for (const i of [...shown]) if (i >= n) shown.delete(i);
+      cells.length = 0;
+      clear(grid);
+      fillSelect();
+      for (let i = 0; i < n; i++) {
+        const input = h("input", { id: i === 0 ? id : null, type: shown.has(i) ? "text" : "password", class: "inp mono", value: vals[i] || "", autocomplete: "off", autocapitalize: "off", spellcheck: "false", "aria-label": "Word " + (i + 1), on: {
+          input: (e) => {
+            const t = e.target.value;
+            if (/\s/.test(t)) {
+              const w = t.split(/\s+/).filter(Boolean);
+              if (!w.length) {
+                e.target.value = vals[i] || "";
+                return;
+              }
+              spread(i, w);
+            } else {
+              vals[i] = t;
+              note();
+            }
+          },
+          paste: (e) => {
+            const t = e.clipboardData && e.clipboardData.getData("text") || "";
+            if (/\s/.test(t.trim())) {
+              e.preventDefault();
+              spread(i, t.trim().split(/\s+/));
+            }
+          },
+          keydown: (e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              if (cells[i + 1]) cells[i + 1].input.focus();
+            }
+          }
+        } });
+        const eye = h("button", { type: "button", class: "icon-btn eye", "aria-label": (shown.has(i) ? "Hide" : "Show") + " word " + (i + 1), "aria-pressed": String(shown.has(i)), on: { click: () => setShown(i, !shown.has(i)) } }, "{{eye}}");
+        cells.push({ input, eye });
+        grid.append(h("div", { class: "seedcell" }, h("span", { class: "n", "aria-hidden": "true", text: String(i + 1) }), input, eye));
+      }
+      note();
+      syncShowAll();
+    }
+    function resize(n, fromSelect) {
+      if (n < count && vals.slice(n).some((v) => v.trim())) {
+        if (fromSelect) {
+          status.textContent = "Clear words " + (n + 1) + "\u2013" + count + " first, then choose " + n + " words.";
+          sel2.value = String(count);
+        }
+        return;
+      }
+      build2(n);
+    }
+    build2(count);
+    const clearAll = h("button", { type: "button", class: "btn sm", on: { click: () => {
+      vals = vals.map(() => "");
+      paint();
+      if (cells[0]) cells[0].input.focus();
+    } } }, "{{close}} Clear");
+    const el = h("div", { class: "seededitor" }, h("div", { class: "seedbar" }, h("label", { class: "sublbl", for: id + "_count", text: "Words" }), sel2, showAll, clearAll), grid, status);
+    return {
+      el,
+      get: () => vals.slice(0, last() + 1).map((v) => v.trim()).join(" "),
+      set: (text) => {
+        const w = String(text || "").split(/\s+/).filter(Boolean).slice(0, MAX_WORDS);
+        vals = w.slice();
+        const n = WORD_COUNTS.find((c) => c >= w.length) || w.length || 12;
+        shown.clear();
+        build2(n);
+        paint();
+      },
+      problem: () => {
+        const l = last();
+        for (let i = 0; i < l; i++) if (!vals[i].trim()) return "word " + (i + 1) + " is empty. Fill every word up to word " + (l + 1) + ", or move the later words up.";
+        return "";
+      }
+    };
+  }
+  function secretInput(initial, { id, label }) {
+    const input = h("input", { id, type: "password", class: "inp mono", value: initial || "", autocomplete: "off", spellcheck: "false" });
+    const eye = h("button", { type: "button", class: "icon-btn eye", "aria-label": "Show or hide " + label, on: { click: () => {
+      input.type = input.type === "password" ? "text" : "password";
+    } } }, "{{eye}}");
+    return { el: h("div", { class: "pwwrap" }, input, eye), get: () => input.value, set: (v) => {
+      input.value = v || "";
+    }, problem: () => "" };
+  }
+  var bitsText = (v) => {
+    if (!v) return "";
+    const e = estimate(v);
+    return [...v].length + " characters \xB7 ~" + Math.round(e.bits) + " bits \xB7 " + e.label;
+  };
+  function lockableField(ctx2, it, f) {
+    const id = "tf_" + f.k, stored = (it.fields || {})[f.k] || "";
+    const sealed0 = isFieldLocked(stored) ? stored : null;
+    const state = { unlocked: !sealed0, code: null };
+    const inner = f.words ? seedEditor(sealed0 ? "" : stored, { id }) : secretInput(sealed0 ? "" : stored, { id, label: f.l });
+    const editor = h("div"), lockedBox = h("div");
+    const lockOn = h("input", { type: "checkbox", id: "lk_" + f.k, checked: !!sealed0 });
+    const p1 = h("input", { type: "password", class: "inp mono", id: "lk1_" + f.k, autocomplete: "new-password", "aria-label": "Passcode for " + f.l }), p2 = h("input", { type: "password", class: "inp mono", id: "lk2_" + f.k, autocomplete: "new-password", "aria-label": "Repeat passcode for " + f.l });
+    const meterLine = h("small", { class: "sbits", "aria-live": "polite" });
+    p1.addEventListener("input", () => {
+      meterLine.textContent = bitsText(p1.value);
+    });
+    const codeBox = h("div", { class: "lockfields", hidden: !sealed0 });
+    const drawCodeBox = () => {
+      clear(codeBox).append(
+        h("label", { class: "sublbl", for: p1.id, text: sealed0 ? "New passcode (leave both empty to keep the current one)" : "Passcode for " + f.l.toLowerCase() }),
+        p1,
+        meterLine,
+        h("label", { class: "sublbl", for: p2.id, text: "Repeat passcode" }),
+        p2,
+        h("p", { class: "hint", text: "This " + f.l.toLowerCase() + " is encrypted again with this passcode (at least " + FIELD_CODE_MIN + " characters; longer is better). If you forget it nobody can recover it, not even with your master password or recovery key." })
+      );
+    };
+    drawCodeBox();
+    lockOn.addEventListener("change", () => {
+      codeBox.hidden = !lockOn.checked;
+      if (lockOn.checked && !state.code) p1.focus();
+    });
+    const lockRow = h("label", { class: "chk", for: lockOn.id }, lockOn, "{{lock}} Lock with its own passcode");
+    const showEditor = () => {
+      clear(lockedBox);
+      clear(editor).append(inner.el, lockRow, codeBox);
+    };
+    if (sealed0) {
+      clear(lockedBox).append(h(
+        "div",
+        { class: "note lockbox", role: "status" },
+        h("b", { text: "{{lock}} Locked with its own passcode" }),
+        h("p", { class: "hint", text: "Leave it alone and it is saved exactly as it is. To change it, unlock it first." }),
+        h("div", { class: "row" }, h("button", { type: "button", class: "btn sm", on: { click: () => unlockFieldDialog(ctx2, sealed0, f.l, { item: it, then: (value, code) => {
+          state.unlocked = true;
+          state.code = code;
+          inner.set(value);
+          showEditor();
+        } }) } }, "{{lock}} Unlock to edit\u2026"))
+      ));
+    } else showEditor();
+    const el = h("div", { class: "field full lockablefield" }, h("label", { for: id, text: f.l }), lockedBox, editor);
+    return {
+      key: f.k,
+      el,
+      check() {
+        if (!state.unlocked) return "";
+        const pr = inner.problem();
+        if (pr) return f.l + ": " + pr;
+        if (!lockOn.checked || !inner.get()) return "";
+        const code = p1.value || state.code;
+        if (!code) return "Choose a passcode for the " + f.l.toLowerCase() + ", or untick \u201CLock with its own passcode\u201D.";
+        if (p1.value !== p2.value) return "The two passcodes for the " + f.l.toLowerCase() + " do not match.";
+        if (code.length < FIELD_CODE_MIN) return "Use at least " + FIELD_CODE_MIN + " characters for the " + f.l.toLowerCase() + " passcode.";
+        return "";
+      },
+      /* the value to store: the sealed text, the plain text, or '' to remove the field */
+      async resolve() {
+        if (!state.unlocked) return sealed0;
+        const value = inner.get();
+        if (!value) return "";
+        if (!lockOn.checked) return value;
+        return sealField(value, p1.value || state.code);
+      }
+    };
+  }
+  function unlockFieldDialog(ctx2, sealed, label, { item = null, then = null } = {}) {
+    const input = h("input", { type: "password", class: "inp mono", autocomplete: "off", "aria-label": "Passcode for " + label }), err = h("p", { class: "err", role: "alert" });
+    let m;
+    const go = async () => {
+      err.textContent = "";
+      const b = m && m.el && m.el.querySelector(".btn.primary");
+      if (b) b.disabled = true;
+      try {
+        const code = input.value, value = await openField(sealed, code);
+        if (item && ctx2.store.log) ctx2.store.log("access", "Opened the passcode-locked " + label.toLowerCase() + " of \u201C" + item.name + "\u201D");
+        m.close();
+        if (then) then(value, code);
+        else ctx2.refresh();
+      } catch (e) {
+        err.textContent = e.message === "bad-passcode" ? "That is not the passcode for this " + label.toLowerCase() + "." : e.message;
+        input.select();
+        if (b) b.disabled = false;
+      }
+      return false;
+    };
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        go();
+      }
+    });
+    m = modal({
+      title: "Unlock the " + label.toLowerCase(),
+      sub: item ? item.name : "Passcode",
+      body: h("div", null, h("p", { text: "This value has a passcode of its own, on top of your master password. It stays readable for 10 minutes, or until the vault locks." }), input, err),
+      actions: [{ label: "Cancel" }, { label: "Unlock", kind: "primary", onClick: go, close: false }]
+    });
+    setTimeout(() => input.focus(), 50);
+    return m;
+  }
+  function lockedFieldRow(ctx2, it, label, sealed) {
+    return h(
+      "div",
+      { class: "f" },
+      h("div", { class: "k", text: label }),
+      h("div", { class: "v" }, h("span", { class: "chip warn", text: "{{lock}} Locked with its own passcode" }), h("small", { class: "hint", text: " Its value is encrypted again and hidden until you enter that passcode." })),
+      h("div", { class: "acts" }, h("button", { class: "btn sm", "aria-label": "Unlock " + label, on: { click: () => unlockFieldDialog(ctx2, sealed, label, { item: it }) } }, "{{lock}} Unlock"))
+    );
+  }
+  var relockButton = (ctx2, sealed, label) => h("button", { class: "btn sm", type: "button", "aria-label": "Lock " + label + " again", title: "Lock again now", on: { click: () => {
+    relockField(sealed);
+    ctx2.refresh();
+  } } }, "{{lock}} Lock");
+  function seedView(ctx2, it, label, phrase) {
+    const words = String(phrase).split(/\s+/).filter(Boolean), shown = /* @__PURE__ */ new Set(), btns = [];
+    let logged = false;
+    const grid = h("div", { class: "seedgrid view", role: "group", "aria-label": label + ", one tile per word" });
+    const all = h("button", { type: "button", class: "btn sm", "aria-pressed": "false", on: { click: () => {
+      const on = all.getAttribute("aria-pressed") !== "true";
+      words.forEach((_, i) => set(i, on));
+    } } }, "{{eye}} Show all");
+    const set = (i, on) => {
+      if (on && !logged && it && ctx2.store.settings.logReveal) {
+        logged = true;
+        ctx2.store.log("access", "Revealed words of the " + label.toLowerCase() + " of \u201C" + it.name + "\u201D");
+      }
+      if (on) shown.add(i);
+      else shown.delete(i);
+      const b = btns[i];
+      b.setAttribute("aria-pressed", String(on));
+      b.setAttribute("aria-label", (on ? "Hide" : "Show") + " word " + (i + 1));
+      b.lastChild.textContent = on ? words[i] : "\u2022\u2022\u2022\u2022\u2022\u2022";
+      const every = shown.size === words.length;
+      all.setAttribute("aria-pressed", String(every));
+      all.lastChild.textContent = every ? " Hide all" : " Show all";
+    };
+    words.forEach((w, i) => {
+      const b = h("button", { type: "button", class: "seedcell tile mono", "aria-pressed": "false", "aria-label": "Show word " + (i + 1), on: { click: () => set(i, !shown.has(i)) } }, h("span", { class: "n", "aria-hidden": "true", text: String(i + 1) }), h("span", { class: "w", text: "\u2022\u2022\u2022\u2022\u2022\u2022" }));
+      btns.push(b);
+      grid.append(b);
+    });
+    return h("div", { class: "seedview" }, grid, h("div", { class: "row wrap" }, all, h("small", { class: "hint", text: words.length + " words. Tap a word to show it; the others stay hidden." })));
+  }
+
   // js/views.js
   var TYPE_ICON = Object.fromEntries(Object.entries(TYPE_META).map(([k, m]) => [k, m.icon]));
   function avatar(name, type) {
@@ -4317,7 +4692,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   }
   var currentItem = null;
   var STATS_TYPES = /* @__PURE__ */ new Set(["bank", "crypto", "emergency", "note"]);
-  function field(label, value, { secret, copy, ctx: ctx2, pre, link, extra, stats } = {}) {
+  function field(label, value, { secret, copy, ctx: ctx2, pre, link, extra, stats, body } = {}) {
     const item = currentItem;
     if (!value && !extra) return null;
     let shown = !secret;
@@ -4329,14 +4704,14 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     };
     if (value) set();
     const acts = h("div", { class: "acts" });
-    if (secret) acts.append(h("button", { class: "icon-btn", "aria-label": "Show or hide " + label, title: "Show / hide", on: { click: () => {
+    if (secret && !body) acts.append(h("button", { class: "icon-btn", "aria-label": "Show or hide " + label, title: "Show / hide", on: { click: () => {
       shown = !shown;
       set();
       if (shown && item && ctx2.store.settings.logReveal) ctx2.store.log("access", "Revealed " + label.toLowerCase() + " of \u201C" + item.name + "\u201D");
     } } }, "{{eye}}"));
     if (value && item && !item.deleted && (secret || stats) && STATS_TYPES.has(item.type)) acts.append(h("button", { class: "icon-btn", "aria-label": "Seal " + label + " as QR", title: "Seal just this as an encrypted QR", on: { click: () => shareItem(ctx2, item, { label, value }) } }, "{{qr}}"));
     if (copy) acts.append(h("button", { class: "icon-btn", "aria-label": "Copy " + label, title: "Copy", on: { click: () => ctx2.copySecret(value, label + " copied", item, label) } }, "{{copy}}"));
-    return h("div", { class: "f" }, h("div", { class: "k", text: label }), extra ? h("div", { class: "v" }, extra) : h("div", { class: "vwrap" }, v, value && (secret || stats) ? statChip(value) : null), acts);
+    return h("div", { class: "f" }, h("div", { class: "k", text: label }), extra ? h("div", { class: "v" }, extra) : h("div", { class: "vwrap" }, body || v, value && (secret || stats) ? statChip(value) : null), acts);
   }
   function totpField(ctx2, it) {
     if (!it.totp) return null;
@@ -4392,6 +4767,8 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     if (it.username || it.password || it.url || it.totp) parts.push("login details");
     if (it.card && (it.card.number || it.card.holder)) parts.push("card details");
     if (it.description) parts.push("description");
+    const lockedN = Object.values(it.fields || {}).filter(isFieldLocked).length;
+    if (lockedN) parts.push(lockedN + " field" + (lockedN === 1 ? "" : "s") + " that still need" + (lockedN === 1 ? "s" : "") + " their own passcode");
     if (it.notes) parts.push("notes");
     if ((it.custom || []).length) parts.push(it.custom.length + " custom field" + (it.custom.length === 1 ? "" : "s"));
     if ((it.tags || []).length) parts.push(it.tags.length + " tag" + (it.tags.length === 1 ? "" : "s"));
@@ -4593,6 +4970,14 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   function templateRow(ctx2, it, f) {
     const value = (it.fields || {})[f.k];
     if (!value) return null;
+    if (isFieldLocked(value)) {
+      const plain = fieldValue(value);
+      if (plain === null) return lockedFieldRow(ctx2, it, f.l, value);
+      const row2 = f.words ? field(f.l, plain, { secret: true, copy: true, ctx: ctx2, stats: true, body: seedView(ctx2, it, f.l, plain) }) : field(f.l, plain, { secret: true, copy: true, ctx: ctx2, stats: STATS_TYPES.has(it.type) });
+      if (row2) row2.querySelector(".acts").append(relockButton(ctx2, value, f.l));
+      return row2;
+    }
+    if (f.words) return field(f.l, value, { secret: true, copy: true, ctx: ctx2, stats: true, body: seedView(ctx2, it, f.l, value) });
     if (f.kind === "date" && f.expiry) {
       const d = daysUntil(value), chip = d === null ? null : d < 0 ? h("span", { class: "chip bad", text: "expired " + -d + " day" + (d === -1 ? "" : "s") + " ago" }) : d <= 60 ? h("span", { class: "chip warn", text: "in " + d + " day" + (d === 1 ? "" : "s") }) : null;
       return field(f.l, value, { copy: true, ctx: ctx2, extra: h("span", null, value + " ", chip) });
@@ -4733,6 +5118,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       } } })
     );
     const err = h("p", { class: "err", role: "alert" });
+    const locks = [];
     const body = [];
     body.push(h("div", { class: "field" }, h("label", { for: "f_name", text: "Title" }), h("input", { id: "f_name", class: "inp", value: it.name, autofocus: true, autocomplete: "off", placeholder: { card: "e.g. Visa ending 4242", note: "e.g. Safe-deposit notes", network: "e.g. Home Wi-Fi", app: "e.g. Adobe Creative Cloud", computer: "e.g. Work laptop", shopping: "e.g. Amazon", insurance: "e.g. Car insurance", locker: "e.g. Gym locker", travel: "e.g. Passport \u2014 Alex", identity: "e.g. Driver licence", bank: "e.g. Checking account", server: "e.g. Production API", contact: "e.g. Dr. Rivera", phone: "e.g. My mobile", technical: "e.g. AWS production", crypto: "e.g. Ledger Nano", emergency: "e.g. ICE \u2014 Sam", lens: "e.g. Glasses 2026", membership: "e.g. City Gym", internet: "e.g. Home fibre", prescription: "e.g. Amoxicillin", serial: "e.g. MacBook Pro", voter: "e.g. Voter card", photoid: "e.g. Student ID", library: "e.g. Central Library", health: "e.g. Health insurance", car: "e.g. Honda Civic" }[it.type] || "e.g. GitHub", on: { input: (e) => {
       it.name = e.target.value;
@@ -4770,7 +5156,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       ));
     } else if (TEMPLATES[it.type]) {
       if (TEMPLATES[it.type].tip) body.push(h("p", { class: "note", text: TEMPLATES[it.type].tip }));
-      body.push(h("div", { class: "grid2" }, TEMPLATES[it.type].fields.map((f) => tplInput(ctx2, it, f))));
+      body.push(h("div", { class: "grid2" }, TEMPLATES[it.type].fields.map((f) => tplInput(ctx2, it, f, locks))));
     }
     const customBox = h("div", { class: "customs" });
     const moveCustom = (i, d) => {
@@ -4900,9 +5286,27 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
           return false;
         }
       }
+      for (const c of locks) {
+        const e = c.check();
+        if (e) {
+          err.textContent = e;
+          return false;
+        }
+      }
       it.name = it.name.trim();
       it.totp = it.totp.trim();
       it.custom = (it.custom || []).filter((c) => c.label.trim() || c.value).map((c) => ({ label: c.label.trim(), value: c.value, secret: !!c.secret }));
+      if (locks.some((c) => c.el.querySelector("input[type=checkbox]:checked"))) toast("Sealing with the passcode\u2026", "ok", 2500);
+      try {
+        for (const c of locks) {
+          const v = await c.resolve();
+          if (v) (it.fields = it.fields || {})[c.key] = v;
+          else delete (it.fields || {})[c.key];
+        }
+      } catch (e) {
+        err.textContent = e.message;
+        return false;
+      }
       for (const k of Object.keys(it.fields || {})) if (!it.fields[k]) delete it.fields[k];
       if (isNew) {
         it.created = it.updated = it.pwChanged = Date.now();
@@ -4933,7 +5337,12 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     };
     modal({ title: (isNew ? "New " : "Edit ") + TYPES[it.type].toLowerCase(), body: h("div", null, body), actions: [{ label: "Cancel" }, { label: "Save", kind: "primary", onClick: save }], wide: false });
   }
-  function tplInput(ctx2, it, f) {
+  function tplInput(ctx2, it, f, locks = []) {
+    if (f.lockable) {
+      const c = lockableField(ctx2, it, f);
+      locks.push(c);
+      return c.el;
+    }
     const set = (v) => {
       if (v) it.fields[f.k] = v;
       else delete it.fields[f.k];
@@ -9385,6 +9794,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     purgeMemory() {
       const n = store.itemKeys ? store.itemKeys.size : 0;
       if (store.itemKeys) store.itemKeys.clear();
+      clearOpenFields();
       ctx.runCleanup();
       closeAllModals();
       clearClipboardNow();

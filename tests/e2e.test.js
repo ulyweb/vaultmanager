@@ -1675,3 +1675,50 @@ test('v0.26.0: Title + Description on every item, reorderable custom fields, and
   assert.deepEqual(problems.filter((p) => !/Failed to load resource/.test(p)), []);
   await ctx.close();
 });
+
+test('v0.27.0: crypto wallet seed phrase in numbered boxes (hide each word), and passcodes of their own for the seed phrase and the 25th word', async () => {
+  const { ctx, page, problems } = await newPage();
+  await createVault(page);
+  await page.getByRole('button', { name: '＋ New' }).click(); await page.locator('.modal-sheet .cats .btn', { hasText: 'Crypto wallet' }).click();
+  await page.fill('#f_name', 'Cold wallet');
+  const words = 'abandon ability able about above absent absorb abstract absurd abuse access accident'.split(' ');
+  assert.equal(await page.locator('.seedgrid input').count(), 12, 'starts with 12 numbered boxes');
+  await page.fill('#tf_seed', words.join(' '));                                  // pasting a whole phrase spreads it over the boxes
+  assert.deepEqual(await page.locator('.seedgrid input').evaluateAll((els) => els.map((e) => e.value)), words);
+  assert.ok((await page.locator('.seedgrid input').evaluateAll((els) => els.every((e) => e.type === 'password'))), 'every word is hidden');
+  await page.getByRole('button', { name: 'Show word 2' }).click();
+  assert.deepEqual(await page.locator('.seedgrid input').evaluateAll((els) => els.map((e) => e.type)).then((t) => t.filter((x) => x === 'text').length), 1, 'one word shown, the others stay hidden');
+  await page.selectOption('#tf_seed_count', '24'); assert.equal(await page.locator('.seedgrid input').count(), 24);
+  await page.locator('.seedgrid input').nth(12).fill('actress');
+  await page.selectOption('#tf_seed_count', '12'); assert.match(await page.textContent('.seededitor'), /Clear words 13–24 first/); assert.equal(await page.locator('.seedgrid input').count(), 24, 'a filled box is never dropped silently');
+  // the 25th word and the seed phrase each get a passcode of their own
+  await page.fill('#tf_passphrase', 'my-25th-word');
+  await page.check('#lk_passphrase'); await page.fill('#lk1_passphrase', 'word25-code'); await page.fill('#lk2_passphrase', 'word25-code');
+  await page.check('#lk_seed'); await page.fill('#lk1_seed', 'seed-code-9'); await page.fill('#lk2_seed', 'different');
+  await page.getByRole('button', { name: 'Save' }).click(); await page.waitForSelector('.modal-sheet .err:has-text("do not match")');
+  await page.fill('#lk2_seed', 'seed-code-9');
+  await page.getByRole('button', { name: 'Save' }).click(); await page.waitForSelector('.detail h2:has-text("Cold wallet")', { timeout: 60000 });
+  let detail = await page.textContent('.detail');
+  assert.ok(!detail.includes('abandon') && !detail.includes('my-25th-word'), 'nothing readable while the two fields are locked');
+  assert.equal(await page.locator('.detail .chip:has-text("Locked with its own passcode")').count(), 2);
+  assert.ok(!JSON.stringify(await page.evaluate(() => Object.entries(localStorage))).includes('abandon'), 'not stored in the clear');
+  // wrong passcode, then the right one
+  await page.getByRole('button', { name: 'Unlock Recovery seed phrase' }).click();
+  await page.fill('input[aria-label="Passcode for Recovery seed phrase"]', 'nope-nope'); await page.getByRole('button', { name: 'Unlock', exact: true }).click();
+  await page.waitForSelector('.modal-sheet .err:has-text("not the passcode")', { timeout: 60000 });
+  await page.waitForTimeout(2200);
+  await page.fill('input[aria-label="Passcode for Recovery seed phrase"]', 'seed-code-9'); await page.getByRole('button', { name: 'Unlock', exact: true }).click();
+  await page.waitForSelector('.seedgrid.view', { timeout: 60000 });
+  detail = await page.textContent('.detail'); assert.ok(!detail.includes('abandon'), 'opened words still start hidden');
+  assert.equal(await page.locator('.seedgrid.view .tile').count(), 13);
+  await page.getByRole('button', { name: 'Show word 1', exact: true }).click(); assert.ok((await page.textContent('.seedgrid.view')).includes('abandon') && !(await page.textContent('.seedgrid.view')).includes('ability'), 'a single word is shown');
+  await page.getByRole('button', { name: 'Lock Recovery seed phrase again' }).click(); await page.waitForSelector('.detail .chip:has-text("Locked with its own passcode")');
+  assert.ok(!(await page.textContent('.detail')).includes('abandon'));
+  // editing: the locked field is left alone unless it is unlocked first
+  await page.getByRole('button', { name: /Edit/ }).first().click();
+  assert.ok(await page.locator('.modal-sheet .lockablefield .lockbox').count() >= 2, 'both locked fields are offered for unlocking, not editing');
+  await page.fill('#f_description', 'only the description changed'); await page.getByRole('button', { name: 'Save' }).click(); await page.waitForSelector('.detail:has-text("only the description changed")');
+  assert.equal(await page.locator('.detail .chip:has-text("Locked with its own passcode")').count(), 2, 'still locked after an unrelated edit');
+  assert.deepEqual(problems.filter((p) => !/Failed to load resource/.test(p)), []);
+  await ctx.close();
+});

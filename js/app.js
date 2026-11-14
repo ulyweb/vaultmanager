@@ -4,6 +4,7 @@
 if (window.top !== window.self) { document.documentElement.textContent = 'VaultManager cannot be shown inside another page.'; throw new Error('framed'); }
 import { h, clear, setLabel, clearClipboardNow, confirmDialog, buzz, closeAllModals, closeTopModal, modalOpen, modal, toast, copyText } from './dom.js';
 import { VaultStore } from './vault.js';
+import { clearOpenFields } from './fieldlock.js';
 import { available } from './crypto.js';
 import { estimate } from './strength.js';
 import { generatePassphrase } from './generator.js';
@@ -66,6 +67,7 @@ const ctx = {
   purgeMemory() {
     const n = store.itemKeys ? store.itemKeys.size : 0;
     if (store.itemKeys) store.itemKeys.clear();
+    clearOpenFields();
     ctx.runCleanup(); closeAllModals(); clearClipboardNow(); ctx.S.q = '';
     draw();
     toast('Memory purged — ' + n + ' opened item' + (n === 1 ? '' : 's') + ' locked again, clipboard cleared, fields and previews wiped');
