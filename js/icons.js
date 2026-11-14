@@ -97,6 +97,7 @@ const G = {
   archive: ['<path d="M6 3h12v18H6z"/><path d="M12 3v3M12 8v2M12 12v2M10 16h4v3h-4z"/>', '🗜'],
   undo: ['<path d="M4 9l5-5M4 9l5 5M4 9h10a6 6 0 010 12h-3"/>', '↩'],
   menu: ['<path d="M4 6h16M4 12h16M4 18h16"/>', '☰'],
+  chevup: ['<path d="M6 15l6-6 6 6"/>', ''],
   chevdown: ['<path d="M6 9l6 6 6-6"/>', ''],
   chevright: ['<path d="M9 6l6 6-6 6"/>', ''],
   chevleft: ['<path d="M15 6l-6 6 6 6"/>', ''],

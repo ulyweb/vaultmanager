@@ -829,3 +829,14 @@ test('hostile backups cannot weaken the app: settings are typed and bounded, fil
   assert.ok(!/[\\/\u0000]/.test(it.attachments[0].name));
   assert.equal(ITER_MAX, 5000000); assert.equal(inspectSeal(Buffer.from([2, 0x00, 0x98, 0x96, 0x81, ...new Array(40).fill(1)]).toString('base64')).ok, false, '10,000,001 rounds is refused');
 });
+
+test('description: kept by sanitiseItem, merged, searchable, sealed away by the item lock', async () => {
+  const it = sanitiseItem({ type: 'login', name: 'T', description: 'd'.repeat(5000), custom: [{ label: 'b', value: '2' }, { label: 'a', value: '1' }] });
+  assert.equal(it.description.length, 2000); assert.deepEqual(it.custom.map((c) => c.label), ['b', 'a'], 'custom order is kept');
+  assert.equal(sanitiseItem({ type: 'login', name: 'old item' }).description, '', 'older items get an empty description');
+  assert.ok(matches({ ...it, description: 'billing inbox' }, 'billing'));
+  const l = newItem('login', { name: 'x', description: 'one' }), r = structuredClone(l); r.description = 'two'; r.ft = { description: Date.now() + 5000 };
+  mergeItem(l, r); assert.equal(l.description, 'two');
+  const l2 = newItem('login', { name: 'x', custom: [{ label: 'a', value: '1', secret: false }, { label: 'b', value: '2', secret: false }] }), r2 = structuredClone(l2); r2.custom.reverse(); r2.ft = { custom: Date.now() + 5000 };
+  mergeItem(l2, r2); assert.deepEqual(l2.custom.map((c) => c.label), ['b', 'a'], 'a re-ordered custom list syncs');
+});

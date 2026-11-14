@@ -17,11 +17,11 @@ const HISTORY_MAX = 10, REVISIONS_MAX = 10, AUDIT_MAX = 1000, TOMBSTONE_DAYS = 9
 export const OLD_DAYS = 365;
 export const MAX_ATTACHMENT = 10 * 1024 * 1024;
 export const MAX_ATTACHMENTS_PER_ITEM = 20;
-export const TRACKED = ['name', 'username', 'url', 'password', 'totp', 'notes', 'tags', 'card', 'fields', 'custom', 'lock'];
+export const TRACKED = ['name', 'description', 'username', 'url', 'password', 'totp', 'notes', 'tags', 'card', 'fields', 'custom', 'lock'];
 /* What the optional per-item "secondary passcode" seals away (name, tags and favourite stay visible so the item can be found). */
-export const SENSITIVE = ['username', 'password', 'url', 'totp', 'notes', 'card', 'fields', 'custom'];
+export const SENSITIVE = ['description', 'username', 'password', 'url', 'totp', 'notes', 'card', 'fields', 'custom'];
 const pickSensitive = (o) => Object.fromEntries(SENSITIVE.map((k) => [k, o[k]]));
-const BLANK = () => ({ username: '', password: '', url: '', totp: '', notes: '', card: { holder: '', number: '', expiry: '', cvv: '', pin: '' }, fields: {}, custom: [] });
+const BLANK = () => ({ description: '', username: '', password: '', url: '', totp: '', notes: '', card: { holder: '', number: '', expiry: '', cvv: '', pin: '' }, fields: {}, custom: [] });
 export const LOCK_UNLOCK_MS = 10 * 60 * 1000;
 
 export const DEFAULT_SETTINGS = {
@@ -34,7 +34,7 @@ export const DEFAULT_SETTINGS = {
 export function newItem(type = 'login', init = {}) {
   const now = Date.now();
   return {
-    id: uid(), type, name: '', username: '', password: '', url: '', totp: '', notes: '', tags: [], favorite: false,
+    id: uid(), type, name: '', description: '', username: '', password: '', url: '', totp: '', notes: '', tags: [], favorite: false,
     card: { holder: '', number: '', expiry: '', cvv: '', pin: '' }, fields: {}, custom: [], attachments: [], revisions: [], ft: {}, sv: {}, attRemoved: {}, conflicts: [], cr: {},
     history: [], created: now, updated: now, pwChanged: now, deleted: 0, lock: '', ...init,
   };
@@ -47,7 +47,7 @@ const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
    Two devices that edit DIFFERENT fields of one item both keep their changes. If both edited the SAME field
    since they last merged, the newest wins deterministically (both devices pick the same winner) and the other
    value is kept as a conflict for the user to review. */
-const MERGE_KEYS = ['name', 'username', 'url', 'password', 'totp', 'notes', 'tags', 'card', 'custom', 'lock', 'favorite', 'deleted'];
+const MERGE_KEYS = ['name', 'description', 'username', 'url', 'password', 'totp', 'notes', 'tags', 'card', 'custom', 'lock', 'favorite', 'deleted'];
 const NO_CONFLICT = new Set(['favorite', 'deleted']);
 const keysOf = (it) => [...MERGE_KEYS, ...Object.keys(it.fields || {}).map((k) => 'f:' + k)];
 const getKey = (it, k) => (k.startsWith('f:') ? (it.fields || {})[k.slice(2)] ?? '' : it[k]);
@@ -56,7 +56,7 @@ const ftOf = (it, k) => (it.ft && it.ft[k] !== undefined ? it.ft[k] : it.sv && i
 const svOf = (it, k) => (it.sv && it.sv[k] !== undefined ? it.sv[k] : null);   // null: never merged, so nothing counts as "edited since"
 export function keyLabel(it, k) {
   if (k.startsWith('f:')) { const f = ((TEMPLATES[it.type] || {}).fields || []).find((x) => x.k === k.slice(2)); return f ? f.l : k.slice(2); }
-  return ({ name: 'Name', username: 'Username', url: 'Website', password: 'Password', totp: 'One-time code secret', notes: 'Notes', tags: 'Tags', card: 'Card details', custom: 'Custom fields', lock: 'Secondary passcode lock' })[k] || k;
+  return ({ name: 'Title', description: 'Description', username: 'Username', url: 'Website', password: 'Password', totp: 'One-time code secret', notes: 'Notes', tags: 'Tags', card: 'Card details', custom: 'Custom fields', lock: 'Secondary passcode lock' })[k] || k;
 }
 export function keyIsSecret(it, k) {
   if (['password', 'totp', 'card', 'lock'].includes(k)) return true;
@@ -523,7 +523,7 @@ export class VaultStore {
   /* items: sanitised items (ids are regenerated); atts: { oldAttachmentId: base64 }.
      Returns { added, skipped, save } — `save` resolves when everything is persisted. */
   mergeItems(items, atts = {}) {
-    const sig = (i) => [i.type, i.name, i.username, i.url, i.password, i.notes, JSON.stringify(i.fields), JSON.stringify(i.custom)].join('\u0001');
+    const sig = (i) => [i.type, i.name, i.description, i.username, i.url, i.password, i.notes, JSON.stringify(i.fields), JSON.stringify(i.custom)].join('\u0001');
     const have = new Set(this.active().map(sig));
     let added = 0, skipped = 0;
     const writes = [];
@@ -645,7 +645,7 @@ export function sanitiseItem(r, { keepMeta = false, keepAttachments = false } = 
   const type = TYPE_KEYS.includes(r.type) ? r.type : 'login';
   const c = r.card && typeof r.card === 'object' ? r.card : {};
   const it = newItem(type, {
-    name: s(r.name, 300), username: s(r.username, 500), password: s(r.password, 2000), url: s(r.url, 2000), totp: s(r.totp, 1000), notes: s(r.notes, 50000),
+    name: s(r.name, 300), description: s(r.description, 2000), username: s(r.username, 500), password: s(r.password, 2000), url: s(r.url, 2000), totp: s(r.totp, 1000), notes: s(r.notes, 50000),
     tags: Array.isArray(r.tags) ? r.tags.map((t) => s(t, 50)).filter(Boolean).slice(0, 30) : [], favorite: !!r.favorite,
     card: { holder: s(c.holder, 200), number: s(c.number, 40), expiry: s(c.expiry, 10), cvv: s(c.cvv, 10), pin: s(c.pin, 20) },
   });
@@ -781,7 +781,7 @@ export function matches(item, q) {
   const tpl = TEMPLATES[item.type];
   const fieldText = tpl ? tpl.fields.filter((f) => !isSecretField(f)).map((f) => (item.fields || {})[f.k] || '') : [];
   const customText = (item.custom || []).filter((c) => !c.secret).map((c) => c.label + ' ' + c.value);
-  const hay = [item.name, item.username, item.url, item.notes, (item.tags || []).join(' '), ...fieldText, ...customText].join('\n').toLowerCase();
+  const hay = [item.name, item.description, item.username, item.url, item.notes, (item.tags || []).join(' '), ...fieldText, ...customText].join('\n').toLowerCase();
   return q.toLowerCase().split(/\s+/).filter(Boolean).every((w) => hay.includes(w));
 }
 

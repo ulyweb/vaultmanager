@@ -1623,3 +1623,55 @@ test('v0.25.1: the sign-in card keeps picture, name, recovery link, links and ba
     await ctx.close();
   }
 });
+
+test('v0.26.0: Title + Description on every item, reorderable custom fields, and Seal as QR on a locked item', async () => {
+  const { ctx, page, problems } = await newPage();
+  await createVault(page);
+  await page.getByRole('button', { name: '＋ New' }).click(); await page.getByRole('button', { name: '🔑 Login', exact: true }).click();
+  assert.equal(await page.locator('label[for=f_name]').textContent(), 'Title');
+  assert.ok(await page.locator('#f_description').isVisible(), 'description box in the editor');
+  await page.fill('#f_name', 'Work mail'); await page.fill('#f_description', 'Shared inbox for the billing team');
+  for (const [l, v] of [['First', '1'], ['Second', '2'], ['Third', '3']]) {
+    await page.getByRole('button', { name: '＋ Add a field' }).click();
+    const n = await page.locator('.cf').count();
+    await page.locator('.cf').nth(n - 1).locator('input[aria-label="Custom field label"]').fill(l); await page.locator('.cf').nth(n - 1).locator('input[aria-label="Custom field value"]').fill(v);
+  }
+  assert.ok(await page.locator('.cf').first().getByRole('button', { name: 'Move custom field up' }).isDisabled(), 'first field cannot move up');
+  assert.ok(await page.locator('.cf').last().getByRole('button', { name: 'Move custom field down' }).isDisabled(), 'last field cannot move down');
+  await page.locator('.cf').nth(2).getByRole('button', { name: 'Move custom field up' }).click();   // First, Third, Second
+  await page.locator('.cf').nth(1).getByRole('button', { name: 'Move custom field up' }).click();   // Third, First, Second
+  assert.deepEqual(await page.locator('.cf input[aria-label="Custom field label"]').evaluateAll((els) => els.map((e) => e.value)), ['Third', 'First', 'Second']);
+  await page.getByRole('button', { name: 'Save' }).click(); await page.waitForSelector('.detail h2:has-text("Work mail")');
+  assert.ok((await page.textContent('.detail')).includes('Shared inbox for the billing team'), 'description shown on the detail view');
+  assert.ok((await page.textContent('.item')).includes('Work mail'));
+  const keys = await page.locator('.detail .f .k').allTextContents();
+  assert.ok(keys.indexOf('Third') < keys.indexOf('First') && keys.indexOf('First') < keys.indexOf('Second'), 'custom order kept in the detail view: ' + keys);
+  await page.fill('.search', 'billing team'); assert.equal(await page.locator('.item').count(), 1, 'description is searchable'); await page.fill('.search', '');
+
+  // the order and description survive in the QR payload
+  await page.locator('.item').first().click();
+  await page.getByRole('button', { name: /Seal as QR/ }).first().click(); await page.getByRole('button', { name: 'Create QR' }).click(); await page.waitForSelector('.modal-sheet .note.ok', { timeout: 60000 });
+  assert.ok((await page.textContent('.modal-sheet')).includes('description'), 'QR summary mentions the description'); await page.keyboard.press('Escape');
+
+  // locked item: Seal as QR is reachable without first finding the Unlock button
+  await page.getByRole('button', { name: /Add passcode lock/ }).click();
+  const pcs = page.locator('.modal-sheet input[type=password]'); await pcs.nth(0).fill('item-code-123'); await pcs.nth(1).fill('item-code-123');
+  await page.getByRole('button', { name: 'Lock item' }).click(); await page.waitForSelector('.lockbox');
+  assert.ok(!(await page.textContent('.detail')).includes('Shared inbox'), 'description is hidden while locked');
+  await page.getByRole('button', { name: /Unlock & seal as QR/ }).click();
+  await page.fill('input[aria-label="Item passcode"]', 'item-code-123'); await page.getByRole('button', { name: 'Unlock', exact: true }).click();
+  await page.waitForSelector('.modal-sheet:has-text("Seal as QR code")', { timeout: 60000 });
+  await page.getByRole('button', { name: 'Create QR' }).click(); await page.waitForSelector('.modal-sheet .note.ok', { timeout: 60000 });
+  await page.keyboard.press('Escape');
+
+  // optional: seal the QR with the item passcode itself (never stored in the QR)
+  await page.getByRole('button', { name: /^.?\s*Seal as QR/ }).first().click();
+  assert.ok(await page.locator('#f_usecode').isVisible(), 'the checkbox is offered for an opened locked item');
+  await page.check('#f_usecode'); assert.ok(await page.locator('input[aria-label="QR password"]').isHidden(), 'QR password box hides when the passcode is used');
+  await page.getByRole('button', { name: 'Create QR' }).click(); await page.waitForSelector('.modal-sheet .note.ok', { timeout: 60000 });
+  const sealed = await page.locator('.modal-sheet textarea').first().inputValue();
+  const opened = await page.evaluate(async (p) => JSON.parse(await (await import('/js/crypto.js')).openText(p, 'item-code-123')), sealed);
+  assert.equal(opened.item.name, 'Work mail'); assert.ok(!sealed.includes('item-code-123'), 'the passcode is not in the QR text');
+  assert.deepEqual(problems.filter((p) => !/Failed to load resource/.test(p)), []);
+  await ctx.close();
+});

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VaultManager v0.25.1 — single-file offline build. Verify with the .sha256 file next to it. -->
+<!-- VaultManager v0.26.0 — single-file offline build. Verify with the .sha256 file next to it. -->
 <html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
@@ -11,7 +11,7 @@
 <meta name="application-name" content="VaultManager">
 <meta name="format-detection" content="telephone=no">
 <meta name="referrer" content="no-referrer">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-tauzjAWYvkq2EEey6/r1GOXzEWNzSydbYj43JCIjd2U=' 'sha256-O3qdC0F8jzjK9ZZMwiCvEENsjd7mTTQO4QqfMGhicdM=' blob:; style-src 'sha256-ToyGZciOwniAv25nZhz9dZ4hjSWDB6kx8jzH9qTbDck='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-tauzjAWYvkq2EEey6/r1GOXzEWNzSydbYj43JCIjd2U=' 'sha256-/8Fo2R17isgUcueNSVLEYyl/O0irpxYOu/JNGoETZsU=' blob:; style-src 'sha256-zKM5hkUdlZf1/VW6s7MUaFGSy9fNlDNeIQIZnD+KtMA='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
 <title>VaultManager | Zero-Knowledge Password Manager</title>
 <meta name="description" content="VaultManager: an offline-first, zero-knowledge, end-to-end encrypted password manager with a strong password generator, TOTP codes and QR-sealed sharing and backup. Runs entirely in your browser.">
 <meta name="theme-color" content="#05080d">
@@ -284,7 +284,9 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 .hl .ic { font-size: 18px; }
 
 .grid2 .full { grid-column: 1 / -1; }
-.cf { display: grid; grid-template-columns: 1fr 1.4fr auto auto; gap: 8px; align-items: center; margin-bottom: 8px; }
+.cf { display: grid; grid-template-columns: 1fr 1.4fr auto auto auto; gap: 8px; align-items: center; margin-bottom: 8px; }
+.cf .mv { display: inline-flex; gap: 2px; }
+.cf .mv .icon-btn:disabled { opacity: .3; cursor: default; }
 @media (max-width: 640px) { .cf { grid-template-columns: 1fr 1fr; } }
 .cats { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); }
 .side h4 + h4 { margin-top: 4px; }
@@ -978,6 +980,7 @@ html[data-barlabels="0"] .topbar .newbtn { padding: 6px 10px 6px 8px; }
     archive: ['<path d="M6 3h12v18H6z"/><path d="M12 3v3M12 8v2M12 12v2M10 16h4v3h-4z"/>', "\u{1F5DC}"],
     undo: ['<path d="M4 9l5-5M4 9l5 5M4 9h10a6 6 0 010 12h-3"/>', "\u21A9"],
     menu: ['<path d="M4 6h16M4 12h16M4 18h16"/>', "\u2630"],
+    chevup: ['<path d="M6 15l6-6 6 6"/>', ""],
     chevdown: ['<path d="M6 9l6 6 6-6"/>', ""],
     chevright: ['<path d="M9 6l6 6-6 6"/>', ""],
     chevleft: ['<path d="M15 6l-6 6 6 6"/>', ""],
@@ -1915,7 +1918,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   }
 
   // js/version.js
-  var APP_VERSION = "0.25.1";
+  var APP_VERSION = "0.26.0";
   var APP_NAME = "VaultManager";
   var REPO_URL = "https://github.com/ulyweb/vaultmanager";
   var FORMATS = [
@@ -1929,6 +1932,11 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     ["Attachments at rest", "AES-256-GCM per file, bound to vault + file id"]
   ];
   var CHANGELOG = [
+    { v: "0.26.0", date: "2026-11-14", notes: [
+      "Every item now has a Title and an optional Description. The old \u201CName\u201D box is now called Title, and the new Description (a short summary of what the item is for) sits under it. It shows in the item list, the detail view, search, Seal as QR, backups and sync, and \u2014 like the other details \u2014 is hidden while an item is locked with a secondary passcode.",
+      "Custom fields can be put in any order: each one has Move up / Move down buttons in the editor, and the order is kept in the detail view, QR codes, backups and sync.",
+      "Items with a secondary passcode now have an \u201CUnlock & seal as QR\u201D button while they are locked. Before, the Seal as QR button only appeared after you unlocked the item, so it looked as if locked items could not be sealed. The QR uses its own QR password and never contains the item passcode; an optional \u201CUse the item passcode as the QR password\u201D box seals it with the passcode instead."
+    ] },
     { v: "0.25.1", date: "2026-11-13", notes: [
       "Sign-in screen: the profile picture, name, \u201CUse recovery key instead\u201D link and the feature badges are now centred on the card (the picture sits above the name)."
     ] },
@@ -2745,10 +2753,10 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   var OLD_DAYS = 365;
   var MAX_ATTACHMENT = 10 * 1024 * 1024;
   var MAX_ATTACHMENTS_PER_ITEM = 20;
-  var TRACKED = ["name", "username", "url", "password", "totp", "notes", "tags", "card", "fields", "custom", "lock"];
-  var SENSITIVE = ["username", "password", "url", "totp", "notes", "card", "fields", "custom"];
+  var TRACKED = ["name", "description", "username", "url", "password", "totp", "notes", "tags", "card", "fields", "custom", "lock"];
+  var SENSITIVE = ["description", "username", "password", "url", "totp", "notes", "card", "fields", "custom"];
   var pickSensitive = (o) => Object.fromEntries(SENSITIVE.map((k) => [k, o[k]]));
-  var BLANK = () => ({ username: "", password: "", url: "", totp: "", notes: "", card: { holder: "", number: "", expiry: "", cvv: "", pin: "" }, fields: {}, custom: [] });
+  var BLANK = () => ({ description: "", username: "", password: "", url: "", totp: "", notes: "", card: { holder: "", number: "", expiry: "", cvv: "", pin: "" }, fields: {}, custom: [] });
   var LOCK_UNLOCK_MS = 10 * 60 * 1e3;
   var DEFAULT_SETTINGS = {
     autolock: 5,
@@ -2770,6 +2778,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       id: uid(),
       type,
       name: "",
+      description: "",
       username: "",
       password: "",
       url: "",
@@ -2797,7 +2806,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     };
   }
   var same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
-  var MERGE_KEYS = ["name", "username", "url", "password", "totp", "notes", "tags", "card", "custom", "lock", "favorite", "deleted"];
+  var MERGE_KEYS = ["name", "description", "username", "url", "password", "totp", "notes", "tags", "card", "custom", "lock", "favorite", "deleted"];
   var NO_CONFLICT = /* @__PURE__ */ new Set(["favorite", "deleted"]);
   var keysOf = (it) => [...MERGE_KEYS, ...Object.keys(it.fields || {}).map((k) => "f:" + k)];
   var getKey = (it, k) => k.startsWith("f:") ? (it.fields || {})[k.slice(2)] ?? "" : it[k];
@@ -2815,7 +2824,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       const f = ((TEMPLATES[it.type] || {}).fields || []).find((x) => x.k === k.slice(2));
       return f ? f.l : k.slice(2);
     }
-    return { name: "Name", username: "Username", url: "Website", password: "Password", totp: "One-time code secret", notes: "Notes", tags: "Tags", card: "Card details", custom: "Custom fields", lock: "Secondary passcode lock" }[k] || k;
+    return { name: "Title", description: "Description", username: "Username", url: "Website", password: "Password", totp: "One-time code secret", notes: "Notes", tags: "Tags", card: "Card details", custom: "Custom fields", lock: "Secondary passcode lock" }[k] || k;
   }
   function keyIsSecret(it, k) {
     if (["password", "totp", "card", "lock"].includes(k)) return true;
@@ -3550,7 +3559,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     /* items: sanitised items (ids are regenerated); atts: { oldAttachmentId: base64 }.
        Returns { added, skipped, save } — `save` resolves when everything is persisted. */
     mergeItems(items, atts = {}) {
-      const sig = (i) => [i.type, i.name, i.username, i.url, i.password, i.notes, JSON.stringify(i.fields), JSON.stringify(i.custom)].join("");
+      const sig = (i) => [i.type, i.name, i.description, i.username, i.url, i.password, i.notes, JSON.stringify(i.fields), JSON.stringify(i.custom)].join("");
       const have = new Set(this.active().map(sig));
       let added = 0, skipped = 0;
       const writes = [];
@@ -3694,6 +3703,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     const c = r.card && typeof r.card === "object" ? r.card : {};
     const it = newItem(type, {
       name: s(r.name, 300),
+      description: s(r.description, 2e3),
       username: s(r.username, 500),
       password: s(r.password, 2e3),
       url: s(r.url, 2e3),
@@ -3860,7 +3870,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     const tpl = TEMPLATES[item.type];
     const fieldText = tpl ? tpl.fields.filter((f) => !isSecretField(f)).map((f) => (item.fields || {})[f.k] || "") : [];
     const customText = (item.custom || []).filter((c) => !c.secret).map((c) => c.label + " " + c.value);
-    const hay = [item.name, item.username, item.url, item.notes, (item.tags || []).join(" "), ...fieldText, ...customText].join("\n").toLowerCase();
+    const hay = [item.name, item.description, item.username, item.url, item.notes, (item.tags || []).join(" "), ...fieldText, ...customText].join("\n").toLowerCase();
     return q2.toLowerCase().split(/\s+/).filter(Boolean).every((w) => hay.includes(w));
   }
   function health(items, now = Date.now()) {
@@ -4291,7 +4301,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     return h("div", { class: "empty" }, h("p", { text: "No items here yet." }));
   }
   function itemRow(ctx2, it) {
-    const sub = it.type === "login" ? it.username || hostOf(it.url) : it.type === "card" ? "\u2022\u2022\u2022\u2022 " + (it.card.number || "").replace(/\D/g, "").slice(-4) : TEMPLATES[it.type] ? (it.fields || {})[TEMPLATES[it.type].sub] || (it.notes || "").split("\n")[0].slice(0, 60) : (it.notes || "").split("\n")[0].slice(0, 60);
+    const sub = it.type === "login" ? it.username || hostOf(it.url) : it.type === "card" ? "\u2022\u2022\u2022\u2022 " + (it.card.number || "").replace(/\D/g, "").slice(-4) : TEMPLATES[it.type] ? (it.fields || {})[TEMPLATES[it.type].sub] || (it.description || it.notes || "").split("\n")[0].slice(0, 60) : (it.description || it.notes || "").split("\n")[0].slice(0, 60);
     return h(
       "button",
       { class: "item" + (ctx2.S.sel === it.id ? " on" : ""), role: "option", "aria-selected": String(ctx2.S.sel === it.id), on: { click: () => {
@@ -4368,6 +4378,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     } else if (TEMPLATES[it.type]) {
       for (const f of TEMPLATES[it.type].fields) rows.push(templateRow(ctx2, it, f));
     }
+    rows.unshift(field("Description", it.description, { pre: true, ctx: ctx2 }));
     rows.push(field("Notes", it.notes, { pre: true, copy: it.type === "note", ctx: ctx2, stats: STATS_TYPES.has(it.type) }));
     for (const c of it.custom || []) rows.push(field(c.label || "Custom field", c.value, { secret: c.secret, copy: true, ctx: ctx2, pre: true }));
     if ((it.tags || []).length) rows.push(h("div", { class: "f" }, h("div", { class: "k", text: "Tags" }), h("div", { class: "v" }, h("div", { class: "tags" }, it.tags.map((t) => h("span", { class: "chip", text: "#" + t }))))));
@@ -4380,6 +4391,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     if (filled.length) parts.push(filled.length + " filled field" + (filled.length === 1 ? "" : "s") + (secrets ? " (" + secrets + " secret)" : ""));
     if (it.username || it.password || it.url || it.totp) parts.push("login details");
     if (it.card && (it.card.number || it.card.holder)) parts.push("card details");
+    if (it.description) parts.push("description");
     if (it.notes) parts.push("notes");
     if ((it.custom || []).length) parts.push(it.custom.length + " custom field" + (it.custom.length === 1 ? "" : "s"));
     if ((it.tags || []).length) parts.push(it.tags.length + " tag" + (it.tags.length === 1 ? "" : "s"));
@@ -4413,6 +4425,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
         } } }, "{{close}} Delete forever")
       ] : lockedClosed ? [
         h("button", { class: "btn primary sm", on: { click: () => unlockItemDialog(ctx2, it) } }, "{{lock}} Unlock this item"),
+        h("button", { class: "btn sm", title: "Enter the item passcode, then seal it as an encrypted QR", on: { click: () => unlockItemDialog(ctx2, it, { then: (open) => shareItem(ctx2, open) }) } }, "{{qr}} Unlock & seal as QR"),
         h("button", { class: "btn danger sm", on: { click: async () => {
           await store2.trash(it.id);
           ctx2.S.sel = null;
@@ -4479,6 +4492,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     } else if (TEMPLATES[it.type]) {
       for (const f of TEMPLATES[it.type].fields) rows.push(templateRow(ctx2, it, f));
     }
+    rows.unshift(field("Description", it.description, { pre: true, ctx: ctx2 }));
     rows.push(field("Notes", it.notes, { pre: true, copy: it.type === "note", ctx: ctx2, stats: STATS_TYPES.has(it.type) }));
     for (const c of it.custom || []) rows.push(field(c.label || "Custom field", c.value, { secret: c.secret, copy: true, ctx: ctx2, pre: true }));
     rows.push(attachmentsField(ctx2, it));
@@ -4720,9 +4734,12 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     );
     const err = h("p", { class: "err", role: "alert" });
     const body = [];
-    body.push(h("div", { class: "field" }, h("label", { for: "f_name", text: "Name" }), h("input", { id: "f_name", class: "inp", value: it.name, autofocus: true, autocomplete: "off", placeholder: { card: "e.g. Visa ending 4242", note: "e.g. Safe-deposit notes", network: "e.g. Home Wi-Fi", app: "e.g. Adobe Creative Cloud", computer: "e.g. Work laptop", shopping: "e.g. Amazon", insurance: "e.g. Car insurance", locker: "e.g. Gym locker", travel: "e.g. Passport \u2014 Alex", identity: "e.g. Driver licence", bank: "e.g. Checking account", server: "e.g. Production API", contact: "e.g. Dr. Rivera", phone: "e.g. My mobile", technical: "e.g. AWS production", crypto: "e.g. Ledger Nano", emergency: "e.g. ICE \u2014 Sam", lens: "e.g. Glasses 2026", membership: "e.g. City Gym", internet: "e.g. Home fibre", prescription: "e.g. Amoxicillin", serial: "e.g. MacBook Pro", voter: "e.g. Voter card", photoid: "e.g. Student ID", library: "e.g. Central Library", health: "e.g. Health insurance", car: "e.g. Honda Civic" }[it.type] || "e.g. GitHub", on: { input: (e) => {
+    body.push(h("div", { class: "field" }, h("label", { for: "f_name", text: "Title" }), h("input", { id: "f_name", class: "inp", value: it.name, autofocus: true, autocomplete: "off", placeholder: { card: "e.g. Visa ending 4242", note: "e.g. Safe-deposit notes", network: "e.g. Home Wi-Fi", app: "e.g. Adobe Creative Cloud", computer: "e.g. Work laptop", shopping: "e.g. Amazon", insurance: "e.g. Car insurance", locker: "e.g. Gym locker", travel: "e.g. Passport \u2014 Alex", identity: "e.g. Driver licence", bank: "e.g. Checking account", server: "e.g. Production API", contact: "e.g. Dr. Rivera", phone: "e.g. My mobile", technical: "e.g. AWS production", crypto: "e.g. Ledger Nano", emergency: "e.g. ICE \u2014 Sam", lens: "e.g. Glasses 2026", membership: "e.g. City Gym", internet: "e.g. Home fibre", prescription: "e.g. Amoxicillin", serial: "e.g. MacBook Pro", voter: "e.g. Voter card", photoid: "e.g. Student ID", library: "e.g. Central Library", health: "e.g. Health insurance", car: "e.g. Honda Civic" }[it.type] || "e.g. GitHub", on: { input: (e) => {
       it.name = e.target.value;
     } } })));
+    body.push(h("div", { class: "field" }, h("label", { for: "f_description", text: "Description (optional)" }), h("textarea", { id: "f_description", class: "ta", rows: "2", maxlength: "2000", placeholder: "A short summary: what this is for, which account, who it belongs to\u2026", on: { input: (e) => {
+      it.description = e.target.value;
+    } } }, it.description || "")));
     if (it.type === "login") {
       body.push(h("div", { class: "grid2" }, inp("username", "Username / email"), inp("url", "Website", { ph: "https://" })));
       const pf = pwField(it.password, { ctx: ctx2, onInput: (v) => {
@@ -4756,6 +4773,14 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       body.push(h("div", { class: "grid2" }, TEMPLATES[it.type].fields.map((f) => tplInput(ctx2, it, f))));
     }
     const customBox = h("div", { class: "customs" });
+    const moveCustom = (i, d) => {
+      const j = i + d;
+      if (j < 0 || j >= it.custom.length) return;
+      [it.custom[i], it.custom[j]] = [it.custom[j], it.custom[i]];
+      drawCustom();
+      const b = customBox.children[j] && customBox.children[j].querySelector('.mv .icon-btn[aria-label="Move custom field ' + (d < 0 ? "up" : "down") + '"]:not(:disabled)') || customBox.children[j] && customBox.children[j].querySelector(".mv .icon-btn:not(:disabled)");
+      if (b) b.focus();
+    };
     const drawCustom = () => {
       clear(customBox);
       (it.custom = it.custom || []).forEach((c, i) => customBox.append(h(
@@ -4771,6 +4796,12 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
           c.secret = e.target.checked;
           drawCustom();
         } } }), "secret"),
+        h(
+          "span",
+          { class: "mv" },
+          h("button", { type: "button", class: "icon-btn", "aria-label": "Move custom field up", title: "Move up", disabled: i === 0, on: { click: () => moveCustom(i, -1) } }, "{{chevup}}"),
+          h("button", { type: "button", class: "icon-btn", "aria-label": "Move custom field down", title: "Move down", disabled: i === it.custom.length - 1, on: { click: () => moveCustom(i, 1) } }, "{{chevdown}}")
+        ),
         h("button", { type: "button", class: "icon-btn", "aria-label": "Remove custom field", title: "Remove", on: { click: () => {
           it.custom.splice(i, 1);
           drawCustom();
@@ -4851,7 +4882,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     body.push(err);
     const save = async () => {
       if (!it.name.trim()) {
-        err.textContent = "Please give this item a name.";
+        err.textContent = "Please give this item a title.";
         document.getElementById("f_name").focus();
         return false;
       }
@@ -4935,7 +4966,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       actions: [{ label: "Cancel" }]
     });
   }
-  function unlockItemDialog(ctx2, it) {
+  function unlockItemDialog(ctx2, it, { then = null } = {}) {
     const input = h("input", { type: "password", class: "inp mono", autocomplete: "off", "aria-label": "Item passcode" }), err = h("p", { class: "err", role: "alert" });
     let m;
     const go = async () => {
@@ -4946,6 +4977,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
         await ctx2.store.openItem(it.id, input.value);
         m.close();
         ctx2.refresh();
+        if (then) then(ctx2.store.reveal(ctx2.store.get(it.id)));
       } catch (e) {
         err.textContent = e.message === "bad-passcode" ? "That is not the passcode for this item." : e.message;
         input.select();
@@ -5024,26 +5056,35 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   function shareItem(ctx2, it, only = null) {
     const pwBox = h("input", { class: "inp mono", value: generatePassphrase({ words: 4 }), autocomplete: "off", spellcheck: "false", "aria-label": "QR password" });
     const pwRow = passwordRow("QR password", pwBox);
+    const ik = it.lock && ctx2.store.itemKeys.get(it.id), itemCode = ik && ctx2.store.isOpen(it) ? ik.code : "";
+    const useCode = h("input", { type: "checkbox", id: "f_usecode" });
+    const codeNote = h("p", { class: "hint", hidden: true, text: "The QR will be sealed with this item\u2019s passcode instead of a separate QR password. The passcode itself is NOT stored in the QR. Whoever knows the item passcode can open the QR too, and the person you share it with needs that passcode." });
+    if (itemCode) useCode.addEventListener("change", () => {
+      pwRow.hidden = useCode.checked;
+      codeNote.hidden = !useCode.checked;
+    });
+    const qrPw = () => itemCode && useCode.checked ? itemCode : pwBox.value;
+    const pwOk = () => itemCode && useCode.checked || pwRow.match();
     const out = h("div"), err = h("p", { class: "err", role: "alert" }), fileErr = h("p", { class: "err", role: "alert" });
     let canvas = null;
     const make = async () => {
       err.textContent = "";
       clear(out);
-      if (!pwRow.match()) {
+      if (!pwOk()) {
         err.textContent = "The two QR passwords do not match.";
         return false;
       }
-      if (pwBox.value.length < 8) {
-        err.textContent = "Use at least 8 characters for the QR password.";
+      if (qrPw().length < 8) {
+        err.textContent = "Use at least 8 characters for the QR password" + (itemCode && useCode.checked ? " (this item\u2019s passcode is shorter \u2014 untick the box and choose a separate QR password)." : ".");
         return false;
       }
-      const payload = only ? { vm: 1, name: it.name, field: { label: only.label, value: only.value } } : { vm: 1, item: { type: it.type, name: it.name, username: it.username, password: it.password, url: it.url, totp: it.totp, notes: it.notes, tags: it.tags, card: it.card, fields: it.fields, custom: it.custom } };
+      const payload = only ? { vm: 1, name: it.name, field: { label: only.label, value: only.value } } : { vm: 1, item: { type: it.type, name: it.name, description: it.description, username: it.username, password: it.password, url: it.url, totp: it.totp, notes: it.notes, tags: it.tags, card: it.card, fields: it.fields, custom: it.custom } };
       try {
         out.append(h("p", { class: "hint", text: "Deriving the key (600,000 rounds) and sealing\u2026" }));
-        const sealed = await sealText(JSON.stringify(payload), pwBox.value);
+        const sealed = await sealText(JSON.stringify(payload), qrPw());
         canvas = h("canvas", { role: "img", "aria-label": "Encrypted QR code" });
         const r = await drawQR(canvas, sealed, { scale: 6 });
-        const back = JSON.parse(await openText(sealed, pwBox.value));
+        const back = JSON.parse(await openText(sealed, qrPw()));
         const verified = only ? back.field && back.field.value === only.value : back.item && back.item.name === it.name && JSON.stringify(back.item.fields || {}) === JSON.stringify(it.fields || {}) && back.item.notes === it.notes && back.item.password === it.password;
         if (!verified) throw new Error("The QR did not read back correctly \u2014 nothing was changed. Try again.");
         const dc = only ? null : describeContents(it);
@@ -5055,7 +5096,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
             { class: "note ok", role: "status" },
             h("b", { text: "\u2713 Checked: this QR opens again with the password. " }),
             only ? "It holds this single value." : ["It holds the WHOLE item: ", h("b", { text: dc.included }), ".", dc.attachments ? ` Not included: ${dc.attachments} attached file${dc.attachments === 1 ? "" : "s"} (QR codes are far too small for files \u2014 use \u201CSave item + files as encrypted file\u201D below to share them).` : " This item has no attached files."],
-            it.lock ? h("p", { class: "hint", text: "This item has a secondary passcode in your vault. The QR is protected by the QR password only \u2014 whoever has the picture and that password can read it." }) : null,
+            it.lock ? h("p", { class: "hint", text: "This item has a secondary passcode in your vault. The QR is protected by the QR password only \u2014 it does NOT carry the item passcode, so whoever has the picture and the QR password can read it. Pick a QR password as strong as the item passcode." }) : null,
             only ? null : h("div", { class: "row" }, h("button", { class: "btn sm", on: { click: () => modal({ title: "What a scan restores", sub: "Exactly what \u201COpen QR\u201D will show", wide: true, body: itemCard(ctx2, sanitiseItem(back.item)), actions: [{ label: "Close" }] }) } }, "{{search}} Preview what a scan restores"))
           ),
           h("p", { class: "hint", text: `QR version ${r.version} \xB7 ECC ${r.ecc} \xB7 AES-256-GCM \xB7 PBKDF2-SHA256 600,000 rounds. The password is NOT in the code \u2014 share it by a different channel.` }),
@@ -5094,16 +5135,16 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
           h("p", { class: "hint", text: "A QR picture is too small for files, so this makes one encrypted file instead: the whole item and its attachments, sealed with the QR password above. Send the file; the recipient opens Import & export \u2192 Restore from backup, chooses it and enters the password (the item and its files are added to their vault)." }),
           h("div", { class: "row" }, h("button", { class: "btn", on: { click: async () => {
             fileErr.textContent = "";
-            if (!pwRow.match()) {
+            if (!pwOk()) {
               fileErr.textContent = "The two QR passwords do not match.";
               return;
             }
-            if (pwBox.value.length < 10) {
+            if (qrPw().length < 10) {
               fileErr.textContent = "Use at least 10 characters for a file password.";
               return;
             }
             try {
-              const r = await ctx2.store.exportItemEncrypted(it.id, pwBox.value);
+              const r = await ctx2.store.exportItemEncrypted(it.id, qrPw());
               download(`vaultmanager-${it.name.replace(/\W+/g, "-").toLowerCase() || "item"}-${stamp()}.vmvault`, r.text, "text/plain");
               toast(r.missing ? `Saved, but ${r.missing} file${r.missing === 1 ? " is" : "s are"} not on this device yet and could not be included.` : `Saved the item with ${r.files} file${r.files === 1 ? "" : "s"}. Share the password separately.`);
             } catch (e) {
@@ -5112,6 +5153,8 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
           } } }, "{{download}} Save item + files as encrypted file")),
           fileErr
         ) : null,
+        itemCode ? h("label", { class: "chk", for: "f_usecode" }, useCode, "{{lock}} Use the item passcode as the QR password") : null,
+        codeNote,
         pwRow,
         err,
         out
