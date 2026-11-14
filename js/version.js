@@ -1,6 +1,6 @@
 /* Application version, data-format versions and changelog (shown in Settings → About). */
 
-export const APP_VERSION = '0.28.0';
+export const APP_VERSION = '0.28.1';
 export const APP_NAME = 'VaultManager';
 export const REPO_URL = 'https://github.com/ulyweb/vaultmanager';
 
@@ -16,6 +16,9 @@ export const FORMATS = [
 ];
 
 export const CHANGELOG = [
+  { v: '0.28.1', date: '2026-11-14', notes: [
+    'Deleting an item now asks for confirmation first (“Move to trash?”). Cancel keeps the item; confirming moves it to the trash, where it can be restored for the number of days set in Settings (or until you empty the trash).',
+  ] },
   { v: '0.28.0', date: '2026-11-14', notes: [
     'Importing a profile backup: a new optional box “Use the backup password as this profile’s master password” (off by default). The backup file never contains your master password, so it cannot be copied over by itself, but the backup password you just typed can be reused. If it is too short or too easy to guess for a master password, you are told and can choose a new one instead.',
   ] },

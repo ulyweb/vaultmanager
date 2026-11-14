@@ -1743,3 +1743,18 @@ test('v0.28.0: importing a profile backup can reuse the backup password as the m
   assert.deepEqual(B.problems.filter((p) => !/Failed to load resource/.test(p)), []);
   await B.ctx.close();
 });
+
+test('v0.28.1: deleting an item asks first; Cancel keeps it, confirming moves it to the trash', async () => {
+  const { ctx, page, problems } = await newPage(); await createVault(page);
+  await addLogin(page, 'Keep me');
+  await page.getByRole('button', { name: /Delete/ }).first().click();
+  assert.match(await page.textContent('.modal-sheet'), /Move to trash\?[\s\S]*Keep me[\s\S]*restore it from Trash/);
+  await page.locator('.modal-sheet').getByRole('button', { name: 'Cancel' }).click();
+  assert.equal(await page.locator('.item', { hasText: 'Keep me' }).count(), 1, 'Cancel keeps the item');
+  assert.equal(await page.locator('.detail h2', { hasText: 'Keep me' }).count(), 1, 'and keeps it open');
+  await page.getByRole('button', { name: /Delete/ }).first().click(); await page.locator('.modal-sheet').getByRole('button', { name: 'Move to trash' }).click();
+  await page.waitForFunction(() => !document.querySelector('.list .item'));
+  await page.locator('.side .nav', { hasText: 'Trash' }).click(); assert.equal(await page.locator('.item', { hasText: 'Keep me' }).count(), 1, 'the item is in the trash');
+  assert.deepEqual(problems.filter((p) => !/Failed to load resource/.test(p)), []);
+  await ctx.close();
+});

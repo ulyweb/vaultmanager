@@ -208,6 +208,14 @@ export function describeContents(it) {
   return { included: parts.length ? parts.join(', ') : 'the name only (this item has no other details filled in)', attachments: (it.attachments || []).length };
 }
 
+/* Delete = move to the trash, after asking. The trash keeps it for a while, so it can still be restored. */
+async function trashWithConfirm(ctx, it) {
+  const days = ctx.store.settings.trashDays;
+  const ok = await confirmDialog({ title: 'Move to trash?', text: `“${it.name || 'This item'}” will be moved to the trash.` + (days ? ` You can restore it from Trash for ${days} day${days === 1 ? '' : 's'}; after that it is deleted for good.` : ' You can restore it from Trash until you empty the trash yourself.'), okLabel: 'Move to trash', danger: true });
+  if (!ok) return;
+  await ctx.store.trash(it.id); ctx.S.sel = null; toast('Moved to trash'); ctx.refresh();
+}
+
 function detailPanel(ctx, it0) {
   const { store } = ctx;
   const it = store.reveal(it0);
@@ -220,14 +228,14 @@ function detailPanel(ctx, it0) {
       h('button', { class: 'btn danger sm', on: { click: async () => { if (await confirmDialog({ title: 'Delete forever?', text: `“${it.name}” will be permanently deleted.`, okLabel: 'Delete forever', danger: true })) { await store.purge(it.id); ctx.S.sel = null; ctx.refresh(); } } } }, '{{close}} Delete forever')] :
       lockedClosed ? [h('button', { class: 'btn primary sm', on: { click: () => unlockItemDialog(ctx, it) } }, '{{lock}} Unlock this item'),
         h('button', { class: 'btn sm', title: 'Enter the item passcode, then seal it as an encrypted QR', on: { click: () => unlockItemDialog(ctx, it, { then: (open) => shareItem(ctx, open) }) } }, '{{qr}} Unlock & seal as QR'),
-        h('button', { class: 'btn danger sm', on: { click: async () => { await store.trash(it.id); ctx.S.sel = null; toast('Moved to trash'); ctx.refresh(); } } }, '{{trash}} Delete')] :
+        h('button', { class: 'btn danger sm', on: { click: () => trashWithConfirm(ctx, it) } }, '{{trash}} Delete')] :
       [h('button', { class: 'btn sm act-edit', on: { click: () => editItem(ctx, it) } }, '{{edit}} Edit'),
         h('button', { class: 'btn sm' + (it.favorite ? ' primary' : ''), 'aria-pressed': String(it.favorite), on: { click: async () => { await store.update(it.id, { favorite: !it.favorite }); ctx.refresh(); } } }, it.favorite ? '{{star}} Favorite' : '{{starline}} Favorite'),
         it.type === 'network' && (it.fields || {}).ssid ? h('button', { class: 'btn sm', on: { click: () => wifiModal(ctx, it) } }, '{{network}} Wi-Fi QR') : null,
         h('button', { class: 'btn sm', on: { click: () => shareItem(ctx, it) } }, '{{qr}} Seal as QR'),
         it.lock ? null : h('button', { class: 'btn sm', on: { click: async () => { const c = newItem(it.type, { ...structuredClone(it), id: undefined, name: it.name + ' (copy)', history: [], created: Date.now(), updated: Date.now() }); c.id = newItem().id; await store.add(c); ctx.showItem(c.id); toast('Duplicated'); } } }, '{{dup}} Duplicate'),
         it.lock ? h('button', { class: 'btn sm', on: { click: () => { store.relock(it.id); ctx.refresh(); toast('Locked again'); } } }, '{{lock}} Lock now') : h('button', { class: 'btn sm', on: { click: () => lockDialog(ctx, it) } }, '{{lock}} Add passcode lock'),
-        h('button', { class: 'btn danger sm', on: { click: async () => { await store.trash(it.id); ctx.S.sel = null; toast('Moved to trash'); ctx.refresh(); } } }, '{{trash}} Delete')]);
+        h('button', { class: 'btn danger sm', on: { click: () => trashWithConfirm(ctx, it) } }, '{{trash}} Delete')]);
 
   const backTo = TITLES[ctx.S.view] || (ctx.S.view.startsWith('tag:') ? '#' + ctx.S.view.slice(4) : 'Items');
   const navbar = h('div', { class: 'detail-nav' },

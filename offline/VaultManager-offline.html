@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VaultManager v0.28.0 — single-file offline build. Verify with the .sha256 file next to it. -->
+<!-- VaultManager v0.28.1 — single-file offline build. Verify with the .sha256 file next to it. -->
 <html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
@@ -11,7 +11,7 @@
 <meta name="application-name" content="VaultManager">
 <meta name="format-detection" content="telephone=no">
 <meta name="referrer" content="no-referrer">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-tauzjAWYvkq2EEey6/r1GOXzEWNzSydbYj43JCIjd2U=' 'sha256-ZK77sjwtCQeGT9th0hB8AWsGMDCl6m1/YcwHFlM4fV8=' blob:; style-src 'sha256-/taJibJcD/BnQjaH/bYkTvZbYbczvBYuIiXVXoQVReM='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-tauzjAWYvkq2EEey6/r1GOXzEWNzSydbYj43JCIjd2U=' 'sha256-S5DBWbmjSt4U2sioXM1LNfALKu+3QFuPxGps7hGD2GY=' blob:; style-src 'sha256-/taJibJcD/BnQjaH/bYkTvZbYbczvBYuIiXVXoQVReM='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
 <title>VaultManager | Zero-Knowledge Password Manager</title>
 <meta name="description" content="VaultManager: an offline-first, zero-knowledge, end-to-end encrypted password manager with a strong password generator, TOTP codes and QR-sealed sharing and backup. Runs entirely in your browser.">
 <meta name="theme-color" content="#05080d">
@@ -1979,7 +1979,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   }
 
   // js/version.js
-  var APP_VERSION = "0.28.0";
+  var APP_VERSION = "0.28.1";
   var APP_NAME = "VaultManager";
   var REPO_URL = "https://github.com/ulyweb/vaultmanager";
   var FORMATS = [
@@ -1993,6 +1993,9 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     ["Attachments at rest", "AES-256-GCM per file, bound to vault + file id"]
   ];
   var CHANGELOG = [
+    { v: "0.28.1", date: "2026-11-14", notes: [
+      "Deleting an item now asks for confirmation first (\u201CMove to trash?\u201D). Cancel keeps the item; confirming moves it to the trash, where it can be restored for the number of days set in Settings (or until you empty the trash)."
+    ] },
     { v: "0.28.0", date: "2026-11-14", notes: [
       "Importing a profile backup: a new optional box \u201CUse the backup password as this profile\u2019s master password\u201D (off by default). The backup file never contains your master password, so it cannot be copied over by itself, but the backup password you just typed can be reused. If it is too short or too easy to guess for a master password, you are told and can choose a new one instead."
     ] },
@@ -4777,6 +4780,15 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     if ((it.tags || []).length) parts.push(it.tags.length + " tag" + (it.tags.length === 1 ? "" : "s"));
     return { included: parts.length ? parts.join(", ") : "the name only (this item has no other details filled in)", attachments: (it.attachments || []).length };
   }
+  async function trashWithConfirm(ctx2, it) {
+    const days = ctx2.store.settings.trashDays;
+    const ok = await confirmDialog({ title: "Move to trash?", text: `\u201C${it.name || "This item"}\u201D will be moved to the trash.` + (days ? ` You can restore it from Trash for ${days} day${days === 1 ? "" : "s"}; after that it is deleted for good.` : " You can restore it from Trash until you empty the trash yourself."), okLabel: "Move to trash", danger: true });
+    if (!ok) return;
+    await ctx2.store.trash(it.id);
+    ctx2.S.sel = null;
+    toast("Moved to trash");
+    ctx2.refresh();
+  }
   function detailPanel(ctx2, it0) {
     const { store: store2 } = ctx2;
     const it = store2.reveal(it0);
@@ -4806,12 +4818,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       ] : lockedClosed ? [
         h("button", { class: "btn primary sm", on: { click: () => unlockItemDialog(ctx2, it) } }, "{{lock}} Unlock this item"),
         h("button", { class: "btn sm", title: "Enter the item passcode, then seal it as an encrypted QR", on: { click: () => unlockItemDialog(ctx2, it, { then: (open) => shareItem(ctx2, open) }) } }, "{{qr}} Unlock & seal as QR"),
-        h("button", { class: "btn danger sm", on: { click: async () => {
-          await store2.trash(it.id);
-          ctx2.S.sel = null;
-          toast("Moved to trash");
-          ctx2.refresh();
-        } } }, "{{trash}} Delete")
+        h("button", { class: "btn danger sm", on: { click: () => trashWithConfirm(ctx2, it) } }, "{{trash}} Delete")
       ] : [
         h("button", { class: "btn sm act-edit", on: { click: () => editItem(ctx2, it) } }, "{{edit}} Edit"),
         h("button", { class: "btn sm" + (it.favorite ? " primary" : ""), "aria-pressed": String(it.favorite), on: { click: async () => {
@@ -4832,12 +4839,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
           ctx2.refresh();
           toast("Locked again");
         } } }, "{{lock}} Lock now") : h("button", { class: "btn sm", on: { click: () => lockDialog(ctx2, it) } }, "{{lock}} Add passcode lock"),
-        h("button", { class: "btn danger sm", on: { click: async () => {
-          await store2.trash(it.id);
-          ctx2.S.sel = null;
-          toast("Moved to trash");
-          ctx2.refresh();
-        } } }, "{{trash}} Delete")
+        h("button", { class: "btn danger sm", on: { click: () => trashWithConfirm(ctx2, it) } }, "{{trash}} Delete")
       ]
     );
     const backTo = TITLES[ctx2.S.view] || (ctx2.S.view.startsWith("tag:") ? "#" + ctx2.S.view.slice(4) : "Items");
