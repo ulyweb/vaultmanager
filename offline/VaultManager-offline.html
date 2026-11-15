@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VaultManager v0.33.1 — single-file offline build. Verify with the .sha256 file next to it. -->
+<!-- VaultManager v0.33.2 — single-file offline build. Verify with the .sha256 file next to it. -->
 <html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
@@ -11,7 +11,7 @@
 <meta name="application-name" content="VaultManager">
 <meta name="format-detection" content="telephone=no">
 <meta name="referrer" content="no-referrer">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-tauzjAWYvkq2EEey6/r1GOXzEWNzSydbYj43JCIjd2U=' 'sha256-NK73t3UdKy17Bivtb563Y+dP0OtFaUzeO8xkmFicslg=' blob:; style-src 'sha256-XRa7nX603ibC29ED1KQWHHmVpx9Rp9xMG48He1g4o9s='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-tauzjAWYvkq2EEey6/r1GOXzEWNzSydbYj43JCIjd2U=' 'sha256-fUtxJn1zSbt23R7Gt24BsJO70BBUZl+rwYdVZdZ10hM=' blob:; style-src 'sha256-XRa7nX603ibC29ED1KQWHHmVpx9Rp9xMG48He1g4o9s='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
 <title>VaultManager | Zero-Knowledge Password Manager</title>
 <meta name="description" content="VaultManager: an offline-first, zero-knowledge, end-to-end encrypted password manager with a strong password generator, TOTP codes and QR-sealed sharing and backup. Runs entirely in your browser.">
 <meta name="theme-color" content="#05080d">
@@ -2142,7 +2142,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   }
 
   // js/version.js
-  var APP_VERSION = "0.33.1";
+  var APP_VERSION = "0.33.2";
   var APP_NAME = "VaultManager";
   var REPO_URL = "https://github.com/ulyweb/vaultmanager";
   var FORMATS = [
@@ -2156,6 +2156,9 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     ["Attachments at rest", "AES-256-GCM per file, bound to vault + file id"]
   ];
   var CHANGELOG = [
+    { v: "0.33.2", date: "2026-11-15", notes: [
+      "Every generated password now has about 100+ bits of entropy: the backup-password generators (export, whole-profile backup, QR seal), the sync passphrase suggestion and the lightning button on every password pair make 10 random words (about 103 bits) instead of 4\u20136 words (about 41\u201362 bits). The Generator page and the editor \u201CPassphrase\u201D button also default to 10 words (the slider now goes up to 16)."
+    ] },
     { v: "0.33.1", date: "2026-11-15", notes: [
       "Fix: a flat block of colour could cover most of the screen for a moment, for example while typing a password in a dialog. Cause: the 3D card space\u2019s \u201Cswell\u201D pushed a card almost onto the camera so it filled the screen, and the cards\u2019 thick edges (extra 3D layers) could be drawn over their own faces in some browsers. The swell is now a short, safe push; no card can get close to the camera on any screen size; each floating card is a single layer with a solid edge drawn toward the middle of the screen; and the cards rest behind Home while a dialog is open.",
       "Lighter on the graphics card: panels no longer blur the moving cards behind them (they use a near-solid fill while the card space shows), the cards are positioned once per frame instead of by stacked CSS animations, and there are about a hundred fewer 3D layers."
@@ -3047,7 +3050,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     displayName: "",
     tourSeen: false,
     welcomeAlways: false,
-    gen: { mode: "password", length: 20, lower: true, upper: true, digits: true, symbols: true, noAmbiguous: false, words: 5, separator: "-", capitalize: false, number: false },
+    gen: { mode: "password", length: 20, lower: true, upper: true, digits: true, symbols: true, noAmbiguous: false, words: 10, separator: "-", capitalize: false, number: false },
     sync: { method: "off", token: "", gistId: "", passphrase: "", auto: true, attachments: true, last: null },
     look: LOOK_DEFAULTS
   };
@@ -3940,7 +3943,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     const o = {};
     if (["password", "passphrase", "pin"].includes(g.mode)) o.mode = g.mode;
     if (g.length !== void 0) o.length = clampInt(g.length, 4, 128, 20);
-    if (g.words !== void 0) o.words = clampInt(g.words, 3, 12, 5);
+    if (g.words !== void 0) o.words = g.words === 5 ? 10 : clampInt(g.words, 3, 16, 10);
     for (const k of ["lower", "upper", "digits", "symbols", "noAmbiguous", "capitalize", "number"]) if (typeof g[k] === "boolean") o[k] = g[k];
     if (typeof g.separator === "string") o.separator = g.separator.replace(/[\u0000-\u001f]/g, "").slice(0, 4);
     if (typeof g.customSymbols === "string") o.customSymbols = g.customSymbols.replace(/[\u0000-\u001f\s]/g, "").slice(0, 64);
@@ -4420,9 +4423,9 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     while (out.length < length) out.push(all[randInt(all.length)]);
     return shuffle(out).join("");
   }
-  var PASSPHRASE_DEFAULTS = { words: 5, separator: "-", capitalize: false, number: false };
+  var PASSPHRASE_DEFAULTS = { words: 10, separator: "-", capitalize: false, number: false };
   function passphraseEntropy(o = PASSPHRASE_DEFAULTS) {
-    const w = Math.max(1, o.words || 5);
+    const w = Math.max(1, o.words || PASSPHRASE_DEFAULTS.words);
     return w * Math.log2(WORDS.length) + (o.number ? Math.log2(10 * w) : 0) + (o.capitalize ? 0 : 0);
   }
   function generatePassphrase(opt = {}) {
@@ -5195,7 +5198,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     } } }, "{{eye}}");
     const copy = h("button", { class: "btn sm", type: "button", "aria-label": "Copy the password", title: "Copy (clears itself)", on: { click: () => copyText(input.value, "Password copied", 30) } }, "{{copy}}");
     const gen = withGen ? h("button", { class: "btn sm", type: "button", title: "Generate a passphrase", "aria-label": "Generate a passphrase", on: { click: () => {
-      input.value = conf.value = generatePassphrase({ words: 5 });
+      input.value = conf.value = generateStrongPassphrase();
       input.dispatchEvent(new Event("input"));
       show(true);
       eye.setAttribute("aria-pressed", "true");
@@ -6138,7 +6141,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     setTimeout(done, 12e4);
   }
   function shareItem(ctx2, it, only = null) {
-    const pwBox = h("input", { class: "inp mono", value: generatePassphrase({ words: 4 }), autocomplete: "off", spellcheck: "false", "aria-label": "QR password" });
+    const pwBox = h("input", { class: "inp mono", value: generateStrongPassphrase(), autocomplete: "off", spellcheck: "false", "aria-label": "QR password" });
     const pwRow = passwordRow("QR password", pwBox);
     const ik = it.lock && ctx2.store.itemKeys.get(it.id), itemCode = ik && ctx2.store.isOpen(it) ? ik.code : "";
     const useCode = h("input", { type: "checkbox", id: "f_usecode" });
@@ -6446,7 +6449,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       clear(controls);
       if (g.mode === "password") controls.append(slider("length", 8, 128, "Length"), h("div", { class: "checks" }, chk2("lower", "Lowercase a\u2013z"), chk2("upper", "Uppercase A\u2013Z"), chk2("digits", "Digits 0\u20139"), chk2("symbols", "Symbols !@#$"), chk2("noAmbiguous", "Avoid look-alikes (O 0 l 1 I)")));
       else if (g.mode === "passphrase") controls.append(
-        slider("words", 3, 12, "Words"),
+        slider("words", 3, 16, "Words"),
         field2("Separator", sel(g.separator, [["-", "hyphen  -"], [" ", "space"], [".", "dot  ."], ["_", "underscore  _"], ["", "none"]], (v) => {
           g.separator = v;
           save();
@@ -6543,7 +6546,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   }
   function sealTab(ctx2) {
     const text = h("textarea", { class: "ta", rows: "5", placeholder: "A Wi-Fi password, a recovery code, a short note\u2026", "aria-label": "Text to seal", spellcheck: "false" });
-    const pw = h("input", { class: "inp mono", type: "text", value: generatePassphrase({ words: 5 }), autocomplete: "off", spellcheck: "false", "aria-label": "QR password" });
+    const pw = h("input", { class: "inp mono", type: "text", value: generateStrongPassphrase(), autocomplete: "off", spellcheck: "false", "aria-label": "QR password" });
     const out = h("div"), err = h("p", { class: "err", role: "alert" });
     const btn = h("button", { class: "btn primary", on: { click: async () => {
       err.textContent = "";
@@ -6793,7 +6796,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     );
   }
   function backupTab(ctx2) {
-    const pw = h("input", { class: "inp mono", type: "text", value: generatePassphrase({ words: 6 }), autocomplete: "off", spellcheck: "false", "aria-label": "Backup password" });
+    const pw = h("input", { class: "inp mono", type: "text", value: generateStrongPassphrase(), autocomplete: "off", spellcheck: "false", "aria-label": "Backup password" });
     const out = h("div"), err = h("p", { class: "err", role: "alert" });
     const bkRow = passwordRow("Backup password", pw);
     const btn = h("button", { class: "btn primary", on: { click: async () => {
@@ -6936,7 +6939,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       if (f) runImport(await readFileText(f), f.name);
       e.target.value = "";
     } } });
-    const bkPw = h("input", { class: "inp mono", type: "text", value: generatePassphrase({ words: 5 }), autocomplete: "off", spellcheck: "false", "aria-label": "Backup password" });
+    const bkPw = h("input", { class: "inp mono", type: "text", value: generateStrongPassphrase(), autocomplete: "off", spellcheck: "false", "aria-label": "Backup password" });
     const bkErr = h("p", { class: "err", role: "alert" });
     const bkPwRow = passwordRow("Backup password", bkPw);
     const bkAtt = h("input", { type: "checkbox", checked: true });
@@ -9201,7 +9204,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
         field2("Passphrase (the same on every device)", h("div", null, h("div", { class: "pwwrap" }, pass), passM)),
         h("div", { class: "row wrap" }, h("button", { class: "btn primary", on: { click: savePass } }, "Save passphrase"), h("button", { class: "btn", on: { click: () => {
           pass.type = "text";
-          pass.value = generatePassphrase({ words: 6 });
+          pass.value = generateStrongPassphrase();
           pass.dispatchEvent(new Event("input"));
         } } }, "{{bolt}} Suggest one"), h("button", { class: "btn ghost", on: { click: () => {
           pass.type = pass.type === "password" ? "text" : "password";

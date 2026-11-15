@@ -4,7 +4,7 @@ import { h, clear, modal, toast, confirmDialog, copyText, download } from './dom
 import { newItem, sanitiseItem, SENSITIVE, TYPES, matches, totpValid, MAX_ATTACHMENT, MAX_ATTACHMENTS_PER_ITEM, keyLabel, keyIsSecret, describeValue, currentValue } from './vault.js';
 import { TYPE_META, TEMPLATES, GROUPS, isSecretField, MAX_CUSTOM, daysUntil, wifiQRString } from './templates.js';
 import { estimate, crackTime } from './strength.js';
-import { generatePassword, generatePassphrase } from './generator.js';
+import { generatePassword, generatePassphrase, generateStrongPassphrase } from './generator.js';
 import { totpNow, parseTotp } from './totp.js';
 import { sealText, openText } from './crypto.js';
 import { drawQR } from './qr.js';
@@ -66,7 +66,7 @@ export function passwordRow(label, input, withGen = true) {
   const show = (on) => { input.type = conf.type = on ? 'text' : 'password'; };
   const eye = h('button', { class: 'btn sm', type: 'button', 'aria-label': 'Show or hide the password', title: 'Show / hide', 'aria-pressed': 'false', on: { click: () => { const on = input.type === 'password'; show(on); eye.setAttribute('aria-pressed', String(on)); } } }, '{{eye}}');
   const copy = h('button', { class: 'btn sm', type: 'button', 'aria-label': 'Copy the password', title: 'Copy (clears itself)', on: { click: () => copyText(input.value, 'Password copied', 30) } }, '{{copy}}');
-  const gen = withGen ? h('button', { class: 'btn sm', type: 'button', title: 'Generate a passphrase', 'aria-label': 'Generate a passphrase', on: { click: () => { input.value = conf.value = generatePassphrase({ words: 5 }); input.dispatchEvent(new Event('input')); show(true); eye.setAttribute('aria-pressed', 'true'); } } }, '{{bolt}}') : null;
+  const gen = withGen ? h('button', { class: 'btn sm', type: 'button', title: 'Generate a passphrase', 'aria-label': 'Generate a passphrase', on: { click: () => { input.value = conf.value = generateStrongPassphrase(); input.dispatchEvent(new Event('input')); show(true); eye.setAttribute('aria-pressed', 'true'); } } }, '{{bolt}}') : null;
   const f = h('div', { class: 'field' }, h('label', { text: label }), h('div', { class: 'row' }, h('div', { class: 'grow' }, input), eye, copy, gen),
     h('label', { class: 'sublbl', text: 'Confirm ' + label.toLowerCase() }), conf, liveMeter(input));
   f.match = () => input.value === conf.value;
@@ -590,7 +590,7 @@ export function printNodes(nodes) {
 
 /* ---------- QR share (QR Seal v2 compatible) ---------- */
 export function shareItem(ctx, it, only = null) {
-  const pwBox = h('input', { class: 'inp mono', value: generatePassphrase({ words: 4 }), autocomplete: 'off', spellcheck: 'false', 'aria-label': 'QR password' });
+  const pwBox = h('input', { class: 'inp mono', value: generateStrongPassphrase(), autocomplete: 'off', spellcheck: 'false', 'aria-label': 'QR password' });
   const pwRow = passwordRow('QR password', pwBox);
   /* optional: reuse the item's own passcode as the QR password (only while the item is open, so the app knows it; it never goes into the QR) */
   const ik = it.lock && ctx.store.itemKeys.get(it.id), itemCode = ik && ctx.store.isOpen(it) ? ik.code : '';

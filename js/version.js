@@ -1,6 +1,6 @@
 /* Application version, data-format versions and changelog (shown in Settings → About). */
 
-export const APP_VERSION = '0.33.1';
+export const APP_VERSION = '0.33.2';
 export const APP_NAME = 'VaultManager';
 export const REPO_URL = 'https://github.com/ulyweb/vaultmanager';
 
@@ -16,6 +16,9 @@ export const FORMATS = [
 ];
 
 export const CHANGELOG = [
+  { v: '0.33.2', date: '2026-11-15', notes: [
+    'Every generated password now has about 100+ bits of entropy: the backup-password generators (export, whole-profile backup, QR seal), the sync passphrase suggestion and the lightning button on every password pair make 10 random words (about 103 bits) instead of 4–6 words (about 41–62 bits). The Generator page and the editor “Passphrase” button also default to 10 words (the slider now goes up to 16).',
+  ] },
   { v: '0.33.1', date: '2026-11-15', notes: [
     'Fix: a flat block of colour could cover most of the screen for a moment, for example while typing a password in a dialog. Cause: the 3D card space’s “swell” pushed a card almost onto the camera so it filled the screen, and the cards’ thick edges (extra 3D layers) could be drawn over their own faces in some browsers. The swell is now a short, safe push; no card can get close to the camera on any screen size; each floating card is a single layer with a solid edge drawn toward the middle of the screen; and the cards rest behind Home while a dialog is open.',
     'Lighter on the graphics card: panels no longer blur the moving cards behind them (they use a near-solid fill while the card space shows), the cards are positioned once per frame instead of by stacked CSS animations, and there are about a hundred fewer 3D layers.',

@@ -128,7 +128,7 @@ test('full journey: create → add → lock → unlock → tools → QR round tr
   const g1 = await page.textContent('.genout'); await page.getByRole('button', { name: /Regenerate/ }).click();
   assert.notEqual(g1, await page.textContent('.genout'));
   await page.getByRole('tab', { name: 'Passphrase' }).click();
-  assert.equal((await page.textContent('.genout')).split('-').length, 5);
+  assert.equal((await page.textContent('.genout')).split('-').length, 10);
 
   // health
   await page.getByRole('button', { name: /Vault health/ }).click(); await page.waitForSelector('.ring');
@@ -1973,4 +1973,16 @@ test('v0.33.0: thick cards and windows, tilt / thickness / float settings from t
   await page.locator('input[aria-label="fx3dThick"]').fill('8'); assert.equal(await css('--fx3d-thick'), '8', 'the same slider lives in Settings');
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth <= 1), true, 'no sideways scroll with thick widgets');
   assert.deepEqual(problems.filter(quiet), []); await ctx.close();
+});
+
+test('v0.33.2: every generate-a-password button makes 100+ bits (export, whole-profile backup, master password)', async () => {
+  const bits = async (page) => +(/~(\d+) bits/.exec(await page.textContent('.modal-sheet .meter-label'))[1]);
+  const A = await newPage(); await createVault(A.page);
+  await settingsTab(A.page, 'General');
+  await A.page.getByRole('button', { name: /Export whole profile/ }).click();
+  await A.page.locator('.modal-sheet button[aria-label="Generate a passphrase"]').click();
+  const b = await bits(A.page);
+  assert.ok(b >= 100, 'the export dialog generator gave only ' + b + ' bits');
+  assert.equal((await A.page.inputValue('input[aria-label="Backup password"]')).split('-').length, 10);
+  assert.deepEqual(A.problems.filter((p) => !/Failed to load resource/.test(p)), []); await A.ctx.close();
 });

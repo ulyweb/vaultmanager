@@ -27,7 +27,7 @@ export const LOCK_UNLOCK_MS = 10 * 60 * 1000;
 
 export const DEFAULT_SETTINGS = {
   autolock: 5, clipboard: 30, theme: 'auto', lockOnHide: false, trashDays: 30, logReveal: true, displayName: '', tourSeen: false, welcomeAlways: false,
-  gen: { mode: 'password', length: 20, lower: true, upper: true, digits: true, symbols: true, noAmbiguous: false, words: 5, separator: '-', capitalize: false, number: false },
+  gen: { mode: 'password', length: 20, lower: true, upper: true, digits: true, symbols: true, noAmbiguous: false, words: 10, separator: '-', capitalize: false, number: false },
   sync: { method: 'off', token: '', gistId: '', passphrase: '', auto: true, attachments: true, last: null },
   look: LOOK_DEFAULTS,
 };
@@ -599,7 +599,7 @@ export function sanitizeGen(g = {}) {
   const o = {};
   if (['password', 'passphrase', 'pin'].includes(g.mode)) o.mode = g.mode;
   if (g.length !== undefined) o.length = clampInt(g.length, 4, 128, 20);
-  if (g.words !== undefined) o.words = clampInt(g.words, 3, 12, 5);
+  if (g.words !== undefined) o.words = (g.words === 5 ? 10 : clampInt(g.words, 3, 16, 10));
   for (const k of ['lower', 'upper', 'digits', 'symbols', 'noAmbiguous', 'capitalize', 'number']) if (typeof g[k] === 'boolean') o[k] = g[k];
   if (typeof g.separator === 'string') o.separator = g.separator.replace(/[\u0000-\u001f]/g, '').slice(0, 4);
   if (typeof g.customSymbols === 'string') o.customSymbols = g.customSymbols.replace(/[\u0000-\u001f\s]/g, '').slice(0, 64);

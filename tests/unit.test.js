@@ -883,3 +883,11 @@ test('look: 3D settings have defaults and a look saved before the 3D card space 
   assert.equal(normalizeLook({ fx3d: true, fxTilt: 0 }).fxTilt, 0, 'a deliberate 0 stays 0');
   assert.equal(normalizeLook({ fx3dThick: 99, fx3dFloat: -4, fxTilt: 40, fx3d: true }).fx3dThick, 28); assert.equal(normalizeLook({ fx3dFloat: -4 }).fx3dFloat, 0); assert.equal(normalizeLook({ fx3d: true, fxTilt: 40 }).fxTilt, 12);
 });
+
+test('every generated passphrase defaults to 100+ bits of entropy', async () => {
+  const g = await import('../js/generator.js');
+  assert.ok(g.passphraseEntropy() >= 100);
+  assert.ok(g.passphraseEntropy({ words: g.STRONG_WORDS }) >= 100);
+  assert.equal(g.generatePassphrase().split('-').length, 10);
+  assert.equal(g.generateStrongPassphrase().split('-').length, 10);
+});
