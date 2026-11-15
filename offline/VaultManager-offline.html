@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VaultManager v0.34.0 — single-file offline build. Verify with the .sha256 file next to it. -->
+<!-- VaultManager v0.34.1 — single-file offline build. Verify with the .sha256 file next to it. -->
 <html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
@@ -11,7 +11,7 @@
 <meta name="application-name" content="VaultManager">
 <meta name="format-detection" content="telephone=no">
 <meta name="referrer" content="no-referrer">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-tauzjAWYvkq2EEey6/r1GOXzEWNzSydbYj43JCIjd2U=' 'sha256-0pov1ePxwXVVRSrvZRd253qvU7YITYGWsHwgjyUqhj4=' blob:; style-src 'sha256-XRa7nX603ibC29ED1KQWHHmVpx9Rp9xMG48He1g4o9s='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-tauzjAWYvkq2EEey6/r1GOXzEWNzSydbYj43JCIjd2U=' 'sha256-8q+vGk0W87s+IlUwfVQvK1Lrr7NEKhFTfkn+7KxhcWY=' blob:; style-src 'sha256-C8nOTky3L1FushSnsUCa+sjhTlzZ6yt4DIiDdK4lR7Y='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
 <title>VaultManager | Zero-Knowledge Password Manager</title>
 <meta name="description" content="VaultManager: an offline-first, zero-knowledge, end-to-end encrypted password manager with a strong password generator, TOTP codes and QR-sealed sharing and backup. Runs entirely in your browser.">
 <meta name="theme-color" content="#05080d">
@@ -1027,6 +1027,11 @@ body[data-modal][data-space=home] .s3 { display: none !important; }
 html[data-thick=on] .s3-card { --tn: calc(var(--fx3d-thick, 14) * .125px); }
 html[data-thick=on] .s3-inner { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .16), calc(var(--ex, .2) * var(--tn) * 1) calc(var(--ey, .4) * var(--tn) * 1) 0 0 hsl(var(--h) 46% calc(40% - 1 * 3.4%)), calc(var(--ex, .2) * var(--tn) * 2) calc(var(--ey, .4) * var(--tn) * 2) 0 0 hsl(var(--h) 46% calc(40% - 2 * 3.4%)), calc(var(--ex, .2) * var(--tn) * 3) calc(var(--ey, .4) * var(--tn) * 3) 0 0 hsl(var(--h) 46% calc(40% - 3 * 3.4%)), calc(var(--ex, .2) * var(--tn) * 4) calc(var(--ey, .4) * var(--tn) * 4) 0 0 hsl(var(--h) 46% calc(40% - 4 * 3.4%)), calc(var(--ex, .2) * var(--tn) * 5) calc(var(--ey, .4) * var(--tn) * 5) 0 0 hsl(var(--h) 46% calc(40% - 5 * 3.4%)), calc(var(--ex, .2) * var(--tn) * 6) calc(var(--ey, .4) * var(--tn) * 6) 0 0 hsl(var(--h) 46% calc(40% - 6 * 3.4%)), calc(var(--ex, .2) * var(--tn) * 7) calc(var(--ey, .4) * var(--tn) * 7) 0 0 hsl(var(--h) 46% calc(40% - 7 * 3.4%)), calc(var(--ex, .2) * var(--tn) * 8) calc(var(--ey, .4) * var(--tn) * 8) 0 0 hsl(var(--h) 46% calc(40% - 8 * 3.4%)), 0 26px 44px rgba(0, 0, 0, .4); }
 :root[data-theme="light"][data-thick=on] .s3-inner { box-shadow: inset 0 1px 0 #fff, calc(var(--ex, .2) * var(--tn) * 1) calc(var(--ey, .4) * var(--tn) * 1) 0 0 hsl(var(--h) 40% calc(78% - 1 * 4.4%)), calc(var(--ex, .2) * var(--tn) * 2) calc(var(--ey, .4) * var(--tn) * 2) 0 0 hsl(var(--h) 40% calc(78% - 2 * 4.4%)), calc(var(--ex, .2) * var(--tn) * 3) calc(var(--ey, .4) * var(--tn) * 3) 0 0 hsl(var(--h) 40% calc(78% - 3 * 4.4%)), calc(var(--ex, .2) * var(--tn) * 4) calc(var(--ey, .4) * var(--tn) * 4) 0 0 hsl(var(--h) 40% calc(78% - 4 * 4.4%)), calc(var(--ex, .2) * var(--tn) * 5) calc(var(--ey, .4) * var(--tn) * 5) 0 0 hsl(var(--h) 40% calc(78% - 5 * 4.4%)), calc(var(--ex, .2) * var(--tn) * 6) calc(var(--ey, .4) * var(--tn) * 6) 0 0 hsl(var(--h) 40% calc(78% - 6 * 4.4%)), calc(var(--ex, .2) * var(--tn) * 7) calc(var(--ey, .4) * var(--tn) * 7) 0 0 hsl(var(--h) 40% calc(78% - 7 * 4.4%)), calc(var(--ex, .2) * var(--tn) * 8) calc(var(--ey, .4) * var(--tn) * 8) 0 0 hsl(var(--h) 40% calc(78% - 8 * 4.4%)), 0 22px 36px rgba(30, 45, 60, .22); }
+
+/* Favorites page: your own favorite names as filter chips */
+.favchips { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 12px 4px; }
+.favchip { cursor: pointer; background: transparent; color: var(--ink-2, inherit); font: inherit; font-size: .8em; }
+.favchip.on { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 55%, transparent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
 </style>
 </head>
 <body>
@@ -2144,7 +2149,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   }
 
   // js/version.js
-  var APP_VERSION = "0.34.0";
+  var APP_VERSION = "0.34.1";
   var APP_NAME = "VaultManager";
   var REPO_URL = "https://github.com/ulyweb/vaultmanager";
   var FORMATS = [
@@ -2158,6 +2163,9 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     ["Attachments at rest", "AES-256-GCM per file, bound to vault + file id"]
   ];
   var CHANGELOG = [
+    { v: "0.34.1", date: "2026-11-15", notes: [
+      "Custom favorite names: give a favorite your own name (Work, Family, Trip\u2026) in the item editor (\u201CFavorite name\u201D, with your earlier names suggested) or leave it as plain Favorites. The Favorites page shows your names as filter chips (All \xB7 Work \xB7 Family), the item\u2019s star button shows its name, and the names are kept in backups, sync and locked items."
+    ] },
     { v: "0.34.0", date: "2026-11-15", notes: [
       "New category: Social network (29 categories now). One card for YouTube, Facebook, X, Instagram, TikTok, LinkedIn and more (pick the platform): handle, channel or page name and ID, profile link, sign-in email and phone, password with the generator, two-factor method, backup codes, API key, when the account was created.",
       "Crypto wallets now stamp the date and time they were added to your vault automatically (your local time; you can edit it), and have fields for when the wallet was created, when the seed phrase was backed up and the last balance check. Social accounts get the same automatic \u201Cadded\u201D stamp. The new date-and-time field type is available to any category."
@@ -3096,6 +3104,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       notes: "",
       tags: [],
       favorite: false,
+      favName: "",
       card: { holder: "", number: "", expiry: "", cvv: "", pin: "" },
       fields: autoFields(type),
       custom: [],
@@ -3116,8 +3125,8 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     };
   }
   var same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
-  var MERGE_KEYS = ["name", "description", "username", "url", "password", "totp", "notes", "tags", "card", "custom", "lock", "favorite", "deleted"];
-  var NO_CONFLICT = /* @__PURE__ */ new Set(["favorite", "deleted"]);
+  var MERGE_KEYS = ["name", "description", "username", "url", "password", "totp", "notes", "tags", "card", "custom", "lock", "favorite", "favName", "deleted"];
+  var NO_CONFLICT = /* @__PURE__ */ new Set(["favorite", "favName", "deleted"]);
   var keysOf = (it) => [...MERGE_KEYS, ...Object.keys(it.fields || {}).map((k) => "f:" + k)];
   var getKey = (it, k) => k.startsWith("f:") ? (it.fields || {})[k.slice(2)] ?? "" : it[k];
   var setKey = (it, k, v) => {
@@ -3134,7 +3143,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       const f = ((TEMPLATES[it.type] || {}).fields || []).find((x) => x.k === k.slice(2));
       return f ? f.l : k.slice(2);
     }
-    return { name: "Title", description: "Description", username: "Username", url: "Website", password: "Password", totp: "One-time code secret", notes: "Notes", tags: "Tags", card: "Card details", custom: "Custom fields", lock: "Secondary passcode lock" }[k] || k;
+    return { favName: "Favorite name", name: "Title", description: "Description", username: "Username", url: "Website", password: "Password", totp: "One-time code secret", notes: "Notes", tags: "Tags", card: "Card details", custom: "Custom fields", lock: "Secondary passcode lock" }[k] || k;
   }
   function keyIsSecret(it, k) {
     if (["password", "totp", "card", "lock"].includes(k)) return true;
@@ -3624,6 +3633,12 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     active() {
       return this.data.items.filter((i) => !i.deleted);
     }
+    /* the custom names given to favorites ("Work", "Family"…), most used first */
+    favNames() {
+      const m = /* @__PURE__ */ new Map();
+      for (const i of this.active()) if (i.favorite && i.favName) m.set(i.favName, (m.get(i.favName) || 0) + 1);
+      return [...m].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([n, c]) => [n, c]);
+    }
     trashed() {
       return this.data.items.filter((i) => i.deleted);
     }
@@ -4026,6 +4041,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       notes: s(r.notes, 5e4),
       tags: Array.isArray(r.tags) ? r.tags.map((t) => s(t, 50)).filter(Boolean).slice(0, 30) : [],
       favorite: !!r.favorite,
+      favName: s(r.favName, 40).trim(),
       card: { holder: s(c.holder, 200), number: s(c.number, 40), expiry: s(c.expiry, 10), cvv: s(c.cvv, 10), pin: s(c.pin, 20) }
     });
     if (TEMPLATES[type] && r.fields && typeof r.fields === "object") for (const f of TEMPLATES[type].fields) {
@@ -4054,6 +4070,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       it.cr = numMap(r.cr);
       if (Array.isArray(r.conflicts)) it.conflicts = r.conflicts.filter((c2) => c2 && typeof c2.id === "string" && /^[0-9a-f]{8}$/.test(c2.id) && typeof c2.key === "string" && c2.key.length < 60 && JSON.stringify(c2.value ?? "").length < 6e4).slice(0, 20).map((c2) => ({ id: c2.id, key: c2.key, value: c2.value ?? "", at: num2(c2.at) }));
       it.favorite = !!r.favorite;
+      it.favName = s(r.favName, 40).trim();
       if (Array.isArray(r.revisions)) it.revisions = r.revisions.filter((v) => v && v.snap && typeof v.snap === "object").slice(0, REVISIONS_MAX).map((v) => {
         const sn = sanitiseItem(v.snap);
         return { at: num2(v.at), changed: Array.isArray(v.changed) ? v.changed.map((x) => s(x, 20)).slice(0, 10) : [], snap: Object.fromEntries(TRACKED.map((k) => [k, sn[k]])) };
@@ -5281,8 +5298,10 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     const { store: store2, S: S2 } = ctx2;
     let items = S2.view === "trash" ? store2.trashed() : store2.active();
     const v = S2.view;
-    if (v === "fav") items = items.filter((i) => i.favorite);
-    else if (v === "conflicts") items = items.filter((i) => (i.conflicts || []).length);
+    if (v === "fav") {
+      items = items.filter((i) => i.favorite);
+      if (S2.favName) items = items.filter((i) => i.favName === S2.favName);
+    } else if (v === "conflicts") items = items.filter((i) => (i.conflicts || []).length);
     else if (v in TYPE_META) items = items.filter((i) => i.type === v);
     else if (v.startsWith("tag:")) items = items.filter((i) => (i.tags || []).includes(v.slice(4)));
     if (S2.q) items = items.filter((i) => matches(i, S2.q));
@@ -5309,10 +5328,21 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
           }
         } } }, "Empty") : null
       ),
+      S2.view === "fav" ? favChips(ctx2) : null,
       h("div", { class: "items", role: "listbox", "aria-label": "Items" }, items.length ? items.map((it) => itemRow(ctx2, it)) : emptyState(ctx2, items))
     );
     const detail = h("div", { class: "panel detail", "aria-live": "polite" }, sel2 ? detailPanel(ctx2, sel2) : h("div", { class: "empty" }, h("div", { class: "big", text: "{{shieldlock}}" }), h("p", { text: "Select an item to view it." })));
     return h("div", { class: "split" + (sel2 ? " has-sel" : "") }, list, detail);
+  }
+  function favChips(ctx2) {
+    const { S: S2, store: store2 } = ctx2, names = store2.favNames();
+    if (S2.favName && !names.some(([n]) => n === S2.favName)) S2.favName = "";
+    if (!names.length) return null;
+    const chip = (label, name, n) => h("button", { type: "button", class: "chip favchip" + ((S2.favName || "") === name ? " on" : ""), "aria-pressed": String((S2.favName || "") === name), on: { click: () => {
+      S2.favName = name;
+      ctx2.refresh();
+    } } }, label + (n === void 0 ? "" : " \xB7 " + n));
+    return h("div", { class: "favchips", role: "group", "aria-label": "Favorite names" }, chip("All", "", store2.active().filter((i) => i.favorite).length), names.map(([n, c]) => chip(n, n, c)));
   }
   function emptyState(ctx2, items) {
     const { S: S2, store: store2 } = ctx2;
@@ -5475,7 +5505,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
         h("button", { class: "btn sm" + (it.favorite ? " primary" : ""), "aria-pressed": String(it.favorite), on: { click: async () => {
           await store2.update(it.id, { favorite: !it.favorite });
           ctx2.refresh();
-        } } }, it.favorite ? "{{star}} Favorite" : "{{starline}} Favorite"),
+        } } }, it.favorite ? "{{star}} " + (it.favName || "Favorite") : "{{starline}} Favorite"),
         it.type === "network" && (it.fields || {}).ssid ? h("button", { class: "btn sm", on: { click: () => wifiModal(ctx2, it) } }, "{{network}} Wi-Fi QR") : null,
         h("button", { class: "btn sm", on: { click: () => shareItem(ctx2, it) } }, "{{qr}} Seal as QR"),
         it.lock ? null : h("button", { class: "btn sm", on: { click: async () => {
@@ -5903,9 +5933,20 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     body.push(inp("tags", "Tags (comma separated)", { get: () => (it.tags || []).join(", "), set: (v) => {
       it.tags = v.split(",").map((t) => t.trim().replace(/^#/, "")).filter(Boolean).slice(0, 30);
     }, ph: "work, finance" }));
-    body.push(h("label", { class: "chk" }, h("input", { type: "checkbox", checked: it.favorite, on: { change: (e) => {
+    const favBox = h("input", { type: "checkbox", checked: it.favorite, on: { change: (e) => {
       it.favorite = e.target.checked;
-    } } }), "Favorite"));
+    } } });
+    const favNameIn = h("input", { id: "f_favname", class: "inp", list: "f_favnames", maxlength: "40", value: it.favName || "", placeholder: "Favorites", autocomplete: "off", "aria-label": "Favorite name", on: { input: (e) => {
+      it.favName = e.target.value.trim().slice(0, 40);
+      if (it.favName) {
+        it.favorite = true;
+        favBox.checked = true;
+      }
+    } } });
+    body.push(
+      h("label", { class: "chk" }, favBox, "Favorite"),
+      h("div", { class: "field" }, h("label", { for: "f_favname", text: "Favorite name (optional)" }), favNameIn, h("datalist", { id: "f_favnames" }, ctx2.store.favNames().map(([n]) => h("option", { value: n }))), h("p", { class: "hint", text: "Give your favorites your own names, like Work or Family. They appear as filters on the Favorites page." }))
+    );
     const lockOn = h("input", { type: "checkbox", id: "f_lockon" }), lp1 = h("input", { type: "password", class: "inp mono", id: "f_lock1", autocomplete: "new-password", "aria-label": "Item passcode" }), lp2 = h("input", { type: "password", class: "inp mono", id: "f_lock2", autocomplete: "new-password", "aria-label": "Repeat item passcode" });
     const lockBox = h(
       "div",
@@ -5970,7 +6011,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
         it.attachments = [];
         await store2.add(it);
       } else if (it.lock) {
-        const meta = { name: it.name, tags: it.tags, favorite: it.favorite };
+        const meta = { name: it.name, tags: it.tags, favorite: it.favorite, favName: it.favName };
         await store2.saveLocked(it.id, meta, it);
       } else {
         const { id, history, created, pwChanged, attachments, revisions, deleted, lock: lock2, _open, ...patch } = it;

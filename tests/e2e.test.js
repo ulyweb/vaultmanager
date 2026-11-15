@@ -2008,3 +2008,23 @@ test('v0.33.2: social network category (YouTube, Facebook, X, Instagram, TikTok,
   assert.ok((await page.textContent('.detail')).includes(stamp.replace('T', ' ')), 'the detail page shows it as date and time');
   assert.deepEqual(problems.filter((p) => !/Failed to load resource/.test(p)), []); await ctx.close();
 });
+
+test('v0.34.1: custom favorite names — name a favorite, filter the Favorites page by it, keep it after a re-edit', async () => {
+  const { ctx, page, problems } = await newPage(); await createVault(page);
+  await addLogin(page, 'Payroll', async () => { await page.fill('#f_favname', 'Work'); assert.equal(await page.locator('.modal-sheet input[type=checkbox]').first().isChecked().catch(() => true), true); });
+  await addLogin(page, 'Netflix', async () => { await page.fill('#f_favname', 'Family'); });
+  await addLogin(page, 'Plain', async () => { await page.locator('label.chk:has-text("Favorite") input').check(); });
+  await page.locator('.side .nav:has-text("Favorites")').click();
+  await page.waitForSelector('.favchips');
+  const chips = await page.locator('.favchip').allTextContents(); assert.deepEqual(chips.map((t) => t.replace(/\s+/g, ' ').trim()).sort(), ['All · 3', 'Family · 1', 'Work · 1']);
+  assert.equal(await page.locator('.items .row, .items [role=option]').count(), 3);
+  await page.locator('.favchip', { hasText: 'Work' }).click();
+  assert.equal(await page.locator('.items [role=option]').count(), 1); assert.match(await page.textContent('.items'), /Payroll/);
+  await page.locator('.items [role=option]').first().click();
+  assert.match(await page.textContent('.detail .act-edit, .detail'), /Work/, 'the detail page shows the favorite name');
+  await page.locator('.detail .act-edit').click(); await page.waitForSelector('#f_favname');
+  assert.equal(await page.inputValue('#f_favname'), 'Work');
+  assert.deepEqual(await page.locator('#f_favnames option').evaluateAll((o) => o.map((x) => x.value).sort()), ['Family', 'Work']);
+  await page.getByRole('button', { name: 'Save' }).click(); await page.waitForSelector('.detail h2:has-text("Payroll")');
+  assert.deepEqual(problems.filter((p) => !/Failed to load resource/.test(p)), []); await ctx.close();
+});

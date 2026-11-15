@@ -96,7 +96,7 @@ export function filterItems(ctx) {
   const { store, S } = ctx;
   let items = S.view === 'trash' ? store.trashed() : store.active();
   const v = S.view;
-  if (v === 'fav') items = items.filter((i) => i.favorite);
+  if (v === 'fav') { items = items.filter((i) => i.favorite); if (S.favName) items = items.filter((i) => i.favName === S.favName); }
   else if (v === 'conflicts') items = items.filter((i) => (i.conflicts || []).length);
   else if (v in TYPE_META) items = items.filter((i) => i.type === v);
   else if (v.startsWith('tag:')) items = items.filter((i) => (i.tags || []).includes(v.slice(4)));
@@ -115,9 +115,19 @@ export function renderVaultView(ctx) {
   const list = h('div', { class: 'panel list' },
     h('div', { class: 'list-head' }, h('span', { text: S.view.startsWith('tag:') ? '#' + S.view.slice(4) : TITLES[S.view] || 'Items' }), h('span', { text: String(items.length), style: null }),
       S.view === 'trash' && items.length ? h('button', { class: 'btn sm danger', style: null, on: { click: async () => { if (await confirmDialog({ title: 'Empty trash?', text: 'These items will be permanently deleted.', okLabel: 'Delete forever', danger: true })) { await store.emptyTrash(); ctx.refresh(); } } } }, 'Empty') : null),
+    S.view === 'fav' ? favChips(ctx) : null,
     h('div', { class: 'items', role: 'listbox', 'aria-label': 'Items' }, items.length ? items.map((it) => itemRow(ctx, it)) : emptyState(ctx, items)));
   const detail = h('div', { class: 'panel detail', 'aria-live': 'polite' }, sel ? detailPanel(ctx, sel) : h('div', { class: 'empty' }, h('div', { class: 'big', text: '{{shieldlock}}' }), h('p', { text: 'Select an item to view it.' })));
   return h('div', { class: 'split' + (sel ? ' has-sel' : '') }, list, detail);
+}
+
+/* the Favorites page: your own favorite names as filter chips (All · Work · Family …) */
+function favChips(ctx) {
+  const { S, store } = ctx, names = store.favNames();
+  if (S.favName && !names.some(([n]) => n === S.favName)) S.favName = '';
+  if (!names.length) return null;
+  const chip = (label, name, n) => h('button', { type: 'button', class: 'chip favchip' + ((S.favName || '') === name ? ' on' : ''), 'aria-pressed': String((S.favName || '') === name), on: { click: () => { S.favName = name; ctx.refresh(); } } }, label + (n === undefined ? '' : ' · ' + n));
+  return h('div', { class: 'favchips', role: 'group', 'aria-label': 'Favorite names' }, chip('All', '', store.active().filter((i) => i.favorite).length), names.map(([n, c]) => chip(n, n, c)));
 }
 
 function emptyState(ctx, items) {
@@ -231,7 +241,7 @@ function detailPanel(ctx, it0) {
         h('button', { class: 'btn sm', title: 'Enter the item passcode, then seal it as an encrypted QR', on: { click: () => unlockItemDialog(ctx, it, { then: (open) => shareItem(ctx, open) }) } }, '{{qr}} Unlock & seal as QR'),
         h('button', { class: 'btn danger sm', on: { click: () => trashWithConfirm(ctx, it) } }, '{{trash}} Delete')] :
       [h('button', { class: 'btn sm act-edit', on: { click: () => editItem(ctx, it) } }, '{{edit}} Edit'),
-        h('button', { class: 'btn sm' + (it.favorite ? ' primary' : ''), 'aria-pressed': String(it.favorite), on: { click: async () => { await store.update(it.id, { favorite: !it.favorite }); ctx.refresh(); } } }, it.favorite ? '{{star}} Favorite' : '{{starline}} Favorite'),
+        h('button', { class: 'btn sm' + (it.favorite ? ' primary' : ''), 'aria-pressed': String(it.favorite), on: { click: async () => { await store.update(it.id, { favorite: !it.favorite }); ctx.refresh(); } } }, it.favorite ? '{{star}} ' + (it.favName || 'Favorite') : '{{starline}} Favorite'),
         it.type === 'network' && (it.fields || {}).ssid ? h('button', { class: 'btn sm', on: { click: () => wifiModal(ctx, it) } }, '{{network}} Wi-Fi QR') : null,
         h('button', { class: 'btn sm', on: { click: () => shareItem(ctx, it) } }, '{{qr}} Seal as QR'),
         it.lock ? null : h('button', { class: 'btn sm', on: { click: async () => { const c = newItem(it.type, { ...structuredClone(it), id: undefined, name: it.name + ' (copy)', history: [], created: Date.now(), updated: Date.now() }); c.id = newItem().id; await store.add(c); ctx.showItem(c.id); toast('Duplicated'); } } }, '{{dup}} Duplicate'),
@@ -465,7 +475,10 @@ export function editItem(ctx, item, type = 'login') {
     h('div', { class: 'row wrap' }, h('button', { type: 'button', class: 'btn sm', on: { click: () => fileIn.click() } }, '{{clip}} Add files'), h('button', { type: 'button', class: 'btn sm', on: { click: () => camIn.click() } }, '{{camera}} Take photo'), fileIn, camIn), attErr));
   body.push(h('div', { class: 'field' }, h('label', { for: 'f_notes', text: it.type === 'note' ? 'Note' : 'Notes' }), h('textarea', { id: 'f_notes', class: 'ta', rows: it.type === 'note' ? '10' : '4', on: { input: (e) => { it.notes = e.target.value; } } }, it.notes)));
   body.push(inp('tags', 'Tags (comma separated)', { get: () => (it.tags || []).join(', '), set: (v) => { it.tags = v.split(',').map((t) => t.trim().replace(/^#/, '')).filter(Boolean).slice(0, 30); }, ph: 'work, finance' }));
-  body.push(h('label', { class: 'chk' }, h('input', { type: 'checkbox', checked: it.favorite, on: { change: (e) => { it.favorite = e.target.checked; } } }), 'Favorite'));
+  const favBox = h('input', { type: 'checkbox', checked: it.favorite, on: { change: (e) => { it.favorite = e.target.checked; } } });
+  const favNameIn = h('input', { id: 'f_favname', class: 'inp', list: 'f_favnames', maxlength: '40', value: it.favName || '', placeholder: 'Favorites', autocomplete: 'off', 'aria-label': 'Favorite name', on: { input: (e) => { it.favName = e.target.value.trim().slice(0, 40); if (it.favName) { it.favorite = true; favBox.checked = true; } } } });
+  body.push(h('label', { class: 'chk' }, favBox, 'Favorite'),
+    h('div', { class: 'field' }, h('label', { for: 'f_favname', text: 'Favorite name (optional)' }), favNameIn, h('datalist', { id: 'f_favnames' }, ctx.store.favNames().map(([n]) => h('option', { value: n }))), h('p', { class: 'hint', text: 'Give your favorites your own names, like Work or Family. They appear as filters on the Favorites page.' })));
   /* optional secondary passcode (new items; existing ones use the Lock button on the detail page) */
   const lockOn = h('input', { type: 'checkbox', id: 'f_lockon' }), lp1 = h('input', { type: 'password', class: 'inp mono', id: 'f_lock1', autocomplete: 'new-password', 'aria-label': 'Item passcode' }), lp2 = h('input', { type: 'password', class: 'inp mono', id: 'f_lock2', autocomplete: 'new-password', 'aria-label': 'Repeat item passcode' });
   const lockBox = h('div', { class: 'field lockfields', hidden: true }, h('label', { for: 'f_lock1', text: 'Item passcode' }), lp1, liveMeter(lp1), h('label', { for: 'f_lock2', text: 'Repeat passcode' }), lp2,
@@ -485,7 +498,7 @@ export function editItem(ctx, item, type = 'login') {
     try { for (const c of locks) { const v = await c.resolve(); if (v) (it.fields = it.fields || {})[c.key] = v; else delete (it.fields || {})[c.key]; } } catch (e) { err.textContent = e.message; return false; }
     for (const k of Object.keys(it.fields || {})) if (!it.fields[k]) delete it.fields[k];
     if (isNew) { it.created = it.updated = it.pwChanged = Date.now(); it.attachments = []; await store.add(it); }
-    else if (it.lock) { const meta = { name: it.name, tags: it.tags, favorite: it.favorite }; await store.saveLocked(it.id, meta, it); }
+    else if (it.lock) { const meta = { name: it.name, tags: it.tags, favorite: it.favorite, favName: it.favName }; await store.saveLocked(it.id, meta, it); }
     else { const { id, history, created, pwChanged, attachments, revisions, deleted, lock, _open, ...patch } = it; await store.update(id, patch); }
     try {
       for (const id of removed) await store.removeAttachment(it.id, id);

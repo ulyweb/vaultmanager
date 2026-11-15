@@ -1,6 +1,6 @@
 /* Application version, data-format versions and changelog (shown in Settings → About). */
 
-export const APP_VERSION = '0.34.0';
+export const APP_VERSION = '0.34.1';
 export const APP_NAME = 'VaultManager';
 export const REPO_URL = 'https://github.com/ulyweb/vaultmanager';
 
@@ -16,6 +16,9 @@ export const FORMATS = [
 ];
 
 export const CHANGELOG = [
+  { v: '0.34.1', date: '2026-11-15', notes: [
+    'Custom favorite names: give a favorite your own name (Work, Family, Trip…) in the item editor (“Favorite name”, with your earlier names suggested) or leave it as plain Favorites. The Favorites page shows your names as filter chips (All · Work · Family), the item’s star button shows its name, and the names are kept in backups, sync and locked items.',
+  ] },
   { v: '0.34.0', date: '2026-11-15', notes: [
     'New category: Social network (29 categories now). One card for YouTube, Facebook, X, Instagram, TikTok, LinkedIn and more (pick the platform): handle, channel or page name and ID, profile link, sign-in email and phone, password with the generator, two-factor method, backup codes, API key, when the account was created.',
     'Crypto wallets now stamp the date and time they were added to your vault automatically (your local time; you can edit it), and have fields for when the wallet was created, when the seed phrase was backed up and the last balance check. Social accounts get the same automatic “added” stamp. The new date-and-time field type is available to any category.',

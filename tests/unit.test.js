@@ -905,3 +905,16 @@ test('social network category exists, and a new crypto wallet gets its date & ti
   assert.deepEqual(newItem('login').fields, {});
   assert.equal(newItem('crypto', { fields: { added: '2020-01-02T03:04' } }).fields.added, '2020-01-02T03:04', 'imports keep their own stamp');
 });
+
+test('custom favorite names: kept, listed by use, survive export/import and merge', async () => {
+  const { v } = await mk('fav names pass!!');
+  const a = newItem('login', { name: 'A', favorite: true, favName: 'Work' }), b = newItem('login', { name: 'B', favorite: true, favName: 'Work' }), c = newItem('login', { name: 'C', favorite: true, favName: 'Family' }), d = newItem('login', { name: 'D', favorite: true });
+  for (const i of [a, b, c, d]) await v.add(i);
+  assert.deepEqual(v.favNames(), [['Work', 2], ['Family', 1]]);
+  await v.update(a.id, { favName: 'Office' });
+  assert.deepEqual(v.favNames().map(([n]) => n).sort(), ['Family', 'Office', 'Work']);
+  assert.equal(v.get(a.id).favName, 'Office');
+  const back = sanitiseItem(JSON.parse(JSON.stringify(v.get(c.id))));
+  assert.equal(back.favName, 'Family');
+  assert.equal(sanitiseItem({ type: 'login', name: 'x', favName: 'y'.repeat(100) }).favName.length, 40);
+});
