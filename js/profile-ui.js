@@ -88,7 +88,7 @@ export function importProfileDialog(ctx, { onDone } = {}) {
   const fname = h('span', { class: 'hint', text: 'No file chosen' });
   const paste = h('textarea', { class: 'ta', rows: '2', placeholder: 'Or paste the backup text here (starts with VMP1: or VMX1:)', 'aria-label': 'Backup text', spellcheck: 'false' });
   const bpw = h('input', { class: 'inp mono', type: 'password', autocomplete: 'off', 'aria-label': 'Backup password' });
-  const err1 = h('p', { class: 'err', role: 'alert' }), step1 = h('div'), step2 = h('div', { hidden: true });
+  const err1 = h('p', { class: 'err', role: 'alert' }), step1 = h('div'), step2 = h('div', { class: 'impcenter', hidden: true });
   const openBtn = h('button', { class: 'btn primary', type: 'button' }, 'Open backup');
   step1.append(h('p', { class: 'hint', text: 'Bring a profile back from an encrypted backup (.vmprofile from “Export profile”, or a .vmvault backup). The whole database — items, attachments, settings — is restored into a new profile with a master password you choose now.' }),
     h('div', { class: 'row wrap' }, h('button', { class: 'btn', type: 'button', on: { click: () => file.click() } }, '{{folder}} Choose backup file'), file, fname), paste,
@@ -103,7 +103,7 @@ export function importProfileDialog(ctx, { onDone } = {}) {
   const createBtn = h('button', { class: 'btn primary', type: 'button' }, 'Create profile');
   /* optional: reuse the backup password (just typed in step 1) as this profile's master password — the backup file never contains the master password itself */
   const same = h('input', { type: 'checkbox', id: 'f_samepw' });
-  const own = h('div', null,
+  const own = h('div', { class: 'own' },
     h('div', { class: 'field' }, h('label', { text: 'New master password for this profile' }), p1, meterBox, h('p', { class: 'hint', text: '12+ characters. It can be different from the one the backup came from.' })),
     h('div', { class: 'field' }, h('label', { text: 'Repeat master password' }), p2),
     h('button', { class: 'btn sm', type: 'button', title: 'Ten random words: about 103 bits of entropy', on: { click: () => { const pw = generateStrongPassphrase(); p1.value = p2.value = pw; p1.type = p2.type = 'text'; p1.dispatchEvent(new Event('input')); } } }, '{{bolt}} Suggest a passphrase'));

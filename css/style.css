@@ -891,3 +891,14 @@ html[data-fxanim=on] .btn.cta.busy { background: repeating-linear-gradient(45deg
 html[data-fxanim=on] .btn.cta.busy::after { display: none; }
 @media (prefers-reduced-motion: reduce) { html .avprev::before, html .btn.cta, html .btn.cta::after, html .emo, html .avbtn { animation: none !important; } }
 html[data-icons] .themeseg .ico:not(.cat) { color: inherit; filter: none; }   /* the sun and moon follow the pill's colour, so they stay readable on light and dark */
+
+/* Import a profile, step 2: the name, picture, password choice, confirmation and Create button all sit on the centre line */
+.impcenter .field > label { display: block; text-align: center; }
+.impcenter .inp[aria-label="Profile name"] { text-align: center; }
+.impcenter .avpick { display: grid; justify-items: center; gap: 12px; margin: 14px 0; }
+.impcenter .avpick .row, .impcenter .row { justify-content: center; }
+.impcenter .emojigrid { justify-self: stretch; }
+.impcenter .chk { justify-content: center; text-align: center; }
+.impcenter .hint, .impcenter .err { text-align: center; }
+.impcenter .own > .btn { display: flex; margin: 8px auto 0; }
+.impcenter .kv { margin-bottom: 10px; }

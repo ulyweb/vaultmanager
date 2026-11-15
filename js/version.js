@@ -1,6 +1,6 @@
 /* Application version, data-format versions and changelog (shown in Settings → About). */
 
-export const APP_VERSION = '0.29.1';
+export const APP_VERSION = '0.29.2';
 export const APP_NAME = 'VaultManager';
 export const REPO_URL = 'https://github.com/ulyweb/vaultmanager';
 
@@ -16,6 +16,9 @@ export const FORMATS = [
 ];
 
 export const CHANGELOG = [
+  { v: '0.29.2', date: '2026-11-15', notes: [
+    'Import a profile: the second step is now centred — the profile name, the picture and its Letter / Emoji / Photo buttons, the “use the backup password” choice, the confirmation box and the Create profile button all sit on the centre line, on desktop and phone.',
+  ] },
   { v: '0.29.1', date: '2026-11-15', notes: [
     'Stronger “Suggest a passphrase”: it now makes 10 random words (about 103 bits of entropy, rated Excellent) instead of 6 (about 62 bits). This applies to the master password when you create a profile, import a profile backup, or change your master password.',
   ] },

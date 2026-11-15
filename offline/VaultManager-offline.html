@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VaultManager v0.29.1 — single-file offline build. Verify with the .sha256 file next to it. -->
+<!-- VaultManager v0.29.2 — single-file offline build. Verify with the .sha256 file next to it. -->
 <html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
@@ -11,7 +11,7 @@
 <meta name="application-name" content="VaultManager">
 <meta name="format-detection" content="telephone=no">
 <meta name="referrer" content="no-referrer">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-tauzjAWYvkq2EEey6/r1GOXzEWNzSydbYj43JCIjd2U=' 'sha256-EZuvFpBeYhlcKeYsFmFk69grpG+VIwLNzfZaERhbOQE=' blob:; style-src 'sha256-vpUdONVG3hKpQsa3/iK8SxueMeVv846WIAor6lRxnRM='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-tauzjAWYvkq2EEey6/r1GOXzEWNzSydbYj43JCIjd2U=' 'sha256-+mtjwHsOx23LV+m9FQhSQNbhLbkyQL85QACbdEE/lZE=' blob:; style-src 'sha256-FHMWZDwvQqaMQWJbWE2C83vWaj4vtYikPtV3g2TyvDE='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
 <title>VaultManager | Zero-Knowledge Password Manager</title>
 <meta name="description" content="VaultManager: an offline-first, zero-knowledge, end-to-end encrypted password manager with a strong password generator, TOTP codes and QR-sealed sharing and backup. Runs entirely in your browser.">
 <meta name="theme-color" content="#05080d">
@@ -909,6 +909,17 @@ html[data-fxanim=on] .btn.cta.busy { background: repeating-linear-gradient(45deg
 html[data-fxanim=on] .btn.cta.busy::after { display: none; }
 @media (prefers-reduced-motion: reduce) { html .avprev::before, html .btn.cta, html .btn.cta::after, html .emo, html .avbtn { animation: none !important; } }
 html[data-icons] .themeseg .ico:not(.cat) { color: inherit; filter: none; }   /* the sun and moon follow the pill's colour, so they stay readable on light and dark */
+
+/* Import a profile, step 2: the name, picture, password choice, confirmation and Create button all sit on the centre line */
+.impcenter .field > label { display: block; text-align: center; }
+.impcenter .inp[aria-label="Profile name"] { text-align: center; }
+.impcenter .avpick { display: grid; justify-items: center; gap: 12px; margin: 14px 0; }
+.impcenter .avpick .row, .impcenter .row { justify-content: center; }
+.impcenter .emojigrid { justify-self: stretch; }
+.impcenter .chk { justify-content: center; text-align: center; }
+.impcenter .hint, .impcenter .err { text-align: center; }
+.impcenter .own > .btn { display: flex; margin: 8px auto 0; }
+.impcenter .kv { margin-bottom: 10px; }
 </style>
 </head>
 <body>
@@ -2022,7 +2033,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   }
 
   // js/version.js
-  var APP_VERSION = "0.29.1";
+  var APP_VERSION = "0.29.2";
   var APP_NAME = "VaultManager";
   var REPO_URL = "https://github.com/ulyweb/vaultmanager";
   var FORMATS = [
@@ -2036,6 +2047,9 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     ["Attachments at rest", "AES-256-GCM per file, bound to vault + file id"]
   ];
   var CHANGELOG = [
+    { v: "0.29.2", date: "2026-11-15", notes: [
+      "Import a profile: the second step is now centred \u2014 the profile name, the picture and its Letter / Emoji / Photo buttons, the \u201Cuse the backup password\u201D choice, the confirmation box and the Create profile button all sit on the centre line, on desktop and phone."
+    ] },
     { v: "0.29.1", date: "2026-11-15", notes: [
       "Stronger \u201CSuggest a passphrase\u201D: it now makes 10 random words (about 103 bits of entropy, rated Excellent) instead of 6 (about 62 bits). This applies to the master password when you create a profile, import a profile backup, or change your master password."
     ] },
@@ -8038,7 +8052,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     const fname = h("span", { class: "hint", text: "No file chosen" });
     const paste = h("textarea", { class: "ta", rows: "2", placeholder: "Or paste the backup text here (starts with VMP1: or VMX1:)", "aria-label": "Backup text", spellcheck: "false" });
     const bpw = h("input", { class: "inp mono", type: "password", autocomplete: "off", "aria-label": "Backup password" });
-    const err1 = h("p", { class: "err", role: "alert" }), step1 = h("div"), step2 = h("div", { hidden: true });
+    const err1 = h("p", { class: "err", role: "alert" }), step1 = h("div"), step2 = h("div", { class: "impcenter", hidden: true });
     const openBtn = h("button", { class: "btn primary", type: "button" }, "Open backup");
     step1.append(
       h("p", { class: "hint", text: "Bring a profile back from an encrypted backup (.vmprofile from \u201CExport profile\u201D, or a .vmvault backup). The whole database \u2014 items, attachments, settings \u2014 is restored into a new profile with a master password you choose now." }),
@@ -8058,7 +8072,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     const same2 = h("input", { type: "checkbox", id: "f_samepw" });
     const own = h(
       "div",
-      null,
+      { class: "own" },
       h("div", { class: "field" }, h("label", { text: "New master password for this profile" }), p1, meterBox, h("p", { class: "hint", text: "12+ characters. It can be different from the one the backup came from." })),
       h("div", { class: "field" }, h("label", { text: "Repeat master password" }), p2),
       h("button", { class: "btn sm", type: "button", title: "Ten random words: about 103 bits of entropy", on: { click: () => {
