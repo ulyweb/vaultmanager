@@ -32,11 +32,15 @@ export const DEFAULT_SETTINGS = {
   look: LOOK_DEFAULTS,
 };
 
+/* "now" as a local date + time, the value of a datetime-local input: 2026-11-15T23:41 */
+export const stampNow = (d = new Date()) => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+const autoFields = (type) => Object.fromEntries(((TEMPLATES[type] || {}).fields || []).filter((f) => f.auto).map((f) => [f.k, stampNow()]));
+
 export function newItem(type = 'login', init = {}) {
   const now = Date.now();
   return {
     id: uid(), type, name: '', description: '', username: '', password: '', url: '', totp: '', notes: '', tags: [], favorite: false,
-    card: { holder: '', number: '', expiry: '', cvv: '', pin: '' }, fields: {}, custom: [], attachments: [], revisions: [], ft: {}, sv: {}, attRemoved: {}, conflicts: [], cr: {},
+    card: { holder: '', number: '', expiry: '', cvv: '', pin: '' }, fields: autoFields(type), custom: [], attachments: [], revisions: [], ft: {}, sv: {}, attRemoved: {}, conflicts: [], cr: {},
     history: [], created: now, updated: now, pwChanged: now, deleted: 0, lock: '', ...init,
   };
 }

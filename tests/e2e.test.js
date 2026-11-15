@@ -241,7 +241,7 @@ async function phoneFlow(name) {
 
   // add items from the center button (every category picker button is reachable and tall enough)
   await page.getByRole('button', { name: 'New item' }).click(); await page.waitForSelector('.modal-sheet .catgroup'); await fits('picker');
-  assert.equal(await page.locator('.modal-sheet .cats .btn').count(), 28); await tall('.modal-sheet .cats .btn', 44, 'category picker');
+  assert.equal(await page.locator('.modal-sheet .cats .btn').count(), 29); await tall('.modal-sheet .cats .btn', 44, 'category picker');
   const sheet = await page.locator('.modal-sheet').boundingBox(); assert.ok(sheet.width >= vw - 1 && sheet.y + sheet.height <= dev.viewport.height + 1, `${name}: dialogs are bottom sheets`);
   await page.locator('.modal-sheet .cats .btn', { hasText: 'Login' }).first().click();
   await page.fill('#f_name', 'GitHub'); await page.fill('#f_username', 'octocat'); await fits('editor');
@@ -256,7 +256,7 @@ async function phoneFlow(name) {
 
   // More sheet: everything is reachable, nothing overflows
   await page.getByRole('button', { name: 'More' }).click(); await page.waitForSelector('.msheet'); await fits('more');
-  assert.equal(await page.locator('.msheet-item .ico.cat').count(), 28, 'all 28 categories are reachable on a phone'); await tall('.msheet-item', 44, 'more sheet');
+  assert.equal(await page.locator('.msheet-item .ico.cat').count(), 29, 'all 29 categories are reachable on a phone'); await tall('.msheet-item', 44, 'more sheet');
   assert.ok(!EMOJI.test(await page.textContent('.msheet')), `${name}: no emoji glyphs in the menu`);
   await page.locator('.msheet-item', { hasText: 'Network' }).first().click(); await page.waitForSelector('.item'); await fits('category');
   await page.getByRole('button', { name: 'More' }).click(); await page.locator('.msheet-item', { hasText: 'Settings' }).first().click(); await page.waitForSelector('.tabs');
@@ -346,7 +346,7 @@ test('icons are identical on desktop and phone (one SVG set, no emoji)', async (
     await page.waitForSelector('.modal-sheet .cats'); const out = await page.$$eval('.modal-sheet .cats .btn', (bs) => Object.fromEntries(bs.map((b) => [b.textContent.trim(), b.querySelector('svg').outerHTML]))); await ctx.close(); return out;
   };
   const desk = await grab({}), phone = await grab({ ...(({ defaultBrowserType, ...d }) => d)(devices['iPhone 13']), colorScheme: 'dark', reducedMotion: 'reduce' });
-  assert.equal(Object.keys(desk).length, 28); assert.deepEqual(desk, phone);
+  assert.equal(Object.keys(desk).length, 29); assert.deepEqual(desk, phone);
   const html = Object.values(desk).join('').replace(/aria-label="[^"]*"/g, ''); assert.ok(!EMOJI.test(html), 'icons are drawn shapes, not emoji glyphs');
 });
 
@@ -904,7 +904,7 @@ test('v0.7 categories: all 15 new ones are visible, grouped, creatable from the 
   await page.getByRole('button', { name: '＋ New' }).click(); await page.waitForSelector('.modal-sheet .catgroup');
   assert.equal(await page.locator('.modal-sheet .catgroup').count(), GROUPS.length);
   for (const [g] of GROUPS) assert.ok((await page.textContent('.modal-sheet')).includes(g), 'group ' + g);
-  assert.equal(await page.locator('.modal-sheet .cats .btn').count(), 28);
+  assert.equal(await page.locator('.modal-sheet .cats .btn').count(), 29);
   await shot(page, '35-picker-groups'); await page.keyboard.press('Escape');
 
   for (const k of NEW) {
@@ -1985,4 +1985,26 @@ test('v0.33.2: every generate-a-password button makes 100+ bits (export, whole-p
   assert.ok(b >= 100, 'the export dialog generator gave only ' + b + ' bits');
   assert.equal((await A.page.inputValue('input[aria-label="Backup password"]')).split('-').length, 10);
   assert.deepEqual(A.problems.filter((p) => !/Failed to load resource/.test(p)), []); await A.ctx.close();
+});
+
+test('v0.33.2: social network category (YouTube, Facebook, X, Instagram, TikTok, LinkedIn) and the auto date & time on a crypto wallet', async () => {
+  const { ctx, page, problems } = await newPage(); await createVault(page);
+  const openPicker = async () => { await page.getByRole('button', { name: '＋ New' }).click(); await page.waitForSelector('.modal-sheet'); if (await page.locator('.c3-stage').count()) await page.locator('.pickseg button').nth(1).click(); };
+  await openPicker();
+  const btn = page.locator('.modal-sheet .cats .btn', { hasText: 'Social network' }); assert.equal(await btn.count(), 1, 'Social network is in the category picker');
+  await btn.click(); await page.waitForSelector('#f_name'); await page.fill('#f_name', 'My channel');
+  const opts = await page.locator('#tf_platform option').allTextContents();
+  for (const n of ['YouTube', 'Facebook', 'X (Twitter)', 'Instagram', 'TikTok', 'LinkedIn']) assert.ok(opts.includes(n), n + ' is a platform');
+  await page.selectOption('#tf_platform', 'TikTok'); await page.fill('#tf_handle', '@mychannel');
+  const auto = await page.inputValue('#tf_added'); assert.match(auto, /^\d{4}-\d\d-\d\dT\d\d:\d\d$/, 'social accounts are stamped when added');
+  await page.getByRole('button', { name: 'Save' }).click(); await page.waitForSelector('.detail h2:has-text("My channel")');
+  assert.match(await page.textContent('.detail'), /TikTok[\s\S]*@mychannel/);
+  await page.keyboard.press('Escape');
+  await openPicker(); await page.locator('.modal-sheet .cats .btn', { hasText: 'Crypto wallet' }).click(); await page.waitForSelector('#f_name'); await page.fill('#f_name', 'Ledger');
+  const stamp = await page.inputValue('#tf_added'); assert.match(stamp, /^\d{4}-\d\d-\d\dT\d\d:\d\d$/, 'the wallet has its date & time filled in already');
+  assert.ok(Math.abs(new Date(stamp) - Date.now()) < 300000, 'it is the current local time');
+  assert.equal(await page.getAttribute('#tf_added', 'type'), 'datetime-local');
+  await page.getByRole('button', { name: 'Save' }).click(); await page.waitForSelector('.detail h2:has-text("Ledger")');
+  assert.ok((await page.textContent('.detail')).includes(stamp.replace('T', ' ')), 'the detail page shows it as date and time');
+  assert.deepEqual(problems.filter((p) => !/Failed to load resource/.test(p)), []); await ctx.close();
 });

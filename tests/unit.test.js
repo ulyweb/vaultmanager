@@ -423,7 +423,7 @@ test('templates: well-formed, every category round-trips, secrets never indexed 
   for (const [k, t] of Object.entries(TEMPLATES)) {
     const keys = t.fields.map((f) => f.k);
     assert.equal(new Set(keys).size, keys.length, k + ': duplicate field keys');
-    for (const f of t.fields) { assert.ok(['text', 'secret', 'url', 'date', 'multiline', 'select'].includes(f.kind), k + '.' + f.k); if (f.kind === 'select') assert.ok(f.options.length > 1); }
+    for (const f of t.fields) { assert.ok(['text', 'secret', 'url', 'date', 'multiline', 'select', 'stamp'].includes(f.kind), k + '.' + f.k); if (f.kind === 'select') assert.ok(f.options.length > 1); }
     assert.ok(keys.includes(t.sub), k + ': sub field exists');
     assert.ok(TYPE_META[k].icon && TYPE_META[k].plural);
   }
@@ -601,7 +601,7 @@ test('look settings: normalised, bounded, widgets merged, accent maths', async (
 test('v0.7 categories: all 15 requested exist, are grouped exactly once, and are fully usable', async () => {
   const wanted = ['contact', 'phone', 'technical', 'crypto', 'emergency', 'lens', 'membership', 'internet', 'prescription', 'serial', 'voter', 'photoid', 'library', 'healthcard', 'car'];
   for (const k of wanted) assert.ok(TEMPLATES[k], 'missing category ' + k);
-  assert.equal(TYPE_KEYS.length, 28);
+  assert.equal(TYPE_KEYS.length, 29);
   for (const k of TYPE_KEYS) assert.ok(!RESERVED_VIEWS.includes(k), 'category key "' + k + '" collides with an app view id');
   const flat = GROUPS.flatMap(([, keys]) => keys);
   assert.equal(new Set(flat).size, flat.length, 'a category is in two groups'); assert.deepEqual([...flat].sort(), [...TYPE_KEYS].sort());
@@ -890,4 +890,18 @@ test('every generated passphrase defaults to 100+ bits of entropy', async () => 
   assert.ok(g.passphraseEntropy({ words: g.STRONG_WORDS }) >= 100);
   assert.equal(g.generatePassphrase().split('-').length, 10);
   assert.equal(g.generateStrongPassphrase().split('-').length, 10);
+});
+
+test('social network category exists, and a new crypto wallet gets its date & time stamped automatically', async () => {
+  const { TEMPLATES, TYPE_KEYS } = await import('../js/templates.js');
+  const { newItem, stampNow } = await import('../js/vault.js');
+  assert.ok(TYPE_KEYS.includes('social'));
+  const plat = TEMPLATES.social.fields.find((f) => f.k === 'platform').options;
+  for (const n of ['YouTube', 'Facebook', 'X (Twitter)', 'Instagram', 'TikTok', 'LinkedIn']) assert.ok(plat.includes(n), n);
+  assert.match(stampNow(), /^\d{4}-\d\d-\d\dT\d\d:\d\d$/);
+  const w = newItem('crypto');
+  assert.match(w.fields.added, /^\d{4}-\d\d-\d\dT\d\d:\d\d$/);
+  assert.ok(Math.abs(new Date(w.fields.added) - Date.now()) < 120000, 'stamped with the current local time');
+  assert.deepEqual(newItem('login').fields, {});
+  assert.equal(newItem('crypto', { fields: { added: '2020-01-02T03:04' } }).fields.added, '2020-01-02T03:04', 'imports keep their own stamp');
 });

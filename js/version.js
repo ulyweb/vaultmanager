@@ -1,6 +1,6 @@
 /* Application version, data-format versions and changelog (shown in Settings → About). */
 
-export const APP_VERSION = '0.33.2';
+export const APP_VERSION = '0.34.0';
 export const APP_NAME = 'VaultManager';
 export const REPO_URL = 'https://github.com/ulyweb/vaultmanager';
 
@@ -16,6 +16,10 @@ export const FORMATS = [
 ];
 
 export const CHANGELOG = [
+  { v: '0.34.0', date: '2026-11-15', notes: [
+    'New category: Social network (29 categories now). One card for YouTube, Facebook, X, Instagram, TikTok, LinkedIn and more (pick the platform): handle, channel or page name and ID, profile link, sign-in email and phone, password with the generator, two-factor method, backup codes, API key, when the account was created.',
+    'Crypto wallets now stamp the date and time they were added to your vault automatically (your local time; you can edit it), and have fields for when the wallet was created, when the seed phrase was backed up and the last balance check. Social accounts get the same automatic “added” stamp. The new date-and-time field type is available to any category.',
+  ] },
   { v: '0.33.2', date: '2026-11-15', notes: [
     'Every generated password now has about 100+ bits of entropy: the backup-password generators (export, whole-profile backup, QR seal), the sync passphrase suggestion and the lightning button on every password pair make 10 random words (about 103 bits) instead of 4–6 words (about 41–62 bits). The Generator page and the editor “Passphrase” button also default to 10 words (the slider now goes up to 16).',
   ] },

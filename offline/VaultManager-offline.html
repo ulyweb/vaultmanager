@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VaultManager v0.33.2 — single-file offline build. Verify with the .sha256 file next to it. -->
+<!-- VaultManager v0.34.0 — single-file offline build. Verify with the .sha256 file next to it. -->
 <html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
@@ -11,7 +11,7 @@
 <meta name="application-name" content="VaultManager">
 <meta name="format-detection" content="telephone=no">
 <meta name="referrer" content="no-referrer">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-tauzjAWYvkq2EEey6/r1GOXzEWNzSydbYj43JCIjd2U=' 'sha256-fUtxJn1zSbt23R7Gt24BsJO70BBUZl+rwYdVZdZ10hM=' blob:; style-src 'sha256-XRa7nX603ibC29ED1KQWHHmVpx9Rp9xMG48He1g4o9s='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-tauzjAWYvkq2EEey6/r1GOXzEWNzSydbYj43JCIjd2U=' 'sha256-0pov1ePxwXVVRSrvZRd253qvU7YITYGWsHwgjyUqhj4=' blob:; style-src 'sha256-XRa7nX603ibC29ED1KQWHHmVpx9Rp9xMG48He1g4o9s='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
 <title>VaultManager | Zero-Knowledge Password Manager</title>
 <meta name="description" content="VaultManager: an offline-first, zero-knowledge, end-to-end encrypted password manager with a strong password generator, TOTP codes and QR-sealed sharing and backup. Runs entirely in your browser.">
 <meta name="theme-color" content="#05080d">
@@ -1081,6 +1081,7 @@ html[data-thick=on] .s3-inner { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .1
     crypto: ['<circle cx="12" cy="12" r="9"/><path d="M9.5 7.5v9M9.5 8.5h4a1.8 1.8 0 010 3.5h-4m0 0h4.5a1.8 1.8 0 010 3.5H9.5M12 6v1.5M12 16.5V18"/>', "\u{1FA99}", ["#fbbf24", "#f59e0b"]],
     insurance: ['<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/>', "\u{1F6E1}\uFE0F", ["#34d399", "#16a34a"]],
     identity: ['<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M5.5 16c.5-2 2-3 3.5-3s3 1 3.5 3M14 10h4M14 14h4"/>', "\u{1FAAA}", ["#f59e0b", "#ef4444"]],
+    social: ['<circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="M8.2 10.8l7.6-3.6M8.2 13.2l7.6 3.6"/>', "\u{1F4AC}", ["#f472b6", "#db2777"]],
     voter: ['<rect x="4" y="12" width="16" height="9" rx="2"/><path d="M8 15.5h8M9 3h6v6H9z"/><path d="M10.5 6l1 1 2-2"/>', "\u{1F5F3}\uFE0F", ["#f59e0b", "#ef4444"]],
     photoid: ['<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10" r="1.5"/><path d="M3 17l5-4 4 3 3-2 6 4"/>', "\u{1F5BC}\uFE0F", ["#f59e0b", "#ef4444"]],
     library: ['<path d="M4 4h4v16H4zM10 4h4v16h-4zM16 5l4-1 2 15-4 1z"/>', "\u{1F4DA}", ["#f59e0b", "#ef4444"]],
@@ -1539,6 +1540,7 @@ html[data-thick=on] .s3-inner { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .1
     return Array.from(b, (x) => x.toString(16).padStart(2, "0")).join("");
   };
   var fmtDate = (ts) => ts ? new Date(ts).toISOString().slice(0, 10) : "\u2014";
+  var stampText = (v) => String(v || "").replace("T", " ");
   var fmtInt = (n) => Number(n).toLocaleString("en-US");
   function debounce(fn, ms) {
     let t;
@@ -2142,7 +2144,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   }
 
   // js/version.js
-  var APP_VERSION = "0.33.2";
+  var APP_VERSION = "0.34.0";
   var APP_NAME = "VaultManager";
   var REPO_URL = "https://github.com/ulyweb/vaultmanager";
   var FORMATS = [
@@ -2156,6 +2158,10 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     ["Attachments at rest", "AES-256-GCM per file, bound to vault + file id"]
   ];
   var CHANGELOG = [
+    { v: "0.34.0", date: "2026-11-15", notes: [
+      "New category: Social network (29 categories now). One card for YouTube, Facebook, X, Instagram, TikTok, LinkedIn and more (pick the platform): handle, channel or page name and ID, profile link, sign-in email and phone, password with the generator, two-factor method, backup codes, API key, when the account was created.",
+      "Crypto wallets now stamp the date and time they were added to your vault automatically (your local time; you can edit it), and have fields for when the wallet was created, when the seed phrase was backed up and the last balance check. Social accounts get the same automatic \u201Cadded\u201D stamp. The new date-and-time field type is available to any category."
+    ] },
     { v: "0.33.2", date: "2026-11-15", notes: [
       "Every generated password now has about 100+ bits of entropy: the backup-password generators (export, whole-profile backup, QR seal), the sync passphrase suggestion and the lightning button on every password pair make 10 random words (about 103 bits) instead of 4\u20136 words (about 41\u201362 bits). The Generator page and the editor \u201CPassphrase\u201D button also default to 10 words (the slider now goes up to 16)."
     ] },
@@ -2690,6 +2696,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   var T = (k, l, o = {}) => ({ k, l, kind: "text", ...o });
   var D = (k, l, o = {}) => ({ k, l, kind: "date", ...o });
   var U = (k, l, o = {}) => ({ k, l, kind: "url", ...o });
+  var DT = (k, l, o = {}) => ({ k, l, kind: "stamp", ...o });
   var SEL = (k, l, options) => ({ k, l, kind: "select", options });
   var TEMPLATES = {
     app: { label: "App / software", plural: "Apps", icon: "{{app}}", sub: "version", fields: [
@@ -2833,6 +2840,8 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     crypto: { label: "Crypto wallet", plural: "Crypto", icon: "{{crypto}}", sub: "wallet", tip: "Anyone who gets a recovery seed phrase or private key controls the funds. Keep an offline copy too, never photograph it, and avoid syncing it to devices you do not fully trust.", fields: [
       T("wallet", "Wallet / exchange"),
       SEL("kind", "Type", ["Hardware wallet", "Software wallet", "Exchange account", "Paper wallet", "Other"]),
+      DT("added", "Added to vault (date & time)", { auto: true }),
+      DT("created", "Wallet created (date & time)"),
       T("network", "Blockchain / network"),
       T("address", "Public address", { mono: true }),
       { k: "seed", l: "Recovery seed phrase", kind: "multiline", secret: true, words: true, lockable: true },
@@ -2841,7 +2850,24 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       S("passphrase", "Extra passphrase (25th word)", { lockable: true }),
       U("url", "Website"),
       T("username", "Username / email"),
-      S("password", "Account password", { gen: true })
+      S("password", "Account password", { gen: true }),
+      DT("backedup", "Seed phrase backed up (date & time)"),
+      DT("checked", "Last balance check (date & time)")
+    ] },
+    social: { label: "Social network", plural: "Social", icon: "{{social}}", sub: "platform", tip: "Turn on two-factor sign-in for every social account and keep its backup codes here. Social accounts are the ones most often taken over.", fields: [
+      SEL("platform", "Platform", ["YouTube", "Facebook", "X (Twitter)", "Instagram", "TikTok", "LinkedIn", "Snapchat", "Pinterest", "Reddit", "Threads", "Discord", "Twitch", "WhatsApp", "Telegram", "Other"]),
+      T("handle", "Handle / username (@\u2026)"),
+      T("display", "Display / channel / page name"),
+      U("url", "Profile / channel link"),
+      T("email", "Sign-in email"),
+      T("phone", "Linked phone", { mono: true }),
+      S("password", "Password", { gen: true }),
+      SEL("twofa", "Two-factor method", ["Authenticator app", "SMS", "Security key / passkey", "Email", "None"]),
+      { k: "backup", l: "Backup / recovery codes", kind: "multiline", secret: true },
+      T("accountid", "Channel / page / business ID", { mono: true }),
+      S("apikey", "API key / app secret", { gen: true }),
+      D("opened", "Account created"),
+      DT("added", "Added to vault (date & time)", { auto: true })
     ] },
     emergency: { label: "Emergency numbers", plural: "Emergency", icon: "{{emergency}}", sub: "phone", fields: [
       T("person", "Name"),
@@ -3000,7 +3026,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   };
   var GROUPS = [
     ["Everyday", ["login", "note", "card"]],
-    ["Accounts & access", ["technical", "shopping", "app", "server", "computer", "locker"]],
+    ["Accounts & access", ["technical", "social", "shopping", "app", "server", "computer", "locker"]],
     ["Home & devices", ["network", "internet", "phone", "serial"]],
     ["Money", ["bank", "crypto", "insurance"]],
     ["IDs & documents", ["identity", "voter", "photoid", "library", "membership"]],
@@ -3054,6 +3080,8 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     sync: { method: "off", token: "", gistId: "", passphrase: "", auto: true, attachments: true, last: null },
     look: LOOK_DEFAULTS
   };
+  var stampNow = (d = /* @__PURE__ */ new Date()) => new Date(d.getTime() - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 16);
+  var autoFields = (type) => Object.fromEntries(((TEMPLATES[type] || {}).fields || []).filter((f) => f.auto).map((f) => [f.k, stampNow()]));
   function newItem(type = "login", init = {}) {
     const now = Date.now();
     return {
@@ -3069,7 +3097,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       tags: [],
       favorite: false,
       card: { holder: "", number: "", expiry: "", cvv: "", pin: "" },
-      fields: {},
+      fields: autoFields(type),
       custom: [],
       attachments: [],
       revisions: [],
@@ -5606,6 +5634,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       return row2;
     }
     if (f.words) return field(f.l, value, { secret: true, copy: true, ctx: ctx2, stats: true, body: seedView(ctx2, it, f.l, value) });
+    if (f.kind === "stamp") return field(f.l, stampText(value), { copy: true, ctx: ctx2 });
     if (f.kind === "date" && f.expiry) {
       const d = daysUntil(value), chip = d === null ? null : d < 0 ? h("span", { class: "chip bad", text: "expired " + -d + " day" + (d === -1 ? "" : "s") + " ago" }) : d <= 60 ? h("span", { class: "chip warn", text: "in " + d + " day" + (d === 1 ? "" : "s") }) : null;
       return field(f.l, value, { copy: true, ctx: ctx2, extra: h("span", null, value + " ", chip) });
@@ -5987,7 +6016,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       control = h("div", { class: "pwwrap" }, i, h("button", { type: "button", class: "icon-btn eye", "aria-label": "Show or hide " + f.l, on: { click: () => {
         i.type = i.type === "password" ? "text" : "password";
       } } }, "{{eye}}"));
-    } else control = h("input", { id, class: "inp" + (f.mono ? " mono" : ""), type: f.kind === "date" ? "date" : "text", value: val, autocomplete: "off", spellcheck: "false", placeholder: f.kind === "url" ? "https://" : null, on: { input: (e) => set(e.target.value) } });
+    } else control = h("input", { id, class: "inp" + (f.mono ? " mono" : ""), type: f.kind === "date" ? "date" : f.kind === "stamp" ? "datetime-local" : "text", value: val, autocomplete: "off", spellcheck: "false", placeholder: f.kind === "url" ? "https://" : null, on: { input: (e) => set(e.target.value) } });
     return h("div", { class: "field" + (full ? " full" : "") }, h("label", { for: id, text: f.l }), control);
   }
   var CORE_FIELD_LABELS = { login: ["Username / email", "Website", "Password", "One-time code"], note: ["Note"], card: ["Cardholder", "Card number", "Expiry", "CVV", "PIN"] };

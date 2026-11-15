@@ -8,7 +8,7 @@ import { generatePassword, generatePassphrase, generateStrongPassphrase } from '
 import { totpNow, parseTotp } from './totp.js';
 import { sealText, openText } from './crypto.js';
 import { drawQR } from './qr.js';
-import { fmtDate, hostOf, safeHref, stamp } from './util.js';
+import { fmtDate, hostOf, safeHref, stamp, stampText } from './util.js';
 import { isFieldLocked, fieldValue } from './fieldlock.js';
 import { lockableField, lockedFieldRow, relockButton, seedView } from './secure-fields.js';
 import { categoryCarousel } from './carousel3d.js';
@@ -319,6 +319,7 @@ function templateRow(ctx, it, f) {
     return row;
   }
   if (f.words) return field(f.l, value, { secret: true, copy: true, ctx, stats: true, body: seedView(ctx, it, f.l, value) });
+  if (f.kind === 'stamp') return field(f.l, stampText(value), { copy: true, ctx });
   if (f.kind === 'date' && f.expiry) {
     const d = daysUntil(value), chip = d === null ? null : d < 0 ? h('span', { class: 'chip bad', text: 'expired ' + -d + ' day' + (d === -1 ? '' : 's') + ' ago' }) : d <= 60 ? h('span', { class: 'chip warn', text: 'in ' + d + ' day' + (d === 1 ? '' : 's') }) : null;
     return field(f.l, value, { copy: true, ctx, extra: h('span', null, value + ' ', chip) });
@@ -507,7 +508,7 @@ function tplInput(ctx, it, f, locks = []) {
   else if (f.kind === 'multiline') control = h('textarea', { id, class: 'ta', rows: '4', spellcheck: 'false', on: { input: (e) => set(e.target.value) } }, val);
   else if (isSecretField(f) && f.gen) control = pwField(val, { ctx, onInput: set }).el;
   else if (isSecretField(f)) { const i = h('input', { id, type: 'password', class: 'inp mono', value: val, autocomplete: 'off', spellcheck: 'false', on: { input: (e) => set(e.target.value) } }); control = h('div', { class: 'pwwrap' }, i, h('button', { type: 'button', class: 'icon-btn eye', 'aria-label': 'Show or hide ' + f.l, on: { click: () => { i.type = i.type === 'password' ? 'text' : 'password'; } } }, '{{eye}}')); }
-  else control = h('input', { id, class: 'inp' + (f.mono ? ' mono' : ''), type: f.kind === 'date' ? 'date' : 'text', value: val, autocomplete: 'off', spellcheck: 'false', placeholder: f.kind === 'url' ? 'https://' : null, on: { input: (e) => set(e.target.value) } });
+  else control = h('input', { id, class: 'inp' + (f.mono ? ' mono' : ''), type: f.kind === 'date' ? 'date' : f.kind === 'stamp' ? 'datetime-local' : 'text', value: val, autocomplete: 'off', spellcheck: 'false', placeholder: f.kind === 'url' ? 'https://' : null, on: { input: (e) => set(e.target.value) } });
   return h('div', { class: 'field' + (full ? ' full' : '') }, h('label', { for: id, text: f.l }), control);
 }
 
