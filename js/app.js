@@ -256,7 +256,7 @@ function pwInput(id, label, auto) {
 const contactAdminDialog = () => admin.contactAdmin({ profileName: store && store.unlocked ? (ctx.profile() || {}).name || '' : '' });
 
 const gateFoot = () => h('p', { class: 'gate-foot' }, h('span', { class: 'gate-ver', text: 'VaultManager v' + APP_VERSION + (isSingleFile() ? ' · offline copy' : '') }), ...gateFootLinks());
-const gateFootLinks = () => (admin.enabled() || canOfferCopy() ? [ admin.enabled() ? h('button', { type: 'button', class: 'linkbtn', on: { click: contactAdminDialog } }, '{{mailsend}} Contact admin') : null, canOfferCopy() ? h('button', { type: 'button', class: 'linkbtn', on: { click: async () => { try { await saveOfflineCopy(); } catch (e) { toast(e.message, 'err', 7000); } } } }, '{{download}} Download the offline copy — one file, ' + OFFLINE_NAME + ' (v' + APP_VERSION + ')') : null] : []);
+const gateFootLinks = () => (admin.enabled() || canOfferCopy() ? [ canOfferCopy() ? h('a', { class: 'linkbtn tourlink', href: 'experience/' }, '{{sparkles}} Take the 3D tour') : null, admin.enabled() ? h('button', { type: 'button', class: 'linkbtn', on: { click: contactAdminDialog } }, '{{mailsend}} Contact admin') : null, canOfferCopy() ? h('button', { type: 'button', class: 'linkbtn', on: { click: async () => { try { await saveOfflineCopy(); } catch (e) { toast(e.message, 'err', 7000); } } } }, '{{download}} Download the offline copy — one file, ' + OFFLINE_NAME + ' (v' + APP_VERSION + ')') : null] : []);
 
 function profileHead(p, sub) {
   return h('div', { class: 'brand prof' }, profileAvatar(p, 68), h('div', null, h('h1', { text: p.name }), h('p', { text: sub })));

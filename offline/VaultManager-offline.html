@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VaultManager v0.29.2 — single-file offline build. Verify with the .sha256 file next to it. -->
+<!-- VaultManager v0.30.0 — single-file offline build. Verify with the .sha256 file next to it. -->
 <html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
@@ -11,7 +11,7 @@
 <meta name="application-name" content="VaultManager">
 <meta name="format-detection" content="telephone=no">
 <meta name="referrer" content="no-referrer">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-tauzjAWYvkq2EEey6/r1GOXzEWNzSydbYj43JCIjd2U=' 'sha256-+mtjwHsOx23LV+m9FQhSQNbhLbkyQL85QACbdEE/lZE=' blob:; style-src 'sha256-FHMWZDwvQqaMQWJbWE2C83vWaj4vtYikPtV3g2TyvDE='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-tauzjAWYvkq2EEey6/r1GOXzEWNzSydbYj43JCIjd2U=' 'sha256-3VJaSK/ZdHH4iyw4kdVZCgVSgLqV0ATYZq97jKsa2Zc=' blob:; style-src 'sha256-BPpOx7qeQGW3h4C9dvU+iyKClZ2IBAIyFDrxRljI+I4='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
 <title>VaultManager | Zero-Knowledge Password Manager</title>
 <meta name="description" content="VaultManager: an offline-first, zero-knowledge, end-to-end encrypted password manager with a strong password generator, TOTP codes and QR-sealed sharing and backup. Runs entirely in your browser.">
 <meta name="theme-color" content="#05080d">
@@ -781,6 +781,7 @@ html[data-barlabels="0"] .topbar .btn.primary { min-width: 56px; padding: 6px 12
 .topbar .btn:not(.primary):not(:has(.lbl)) { padding: 6px; }
 .topbar .btn .ico { margin: 0 !important; }
 .gate-foot { display: grid; gap: 8px; justify-items: center; }
+.gate-foot a.linkbtn { text-decoration: none; }
 .linkbtn .ico { width: 1.25em; height: 1.25em; padding: .14em; border-radius: .38em; }
 
 /* ---- explanations ---- */
@@ -2033,7 +2034,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   }
 
   // js/version.js
-  var APP_VERSION = "0.29.2";
+  var APP_VERSION = "0.30.0";
   var APP_NAME = "VaultManager";
   var REPO_URL = "https://github.com/ulyweb/vaultmanager";
   var FORMATS = [
@@ -2047,6 +2048,11 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     ["Attachments at rest", "AES-256-GCM per file, bound to vault + file id"]
   ];
   var CHANGELOG = [
+    { v: "0.30.0", date: "2026-11-15", notes: [
+      "New: a 3D tour of VaultManager at experience/ (link on the sign-in screen: \u201CTake the 3D tour\u201D). The whole page is one live 3D scene: a pocket vault you can drag to spin, that opens into seven labelled parts, repaints in five colours, and whose screen runs a small playable game (Z to jump, X to slide; the 3D buttons work too).",
+      "Scrolling moves the camera and the clock from dawn to night through nine chapters (profiles, welcome and tour, items, inside, system menu and settings, tools, play, night watch), and each new chapter sets off a powder burst behind the vault. \u201CChart a new item\u201D gathers a particle cloud into the icon of each of the 28 item categories. The passphrase button there runs the app\u2019s real generator.",
+      "The tour is a separate page: the vault app itself is unchanged, still loads nothing from outside, and the tour is not part of the offline copy or the native apps. three.js is bundled locally (MIT). Photos, powder stills and the music loop were made with Higgsfield; sound is off until you turn it on, and motion is reduced when your device asks for that."
+    ] },
     { v: "0.29.2", date: "2026-11-15", notes: [
       "Import a profile: the second step is now centred \u2014 the profile name, the picture and its Letter / Emoji / Photo buttons, the \u201Cuse the backup password\u201D choice, the confirmation box and the Create profile button all sit on the centre line, on desktop and phone."
     ] },
@@ -10179,7 +10185,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   }
   var contactAdminDialog = () => contactAdmin({ profileName: store && store.unlocked ? (ctx.profile() || {}).name || "" : "" });
   var gateFoot = () => h("p", { class: "gate-foot" }, h("span", { class: "gate-ver", text: "VaultManager v" + APP_VERSION + (isSingleFile() ? " \xB7 offline copy" : "") }), ...gateFootLinks());
-  var gateFootLinks = () => enabled() || canOfferCopy() ? [enabled() ? h("button", { type: "button", class: "linkbtn", on: { click: contactAdminDialog } }, "{{mailsend}} Contact admin") : null, canOfferCopy() ? h("button", { type: "button", class: "linkbtn", on: { click: async () => {
+  var gateFootLinks = () => enabled() || canOfferCopy() ? [canOfferCopy() ? h("a", { class: "linkbtn tourlink", href: "experience/" }, "{{sparkles}} Take the 3D tour") : null, enabled() ? h("button", { type: "button", class: "linkbtn", on: { click: contactAdminDialog } }, "{{mailsend}} Contact admin") : null, canOfferCopy() ? h("button", { type: "button", class: "linkbtn", on: { click: async () => {
     try {
       await saveOfflineCopy();
     } catch (e) {

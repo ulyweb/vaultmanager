@@ -763,6 +763,7 @@ html[data-barlabels="0"] .topbar .btn.primary { min-width: 56px; padding: 6px 12
 .topbar .btn:not(.primary):not(:has(.lbl)) { padding: 6px; }
 .topbar .btn .ico { margin: 0 !important; }
 .gate-foot { display: grid; gap: 8px; justify-items: center; }
+.gate-foot a.linkbtn { text-decoration: none; }
 .linkbtn .ico { width: 1.25em; height: 1.25em; padding: .14em; border-radius: .38em; }
 
 /* ---- explanations ---- */

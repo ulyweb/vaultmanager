@@ -1,6 +1,6 @@
 /* Application version, data-format versions and changelog (shown in Settings → About). */
 
-export const APP_VERSION = '0.29.2';
+export const APP_VERSION = '0.30.0';
 export const APP_NAME = 'VaultManager';
 export const REPO_URL = 'https://github.com/ulyweb/vaultmanager';
 
@@ -16,6 +16,11 @@ export const FORMATS = [
 ];
 
 export const CHANGELOG = [
+  { v: '0.30.0', date: '2026-11-15', notes: [
+    'New: a 3D tour of VaultManager at experience/ (link on the sign-in screen: “Take the 3D tour”). The whole page is one live 3D scene: a pocket vault you can drag to spin, that opens into seven labelled parts, repaints in five colours, and whose screen runs a small playable game (Z to jump, X to slide; the 3D buttons work too).',
+    'Scrolling moves the camera and the clock from dawn to night through nine chapters (profiles, welcome and tour, items, inside, system menu and settings, tools, play, night watch), and each new chapter sets off a powder burst behind the vault. “Chart a new item” gathers a particle cloud into the icon of each of the 28 item categories. The passphrase button there runs the app’s real generator.',
+    'The tour is a separate page: the vault app itself is unchanged, still loads nothing from outside, and the tour is not part of the offline copy or the native apps. three.js is bundled locally (MIT). Photos, powder stills and the music loop were made with Higgsfield; sound is off until you turn it on, and motion is reduced when your device asks for that.',
+  ] },
   { v: '0.29.2', date: '2026-11-15', notes: [
     'Import a profile: the second step is now centred — the profile name, the picture and its Letter / Emoji / Photo buttons, the “use the backup password” choice, the confirmation box and the Create profile button all sit on the centre line, on desktop and phone.',
   ] },

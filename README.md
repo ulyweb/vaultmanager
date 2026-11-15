@@ -22,6 +22,11 @@ It shares its core engine and look with [ulyOS](https://github.com/ulyweb/ulyOS)
 - **Passkey unlock**: fingerprint, face, Windows Hello, a phone or a security key (WebAuthn PRF) wraps the vault key; per device, master password stays as fallback.
 - **Recovery key** (optional, printable "Emergency Kit"), auto-lock, clipboard auto-clear, escalating delay after wrong passwords, light/dark theme, installable offline PWA.
 
+## The 3D tour
+`experience/` is a scroll-driven 3D landing page for the project (three.js, bundled locally in `experience/vendor/`, no CDN). The whole page is one live scene: a pocket vault you can drag to spin, pull apart into seven labelled parts, repaint, and play a small 1-bit game on. Scrolling moves the camera and the clock; every chapter sets off a powder burst. It is a tour only — the app is unchanged and the tour is not shipped in the offline copy or the native apps. Add `?shot=N` (0–8) to pin a chapter for screenshots, plus `&stage=light`, `&flavour=0..4` or `&cat=0..27`.
+
+Media in `experience/media/` (the design board, three photos, three powder stills and the music loop) was generated with Higgsfield. Everything that moves is code.
+
 ## Offline apps (PC and mobile)
 Install it as an app (works with no internet), keep a single `VaultManager-offline.html` file, or build native installers for Windows, macOS, Linux, Android and iOS from the same code. See **[docs/OFFLINE-APPS.md](docs/OFFLINE-APPS.md)** — including exactly what is tested and what still needs a first run on real devices.
 
@@ -89,6 +94,7 @@ See [SECURITY.md](SECURITY.md) for the threat model and, importantly, what Vault
 | `js/vault.js` | store, items, import / export, health (DOM-free, unit-tested) |
 | `js/generator.js`, `strength.js`, `totp.js`, `qr.js` | generator, strength estimate, TOTP, QR + multi-QR chunking |
 | `vendor/` | `qrcode.js` (MIT, QR encoder) and `jsQR.js` (Apache-2.0, QR decoder) from ulyOS |
+| `experience/` | the 3D tour: `index.html`, `site.css`, `js/main.js` (scroll, camera, clock, UI), `js/device.js` (the model), `js/game.js` (the screen and Key Runner), `js/fx.js` (bursts, debris, particle cloud), `vendor/three.bundle.min.js`, `media/` |
 | `tests/`, `tools/lint.js` | unit tests, Playwright browser tests, static security lint |
 
 ## Tests
@@ -103,7 +109,7 @@ The lint enforces the security posture: strict CSP whose `connect-src` may only 
 Version 0.10 — a complete tenth cut (this repo is the test bench for the stand-alone PC + mobile build — see [ROADMAP.md](ROADMAP.md)), **not yet independently audited**. Treat it accordingly and keep an encrypted backup. See [ROADMAP.md](ROADMAP.md).
 
 ## Licences
-Code: see repository owner. EFF short wordlist: CC BY 3.0 US. `vendor/qrcode.js`: MIT (Kazuhiko Arase). `vendor/jsQR.js`: Apache-2.0 (`vendor/LICENSE-jsqr.txt`).
+Code: see repository owner. EFF short wordlist: CC BY 3.0 US. `vendor/qrcode.js`: MIT (Kazuhiko Arase). `vendor/jsQR.js`: Apache-2.0 (`vendor/LICENSE-jsqr.txt`). `experience/vendor/three.bundle.min.js`: three.js r187, MIT (`experience/vendor/LICENSE-three.txt`).
 
 ## Contact admin
 

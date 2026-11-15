@@ -1814,3 +1814,36 @@ test('v0.29.2: importing a profile — name, picture, password choice, confirmat
     await B.ctx.close();
   }
 });
+
+test('v0.30.0: the 3D tour page loads (with or without WebGL), its chapters, colours, categories, generator and game respond, and the sign-in screen links to it', async () => {
+  const quiet = (p) => !/Failed to load resource|WebGL|THREE\.|GPU|context/i.test(p);
+  for (const [label, opts] of [['desktop', {}], ['phone', (({ defaultBrowserType, ...d }) => d)(devices['iPhone SE'])]]) {
+    const { ctx, page, problems } = await newPage(opts);
+    await page.goto(base + 'experience/'); await page.waitForFunction(() => window.__vm3d && window.__vm3d.ready, null, { timeout: 60000 });
+    assert.equal(await page.locator('main .ch').count(), 9, label + ': nine chapters');
+    assert.equal(await page.textContent('#catcount'), String(Object.keys(TEMPLATES).length + 3), label + ': the category count comes from the app');
+    assert.ok(await page.locator('a.btn.solid[href="../"]').count() >= 2, label + ': Open the vault leads back to the app');
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth <= 1), true, label + ': no sideways scroll');
+    // the screen is a real game: it plays itself until a key is pressed
+    assert.equal(await page.evaluate(() => window.__vm3d.screen.auto), true); await page.keyboard.press('z');
+    assert.equal(await page.evaluate(() => window.__vm3d.screen.auto), false, label + ': Z takes over the game');
+    // chart a new item: next category, next colour
+    await page.evaluate(() => window.scrollTo(0, document.querySelector('#c-items').offsetTop)); await page.waitForFunction(() => window.__vm3d.chapter() === 'items');
+    const before = [await page.textContent('#catcard b'), await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--accent').trim())];
+    await page.click('#chart');
+    assert.notEqual(await page.textContent('#catcard b'), before[0]); assert.notEqual(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--accent').trim()), before[1]);
+    // colour chips and the light stage
+    await page.locator('#chips .chip').nth(3).click(); assert.equal(await page.locator('#chips .chip').nth(3).getAttribute('aria-pressed'), 'true');
+    await page.evaluate(() => window.scrollTo(0, document.querySelector('#c-settings').offsetTop)); await page.waitForFunction(() => window.__vm3d.chapter() === 'settings');
+    await page.locator('[data-stage-pick=light]').click(); assert.equal(await page.evaluate(() => document.documentElement.dataset.stage), 'light');
+    // the app's real passphrase generator
+    await page.evaluate(() => window.scrollTo(0, document.querySelector('#c-tools').offsetTop)); await page.waitForFunction(() => window.__vm3d.chapter() === 'tools');
+    await page.click('#suggest'); const bits = Number(/~(\d+) bits/.exec(await page.textContent('#bits'))[1]); assert.ok(bits >= 100, label + ': ' + bits + ' bits');
+    assert.equal((await page.textContent('#phrase')).split('-').length, 10);
+    assert.deepEqual(problems.filter(quiet), [], label);
+    await ctx.close();
+  }
+  const { ctx, page } = await newPage(); await page.goto(base); await page.waitForSelector('#pw1');
+  assert.equal(await page.getAttribute('.gate-foot a.tourlink', 'href'), 'experience/', 'the sign-in screen offers the tour');
+  await ctx.close();
+});
