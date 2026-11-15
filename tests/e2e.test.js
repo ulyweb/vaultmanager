@@ -1921,3 +1921,39 @@ test('v0.32.0: the 3D card space flows behind the sign-in, create and Home scree
   assert.equal(await I.page.evaluate(() => getComputedStyle(document.getElementById('space3d')).display), 'block', 'the cards stay visible behind the import dialog');
   await I.ctx.close();
 });
+
+test('v0.33.0: thick cards and windows, tilt / thickness / float settings from the sign-in screen and Settings, kept when the profile is created', async () => {
+  const quiet = (p) => !/Failed to load resource/.test(p);
+  const { ctx, page, problems } = await newPage({ reducedMotion: 'no-preference' });
+  await page.goto(base); await page.waitForSelector('#pw1');
+  const css = (name) => page.evaluate((n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim(), name);
+  const data = (k) => page.evaluate((x) => document.documentElement.dataset[x], k);
+  // every floating card is a slab: a face plus slices behind it, and the windows carry a stacked edge
+  assert.equal(await page.locator('.s3-slice').count(), 16 * 6, 'six slices behind each of the sixteen cards');
+  assert.equal(await css('--fx3d-thick'), '14'); assert.equal(await data('thick'), 'on');
+  assert.ok(((await page.evaluate(() => getComputedStyle(document.querySelector('.gate-card')).boxShadow)).match(/(rgba?|color)\(/g) || []).length >= 12, 'the sign-in window has a stacked edge');
+  assert.equal(await css('--fx3d-float'), '3');
+  assert.equal(await data('float'), 'off', 'scripted browsers get a still window so clicks stay reliable (real browsers float)');
+  // the 3D effects panel on the create screen
+  await page.click('.gfx-btn'); await page.waitForSelector('.gfx-panel:not([hidden])');
+  assert.deepEqual(await page.locator('.gfx-panel input[type=range]').evaluateAll((els) => els.map((e) => e.getAttribute('aria-label'))), ['Card thickness', '3D tilt', 'Card float']);
+  await page.locator('input[aria-label="Card thickness"]').fill('24'); assert.equal(await css('--fx3d-thick'), '24');
+  await page.locator('input[aria-label="3D tilt"]').fill('0');
+  const box = await page.locator('.gate-card').boundingBox(); await page.mouse.move(box.x + box.width * 0.85, box.y + box.height * 0.2);
+  assert.ok(!(await page.evaluate(() => document.querySelector('.gate-card').style.getPropertyValue('--ry'))) || /^0(\.0+)?deg$/.test(await page.evaluate(() => document.querySelector('.gate-card').style.getPropertyValue('--ry'))), 'tilt 0 keeps the window straight');
+  await page.locator('input[aria-label="3D tilt"]').fill('9'); await page.mouse.move(box.x + box.width * 0.9, box.y + box.height * 0.3);
+  assert.notEqual(parseFloat(await page.evaluate(() => document.querySelector('.gate-card').style.getPropertyValue('--ry')) || '0'), 0, 'tilt 9 leans the window toward the pointer');
+  await page.locator('input[aria-label="Card thickness"]').fill('0'); assert.equal(await data('thick'), 'off', 'thickness 0 makes everything flat');
+  assert.ok(!(await page.evaluate(() => getComputedStyle(document.querySelector('.gate-card')).getPropertyValue('--stack'))), 'no stacked edge when flat');
+  assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector('.s3-slice')).display), 'none');
+  await page.locator('input[aria-label="Card thickness"]').fill('20'); await page.locator('input[aria-label="Card float"]').fill('6'); await page.click('.gfx-btn');
+  // create the profile: the tuned values come with it
+  await createVault(page);
+  assert.equal(await css('--fx3d-thick'), '20'); assert.equal(await css('--fx3d-float'), '6');
+  await settingsTab(page, 'Effects');
+  assert.equal(await page.locator('input[aria-label="fx3dThick"]').inputValue(), '20'); assert.equal(await page.locator('input[aria-label="fx3dFloat"]').inputValue(), '6'); assert.equal(await page.locator('input[aria-label="fxTilt"]').inputValue(), '9');
+  assert.equal(await page.locator('button[aria-label="fx3d"]').getAttribute('aria-checked'), 'true');
+  await page.locator('input[aria-label="fx3dThick"]').fill('8'); assert.equal(await css('--fx3d-thick'), '8', 'the same slider lives in Settings');
+  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth <= 1), true, 'no sideways scroll with thick widgets');
+  assert.deepEqual(problems.filter(quiet), []); await ctx.close();
+});

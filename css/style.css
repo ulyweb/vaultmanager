@@ -951,19 +951,23 @@ body[data-space=home] .s3 { opacity: .72; }
 .s3-ring { position: absolute; left: 50%; top: 50%; width: 0; height: 0; transform-style: preserve-3d; transform: rotateX(var(--ly, 0deg)) rotateY(var(--lx, 0deg)); }
 .s3-orbit { position: absolute; left: 0; top: 0; width: 0; height: 0; transform-style: preserve-3d; transform: rotateY(calc(var(--ang) * 1deg)); }
 .s3-card { position: absolute; left: 0; top: 0; width: calc(172px * var(--s)); height: calc(106px * var(--s)); margin: calc(-53px * var(--s)) 0 0 calc(-86px * var(--s)); transform-style: preserve-3d; transform: translateZ(var(--r)) translateY(var(--y)) rotateY(calc(var(--ang) * -1deg)) rotateX(var(--rx)) rotateZ(var(--rz)); }
-.s3-inner { box-sizing: border-box; width: 100%; height: 100%; padding: 12px 13px; display: flex; flex-direction: column; gap: 9px; border-radius: 16px; border: 1px solid hsl(var(--h) 55% 58% / .45); background: linear-gradient(155deg, hsl(var(--h) 42% 24% / .92), rgba(11, 19, 30, .92) 70%); box-shadow: 0 18px 40px rgba(0, 0, 0, .42), inset 0 1px 0 rgba(255, 255, 255, .14); }
+.s3-slab { position: absolute; inset: 0; transform-style: preserve-3d; }
+.s3-slice { position: absolute; inset: 0; border-radius: 16px; transform: translateZ(calc(var(--k) * var(--fx3d-thick, 14) * -.1667px)); background: hsl(var(--h) 40% calc(40% - var(--k) * 3.4%)); border: 1px solid hsl(var(--h) 50% calc(60% - var(--k) * 4%) / .75); }
+html[data-thick=off] .s3-slice { display: none; }
+.s3-inner { position: absolute; inset: 0; box-sizing: border-box; padding: 12px 13px; display: flex; flex-direction: column; gap: 9px; border-radius: 16px; border: 1px solid hsl(var(--h) 55% 58% / .45); background: linear-gradient(155deg, hsl(var(--h) 42% 24% / .92), rgba(11, 19, 30, .92) 70%); box-shadow: 0 18px 40px rgba(0, 0, 0, .42), inset 0 1px 0 rgba(255, 255, 255, .14); }
 .s3-top { display: flex; align-items: center; gap: 9px; font: 700 13px/1.15 var(--mono); color: var(--ink); }
 .s3-ico { display: grid; place-items: center; flex: none; width: 34px; height: 34px; border-radius: 10px; background: hsl(var(--h) 60% 45% / .4); }
 .s3-ico .ico { width: 22px; height: 22px; }
 .s3-bar { display: block; height: 8px; border-radius: 4px; background: hsl(var(--h) 45% 62% / .3); } .s3-bar.w1 { width: 88%; } .s3-bar.w2 { width: 62%; } .s3-bar.w3 { width: 40%; }
 :root[data-theme="light"] .s3-inner { background: linear-gradient(155deg, hsl(var(--h) 80% 91%), #fff 72%); border-color: hsl(var(--h) 50% 62% / .55); box-shadow: 0 14px 30px rgba(30, 45, 60, .2), inset 0 1px 0 #fff; }
 :root[data-theme="light"] .s3-top { color: #1b2430; }
+:root[data-theme="light"] .s3-slice { background: hsl(var(--h) 38% calc(80% - var(--k) * 4.4%)); border-color: hsl(var(--h) 40% calc(66% - var(--k) * 4%) / .8); }
 @keyframes s3-orbit { from { transform: rotateY(0deg); } to { transform: rotateY(360deg); } }
 @keyframes s3-face { from { transform: translateZ(var(--r)) translateY(var(--y)) rotateY(0deg) rotateX(var(--rx)) rotateZ(var(--rz)); } to { transform: translateZ(var(--r)) translateY(var(--y)) rotateY(-360deg) rotateX(var(--rx)) rotateZ(var(--rz)); } }
-@keyframes s3-bob { from { translate: 0 -11px; rotate: 1 .4 0 -3.2deg; } to { translate: 0 13px; rotate: 1 .4 0 3.2deg; } }
+@keyframes s3-bob { from { transform: translate3d(0, -11px, 0) rotate3d(1, .4, 0, -3.2deg); } to { transform: translate3d(0, 13px, 0) rotate3d(1, .4, 0, 3.2deg); } }
 html[data-fx3d=on] .s3-orbit { animation: s3-orbit var(--dur) linear infinite; animation-delay: calc(var(--ang) / 360 * var(--dur) * -1); }
 html[data-fx3d=on] .s3-card { animation: s3-face var(--dur) linear infinite; animation-delay: calc(var(--ang) / 360 * var(--dur) * -1); }   /* turns exactly against its orbit, so it always faces you */
-html[data-fx3d=on] .s3-inner { animation: s3-bob 7s ease-in-out infinite alternate; animation-delay: var(--bob); }
+html[data-fx3d=on] .s3-slab { animation: s3-bob 7s ease-in-out infinite alternate; animation-delay: var(--bob); }
 @media (max-width: 700px) { .s3 { perspective: 820px; } .s3-card { width: calc(138px * var(--s)); height: calc(86px * var(--s)); margin: calc(-43px * var(--s)) 0 0 calc(-69px * var(--s)); } .s3-inner { padding: 9px 10px; gap: 7px; } .s3-top { font-size: 11px; } .s3-ico { width: 28px; height: 28px; } .s3-orbit:nth-child(n+11) { display: none; } }
 
 /* the cards that sit in front of the space: widgets, the sign-in / create card, and the import dialog */
@@ -979,3 +983,25 @@ html[data-fx3d=on] .gate-card { animation: g3-in .95s cubic-bezier(.2, .9, .25, 
 body[data-space=gate] .modal-overlay { background: rgba(2, 4, 8, .5); -webkit-backdrop-filter: blur(1.5px); backdrop-filter: blur(1.5px); }
 :root[data-theme="light"] body[data-space=gate] .modal-overlay { background: rgba(30, 45, 60, .28); }
 @media (min-width: 700px) { .modal-sheet.m3d { transform: perspective(1100px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)); transition: transform .15s ease; } }
+
+/* ---------- thickness: windows get a solid edge, floating cards get real depth ----------
+   Settings → Effects → Card thickness (and the 3D effects panel on the sign-in screen). The edge on windows is a stack of hard shadows whose direction
+   follows the pointer tilt (--ex / --ey, set in app.js), so it looks like a slab turning in the light. */
+:root { --e1: rgba(255,255,255,.34); --e2: color-mix(in srgb, var(--accent) 34%, #0a1118); --e3: color-mix(in srgb, var(--accent) 31%, #0a1118); --e4: color-mix(in srgb, var(--accent) 29%, #0a1118); --e5: color-mix(in srgb, var(--accent) 26%, #0a1118); --e6: color-mix(in srgb, var(--accent) 24%, #0a1118); --e7: color-mix(in srgb, var(--accent) 21%, #0a1118); --e8: color-mix(in srgb, var(--accent) 18%, #0a1118); --e9: color-mix(in srgb, var(--accent) 16%, #0a1118); --e10: color-mix(in srgb, var(--accent) 13%, #0a1118); --e11: color-mix(in srgb, var(--accent) 11%, #0a1118); --e12: color-mix(in srgb, var(--accent) 8%, #0a1118); }
+:root[data-theme="light"] { --e1: rgba(255,255,255,.95); --e2: color-mix(in srgb, var(--accent) 26%, #9fb0c0); --e3: color-mix(in srgb, var(--accent) 24%, #9fb0c0); --e4: color-mix(in srgb, var(--accent) 22%, #9fb0c0); --e5: color-mix(in srgb, var(--accent) 21%, #9fb0c0); --e6: color-mix(in srgb, var(--accent) 19%, #9fb0c0); --e7: color-mix(in srgb, var(--accent) 17%, #9fb0c0); --e8: color-mix(in srgb, var(--accent) 15%, #9fb0c0); --e9: color-mix(in srgb, var(--accent) 13%, #9fb0c0); --e10: color-mix(in srgb, var(--accent) 12%, #9fb0c0); --e11: color-mix(in srgb, var(--accent) 10%, #9fb0c0); --e12: color-mix(in srgb, var(--accent) 8%, #9fb0c0); }
+html[data-thick=on][data-fx3d=on] .gate-card, html[data-thick=on][data-fx3d=on] .widget { --dx: calc(var(--ex, .5) * var(--fx3d-thick, 14) * .05px); --dy: calc(var(--ey, .8) * var(--fx3d-thick, 14) * .05px); --stack: calc(var(--dx) * 1) calc(var(--dy) * 1) 0 0 var(--e1), calc(var(--dx) * 2) calc(var(--dy) * 2) 0 0 var(--e2), calc(var(--dx) * 3) calc(var(--dy) * 3) 0 0 var(--e3), calc(var(--dx) * 4) calc(var(--dy) * 4) 0 0 var(--e4), calc(var(--dx) * 5) calc(var(--dy) * 5) 0 0 var(--e5), calc(var(--dx) * 6) calc(var(--dy) * 6) 0 0 var(--e6), calc(var(--dx) * 7) calc(var(--dy) * 7) 0 0 var(--e7), calc(var(--dx) * 8) calc(var(--dy) * 8) 0 0 var(--e8), calc(var(--dx) * 9) calc(var(--dy) * 9) 0 0 var(--e9), calc(var(--dx) * 10) calc(var(--dy) * 10) 0 0 var(--e10), calc(var(--dx) * 11) calc(var(--dy) * 11) 0 0 var(--e11), calc(var(--dx) * 12) calc(var(--dy) * 12) 0 0 var(--e12), 0 30px 60px -12px rgba(0, 0, 0, .55), 0 10px 22px -6px rgba(0, 0, 0, .35); box-shadow: var(--stack); }
+html[data-thick=on][data-fx3d=on] .widget.pinned { box-shadow: 0 0 0 1px var(--accent) inset, var(--stack); }
+@media (min-width: 700px) { html[data-thick=on][data-fx3d=on] .modal-sheet { --dx: calc(var(--ex, .5) * var(--fx3d-thick, 14) * .05px); --dy: calc(var(--ey, .8) * var(--fx3d-thick, 14) * .05px); box-shadow: calc(var(--dx) * 1) calc(var(--dy) * 1) 0 0 var(--e1), calc(var(--dx) * 2) calc(var(--dy) * 2) 0 0 var(--e2), calc(var(--dx) * 3) calc(var(--dy) * 3) 0 0 var(--e3), calc(var(--dx) * 4) calc(var(--dy) * 4) 0 0 var(--e4), calc(var(--dx) * 5) calc(var(--dy) * 5) 0 0 var(--e5), calc(var(--dx) * 6) calc(var(--dy) * 6) 0 0 var(--e6), calc(var(--dx) * 7) calc(var(--dy) * 7) 0 0 var(--e7), calc(var(--dx) * 8) calc(var(--dy) * 8) 0 0 var(--e8), calc(var(--dx) * 9) calc(var(--dy) * 9) 0 0 var(--e9), calc(var(--dx) * 10) calc(var(--dy) * 10) 0 0 var(--e10), calc(var(--dx) * 11) calc(var(--dy) * 11) 0 0 var(--e11), calc(var(--dx) * 12) calc(var(--dy) * 12) 0 0 var(--e12), 0 34px 70px -12px rgba(0, 0, 0, .6); } }
+/* ---------- float: windows and widgets drift gently (Settings → Card float); still under the pointer or while you type ---------- */
+@keyframes w3-float { from { translate: 0 calc(var(--fx3d-float, 3) * -.7px); rotate: 1 1 0 calc(var(--fx3d-float, 3) * -.09deg); } to { translate: 0 calc(var(--fx3d-float, 3) * .9px); rotate: 1 1 0 calc(var(--fx3d-float, 3) * .09deg); } }
+html[data-float=on] .widget { animation: w3-float 8s ease-in-out infinite alternate, w3-in .9s cubic-bezier(.2, .9, .25, 1.12) backwards; animation-delay: calc(var(--i, 0) * -1.4s), calc(var(--i, 0) * 85ms); }
+html[data-float=on] .gate-card { animation: w3-float 9s ease-in-out infinite alternate, g3-in .95s cubic-bezier(.2, .9, .25, 1.1) backwards; }
+html[data-float=on] .widget:hover, html[data-float=on] .widget:focus-within, html[data-float=on] .gate-card:hover, html[data-float=on] .gate-card:focus-within { animation-play-state: paused, running; }
+/* the 3D effects button and panel on the sign-in screens */
+.gfx { position: fixed; z-index: 40; top: 12px; right: 12px; display: grid; justify-items: end; gap: 8px; }
+.gfx-panel { width: min(300px, calc(100vw - 24px)); display: grid; gap: 10px; padding: 14px 16px; border-radius: 14px; border: 1px solid var(--line-2, var(--line)); background: var(--panel); box-shadow: 0 18px 44px rgba(0, 0, 0, .45); }
+.gfx-head { display: flex; align-items: center; justify-content: space-between; }
+.gfx-row { display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; align-items: center; font-size: 13px; }
+.gfx-row input[type=range] { grid-column: 1 / -1; width: 100%; }
+.gfx-row .val { font: 600 12px var(--mono); color: var(--muted); }
+.gfx-panel .hint { margin: 0; }

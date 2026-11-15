@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VaultManager v0.32.0 — single-file offline build. Verify with the .sha256 file next to it. -->
+<!-- VaultManager v0.33.0 — single-file offline build. Verify with the .sha256 file next to it. -->
 <html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
@@ -11,7 +11,7 @@
 <meta name="application-name" content="VaultManager">
 <meta name="format-detection" content="telephone=no">
 <meta name="referrer" content="no-referrer">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-tauzjAWYvkq2EEey6/r1GOXzEWNzSydbYj43JCIjd2U=' 'sha256-KZhrUuXbxr/X9icA7uvL5waa1+1fy81Oy7BS0Xrkx/8=' blob:; style-src 'sha256-gyqR+jEK/U5AbGD37CnwcNCSKvug+p6fleBwCfuCpRs='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-tauzjAWYvkq2EEey6/r1GOXzEWNzSydbYj43JCIjd2U=' 'sha256-gfKX0dJQFSmdcgqzkDwXKsQ1Zen81J6AT1RRPoiqEtQ=' blob:; style-src 'sha256-UuFnUBPADH3e7PjtIbGkC9Btv9Yp+ZBS/1bSAbk8KCM='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
 <title>VaultManager | Zero-Knowledge Password Manager</title>
 <meta name="description" content="VaultManager: an offline-first, zero-knowledge, end-to-end encrypted password manager with a strong password generator, TOTP codes and QR-sealed sharing and backup. Runs entirely in your browser.">
 <meta name="theme-color" content="#05080d">
@@ -969,19 +969,23 @@ body[data-space=home] .s3 { opacity: .72; }
 .s3-ring { position: absolute; left: 50%; top: 50%; width: 0; height: 0; transform-style: preserve-3d; transform: rotateX(var(--ly, 0deg)) rotateY(var(--lx, 0deg)); }
 .s3-orbit { position: absolute; left: 0; top: 0; width: 0; height: 0; transform-style: preserve-3d; transform: rotateY(calc(var(--ang) * 1deg)); }
 .s3-card { position: absolute; left: 0; top: 0; width: calc(172px * var(--s)); height: calc(106px * var(--s)); margin: calc(-53px * var(--s)) 0 0 calc(-86px * var(--s)); transform-style: preserve-3d; transform: translateZ(var(--r)) translateY(var(--y)) rotateY(calc(var(--ang) * -1deg)) rotateX(var(--rx)) rotateZ(var(--rz)); }
-.s3-inner { box-sizing: border-box; width: 100%; height: 100%; padding: 12px 13px; display: flex; flex-direction: column; gap: 9px; border-radius: 16px; border: 1px solid hsl(var(--h) 55% 58% / .45); background: linear-gradient(155deg, hsl(var(--h) 42% 24% / .92), rgba(11, 19, 30, .92) 70%); box-shadow: 0 18px 40px rgba(0, 0, 0, .42), inset 0 1px 0 rgba(255, 255, 255, .14); }
+.s3-slab { position: absolute; inset: 0; transform-style: preserve-3d; }
+.s3-slice { position: absolute; inset: 0; border-radius: 16px; transform: translateZ(calc(var(--k) * var(--fx3d-thick, 14) * -.1667px)); background: hsl(var(--h) 40% calc(40% - var(--k) * 3.4%)); border: 1px solid hsl(var(--h) 50% calc(60% - var(--k) * 4%) / .75); }
+html[data-thick=off] .s3-slice { display: none; }
+.s3-inner { position: absolute; inset: 0; box-sizing: border-box; padding: 12px 13px; display: flex; flex-direction: column; gap: 9px; border-radius: 16px; border: 1px solid hsl(var(--h) 55% 58% / .45); background: linear-gradient(155deg, hsl(var(--h) 42% 24% / .92), rgba(11, 19, 30, .92) 70%); box-shadow: 0 18px 40px rgba(0, 0, 0, .42), inset 0 1px 0 rgba(255, 255, 255, .14); }
 .s3-top { display: flex; align-items: center; gap: 9px; font: 700 13px/1.15 var(--mono); color: var(--ink); }
 .s3-ico { display: grid; place-items: center; flex: none; width: 34px; height: 34px; border-radius: 10px; background: hsl(var(--h) 60% 45% / .4); }
 .s3-ico .ico { width: 22px; height: 22px; }
 .s3-bar { display: block; height: 8px; border-radius: 4px; background: hsl(var(--h) 45% 62% / .3); } .s3-bar.w1 { width: 88%; } .s3-bar.w2 { width: 62%; } .s3-bar.w3 { width: 40%; }
 :root[data-theme="light"] .s3-inner { background: linear-gradient(155deg, hsl(var(--h) 80% 91%), #fff 72%); border-color: hsl(var(--h) 50% 62% / .55); box-shadow: 0 14px 30px rgba(30, 45, 60, .2), inset 0 1px 0 #fff; }
 :root[data-theme="light"] .s3-top { color: #1b2430; }
+:root[data-theme="light"] .s3-slice { background: hsl(var(--h) 38% calc(80% - var(--k) * 4.4%)); border-color: hsl(var(--h) 40% calc(66% - var(--k) * 4%) / .8); }
 @keyframes s3-orbit { from { transform: rotateY(0deg); } to { transform: rotateY(360deg); } }
 @keyframes s3-face { from { transform: translateZ(var(--r)) translateY(var(--y)) rotateY(0deg) rotateX(var(--rx)) rotateZ(var(--rz)); } to { transform: translateZ(var(--r)) translateY(var(--y)) rotateY(-360deg) rotateX(var(--rx)) rotateZ(var(--rz)); } }
-@keyframes s3-bob { from { translate: 0 -11px; rotate: 1 .4 0 -3.2deg; } to { translate: 0 13px; rotate: 1 .4 0 3.2deg; } }
+@keyframes s3-bob { from { transform: translate3d(0, -11px, 0) rotate3d(1, .4, 0, -3.2deg); } to { transform: translate3d(0, 13px, 0) rotate3d(1, .4, 0, 3.2deg); } }
 html[data-fx3d=on] .s3-orbit { animation: s3-orbit var(--dur) linear infinite; animation-delay: calc(var(--ang) / 360 * var(--dur) * -1); }
 html[data-fx3d=on] .s3-card { animation: s3-face var(--dur) linear infinite; animation-delay: calc(var(--ang) / 360 * var(--dur) * -1); }   /* turns exactly against its orbit, so it always faces you */
-html[data-fx3d=on] .s3-inner { animation: s3-bob 7s ease-in-out infinite alternate; animation-delay: var(--bob); }
+html[data-fx3d=on] .s3-slab { animation: s3-bob 7s ease-in-out infinite alternate; animation-delay: var(--bob); }
 @media (max-width: 700px) { .s3 { perspective: 820px; } .s3-card { width: calc(138px * var(--s)); height: calc(86px * var(--s)); margin: calc(-43px * var(--s)) 0 0 calc(-69px * var(--s)); } .s3-inner { padding: 9px 10px; gap: 7px; } .s3-top { font-size: 11px; } .s3-ico { width: 28px; height: 28px; } .s3-orbit:nth-child(n+11) { display: none; } }
 
 /* the cards that sit in front of the space: widgets, the sign-in / create card, and the import dialog */
@@ -997,6 +1001,28 @@ html[data-fx3d=on] .gate-card { animation: g3-in .95s cubic-bezier(.2, .9, .25, 
 body[data-space=gate] .modal-overlay { background: rgba(2, 4, 8, .5); -webkit-backdrop-filter: blur(1.5px); backdrop-filter: blur(1.5px); }
 :root[data-theme="light"] body[data-space=gate] .modal-overlay { background: rgba(30, 45, 60, .28); }
 @media (min-width: 700px) { .modal-sheet.m3d { transform: perspective(1100px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)); transition: transform .15s ease; } }
+
+/* ---------- thickness: windows get a solid edge, floating cards get real depth ----------
+   Settings → Effects → Card thickness (and the 3D effects panel on the sign-in screen). The edge on windows is a stack of hard shadows whose direction
+   follows the pointer tilt (--ex / --ey, set in app.js), so it looks like a slab turning in the light. */
+:root { --e1: rgba(255,255,255,.34); --e2: color-mix(in srgb, var(--accent) 34%, #0a1118); --e3: color-mix(in srgb, var(--accent) 31%, #0a1118); --e4: color-mix(in srgb, var(--accent) 29%, #0a1118); --e5: color-mix(in srgb, var(--accent) 26%, #0a1118); --e6: color-mix(in srgb, var(--accent) 24%, #0a1118); --e7: color-mix(in srgb, var(--accent) 21%, #0a1118); --e8: color-mix(in srgb, var(--accent) 18%, #0a1118); --e9: color-mix(in srgb, var(--accent) 16%, #0a1118); --e10: color-mix(in srgb, var(--accent) 13%, #0a1118); --e11: color-mix(in srgb, var(--accent) 11%, #0a1118); --e12: color-mix(in srgb, var(--accent) 8%, #0a1118); }
+:root[data-theme="light"] { --e1: rgba(255,255,255,.95); --e2: color-mix(in srgb, var(--accent) 26%, #9fb0c0); --e3: color-mix(in srgb, var(--accent) 24%, #9fb0c0); --e4: color-mix(in srgb, var(--accent) 22%, #9fb0c0); --e5: color-mix(in srgb, var(--accent) 21%, #9fb0c0); --e6: color-mix(in srgb, var(--accent) 19%, #9fb0c0); --e7: color-mix(in srgb, var(--accent) 17%, #9fb0c0); --e8: color-mix(in srgb, var(--accent) 15%, #9fb0c0); --e9: color-mix(in srgb, var(--accent) 13%, #9fb0c0); --e10: color-mix(in srgb, var(--accent) 12%, #9fb0c0); --e11: color-mix(in srgb, var(--accent) 10%, #9fb0c0); --e12: color-mix(in srgb, var(--accent) 8%, #9fb0c0); }
+html[data-thick=on][data-fx3d=on] .gate-card, html[data-thick=on][data-fx3d=on] .widget { --dx: calc(var(--ex, .5) * var(--fx3d-thick, 14) * .05px); --dy: calc(var(--ey, .8) * var(--fx3d-thick, 14) * .05px); --stack: calc(var(--dx) * 1) calc(var(--dy) * 1) 0 0 var(--e1), calc(var(--dx) * 2) calc(var(--dy) * 2) 0 0 var(--e2), calc(var(--dx) * 3) calc(var(--dy) * 3) 0 0 var(--e3), calc(var(--dx) * 4) calc(var(--dy) * 4) 0 0 var(--e4), calc(var(--dx) * 5) calc(var(--dy) * 5) 0 0 var(--e5), calc(var(--dx) * 6) calc(var(--dy) * 6) 0 0 var(--e6), calc(var(--dx) * 7) calc(var(--dy) * 7) 0 0 var(--e7), calc(var(--dx) * 8) calc(var(--dy) * 8) 0 0 var(--e8), calc(var(--dx) * 9) calc(var(--dy) * 9) 0 0 var(--e9), calc(var(--dx) * 10) calc(var(--dy) * 10) 0 0 var(--e10), calc(var(--dx) * 11) calc(var(--dy) * 11) 0 0 var(--e11), calc(var(--dx) * 12) calc(var(--dy) * 12) 0 0 var(--e12), 0 30px 60px -12px rgba(0, 0, 0, .55), 0 10px 22px -6px rgba(0, 0, 0, .35); box-shadow: var(--stack); }
+html[data-thick=on][data-fx3d=on] .widget.pinned { box-shadow: 0 0 0 1px var(--accent) inset, var(--stack); }
+@media (min-width: 700px) { html[data-thick=on][data-fx3d=on] .modal-sheet { --dx: calc(var(--ex, .5) * var(--fx3d-thick, 14) * .05px); --dy: calc(var(--ey, .8) * var(--fx3d-thick, 14) * .05px); box-shadow: calc(var(--dx) * 1) calc(var(--dy) * 1) 0 0 var(--e1), calc(var(--dx) * 2) calc(var(--dy) * 2) 0 0 var(--e2), calc(var(--dx) * 3) calc(var(--dy) * 3) 0 0 var(--e3), calc(var(--dx) * 4) calc(var(--dy) * 4) 0 0 var(--e4), calc(var(--dx) * 5) calc(var(--dy) * 5) 0 0 var(--e5), calc(var(--dx) * 6) calc(var(--dy) * 6) 0 0 var(--e6), calc(var(--dx) * 7) calc(var(--dy) * 7) 0 0 var(--e7), calc(var(--dx) * 8) calc(var(--dy) * 8) 0 0 var(--e8), calc(var(--dx) * 9) calc(var(--dy) * 9) 0 0 var(--e9), calc(var(--dx) * 10) calc(var(--dy) * 10) 0 0 var(--e10), calc(var(--dx) * 11) calc(var(--dy) * 11) 0 0 var(--e11), calc(var(--dx) * 12) calc(var(--dy) * 12) 0 0 var(--e12), 0 34px 70px -12px rgba(0, 0, 0, .6); } }
+/* ---------- float: windows and widgets drift gently (Settings → Card float); still under the pointer or while you type ---------- */
+@keyframes w3-float { from { translate: 0 calc(var(--fx3d-float, 3) * -.7px); rotate: 1 1 0 calc(var(--fx3d-float, 3) * -.09deg); } to { translate: 0 calc(var(--fx3d-float, 3) * .9px); rotate: 1 1 0 calc(var(--fx3d-float, 3) * .09deg); } }
+html[data-float=on] .widget { animation: w3-float 8s ease-in-out infinite alternate, w3-in .9s cubic-bezier(.2, .9, .25, 1.12) backwards; animation-delay: calc(var(--i, 0) * -1.4s), calc(var(--i, 0) * 85ms); }
+html[data-float=on] .gate-card { animation: w3-float 9s ease-in-out infinite alternate, g3-in .95s cubic-bezier(.2, .9, .25, 1.1) backwards; }
+html[data-float=on] .widget:hover, html[data-float=on] .widget:focus-within, html[data-float=on] .gate-card:hover, html[data-float=on] .gate-card:focus-within { animation-play-state: paused, running; }
+/* the 3D effects button and panel on the sign-in screens */
+.gfx { position: fixed; z-index: 40; top: 12px; right: 12px; display: grid; justify-items: end; gap: 8px; }
+.gfx-panel { width: min(300px, calc(100vw - 24px)); display: grid; gap: 10px; padding: 14px 16px; border-radius: 14px; border: 1px solid var(--line-2, var(--line)); background: var(--panel); box-shadow: 0 18px 44px rgba(0, 0, 0, .45); }
+.gfx-head { display: flex; align-items: center; justify-content: space-between; }
+.gfx-row { display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; align-items: center; font-size: 13px; }
+.gfx-row input[type=range] { grid-column: 1 / -1; width: 100%; }
+.gfx-row .val { font: 600 12px var(--mono); color: var(--muted); }
+.gfx-panel .hint { margin: 0; }
 </style>
 </head>
 <body>
@@ -2110,7 +2136,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   }
 
   // js/version.js
-  var APP_VERSION = "0.32.0";
+  var APP_VERSION = "0.33.0";
   var APP_NAME = "VaultManager";
   var REPO_URL = "https://github.com/ulyweb/vaultmanager";
   var FORMATS = [
@@ -2124,6 +2150,10 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     ["Attachments at rest", "AES-256-GCM per file, bound to vault + file id"]
   ];
   var CHANGELOG = [
+    { v: "0.33.0", date: "2026-11-15", notes: [
+      "Thick cards and windows: the floating cards in the 3D card space are now real slabs, a face with layered depth behind it that shows as an edge when they turn, and the sign-in, create-profile and import windows and the Home widgets have a solid edge that shifts as they lean toward your pointer. Dialogs get the edge too.",
+      "Adjust it yourself: Settings \u2192 Effects has Card thickness (0\u201328 px, 0 makes everything flat), 3D tilt (0\u201312\xB0) and a new Card float (0\u201310: windows and widgets drift gently, and hold still under your pointer or while you type), next to the 3D card space switch. The sign-in and create screens have a \u201C3D effects\u201D button in the corner with the same controls, so you can tune it before you are signed in. What you set comes with you when you unlock or create the profile."
+    ] },
     { v: "0.32.0", date: "2026-11-15", notes: [
       "The sign-in, create-profile, add-a-profile and import screens, and the Home page, now sit in a 3D card space: item cards (Login, Payment card, Wi-Fi, Crypto wallet, Passport\u2026) flow around you on their own orbits at different depths and speeds, always turning to face you, drifting past the sides, away behind the cards you use and swooping in close again. They show only category names and blurred placeholder bars, never anything from your vault.",
       "The cards you use fly in from depth, lean toward the pointer with a moving sheen, and the whole space swells toward you for a moment while a key is being derived (unlocking, creating a profile, opening or restoring a backup). The import dialog leans toward the pointer too, with the cards visible behind it.",
@@ -2440,8 +2470,10 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     bootAnim: true,
     fxAnim: true,
     fx3d: true,
+    fx3dThick: 14,
+    fx3dFloat: 3,
     fxAurora: 65,
-    fxTilt: 0,
+    fxTilt: 5,
     fxGlow: 35,
     fxScan: false,
     blur: 12,
@@ -2498,8 +2530,11 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       bootAnim: bool(o.bootAnim, D2.bootAnim),
       fxAnim: bool(o.fxAnim, D2.fxAnim),
       fx3d: bool(o.fx3d, D2.fx3d),
+      fx3dThick: num(o.fx3dThick, 0, 28, D2.fx3dThick),
+      fx3dFloat: num(o.fx3dFloat, 0, 10, D2.fx3dFloat),
       fxAurora: num(o.fxAurora, 0, 100, D2.fxAurora),
-      fxTilt: num(o.fxTilt, 0, 10, D2.fxTilt),
+      fxTilt: o.fx3d === void 0 && !o.fxTilt ? D2.fxTilt : num(o.fxTilt, 0, 12, D2.fxTilt),
+      // a look saved before the 3D card space has tilt 0 (the old default): give it the new default; a deliberate 0 later stays 0
       fxGlow: num(o.fxGlow, 0, 100, D2.fxGlow),
       fxScan: bool(o.fxScan, D2.fxScan),
       blur: num(o.blur, 0, 40, D2.blur),
@@ -2559,6 +2594,8 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     set("--speed", String(look.animSpeed));
     set("--ui-scale", String(look.uiScale / 100));
     set("--tilt", look.fxTilt + "deg");
+    set("--fx3d-thick", String(look.fx3dThick));
+    set("--fx3d-float", String(look.fx3dFloat));
     set("--dock", look.dockSize + "px");
     set("--wall-dim", String(look.bgDim / 100));
     set("--wall-dim-rgb", theme === "light" ? "238,242,246" : "2,6,12");
@@ -2572,6 +2609,8 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     d.motion = look.animations ? "on" : "off";
     d.fxanim = look.fxAnim && look.animations ? "on" : "off";
     d.fx3d = look.fx3d && look.animations ? "on" : "off";
+    d.thick = look.fx3dThick > 0 ? "on" : "off";
+    d.float = look.fx3d && look.animations && look.fx3dFloat > 0 && !(typeof navigator !== "undefined" && navigator.webdriver) ? "on" : "off";
     d.anim = look.animStyle;
     d.scan = look.fxScan ? "on" : "off";
     d.bg = look.bg === "wallpaper" && landscapes2 ? "wallpaper" : look.bg === "plain" ? "plain" : "default";
@@ -4190,16 +4229,21 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     const ring = h("div", { class: "s3-ring" });
     CARDS.forEach(([name, icon, hue2], i) => {
       const [r, y, ang, rz, dur, size] = SPREAD[i];
-      const card = h("div", { class: "s3-card" }, h(
+      const slices = Array.from({ length: 6 }, (_, k) => {
+        const s = h("i", { class: "s3-slice" });
+        s.style.setProperty("--k", String(k + 1));
+        return s;
+      });
+      const card = h("div", { class: "s3-card" }, h("div", { class: "s3-slab" }, ...slices, h(
         "div",
         { class: "s3-inner" },
         h("div", { class: "s3-top" }, h("span", { class: "s3-ico" }, h("span", { class: "icn", text: icon })), h("b", { text: name })),
         h("i", { class: "s3-bar w1" }),
         h("i", { class: "s3-bar w2" }),
         h("i", { class: "s3-bar w3" })
-      ));
+      )));
       const orbit = h("div", { class: "s3-orbit" }, card);
-      orbit.style.cssText = `--ang:${ang};--r:${r}px;--y:${y}px;--rz:${rz}deg;--rx:${(i % 3 - 1) * 7}deg;--dur:${dur}s;--s:${size};--h:${hue2};--bob:${i % 5 * -1.1 - 2}s`;
+      orbit.style.cssText = `--ang:${ang};--r:${r}px;--y:${y}px;--rz:${rz}deg;--rx:${(i % 3 - 1) * 11}deg;--dur:${dur}s;--s:${size};--h:${hue2};--bob:${i % 5 * -1.1 - 2}s`;
       ring.append(orbit);
     });
     const root2 = h("div", { id: "space3d", class: "s3", "aria-hidden": "true" }, ring);
@@ -4232,6 +4276,51 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
         timer = setTimeout(() => root2.classList.remove("surge"), 1500);
       }
     };
+  }
+
+  // js/gate-fx.js
+  var CONTROLS = [
+    ["fx3dThick", "Card thickness", 0, 28, 1, (v) => v + " px"],
+    ["fxTilt", "3D tilt", 0, 12, 1, (v) => v + "\xB0"],
+    ["fx3dFloat", "Card float", 0, 10, 1, (v) => String(v)]
+  ];
+  function gateFxControl(ctx2) {
+    const L = () => ctx2.look();
+    const panel3 = h("div", { class: "gfx-panel", id: "gfx-panel", role: "group", "aria-label": "3D effects", hidden: true });
+    const button = h("button", { type: "button", class: "btn sm gfx-btn", "aria-expanded": "false", "aria-controls": "gfx-panel", title: "Tune the 3D cards and windows", on: { click: () => toggle() } }, "{{sparkles}} 3D effects");
+    const draw2 = () => {
+      clear(panel3);
+      const on = h("button", { type: "button", class: "sw", role: "switch", "aria-checked": String(!!L().fx3d), "aria-label": "fx3d", on: { click: () => {
+        ctx2.setGateLook({ fx3d: !L().fx3d });
+        draw2();
+      } } });
+      panel3.append(
+        h("div", { class: "gfx-head" }, h("b", { text: "3D effects" }), h("button", { type: "button", class: "icon-btn", "aria-label": "Close the 3D effects panel", on: { click: () => toggle(false) } }, "{{close}}")),
+        h("div", { class: "gfx-row" }, h("span", { text: "3D card space" }), on)
+      );
+      for (const [key, label, lo, hi, step, fmt] of CONTROLS) {
+        const val = h("span", { class: "val", text: fmt(L()[key]) });
+        const input = h("input", { type: "range", min: String(lo), max: String(hi), step: String(step), value: String(L()[key]), "aria-label": label, on: { input: (e) => {
+          val.textContent = fmt(+e.target.value);
+          ctx2.setGateLook({ [key]: +e.target.value });
+        } } });
+        panel3.append(h("label", { class: "gfx-row" }, h("span", { text: label }), input, val));
+      }
+      panel3.append(
+        h("p", { class: "hint", text: "These follow you into the vault: Settings \u2192 Effects has the same sliders." }),
+        h("button", { type: "button", class: "btn sm", on: { click: () => {
+          ctx2.setGateLook({ fx3d: true, fx3dThick: 14, fxTilt: 5, fx3dFloat: 3 });
+          draw2();
+        } } }, "Reset")
+      );
+    };
+    function toggle(open) {
+      const show = open === void 0 ? panel3.hidden : open;
+      if (show) draw2();
+      panel3.hidden = !show;
+      button.setAttribute("aria-expanded", String(show));
+    }
+    return h("div", { class: "gfx" }, button, panel3);
   }
 
   // js/generator.js
@@ -7838,7 +7927,9 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
         "Telemetry FX",
         row("Aurora intensity", "Soft animated glow floating behind everything", range("fxAurora", 0, 100, 1)),
         row("3D card space", "Item cards that flow around you in 3D behind the sign-in, create, import and Home screens; widgets and cards float, fly in and lean toward the pointer", sw("fx3d")),
-        row("3D tilt", "How far widgets and the sign-in card lean toward the pointer (the 3D card space adds a gentle lean of its own)", range("fxTilt", 0, 10, 1, (v) => v + "\xB0")),
+        row("Card thickness", "How thick the floating cards and the windows look (sign-in, create, import, dialogs and Home widgets). 0 makes them flat", range("fx3dThick", 0, 28, 1, (v) => v + " px")),
+        row("3D tilt", "How far widgets, the sign-in card and the import dialog lean toward the pointer (0 keeps them straight)", range("fxTilt", 0, 12, 1, (v) => v + "\xB0")),
+        row("Card float", "How much the windows and widgets drift up and down, slowly; they hold still under your pointer or while you type (0 turns the float off)", range("fx3dFloat", 0, 10, 1)),
         row("FX animation", "Ambient motion: aurora drift and icon wiggle on hover", sw("fxAnim")),
         row("Toolbar glow", "Accent glow around the top bar, side bar and dock", range("fxGlow", 0, 100, 1)),
         row("CRT scanlines", "Retro scanline overlay across the whole screen", sw("fxScan")),
@@ -7850,7 +7941,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
         h("p", { class: "hint", text: "If you have \u201Creduce motion\u201D turned on in your device settings, animations are turned off automatically." }),
         h("button", { class: "btn", on: { click: () => {
           const D2 = LOOK_DEFAULTS;
-          ctx2.setLook({ animations: D2.animations, animStyle: D2.animStyle, animSpeed: D2.animSpeed, bootAnim: D2.bootAnim, fxAnim: D2.fxAnim, fx3d: D2.fx3d, fxAurora: D2.fxAurora, fxTilt: D2.fxTilt, fxGlow: D2.fxGlow, fxScan: D2.fxScan, blur: D2.blur, glassAlpha: D2.glassAlpha }, { redraw: true });
+          ctx2.setLook({ animations: D2.animations, animStyle: D2.animStyle, animSpeed: D2.animSpeed, bootAnim: D2.bootAnim, fxAnim: D2.fxAnim, fx3d: D2.fx3d, fx3dThick: D2.fx3dThick, fx3dFloat: D2.fx3dFloat, fxAurora: D2.fxAurora, fxTilt: D2.fxTilt, fxGlow: D2.fxGlow, fxScan: D2.fxScan, blur: D2.blur, glassAlpha: D2.glassAlpha }, { redraw: true });
         } } }, "Reset effects")
       )
     );
@@ -10477,7 +10568,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   document.addEventListener("pointermove", (e) => {
     const L = curLook();
     if (!L.animations || !e.target.closest) return;
-    const tilt = L.fxTilt || (L.fx3d && !reducedMotion2() ? 5 : 0);
+    const tilt = reducedMotion2() ? 0 : L.fxTilt;
     if (!tilt) return;
     const el = e.target.closest(".widget, .gate-card, .modal-sheet.m3d");
     if (!el) return;
@@ -10486,15 +10577,22 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     el.style.setProperty("--ry", (px * 2 * tilt).toFixed(2) + "deg");
     el.style.setProperty("--mx", ((px + 0.5) * 100).toFixed(1) + "%");
     el.style.setProperty("--my", ((py + 0.5) * 100).toFixed(1) + "%");
+    el.style.setProperty("--ex", (0.5 - px * 1.1).toFixed(2));
+    el.style.setProperty("--ey", (0.8 - py * 1.1).toFixed(2));
   });
   document.addEventListener("pointerleave", (e) => {
     if (e.target.classList && e.target.matches && e.target.matches(".widget, .gate-card, .modal-sheet.m3d")) {
-      e.target.style.setProperty("--rx", "0deg");
-      e.target.style.setProperty("--ry", "0deg");
+      for (const k of ["--rx", "--ry"]) e.target.style.setProperty(k, "0deg");
+      for (const k of ["--ex", "--ey"]) e.target.style.removeProperty(k);
     }
   }, true);
   var space = mountSpace();
   ctx.surge = () => space.surge();
+  ctx.setGateLook = (patch) => {
+    bootLook = normalizeLook({ ...bootLook, ...patch });
+    ctx.S.pendingLook = { ...ctx.S.pendingLook || {}, ...patch };
+    applyTheme();
+  };
   var syncSpace = () => space.set(!store.unlocked ? "gate" : ctx.S.view === "home" && !ctx.S.sel ? "home" : "off");
   function showBoot(L, done) {
     const iter = store.session ? store.session.iterations() : 0, n = store.active().length;
@@ -10539,6 +10637,11 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     ctx.S.view = L.startPage === "home" ? "home" : "all";
     if (ctx.S.lastView && ctx.S.lastProfile === ctx.S.profileId) ctx.S.view = ctx.S.lastView;
     ctx.S.lastView = null;
+    if (ctx.S.pendingLook) {
+      store.settings.look = normalizeLook({ ...store.settings.look, ...ctx.S.pendingLook });
+      ctx.S.pendingLook = null;
+      saveSoon();
+    }
     applyTheme();
     armAutolock();
     draw();
@@ -10740,6 +10843,11 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
           await st.create(p1.input.value);
           st.data.settings.displayName = nm;
           st.data.settings.theme = themeChoice;
+          {
+            const { fx3d, fxTilt, fx3dThick, fx3dFloat } = bootLook;
+            st.data.settings.look = normalizeLook({ fx3d, fxTilt, fx3dThick, fx3dFloat });
+          }
+          ctx.S.pendingLook = null;
           await st.save();
         } catch (x) {
           err.textContent = x.message;
@@ -10958,7 +11066,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       }
       card = gateUnlock(p);
     }
-    root.append(h("div", { class: "gate" }, h("div", null, storageWarn, card)));
+    root.append(h("div", { class: "gate" }, h("div", null, storageWarn, card)), gateFxControl(ctx));
     const f = root.querySelector("input");
     if (f) f.focus();
   }

@@ -24,11 +24,13 @@ export function mountSpace() {
   const ring = h('div', { class: 's3-ring' });
   CARDS.forEach(([name, icon, hue], i) => {
     const [r, y, ang, rz, dur, size] = SPREAD[i];
-    const card = h('div', { class: 's3-card' }, h('div', { class: 's3-inner' },
+    /* a real slab: the face in front, and a stack of slices behind it (their depth follows Settings → Card thickness), so the card has an edge you see as it turns */
+    const slices = Array.from({ length: 6 }, (_, k) => { const s = h('i', { class: 's3-slice' }); s.style.setProperty('--k', String(k + 1)); return s; });
+    const card = h('div', { class: 's3-card' }, h('div', { class: 's3-slab' }, ...slices, h('div', { class: 's3-inner' },
       h('div', { class: 's3-top' }, h('span', { class: 's3-ico' }, h('span', { class: 'icn', text: icon })), h('b', { text: name })),
-      h('i', { class: 's3-bar w1' }), h('i', { class: 's3-bar w2' }), h('i', { class: 's3-bar w3' })));
+      h('i', { class: 's3-bar w1' }), h('i', { class: 's3-bar w2' }), h('i', { class: 's3-bar w3' }))));
     const orbit = h('div', { class: 's3-orbit' }, card);
-    orbit.style.cssText = `--ang:${ang};--r:${r}px;--y:${y}px;--rz:${rz}deg;--rx:${(i % 3 - 1) * 7}deg;--dur:${dur}s;--s:${size};--h:${hue};--bob:${(i % 5) * -1.1 - 2}s`;
+    orbit.style.cssText = `--ang:${ang};--r:${r}px;--y:${y}px;--rz:${rz}deg;--rx:${(i % 3 - 1) * 11}deg;--dur:${dur}s;--s:${size};--h:${hue};--bob:${(i % 5) * -1.1 - 2}s`;
     ring.append(orbit);
   });
   const root = h('div', { id: 'space3d', class: 's3', 'aria-hidden': 'true' }, ring);

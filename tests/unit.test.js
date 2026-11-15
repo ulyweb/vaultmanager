@@ -874,3 +874,12 @@ test('master-password suggestion is at least 100 bits (10 words), well above the
   const p = generateStrongPassphrase(); assert.equal(p.split('-').length, 10);
   assert.ok(estimate(p).bits >= 100, 'estimator agrees: ' + estimate(p).bits); assert.notEqual(p, generateStrongPassphrase());
 });
+
+test('look: 3D settings have defaults and a look saved before the 3D card space gets the new tilt default', async () => {
+  const { normalizeLook, LOOK_DEFAULTS } = await import('../js/look.js');
+  const d = normalizeLook({});
+  assert.equal(d.fx3d, true); assert.equal(d.fx3dThick, LOOK_DEFAULTS.fx3dThick); assert.equal(d.fx3dFloat, LOOK_DEFAULTS.fx3dFloat); assert.equal(d.fxTilt, 5);
+  assert.equal(normalizeLook({ fxTilt: 0 }).fxTilt, 5, 'an old saved look (tilt 0 was the old default) gets the new default');
+  assert.equal(normalizeLook({ fx3d: true, fxTilt: 0 }).fxTilt, 0, 'a deliberate 0 stays 0');
+  assert.equal(normalizeLook({ fx3dThick: 99, fx3dFloat: -4, fxTilt: 40, fx3d: true }).fx3dThick, 28); assert.equal(normalizeLook({ fx3dFloat: -4 }).fx3dFloat, 0); assert.equal(normalizeLook({ fx3d: true, fxTilt: 40 }).fxTilt, 12);
+});

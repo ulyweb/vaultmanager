@@ -193,14 +193,16 @@ export function effects(ctx) {
     panel('Telemetry FX',
       row('Aurora intensity', 'Soft animated glow floating behind everything', range('fxAurora', 0, 100, 1)),
       row('3D card space', 'Item cards that flow around you in 3D behind the sign-in, create, import and Home screens; widgets and cards float, fly in and lean toward the pointer', sw('fx3d')),
-      row('3D tilt', 'How far widgets and the sign-in card lean toward the pointer (the 3D card space adds a gentle lean of its own)', range('fxTilt', 0, 10, 1, (v) => v + '°')),
+      row('Card thickness', 'How thick the floating cards and the windows look (sign-in, create, import, dialogs and Home widgets). 0 makes them flat', range('fx3dThick', 0, 28, 1, (v) => v + ' px')),
+      row('3D tilt', 'How far widgets, the sign-in card and the import dialog lean toward the pointer (0 keeps them straight)', range('fxTilt', 0, 12, 1, (v) => v + '°')),
+      row('Card float', 'How much the windows and widgets drift up and down, slowly; they hold still under your pointer or while you type (0 turns the float off)', range('fx3dFloat', 0, 10, 1)),
       row('FX animation', 'Ambient motion: aurora drift and icon wiggle on hover', sw('fxAnim')),
       row('Toolbar glow', 'Accent glow around the top bar, side bar and dock', range('fxGlow', 0, 100, 1)),
       row('CRT scanlines', 'Retro scanline overlay across the whole screen', sw('fxScan')),
       row('Glass blur', 'Backdrop blur behind panels, dialogs and the dock', range('blur', 0, 40, 2, (v) => v + 'px')),
       row('Panel fill', 'Panel opacity — lower reveals more of the background', range('glassAlpha', 0.4, 0.98, 0.02, (v) => Math.round(v * 100) + '%'))),
     panel(null, h('p', { class: 'hint', text: 'If you have “reduce motion” turned on in your device settings, animations are turned off automatically.' }),
-      h('button', { class: 'btn', on: { click: () => { const D = LOOK_DEFAULTS; ctx.setLook({ animations: D.animations, animStyle: D.animStyle, animSpeed: D.animSpeed, bootAnim: D.bootAnim, fxAnim: D.fxAnim, fx3d: D.fx3d, fxAurora: D.fxAurora, fxTilt: D.fxTilt, fxGlow: D.fxGlow, fxScan: D.fxScan, blur: D.blur, glassAlpha: D.glassAlpha }, { redraw: true }); } } }, 'Reset effects')));
+      h('button', { class: 'btn', on: { click: () => { const D = LOOK_DEFAULTS; ctx.setLook({ animations: D.animations, animStyle: D.animStyle, animSpeed: D.animSpeed, bootAnim: D.bootAnim, fxAnim: D.fxAnim, fx3d: D.fx3d, fx3dThick: D.fx3dThick, fx3dFloat: D.fx3dFloat, fxAurora: D.fxAurora, fxTilt: D.fxTilt, fxGlow: D.fxGlow, fxScan: D.fxScan, blur: D.blur, glassAlpha: D.glassAlpha }, { redraw: true }); } } }, 'Reset effects')));
 }
 
 /* ======================= Layout: dock & menu bar ======================= */

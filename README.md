@@ -84,6 +84,7 @@ See [SECURITY.md](SECURITY.md) for the threat model and, importantly, what Vault
 | Path | Purpose |
 |---|---|
 | `index.html`, `css/`, `js/app.js` | shell, lock screen, navigation, auto-lock |
+| `js/gate-fx.js` | the "3D effects" button and panel on the sign-in / create screens (thickness, tilt, float, 3D switch) |
 | `js/space3d.js` | the 3D card space behind the sign-in, create, import and Home screens (CSS 3D orbits, no library) |
 | `js/carousel3d.js` | the 3D category carousel in the New item picker (CSS 3D transforms, one animation loop, no library) |
 | `js/views.js`, `js/tools.js`, `js/settings.js` | vault list / detail / editor / attachments; generator, health, QR, import-export; tabbed settings (sync, audit, about) |
