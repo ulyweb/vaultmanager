@@ -368,7 +368,9 @@ async function createVault(page, pw = MASTER) {
   await page.evaluate(() => document.querySelectorAll('.ngroup[aria-expanded=false]').forEach((b) => b.click()));   // category groups start collapsed (except Everyday)
 }
 async function addLogin(page, name, extra = async () => {}) {
-  await page.getByRole('button', { name: '＋ New' }).click(); await page.getByRole('button', { name: '🔑 Login', exact: true }).click();
+  await page.getByRole('button', { name: '＋ New' }).click(); await page.waitForSelector('.modal-sheet');
+  if (await page.locator('.c3-stage').count()) await page.locator('.pickseg button').nth(1).click();   // motion on: the picker opens as the 3D carousel, this helper wants the list
+  await page.getByRole('button', { name: '🔑 Login', exact: true }).click();
   await page.fill('#f_name', name); await page.fill('#f_username', 'user-' + name); await page.getByRole('button', { name: '⚡ Generate' }).click();
   await extra(); await page.getByRole('button', { name: 'Save' }).click(); await page.waitForSelector(`.detail h2:has-text("${name}")`);
 }
@@ -1846,4 +1848,42 @@ test('v0.30.0: the 3D tour page loads (with or without WebGL), its chapters, col
   const { ctx, page } = await newPage(); await page.goto(base); await page.waitForSelector('#pw1');
   assert.equal(await page.getAttribute('.gate-foot a.tourlink', 'href'), 'experience/', 'the sign-in screen offers the tour');
   await ctx.close();
+});
+
+test('v0.31.0: New item opens a 3D category carousel (spin with keys, drag and group chips), creates the chosen kind, and keeps a plain list as the choice for reduced motion', async () => {
+  const quiet = (p) => !/Failed to load resource/.test(p);
+  // reduced motion (what every other test runs with): the plain list comes first, so nothing about the old picker changed
+  const R = await newPage(); await createVault(R.page);
+  await R.page.getByRole('button', { name: '＋ New' }).click(); await R.page.waitForSelector('.modal-sheet .cats .btn');
+  assert.equal(await R.page.locator('.c3-stage').count(), 0, 'list first for people who ask for reduced motion');
+  await R.page.locator('.pickseg button').first().click(); await R.page.waitForSelector('.c3-stage'); assert.equal(await R.page.locator('.c3-card').count(), Object.keys(TEMPLATES).length + 3, 'one card per category, even held still');
+  await R.ctx.close();
+  // motion on: the carousel is the default
+  for (const [label, opts] of [['desktop', { reducedMotion: 'no-preference' }], ['phone', { ...(({ defaultBrowserType, ...d }) => d)(devices['iPhone SE']), reducedMotion: 'no-preference' }]]) {
+    const { ctx, page, problems } = await newPage(opts); await createVault(page);
+    await page.getByRole('button', { name: label === 'phone' ? 'New item' : '＋ New' }).click({ force: true }); await page.waitForSelector('.c3-stage');
+    assert.equal(await page.locator('.c3-card').count(), Object.keys(TEMPLATES).length + 3, label + ': a card for every category');
+    assert.equal(await page.textContent('.c3-name'), 'Login', label + ': starts on Login');
+    assert.ok(await page.evaluate(() => document.activeElement && document.activeElement.classList.contains('c3-stage')), label + ': the ring has the keyboard focus');
+    const t = await page.evaluate(() => getComputedStyle(document.querySelector('.c3-card.front')).transform); assert.match(t, /^matrix3d/, label + ': cards are really placed in 3D');
+    await page.keyboard.press('ArrowRight'); await page.waitForFunction(() => document.querySelector('.c3-name').textContent !== 'Login'); const second = await page.textContent('.c3-name');
+    await page.keyboard.press('ArrowLeft'); await page.waitForFunction((s) => document.querySelector('.c3-name').textContent !== s, second);
+    // a group chip jumps to that group
+    await page.locator('.c3-group', { hasText: 'Money' }).click(); await page.waitForFunction(() => /^Money/i.test(document.querySelector('.c3-meta').textContent));
+    // drag the ring
+    const box = await page.locator('.c3-stage').boundingBox(), before = await page.textContent('.c3-name');
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2); await page.mouse.down(); await page.mouse.move(box.x + box.width / 2 - 150, box.y + box.height / 2, { steps: 6 }); await page.mouse.up();
+    await page.waitForFunction((b) => document.querySelector('.c3-name').textContent !== b, before);
+    // create the card in front
+    await page.waitForSelector('.c3-stage[data-rest="1"]', { timeout: 30000 });   // the ring has finished coasting
+    const kind = await page.textContent('.c3-name'); await page.locator('.c3-create').click();
+    await page.waitForSelector('#f_name'); const head = await page.textContent('.modal-sheet h2'); assert.match(head, new RegExp('^New ' + kind.toLowerCase().replace(/[^a-z]+/g, '.*'), 'i'), label + ': the editor opens for ' + kind + ' but its title is “' + head + '”');
+    await page.keyboard.press('Escape');
+    // the list switch is remembered
+    await page.getByRole('button', { name: label === 'phone' ? 'New item' : '＋ New' }).click({ force: true }); await page.waitForSelector('.c3-stage');
+    await page.locator('.pickseg button').nth(1).click(); await page.waitForSelector('.modal-sheet .cats .btn'); await page.keyboard.press('Escape');
+    await page.getByRole('button', { name: label === 'phone' ? 'New item' : '＋ New' }).click({ force: true }); await page.waitForSelector('.modal-sheet .cats .btn'); assert.equal(await page.locator('.c3-stage').count(), 0, label + ': the list choice sticks');
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth <= 1), true, label + ': no sideways scroll');
+    assert.deepEqual(problems.filter(quiet), [], label); await ctx.close();
+  }
 });

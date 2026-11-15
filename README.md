@@ -84,6 +84,7 @@ See [SECURITY.md](SECURITY.md) for the threat model and, importantly, what Vault
 | Path | Purpose |
 |---|---|
 | `index.html`, `css/`, `js/app.js` | shell, lock screen, navigation, auto-lock |
+| `js/carousel3d.js` | the 3D category carousel in the New item picker (CSS 3D transforms, one animation loop, no library) |
 | `js/views.js`, `js/tools.js`, `js/settings.js` | vault list / detail / editor / attachments; generator, health, QR, import-export; tabbed settings (sync, audit, about) |
 | `js/icons.js` | the built-in SVG icon set (one look on every device) |
 | `js/tour.js` | welcome splash, spotlight guided tour, help dialog |

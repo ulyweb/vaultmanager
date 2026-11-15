@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VaultManager v0.30.0 — single-file offline build. Verify with the .sha256 file next to it. -->
+<!-- VaultManager v0.31.0 — single-file offline build. Verify with the .sha256 file next to it. -->
 <html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
@@ -11,7 +11,7 @@
 <meta name="application-name" content="VaultManager">
 <meta name="format-detection" content="telephone=no">
 <meta name="referrer" content="no-referrer">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-tauzjAWYvkq2EEey6/r1GOXzEWNzSydbYj43JCIjd2U=' 'sha256-3VJaSK/ZdHH4iyw4kdVZCgVSgLqV0ATYZq97jKsa2Zc=' blob:; style-src 'sha256-BPpOx7qeQGW3h4C9dvU+iyKClZ2IBAIyFDrxRljI+I4='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-tauzjAWYvkq2EEey6/r1GOXzEWNzSydbYj43JCIjd2U=' 'sha256-patX0RZwjv+xOkdprBRbTpjxdPcX3/HaIlhmdHjotyM=' blob:; style-src 'sha256-AjW5O91O/yzsRP2e6lJZFj51CL095I/R6oB0Wila/dE='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
 <title>VaultManager | Zero-Knowledge Password Manager</title>
 <meta name="description" content="VaultManager: an offline-first, zero-knowledge, end-to-end encrypted password manager with a strong password generator, TOTP codes and QR-sealed sharing and backup. Runs entirely in your browser.">
 <meta name="theme-color" content="#05080d">
@@ -921,6 +921,42 @@ html[data-icons] .themeseg .ico:not(.cat) { color: inherit; filter: none; }   /*
 .impcenter .hint, .impcenter .err { text-align: center; }
 .impcenter .own > .btn { display: flex; margin: 8px auto 0; }
 .impcenter .kv { margin-bottom: 10px; }
+
+/* ---------- "Choose a category": the 3D carousel ---------- */
+.pickseg { margin: 0 0 10px; }
+.pickseg button { display: inline-flex; align-items: center; gap: 6px; }
+.c3 { display: grid; gap: 12px; }
+.c3-groups { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+.c3-group { border: 1px solid var(--line); background: var(--panel); color: var(--ink-dim, var(--muted)); border-radius: 999px; padding: 5px 12px; font: 600 12px var(--mono); cursor: pointer; min-height: 32px; transition: background-color .2s, color .2s, border-color .2s, transform .15s; }
+.c3-group:hover { color: var(--ink); border-color: var(--accent); }
+.c3-group.on { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
+.c3-stage { position: relative; height: 330px; perspective: 1100px; perspective-origin: 50% 38%; overflow: hidden; border-radius: 16px; border: 1px solid var(--line); background: radial-gradient(70% 60% at 50% 55%, rgba(var(--accent-rgb), .16), transparent 72%), var(--panel-2, var(--panel)); cursor: grab; touch-action: pan-y; outline: none; user-select: none; -webkit-user-select: none; }
+.c3-stage:focus-visible { box-shadow: 0 0 0 3px var(--accent); }
+.c3-stage.dragging { cursor: grabbing; }
+.c3-stage::after { content: ''; position: absolute; left: 50%; bottom: 14px; width: 62%; height: 26px; transform: translateX(-50%); border-radius: 50%; background: radial-gradient(closest-side, rgba(var(--accent-rgb), .32), transparent); pointer-events: none; }
+.c3-ring { position: absolute; inset: 0; transform-style: preserve-3d; }
+.c3-card { position: absolute; left: 50%; top: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 7px; padding: 12px 10px; border-radius: 16px; border: 1px solid hsl(var(--hue) 45% 50% / .55); background: linear-gradient(160deg, hsl(var(--hue) 40% 24% / .96), var(--panel) 72%); color: var(--ink); font: inherit; text-align: center; cursor: pointer; backface-visibility: visible; will-change: transform, opacity; box-shadow: 0 10px 28px rgba(0, 0, 0, .35); overflow: hidden; }
+:root[data-theme="light"] .c3-card { background: linear-gradient(160deg, hsl(var(--hue) 70% 90%), #fff 72%); box-shadow: 0 10px 24px rgba(30, 45, 60, .18); }
+.c3-card.front { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent), 0 18px 40px rgba(0, 0, 0, .45), 0 0 34px rgba(var(--accent-rgb), .35); }
+.c3-ico { display: grid; place-items: center; width: 64px; height: 64px; border-radius: 18px; background: hsl(var(--hue) 55% 42% / .35); }
+.c3-ico .icn { font-size: 30px; }
+.c3-ico .ico { width: 40px; height: 40px; }
+.c3-ico .ico.cat { width: 50px; height: 50px; padding: 10px; }
+.c3-card b { font: 800 15px/1.15 var(--mono); letter-spacing: -.01em; }
+.c3-card small { font: 600 10px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.c3-shine { position: absolute; inset: 0; background: linear-gradient(115deg, transparent 38%, rgba(255, 255, 255, .22) 50%, transparent 62%); transform: translateX(-130%); pointer-events: none; }
+.c3-card.front .c3-shine { animation: c3-shine 3.6s ease-in-out infinite; }
+@keyframes c3-shine { 0%, 55% { transform: translateX(-130%); } 100% { transform: translateX(130%); } }
+.c3-caption { display: grid; gap: 6px; justify-items: center; text-align: center; }
+.c3-name { font: 900 24px/1.1 var(--mono); letter-spacing: -.02em; }
+.c3-meta { font: 600 11px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.c3-fields { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; max-width: 560px; }
+.c3-fields span { font: 500 12px var(--mono); border: 1px solid var(--line); border-radius: 6px; padding: 2px 8px; }
+.c3-create { margin: 4px 0 2px; min-width: 240px; min-height: 44px; }
+.c3-hint { text-align: center; margin: 0; }
+.c3.still .c3-card.front .c3-shine { animation: none; }
+@media (max-width: 640px) { .c3-groups { flex-wrap: nowrap; justify-content: flex-start; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; } .c3-groups::-webkit-scrollbar { display: none; } .c3-group { flex: none; } .c3-stage { height: 270px; } .c3-name { font-size: 20px; } .c3-ico { width: 54px; height: 54px; } .c3-card b { font-size: 13px; } .c3-group { padding: 4px 9px; font-size: 11px; } }
+@media (prefers-reduced-motion: reduce) { .c3-card.front .c3-shine { animation: none; } }
 </style>
 </head>
 <body>
@@ -2034,7 +2070,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   }
 
   // js/version.js
-  var APP_VERSION = "0.30.0";
+  var APP_VERSION = "0.31.0";
   var APP_NAME = "VaultManager";
   var REPO_URL = "https://github.com/ulyweb/vaultmanager";
   var FORMATS = [
@@ -2048,6 +2084,10 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     ["Attachments at rest", "AES-256-GCM per file, bound to vault + file id"]
   ];
   var CHANGELOG = [
+    { v: "0.31.0", date: "2026-11-15", notes: [
+      "New item: the \u201CChoose a category\u201D step is now a 3D carousel. All 28 categories are cards on a ring that flows around you: they pop out of the centre one after another, drift in a slow wave, the card in front grows and tilts toward your pointer, and the ones behind turn back to face you. Drag, swipe, scroll or use the arrow keys to spin it; click the front card (or press Enter) to create that kind of item. Group chips jump to Everyday, Money, Health and so on, and the caption shows the fields each category holds.",
+      "A 3D / List switch at the top keeps the plain grouped list one tap away, and your choice is remembered on this device. With animations off in Settings, or \u201Creduce motion\u201D on your device, the list is shown first and the carousel (if you pick it) holds still instead of drifting. It is plain CSS 3D, so nothing extra is loaded and it works in the offline copy."
+    ] },
     { v: "0.30.0", date: "2026-11-15", notes: [
       "New: a 3D tour of VaultManager at experience/ (link on the sign-in screen: \u201CTake the 3D tour\u201D). The whole page is one live 3D scene: a pocket vault you can drag to spin, that opens into seven labelled parts, repaints in five colours, and whose screen runs a small playable game (Z to jump, X to slide; the 3D buttons work too).",
       "Scrolling moves the camera and the clock from dawn to night through nine chapters (profiles, welcome and tour, items, inside, system menu and settings, tools, play, night watch), and each new chapter sets off a powder burst behind the vault. \u201CChart a new item\u201D gathers a particle cloud into the icon of each of the 28 item categories. The passphrase button there runs the app\u2019s real generator.",
@@ -4583,6 +4623,246 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     return h("div", { class: "seedview" }, grid, h("div", { class: "row wrap" }, all, h("small", { class: "hint", text: words.length + " words. Tap a word to show it; the others stay hidden." })));
   }
 
+  // js/carousel3d.js
+  var TAU = Math.PI * 2;
+  var clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+  var mod = (a, n) => (a % n + n) % n;
+  var wrap = (d, n) => {
+    d = mod(d, n);
+    return d > n / 2 ? d - n : d;
+  };
+  var backOut = (t) => {
+    const c = 1.9;
+    return 1 + (c + 1) * Math.pow(t - 1, 3) + c * Math.pow(t - 1, 2);
+  };
+  function categoryCarousel({ cards, groups, onPick, still = false, start = 0 }) {
+    const n = cards.length, step = TAU / n;
+    let pos = start, tpos = start, vel = 0, front = -1, alive = true, raf = 0, last = performance.now(), t0 = last, idleAt = last, hover = false, focusIn = false, touched = false;
+    const tilt = { x: 0, y: 0, tx: 0, ty: 0 };
+    const ring = h("div", { class: "c3-ring" });
+    const els = cards.map((c, i) => {
+      const b = h("button", { type: "button", class: "c3-card", "data-key": c.key, tabindex: "-1", "aria-label": `${c.label}, ${c.group}, ${c.count} field${c.count === 1 ? "" : "s"}`, on: {
+        click: () => {
+          if (drag.moved) return;
+          if (i === front) onPick(c.key);
+          else go(pos + wrap(i - pos, n));
+        },
+        focus: () => {
+          if (i !== front) go(pos + wrap(i - pos, n));
+        }
+      } }, h("span", { class: "c3-ico" }, h("span", { class: "icn", text: c.icon })), h("b", { text: c.label }), h("small", { text: c.group }), h("i", { class: "c3-shine", "aria-hidden": "true" }));
+      b.style.setProperty("--hue", String(groups.findIndex(([, keys]) => keys.includes(c.key)) * 47 + 160));
+      ring.append(b);
+      return b;
+    });
+    const name = h("b", { class: "c3-name", "aria-live": "polite" }), meta = h("small", { class: "c3-meta" }), chips = h("div", { class: "c3-fields" });
+    const create = h("button", { type: "button", class: "btn primary c3-create", on: { click: () => onPick(cards[front].key) } });
+    const groupBtns = groups.map(([g, keys]) => h("button", { type: "button", class: "c3-group", "aria-pressed": "false", on: { click: () => go(pos + wrap(cards.findIndex((c) => c.key === keys[0]) - pos, n)) } }, g));
+    const stage = h("div", { class: "c3-stage", role: "group", autofocus: true, "aria-roledescription": "carousel", "aria-label": "Item categories. Use the left and right arrow keys to browse, Enter to create.", tabindex: "0" }, ring);
+    const caption = h("div", { class: "c3-caption" }, name, meta, create, chips);
+    const el = h(
+      "div",
+      { class: "c3" + (still ? " still" : "") },
+      h("div", { class: "c3-groups", role: "group", "aria-label": "Jump to a group" }, groupBtns),
+      stage,
+      caption,
+      h("p", { class: "hint c3-hint", text: "Drag, scroll or use the arrow keys to spin the ring. Click the card in front, or press Enter, to create that kind of item." })
+    );
+    const go = (p) => {
+      touched = true;
+      tpos = Math.round(p);
+      idleAt = performance.now();
+      if (still) {
+        pos = tpos;
+        paint(performance.now(), 0.016);
+      }
+    };
+    const setFront = (i) => {
+      if (i === front) return;
+      front = i;
+      const c = cards[i];
+      name.textContent = c.label;
+      meta.textContent = `${c.group} \xB7 ${i + 1} of ${n}`;
+      clear(chips).append(...c.fields.slice(0, 4).map((f) => h("span", { text: f })), c.fields.length > 4 ? h("span", { text: "+ " + (c.fields.length - 4) + " more" }) : null);
+      create.textContent = "Create " + c.label.toLowerCase();
+      els.forEach((b, k) => {
+        b.tabIndex = k === i ? 0 : -1;
+        b.classList.toggle("front", k === i);
+      });
+      groupBtns.forEach((b, k) => {
+        const on = groups[k][1].includes(c.key);
+        b.setAttribute("aria-pressed", String(on));
+        b.classList.toggle("on", on);
+      });
+    };
+    const drag = { on: false, moved: false, x: 0, sx: 0, last: 0, id: null };
+    const unit = () => Math.max(46, stage.clientWidth / 11);
+    el.addEventListener("pointerdown", () => {
+      touched = true;
+    });
+    stage.addEventListener("pointerdown", (e) => {
+      if (e.button) return;
+      drag.on = true;
+      drag.moved = false;
+      drag.x = drag.sx = e.clientX;
+      drag.last = performance.now();
+      vel = 0;
+      idleAt = drag.last;
+    });
+    stage.addEventListener("pointermove", (e) => {
+      const r = stage.getBoundingClientRect();
+      tilt.tx = clamp(((e.clientX - r.left) / r.width - 0.5) * 2, -1, 1);
+      tilt.ty = clamp(((e.clientY - r.top) / r.height - 0.5) * 2, -1, 1);
+      if (!drag.on) return;
+      const dx = e.clientX - drag.x;
+      drag.x = e.clientX;
+      if (!drag.moved && Math.abs(e.clientX - drag.sx) > 6) {
+        drag.moved = true;
+        stage.classList.add("dragging");
+        try {
+          stage.setPointerCapture(e.pointerId);
+        } catch {
+        }
+      }
+      if (drag.moved) {
+        const now = performance.now(), dt = Math.max(1, now - drag.last) / 1e3;
+        drag.last = now;
+        const dp = -dx / unit();
+        pos += dp;
+        tpos = pos;
+        vel = 0.7 * vel + 0.3 * (dp / dt);
+        if (still) paint(now, dt);
+      }
+    });
+    const release = () => {
+      if (!drag.on) return;
+      drag.on = false;
+      stage.classList.remove("dragging");
+      if (drag.moved) {
+        tpos = Math.round(pos + clamp(vel * 0.18, -4, 4));
+        if (still) {
+          pos = tpos;
+          paint(performance.now(), 0.016);
+        }
+        setTimeout(() => {
+          drag.moved = false;
+        }, 0);
+      }
+      idleAt = performance.now();
+    };
+    stage.addEventListener("pointerup", release);
+    stage.addEventListener("pointercancel", release);
+    stage.addEventListener("pointerleave", () => {
+      tilt.tx = tilt.ty = 0;
+    });
+    el.addEventListener("pointerenter", () => {
+      hover = true;
+    });
+    el.addEventListener("pointerleave", () => {
+      hover = false;
+      idleAt = performance.now();
+    });
+    el.addEventListener("focusin", () => {
+      focusIn = true;
+    });
+    el.addEventListener("focusout", () => {
+      focusIn = false;
+      idleAt = performance.now();
+    });
+    let wheelAt = 0;
+    stage.addEventListener("wheel", (e) => {
+      const d = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+      if (!d) return;
+      e.preventDefault();
+      const now = performance.now();
+      if (now - wheelAt < 110) return;
+      wheelAt = now;
+      go(tpos + (d > 0 ? 1 : -1));
+    }, { passive: false });
+    stage.addEventListener("keydown", (e) => {
+      const k = e.key;
+      touched = true;
+      if (k === "ArrowRight" || k === "ArrowDown") {
+        e.preventDefault();
+        go(tpos + 1);
+        els[mod(tpos, n)].focus({ preventScroll: true });
+      } else if (k === "ArrowLeft" || k === "ArrowUp") {
+        e.preventDefault();
+        go(tpos - 1);
+        els[mod(tpos, n)].focus({ preventScroll: true });
+      } else if (k === "Home") {
+        e.preventDefault();
+        go(tpos + wrap(0 - tpos, n));
+      } else if (k === "End") {
+        e.preventDefault();
+        go(tpos + wrap(n - 1 - tpos, n));
+      } else if ((k === "Enter" || k === " ") && e.target === stage) {
+        e.preventDefault();
+        onPick(cards[front].key);
+      }
+    });
+    const paint = (now, dt) => {
+      const w = stage.clientWidth || 600, narrow = w < 560;
+      const R = clamp(w * (narrow ? 0.7 : 0.8), 200, 560), cw = narrow ? 118 : 150, ch = narrow ? 150 : 186, t = now / 1e3;
+      tilt.x += (tilt.tx - tilt.x) * Math.min(1, dt * 6);
+      tilt.y += (tilt.ty - tilt.y) * Math.min(1, dt * 6);
+      const near = Math.round(pos);
+      if (!still && !drag.on) {
+        pos += (tpos - pos) * (1 - Math.exp(-dt * 8.5));
+        if (Math.abs(tpos - pos) < 8e-4) pos = tpos;
+      }
+      for (let i = 0; i < n; i++) {
+        const d = wrap(i - pos, n), th = d * step, c = Math.cos(th), s = Math.sin(th);
+        const pop = still ? 1 : backOut(clamp((now - t0 - i * 24) / 760, 0, 1));
+        const r = R * pop, depth = (c + 1) / 2, fr = Math.max(0, 1 - Math.abs(d) / 1.15);
+        const y = still ? 0 : Math.sin(t * 1.1 + i * 0.62) * 6 + Math.sin(th * 2 + t * 0.7) * 11 * (1 - fr * 0.8);
+        const faceBack = Math.abs(th) > Math.PI / 2, ry = (faceBack ? th + Math.PI : th) * 57.2958;
+        const sc = (0.56 + 0.44 * depth) * (1 + 0.16 * fr) * Math.max(1e-3, still ? 1 : pop);
+        const tx = fr > 0 ? ` rotateX(${(-tilt.y * 7 * fr).toFixed(2)}deg) rotateY(${(tilt.x * 9 * fr).toFixed(2)}deg)` : "";
+        const b = els[i];
+        b.style.transform = `translate3d(${(s * r).toFixed(1)}px, ${y.toFixed(1)}px, ${((c - 1) * r * 0.9 + fr * 90).toFixed(1)}px) translate(-50%, -50%) rotateY(${ry.toFixed(2)}deg)${tx} scale(${sc.toFixed(3)})`;
+        b.style.opacity = (still ? 1 : clamp(pop, 0, 1)) * (faceBack ? 0.22 + 0.5 * depth : 0.55 + 0.45 * depth ** 0.6);
+        b.style.zIndex = String(Math.round(c * 500) + 500);
+        b.style.width = cw + "px";
+        b.style.height = ch + "px";
+      }
+      stage.style.setProperty("--ch", ch + "px");
+      setFront(mod(near, n));
+      const rest = !drag.on && Math.abs(tpos - pos) < 2e-3 ? "1" : "0";
+      if (stage.dataset.rest !== rest) stage.dataset.rest = rest;
+    };
+    const frame = (now) => {
+      if (!alive) return;
+      raf = requestAnimationFrame(frame);
+      const dt = Math.min(0.05, (now - last) / 1e3);
+      last = now;
+      if (!still && !touched && !drag.on && !hover && !focusIn && !document.hidden && now - idleAt > 3200) {
+        tpos += 1;
+        idleAt = now - 3200 + 2600;
+      }
+      paint(now, dt);
+    };
+    paint(performance.now(), 0.016);
+    if (!still) raf = requestAnimationFrame(frame);
+    const onResize = () => paint(performance.now(), 0.016);
+    window.addEventListener("resize", onResize);
+    return {
+      el,
+      stage,
+      focus() {
+        stage.focus({ preventScroll: true });
+      },
+      destroy() {
+        alive = false;
+        cancelAnimationFrame(raf);
+        window.removeEventListener("resize", onResize);
+      },
+      get front() {
+        return cards[front] && cards[front].key;
+      }
+    };
+  }
+
   // js/views.js
   var TYPE_ICON = Object.fromEntries(Object.entries(TYPE_META).map(([k, m]) => [k, m.icon]));
   function avatar(name, type) {
@@ -4683,7 +4963,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       input.type = "text";
       upd();
     };
-    const wrap2 = h(
+    const wrap3 = h(
       "div",
       null,
       h("div", { class: "pwwrap" }, input, eye),
@@ -4697,7 +4977,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       m
     );
     upd();
-    return { el: wrap2, input };
+    return { el: wrap3, input };
   }
   function filterItems(ctx2) {
     const { store: store2, S: S2 } = ctx2;
@@ -4794,7 +5074,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   }
   function totpField(ctx2, it) {
     if (!it.totp) return null;
-    const code = h("span", { class: "totp-code", text: "------" }), bar2 = h("i"), wrap2 = h("div", null, code, h("div", { class: "totp-bar" }, bar2));
+    const code = h("span", { class: "totp-code", text: "------" }), bar2 = h("i"), wrap3 = h("div", null, code, h("div", { class: "totp-bar" }, bar2));
     let cfg;
     try {
       cfg = parseTotp(it.totp);
@@ -4815,7 +5095,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       "div",
       { class: "f" },
       h("div", { class: "k", text: "One-time code" }),
-      h("div", { class: "v" }, wrap2),
+      h("div", { class: "v" }, wrap3),
       h("div", { class: "acts" }, h("button", { class: "icon-btn", "aria-label": "Copy one-time code", on: { click: () => ctx2.copySecret(last, "Code copied", it, "one-time code") } }, "{{copy}}"))
     );
     return f;
@@ -5440,18 +5720,68 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     } else control = h("input", { id, class: "inp" + (f.mono ? " mono" : ""), type: f.kind === "date" ? "date" : "text", value: val, autocomplete: "off", spellcheck: "false", placeholder: f.kind === "url" ? "https://" : null, on: { input: (e) => set(e.target.value) } });
     return h("div", { class: "field" + (full ? " full" : "") }, h("label", { for: id, text: f.l }), control);
   }
+  var CORE_FIELD_LABELS = { login: ["Username / email", "Website", "Password", "One-time code"], note: ["Note"], card: ["Cardholder", "Card number", "Expiry", "CVV", "PIN"] };
+  var PICKER_KEY = "vaultmanager.picker";
+  var pickerPref = () => {
+    try {
+      return localStorage.getItem(PICKER_KEY) || "";
+    } catch {
+      return "";
+    }
+  };
+  var savePickerPref = (v) => {
+    try {
+      localStorage.setItem(PICKER_KEY, v);
+    } catch {
+    }
+  };
+  var reducedMotion = () => !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  var carouselWanted = () => {
+    const p = pickerPref();
+    return p === "3d" || p !== "list" && document.documentElement.dataset.fxanim === "on" && !reducedMotion();
+  };
   function newItemMenu(ctx2) {
     const pick = (k) => h("button", { class: "btn", on: { click: () => {
       ctx2.closeModals();
       editItem(ctx2, null, k);
     } } }, h("span", { class: "icn", text: TYPE_ICON[k] }), " " + TYPES[k]);
-    modal({
-      title: "Choose a category",
-      sub: Object.keys(TYPES).length + " categories. Every one can also hold attachments, notes, tags and custom fields",
-      wide: true,
-      body: h("div", null, GROUPS.map(([g, keys]) => h("div", { class: "catgroup" }, h("p", { class: "lbl", text: g }), h("div", { class: "checks cats" }, keys.map(pick))))),
-      actions: [{ label: "Cancel" }]
-    });
+    const grid = () => h("div", null, GROUPS.map(([g, keys]) => h("div", { class: "catgroup" }, h("p", { class: "lbl", text: g }), h("div", { class: "checks cats" }, keys.map(pick)))));
+    const cards = GROUPS.flatMap(([g, keys]) => keys.map((k) => {
+      const fields = CORE_FIELD_LABELS[k] || ((TEMPLATES[k] || {}).fields || []).map((f) => f.l);
+      return { key: k, label: TYPES[k], icon: TYPE_ICON[k], group: g, fields, count: fields.length };
+    }));
+    const body = h("div", { class: "picker" });
+    let car = null, mode = "";
+    const toggle = (m) => h(
+      "div",
+      { class: "seg pickseg", role: "group", "aria-label": "How to show the categories" },
+      ["3d", "list"].map((v) => h("button", { type: "button", "aria-pressed": String(v === m), class: v === m ? "on" : "", on: { click: () => {
+        savePickerPref(v);
+        render(v);
+      } } }, v === "3d" ? "{{sparkles}} 3D" : "{{menu}} List"))
+    );
+    const render = (m) => {
+      if (car) {
+        car.destroy();
+        car = null;
+      }
+      mode = m;
+      clear(body);
+      if (m === "3d") {
+        car = categoryCarousel({ cards, groups: GROUPS, still: reducedMotion(), onPick: (k) => {
+          ctx2.closeModals();
+          editItem(ctx2, null, k);
+        } });
+        body.append(toggle(m), car.el);
+      } else body.append(toggle(m), grid());
+    };
+    render(carouselWanted() ? "3d" : "list");
+    modal({ title: "Choose a category", sub: Object.keys(TYPES).length + " categories. Every one can also hold attachments, notes, tags and custom fields", wide: true, body, actions: [{ label: "Cancel" }], onClose: () => {
+      if (car) {
+        car.destroy();
+        car = null;
+      }
+    } });
   }
   function unlockItemDialog(ctx2, it, { then = null } = {}) {
     const input = h("input", { type: "password", class: "inp mono", autocomplete: "off", "aria-label": "Item passcode" }), err = h("p", { class: "err", role: "alert" });
@@ -7262,7 +7592,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   var NAV_LABELS = { fav: "Favorites", trash: "Trash", health: "Vault health", gen: "Generator", qr: "QR tools", beam: "Beam sync", data: "Import & export", tm: "Task manager", cats: "Categories (dock button)" };
   function visibilityPanel(ctx2) {
     const L = () => ctx2.look();
-    const wrap2 = h("div");
+    const wrap3 = h("div");
     const put = (key, id, on) => {
       const cur = new Set(L()[key]);
       if (on) cur.delete(id);
@@ -7277,7 +7607,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     };
     const paint = () => {
       const cnt = (k) => ctx2.store.active().filter((i) => i.type === k).length;
-      clear(wrap2).append(
+      clear(wrap3).append(
         h(
           "div",
           { class: "row wrap" },
@@ -7300,7 +7630,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       );
     };
     paint();
-    return panel("Show or hide", h("p", { class: "hint", text: "Tidy the side bar, dock and menu. Nothing is deleted: hidden categories still appear in All items and in search, and you can still create items in them." }), wrap2);
+    return panel("Show or hide", h("p", { class: "hint", text: "Tidy the side bar, dock and menu. Nothing is deleted: hidden categories still appear in All items and in search, and you can still create items in them." }), wrap3);
   }
   function cursorPanel(ctx2) {
     const { sw, range, select, L, set } = ctls(ctx2);
@@ -9298,7 +9628,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     Object.assign(a[i], patch);
     ctx2.setLook({ widgets: a }, { redraw: !!redraw });
   };
-  var wrap = (ctx2, def, w, idx, body, grid) => {
+  var wrap2 = (ctx2, def, w, idx, body, grid) => {
     const pin = h("button", { class: "icon-btn wpin" + (w.pinned ? " on" : ""), "aria-pressed": String(!!w.pinned), "aria-label": (w.pinned ? "Unpin " : "Pin ") + def.label, title: w.pinned ? "Pinned to the top \u2014 click to unpin" : "Pin to the top of Home", on: { click: () => setW(ctx2, w.id, { pinned: !w.pinned }, true) } }, "{{pin}}");
     const grip = h("button", { class: "wgrip", type: "button", "aria-label": "Resize " + def.label + " \u2014 drag, or use the arrow keys; double-click resets", title: "Drag to resize \xB7 double-click to reset" });
     const el = h("section", { class: "panel widget " + w.size + (w.pinned ? " pinned" : ""), "aria-label": def.label }, h("div", { class: "whead" }, h("span", { class: "icn", text: def.icon }), h("span", { text: def.label }), pin), h("div", { class: "wbody" }, body), grip);
@@ -9486,7 +9816,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     const grid = h("div", { class: "widgets" });
     list.forEach((w, i) => {
       const def = WIDGET_DEFS.find((d) => d.id === w.id);
-      grid.append(wrap(ctx2, def, w, i, BUILD[w.id](ctx2), grid));
+      grid.append(wrap2(ctx2, def, w, i, BUILD[w.id](ctx2), grid));
     });
     const fit = () => {
       const c = Math.max(1, getComputedStyle(grid).gridTemplateColumns.split(" ").length);
@@ -9510,7 +9840,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   // js/tour.js
   var visible = (el) => el && el.getBoundingClientRect().width > 0 ? el : null;
   var q = (sel2) => visible(document.querySelector(sel2));
-  var clamp = (v, a, b) => Math.min(Math.max(v, a), b);
+  var clamp2 = (v, a, b) => Math.min(Math.max(v, a), b);
   function createTour(ctx2) {
     const store2 = new Proxy({}, { get: (_, k) => ctx2.store[k], set: (_, k, v) => {
       ctx2.store[k] = v;
@@ -9566,7 +9896,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       const steps = STEPS();
       const hole = h("div", { class: "tour-hole" }), card = h("div", { class: "tour-card", role: "dialog", "aria-live": "polite", "aria-label": "Guided tour" }), shield = h("div", { class: "tour-shield" });
       document.body.append(shield, hole, card);
-      let i = clamp(from, 0, steps.length - 1);
+      let i = clamp2(from, 0, steps.length - 1);
       const st = { nodes: [shield, hole, card] };
       const place = () => {
         const s = steps[i], el = s.target ? s.target() : null, pad = 8;
@@ -9578,12 +9908,12 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
           let x = r.right + 18, y = r.top + r.height / 2 - ch / 2;
           if (x + cw > window.innerWidth - 12) x = r.left - cw - 18;
           if (x < 12) {
-            x = clamp(r.left + r.width / 2 - cw / 2, 12, window.innerWidth - cw - 12);
+            x = clamp2(r.left + r.width / 2 - cw / 2, 12, window.innerWidth - cw - 12);
             y = r.bottom + 18;
             if (y + ch > window.innerHeight - 12) y = r.top - ch - 18;
           }
-          card.style.left = clamp(x, 12, window.innerWidth - cw - 12) + "px";
-          card.style.top = clamp(y, 12, Math.max(12, window.innerHeight - ch - 12)) + "px";
+          card.style.left = clamp2(x, 12, window.innerWidth - cw - 12) + "px";
+          card.style.top = clamp2(y, 12, Math.max(12, window.innerHeight - ch - 12)) + "px";
           card.style.transform = "none";
         } else {
           hole.style.display = "none";
@@ -9955,7 +10285,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   var bootTheme = "auto";
   var cosKey = () => keysFor(ctx.S.profileId || "main").look;
   var lightMQ = window.matchMedia("(prefers-color-scheme: light)");
-  var reducedMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var reducedMotion2 = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   function curLook() {
     return store.unlocked ? normalizeLook(store.settings.look) : bootLook;
   }
@@ -10072,7 +10402,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       tour.maybeWelcome();
       if (note === "recovery") toast("Unlocked with your recovery key \u2014 set a new master password in Settings.", "ok", 7e3);
     };
-    if (L.animations && L.bootAnim && !reducedMotion()) showBoot(L, after);
+    if (L.animations && L.bootAnim && !reducedMotion2()) showBoot(L, after);
     else after();
   }
   var idleTimer = null;

@@ -11,6 +11,7 @@ import { drawQR } from './qr.js';
 import { fmtDate, hostOf, safeHref, stamp } from './util.js';
 import { isFieldLocked, fieldValue } from './fieldlock.js';
 import { lockableField, lockedFieldRow, relockButton, seedView } from './secure-fields.js';
+import { categoryCarousel } from './carousel3d.js';
 
 export const TYPE_ICON = Object.fromEntries(Object.entries(TYPE_META).map(([k, m]) => [k, m.icon]));
 
@@ -510,10 +511,33 @@ function tplInput(ctx, it, f, locks = []) {
   return h('div', { class: 'field' + (full ? ' full' : '') }, h('label', { for: id, text: f.l }), control);
 }
 
+/* ---------- the "Choose a category" picker: a 3D carousel, or the plain grouped list ---------- */
+const CORE_FIELD_LABELS = { login: ['Username / email', 'Website', 'Password', 'One-time code'], note: ['Note'], card: ['Cardholder', 'Card number', 'Expiry', 'CVV', 'PIN'] };
+const PICKER_KEY = 'vaultmanager.picker';
+const pickerPref = () => { try { return localStorage.getItem(PICKER_KEY) || ''; } catch { return ''; } };
+const savePickerPref = (v) => { try { localStorage.setItem(PICKER_KEY, v); } catch { /* private window: just not remembered */ } };
+const reducedMotion = () => !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+/* 3D unless the person chose the list, or has animations off / asks for reduced motion and never chose 3D */
+const carouselWanted = () => { const p = pickerPref(); return p === '3d' || (p !== 'list' && document.documentElement.dataset.fxanim === 'on' && !reducedMotion()); };
+
 export function newItemMenu(ctx) {
   const pick = (k) => h('button', { class: 'btn', on: { click: () => { ctx.closeModals(); editItem(ctx, null, k); } } }, h('span', { class: 'icn', text: TYPE_ICON[k] }), ' ' + TYPES[k]);
-  modal({ title: 'Choose a category', sub: Object.keys(TYPES).length + ' categories. Every one can also hold attachments, notes, tags and custom fields', wide: true,
-    body: h('div', null, GROUPS.map(([g, keys]) => h('div', { class: 'catgroup' }, h('p', { class: 'lbl', text: g }), h('div', { class: 'checks cats' }, keys.map(pick))))), actions: [{ label: 'Cancel' }] });
+  const grid = () => h('div', null, GROUPS.map(([g, keys]) => h('div', { class: 'catgroup' }, h('p', { class: 'lbl', text: g }), h('div', { class: 'checks cats' }, keys.map(pick)))));
+  const cards = GROUPS.flatMap(([g, keys]) => keys.map((k) => { const fields = CORE_FIELD_LABELS[k] || ((TEMPLATES[k] || {}).fields || []).map((f) => f.l); return { key: k, label: TYPES[k], icon: TYPE_ICON[k], group: g, fields, count: fields.length }; }));
+  const body = h('div', { class: 'picker' });
+  let car = null, mode = '';
+  const toggle = (m) => h('div', { class: 'seg pickseg', role: 'group', 'aria-label': 'How to show the categories' },
+    ['3d', 'list'].map((v) => h('button', { type: 'button', 'aria-pressed': String(v === m), class: v === m ? 'on' : '', on: { click: () => { savePickerPref(v); render(v); } } }, v === '3d' ? '{{sparkles}} 3D' : '{{menu}} List')));
+  const render = (m) => {
+    if (car) { car.destroy(); car = null; }
+    mode = m; clear(body);
+    if (m === '3d') {
+      car = categoryCarousel({ cards, groups: GROUPS, still: reducedMotion(), onPick: (k) => { ctx.closeModals(); editItem(ctx, null, k); } });
+      body.append(toggle(m), car.el);
+    } else body.append(toggle(m), grid());
+  };
+  render(carouselWanted() ? '3d' : 'list');
+  modal({ title: 'Choose a category', sub: Object.keys(TYPES).length + ' categories. Every one can also hold attachments, notes, tags and custom fields', wide: true, body, actions: [{ label: 'Cancel' }], onClose: () => { if (car) { car.destroy(); car = null; } } });
 }
 
 

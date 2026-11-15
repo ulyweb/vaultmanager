@@ -1,6 +1,6 @@
 /* Application version, data-format versions and changelog (shown in Settings → About). */
 
-export const APP_VERSION = '0.30.0';
+export const APP_VERSION = '0.31.0';
 export const APP_NAME = 'VaultManager';
 export const REPO_URL = 'https://github.com/ulyweb/vaultmanager';
 
@@ -16,6 +16,10 @@ export const FORMATS = [
 ];
 
 export const CHANGELOG = [
+  { v: '0.31.0', date: '2026-11-15', notes: [
+    'New item: the “Choose a category” step is now a 3D carousel. All 28 categories are cards on a ring that flows around you: they pop out of the centre one after another, drift in a slow wave, the card in front grows and tilts toward your pointer, and the ones behind turn back to face you. Drag, swipe, scroll or use the arrow keys to spin it; click the front card (or press Enter) to create that kind of item. Group chips jump to Everyday, Money, Health and so on, and the caption shows the fields each category holds.',
+    'A 3D / List switch at the top keeps the plain grouped list one tap away, and your choice is remembered on this device. With animations off in Settings, or “reduce motion” on your device, the list is shown first and the carousel (if you pick it) holds still instead of drifting. It is plain CSS 3D, so nothing extra is loaded and it works in the offline copy.',
+  ] },
   { v: '0.30.0', date: '2026-11-15', notes: [
     'New: a 3D tour of VaultManager at experience/ (link on the sign-in screen: “Take the 3D tour”). The whole page is one live 3D scene: a pocket vault you can drag to spin, that opens into seven labelled parts, repaints in five colours, and whose screen runs a small playable game (Z to jump, X to slide; the 3D buttons work too).',
     'Scrolling moves the camera and the clock from dawn to night through nine chapters (profiles, welcome and tour, items, inside, system menu and settings, tools, play, night watch), and each new chapter sets off a powder burst behind the vault. “Chart a new item” gathers a particle cloud into the icon of each of the 28 item categories. The passphrase button there runs the app’s real generator.',
