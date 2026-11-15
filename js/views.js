@@ -4,13 +4,14 @@ import { h, clear, modal, toast, confirmDialog, copyText, download } from './dom
 import { newItem, sanitiseItem, SENSITIVE, TYPES, matches, totpValid, MAX_ATTACHMENT, MAX_ATTACHMENTS_PER_ITEM, keyLabel, keyIsSecret, describeValue, currentValue } from './vault.js';
 import { TYPE_META, TEMPLATES, GROUPS, isSecretField, MAX_CUSTOM, daysUntil, wifiQRString } from './templates.js';
 import { estimate, crackTime } from './strength.js';
-import { generatePassword, generatePassphrase } from './generator.js';
+import { generatePassword, generatePassphrase, generateStrongPassphrase } from './generator.js';
 import { totpNow, parseTotp } from './totp.js';
 import { sealText, openText } from './crypto.js';
 import { drawQR } from './qr.js';
-import { fmtDate, hostOf, safeHref, stamp } from './util.js';
+import { fmtDate, hostOf, safeHref, stamp, stampText } from './util.js';
 import { isFieldLocked, fieldValue } from './fieldlock.js';
 import { lockableField, lockedFieldRow, relockButton, seedView } from './secure-fields.js';
+import { categoryCarousel } from './carousel3d.js';
 
 export const TYPE_ICON = Object.fromEntries(Object.entries(TYPE_META).map(([k, m]) => [k, m.icon]));
 
@@ -65,7 +66,7 @@ export function passwordRow(label, input, withGen = true) {
   const show = (on) => { input.type = conf.type = on ? 'text' : 'password'; };
   const eye = h('button', { class: 'btn sm', type: 'button', 'aria-label': 'Show or hide the password', title: 'Show / hide', 'aria-pressed': 'false', on: { click: () => { const on = input.type === 'password'; show(on); eye.setAttribute('aria-pressed', String(on)); } } }, '{{eye}}');
   const copy = h('button', { class: 'btn sm', type: 'button', 'aria-label': 'Copy the password', title: 'Copy (clears itself)', on: { click: () => copyText(input.value, 'Password copied', 30) } }, '{{copy}}');
-  const gen = withGen ? h('button', { class: 'btn sm', type: 'button', title: 'Generate a passphrase', 'aria-label': 'Generate a passphrase', on: { click: () => { input.value = conf.value = generatePassphrase({ words: 5 }); input.dispatchEvent(new Event('input')); show(true); eye.setAttribute('aria-pressed', 'true'); } } }, '{{bolt}}') : null;
+  const gen = withGen ? h('button', { class: 'btn sm', type: 'button', title: 'Generate a passphrase', 'aria-label': 'Generate a passphrase', on: { click: () => { input.value = conf.value = generateStrongPassphrase(); input.dispatchEvent(new Event('input')); show(true); eye.setAttribute('aria-pressed', 'true'); } } }, '{{bolt}}') : null;
   const f = h('div', { class: 'field' }, h('label', { text: label }), h('div', { class: 'row' }, h('div', { class: 'grow' }, input), eye, copy, gen),
     h('label', { class: 'sublbl', text: 'Confirm ' + label.toLowerCase() }), conf, liveMeter(input));
   f.match = () => input.value === conf.value;
@@ -95,7 +96,7 @@ export function filterItems(ctx) {
   const { store, S } = ctx;
   let items = S.view === 'trash' ? store.trashed() : store.active();
   const v = S.view;
-  if (v === 'fav') items = items.filter((i) => i.favorite);
+  if (v === 'fav') { items = items.filter((i) => i.favorite); if (S.favName) items = items.filter((i) => i.favName === S.favName); }
   else if (v === 'conflicts') items = items.filter((i) => (i.conflicts || []).length);
   else if (v in TYPE_META) items = items.filter((i) => i.type === v);
   else if (v.startsWith('tag:')) items = items.filter((i) => (i.tags || []).includes(v.slice(4)));
@@ -114,9 +115,19 @@ export function renderVaultView(ctx) {
   const list = h('div', { class: 'panel list' },
     h('div', { class: 'list-head' }, h('span', { text: S.view.startsWith('tag:') ? '#' + S.view.slice(4) : TITLES[S.view] || 'Items' }), h('span', { text: String(items.length), style: null }),
       S.view === 'trash' && items.length ? h('button', { class: 'btn sm danger', style: null, on: { click: async () => { if (await confirmDialog({ title: 'Empty trash?', text: 'These items will be permanently deleted.', okLabel: 'Delete forever', danger: true })) { await store.emptyTrash(); ctx.refresh(); } } } }, 'Empty') : null),
+    S.view === 'fav' ? favChips(ctx) : null,
     h('div', { class: 'items', role: 'listbox', 'aria-label': 'Items' }, items.length ? items.map((it) => itemRow(ctx, it)) : emptyState(ctx, items)));
   const detail = h('div', { class: 'panel detail', 'aria-live': 'polite' }, sel ? detailPanel(ctx, sel) : h('div', { class: 'empty' }, h('div', { class: 'big', text: '{{shieldlock}}' }), h('p', { text: 'Select an item to view it.' })));
   return h('div', { class: 'split' + (sel ? ' has-sel' : '') }, list, detail);
+}
+
+/* the Favorites page: your own favorite names as filter chips (All · Work · Family …) */
+function favChips(ctx) {
+  const { S, store } = ctx, names = store.favNames();
+  if (S.favName && !names.some(([n]) => n === S.favName)) S.favName = '';
+  if (!names.length) return null;
+  const chip = (label, name, n) => h('button', { type: 'button', class: 'chip favchip' + ((S.favName || '') === name ? ' on' : ''), 'aria-pressed': String((S.favName || '') === name), on: { click: () => { S.favName = name; ctx.refresh(); } } }, label + (n === undefined ? '' : ' · ' + n));
+  return h('div', { class: 'favchips', role: 'group', 'aria-label': 'Favorite names' }, chip('All', '', store.active().filter((i) => i.favorite).length), names.map(([n, c]) => chip(n, n, c)));
 }
 
 function emptyState(ctx, items) {
@@ -230,7 +241,7 @@ function detailPanel(ctx, it0) {
         h('button', { class: 'btn sm', title: 'Enter the item passcode, then seal it as an encrypted QR', on: { click: () => unlockItemDialog(ctx, it, { then: (open) => shareItem(ctx, open) }) } }, '{{qr}} Unlock & seal as QR'),
         h('button', { class: 'btn danger sm', on: { click: () => trashWithConfirm(ctx, it) } }, '{{trash}} Delete')] :
       [h('button', { class: 'btn sm act-edit', on: { click: () => editItem(ctx, it) } }, '{{edit}} Edit'),
-        h('button', { class: 'btn sm' + (it.favorite ? ' primary' : ''), 'aria-pressed': String(it.favorite), on: { click: async () => { await store.update(it.id, { favorite: !it.favorite }); ctx.refresh(); } } }, it.favorite ? '{{star}} Favorite' : '{{starline}} Favorite'),
+        h('button', { class: 'btn sm' + (it.favorite ? ' primary' : ''), 'aria-pressed': String(it.favorite), on: { click: async () => { await store.update(it.id, { favorite: !it.favorite }); ctx.refresh(); } } }, it.favorite ? '{{star}} ' + (it.favName || 'Favorite') : '{{starline}} Favorite'),
         it.type === 'network' && (it.fields || {}).ssid ? h('button', { class: 'btn sm', on: { click: () => wifiModal(ctx, it) } }, '{{network}} Wi-Fi QR') : null,
         h('button', { class: 'btn sm', on: { click: () => shareItem(ctx, it) } }, '{{qr}} Seal as QR'),
         it.lock ? null : h('button', { class: 'btn sm', on: { click: async () => { const c = newItem(it.type, { ...structuredClone(it), id: undefined, name: it.name + ' (copy)', history: [], created: Date.now(), updated: Date.now() }); c.id = newItem().id; await store.add(c); ctx.showItem(c.id); toast('Duplicated'); } } }, '{{dup}} Duplicate'),
@@ -318,6 +329,7 @@ function templateRow(ctx, it, f) {
     return row;
   }
   if (f.words) return field(f.l, value, { secret: true, copy: true, ctx, stats: true, body: seedView(ctx, it, f.l, value) });
+  if (f.kind === 'stamp') return field(f.l, stampText(value), { copy: true, ctx });
   if (f.kind === 'date' && f.expiry) {
     const d = daysUntil(value), chip = d === null ? null : d < 0 ? h('span', { class: 'chip bad', text: 'expired ' + -d + ' day' + (d === -1 ? '' : 's') + ' ago' }) : d <= 60 ? h('span', { class: 'chip warn', text: 'in ' + d + ' day' + (d === 1 ? '' : 's') }) : null;
     return field(f.l, value, { copy: true, ctx, extra: h('span', null, value + ' ', chip) });
@@ -463,7 +475,10 @@ export function editItem(ctx, item, type = 'login') {
     h('div', { class: 'row wrap' }, h('button', { type: 'button', class: 'btn sm', on: { click: () => fileIn.click() } }, '{{clip}} Add files'), h('button', { type: 'button', class: 'btn sm', on: { click: () => camIn.click() } }, '{{camera}} Take photo'), fileIn, camIn), attErr));
   body.push(h('div', { class: 'field' }, h('label', { for: 'f_notes', text: it.type === 'note' ? 'Note' : 'Notes' }), h('textarea', { id: 'f_notes', class: 'ta', rows: it.type === 'note' ? '10' : '4', on: { input: (e) => { it.notes = e.target.value; } } }, it.notes)));
   body.push(inp('tags', 'Tags (comma separated)', { get: () => (it.tags || []).join(', '), set: (v) => { it.tags = v.split(',').map((t) => t.trim().replace(/^#/, '')).filter(Boolean).slice(0, 30); }, ph: 'work, finance' }));
-  body.push(h('label', { class: 'chk' }, h('input', { type: 'checkbox', checked: it.favorite, on: { change: (e) => { it.favorite = e.target.checked; } } }), 'Favorite'));
+  const favBox = h('input', { type: 'checkbox', checked: it.favorite, on: { change: (e) => { it.favorite = e.target.checked; } } });
+  const favNameIn = h('input', { id: 'f_favname', class: 'inp', list: 'f_favnames', maxlength: '40', value: it.favName || '', placeholder: 'Favorites', autocomplete: 'off', 'aria-label': 'Favorite name', on: { input: (e) => { it.favName = e.target.value.trim().slice(0, 40); if (it.favName) { it.favorite = true; favBox.checked = true; } } } });
+  body.push(h('label', { class: 'chk' }, favBox, 'Favorite'),
+    h('div', { class: 'field' }, h('label', { for: 'f_favname', text: 'Favorite name (optional)' }), favNameIn, h('datalist', { id: 'f_favnames' }, ctx.store.favNames().map(([n]) => h('option', { value: n }))), h('p', { class: 'hint', text: 'Give your favorites your own names, like Work or Family. They appear as filters on the Favorites page.' })));
   /* optional secondary passcode (new items; existing ones use the Lock button on the detail page) */
   const lockOn = h('input', { type: 'checkbox', id: 'f_lockon' }), lp1 = h('input', { type: 'password', class: 'inp mono', id: 'f_lock1', autocomplete: 'new-password', 'aria-label': 'Item passcode' }), lp2 = h('input', { type: 'password', class: 'inp mono', id: 'f_lock2', autocomplete: 'new-password', 'aria-label': 'Repeat item passcode' });
   const lockBox = h('div', { class: 'field lockfields', hidden: true }, h('label', { for: 'f_lock1', text: 'Item passcode' }), lp1, liveMeter(lp1), h('label', { for: 'f_lock2', text: 'Repeat passcode' }), lp2,
@@ -483,7 +498,7 @@ export function editItem(ctx, item, type = 'login') {
     try { for (const c of locks) { const v = await c.resolve(); if (v) (it.fields = it.fields || {})[c.key] = v; else delete (it.fields || {})[c.key]; } } catch (e) { err.textContent = e.message; return false; }
     for (const k of Object.keys(it.fields || {})) if (!it.fields[k]) delete it.fields[k];
     if (isNew) { it.created = it.updated = it.pwChanged = Date.now(); it.attachments = []; await store.add(it); }
-    else if (it.lock) { const meta = { name: it.name, tags: it.tags, favorite: it.favorite }; await store.saveLocked(it.id, meta, it); }
+    else if (it.lock) { const meta = { name: it.name, tags: it.tags, favorite: it.favorite, favName: it.favName }; await store.saveLocked(it.id, meta, it); }
     else { const { id, history, created, pwChanged, attachments, revisions, deleted, lock, _open, ...patch } = it; await store.update(id, patch); }
     try {
       for (const id of removed) await store.removeAttachment(it.id, id);
@@ -506,14 +521,37 @@ function tplInput(ctx, it, f, locks = []) {
   else if (f.kind === 'multiline') control = h('textarea', { id, class: 'ta', rows: '4', spellcheck: 'false', on: { input: (e) => set(e.target.value) } }, val);
   else if (isSecretField(f) && f.gen) control = pwField(val, { ctx, onInput: set }).el;
   else if (isSecretField(f)) { const i = h('input', { id, type: 'password', class: 'inp mono', value: val, autocomplete: 'off', spellcheck: 'false', on: { input: (e) => set(e.target.value) } }); control = h('div', { class: 'pwwrap' }, i, h('button', { type: 'button', class: 'icon-btn eye', 'aria-label': 'Show or hide ' + f.l, on: { click: () => { i.type = i.type === 'password' ? 'text' : 'password'; } } }, '{{eye}}')); }
-  else control = h('input', { id, class: 'inp' + (f.mono ? ' mono' : ''), type: f.kind === 'date' ? 'date' : 'text', value: val, autocomplete: 'off', spellcheck: 'false', placeholder: f.kind === 'url' ? 'https://' : null, on: { input: (e) => set(e.target.value) } });
+  else control = h('input', { id, class: 'inp' + (f.mono ? ' mono' : ''), type: f.kind === 'date' ? 'date' : f.kind === 'stamp' ? 'datetime-local' : 'text', value: val, autocomplete: 'off', spellcheck: 'false', placeholder: f.kind === 'url' ? 'https://' : null, on: { input: (e) => set(e.target.value) } });
   return h('div', { class: 'field' + (full ? ' full' : '') }, h('label', { for: id, text: f.l }), control);
 }
 
+/* ---------- the "Choose a category" picker: a 3D carousel, or the plain grouped list ---------- */
+const CORE_FIELD_LABELS = { login: ['Username / email', 'Website', 'Password', 'One-time code'], note: ['Note'], card: ['Cardholder', 'Card number', 'Expiry', 'CVV', 'PIN'] };
+const PICKER_KEY = 'vaultmanager.picker';
+const pickerPref = () => { try { return localStorage.getItem(PICKER_KEY) || ''; } catch { return ''; } };
+const savePickerPref = (v) => { try { localStorage.setItem(PICKER_KEY, v); } catch { /* private window: just not remembered */ } };
+const reducedMotion = () => !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+/* 3D unless the person chose the list, or has animations off / asks for reduced motion and never chose 3D */
+const carouselWanted = () => { const p = pickerPref(); return p === '3d' || (p !== 'list' && document.documentElement.dataset.fxanim === 'on' && !reducedMotion()); };
+
 export function newItemMenu(ctx) {
   const pick = (k) => h('button', { class: 'btn', on: { click: () => { ctx.closeModals(); editItem(ctx, null, k); } } }, h('span', { class: 'icn', text: TYPE_ICON[k] }), ' ' + TYPES[k]);
-  modal({ title: 'Choose a category', sub: Object.keys(TYPES).length + ' categories. Every one can also hold attachments, notes, tags and custom fields', wide: true,
-    body: h('div', null, GROUPS.map(([g, keys]) => h('div', { class: 'catgroup' }, h('p', { class: 'lbl', text: g }), h('div', { class: 'checks cats' }, keys.map(pick))))), actions: [{ label: 'Cancel' }] });
+  const grid = () => h('div', null, GROUPS.map(([g, keys]) => h('div', { class: 'catgroup' }, h('p', { class: 'lbl', text: g }), h('div', { class: 'checks cats' }, keys.map(pick)))));
+  const cards = GROUPS.flatMap(([g, keys]) => keys.map((k) => { const fields = CORE_FIELD_LABELS[k] || ((TEMPLATES[k] || {}).fields || []).map((f) => f.l); return { key: k, label: TYPES[k], icon: TYPE_ICON[k], group: g, fields, count: fields.length }; }));
+  const body = h('div', { class: 'picker' });
+  let car = null, mode = '';
+  const toggle = (m) => h('div', { class: 'seg pickseg', role: 'group', 'aria-label': 'How to show the categories' },
+    ['3d', 'list'].map((v) => h('button', { type: 'button', 'aria-pressed': String(v === m), class: v === m ? 'on' : '', on: { click: () => { savePickerPref(v); render(v); } } }, v === '3d' ? '{{sparkles}} 3D' : '{{menu}} List')));
+  const render = (m) => {
+    if (car) { car.destroy(); car = null; }
+    mode = m; clear(body);
+    if (m === '3d') {
+      car = categoryCarousel({ cards, groups: GROUPS, still: reducedMotion(), onPick: (k) => { ctx.closeModals(); editItem(ctx, null, k); } });
+      body.append(toggle(m), car.el);
+    } else body.append(toggle(m), grid());
+  };
+  render(carouselWanted() ? '3d' : 'list');
+  modal({ title: 'Choose a category', sub: Object.keys(TYPES).length + ' categories. Every one can also hold attachments, notes, tags and custom fields', wide: true, body, actions: [{ label: 'Cancel' }], onClose: () => { if (car) { car.destroy(); car = null; } } });
 }
 
 
@@ -566,7 +604,7 @@ export function printNodes(nodes) {
 
 /* ---------- QR share (QR Seal v2 compatible) ---------- */
 export function shareItem(ctx, it, only = null) {
-  const pwBox = h('input', { class: 'inp mono', value: generatePassphrase({ words: 4 }), autocomplete: 'off', spellcheck: 'false', 'aria-label': 'QR password' });
+  const pwBox = h('input', { class: 'inp mono', value: generateStrongPassphrase(), autocomplete: 'off', spellcheck: 'false', 'aria-label': 'QR password' });
   const pwRow = passwordRow('QR password', pwBox);
   /* optional: reuse the item's own passcode as the QR password (only while the item is open, so the app knows it; it never goes into the QR) */
   const ik = it.lock && ctx.store.itemKeys.get(it.id), itemCode = ik && ctx.store.isOpen(it) ? ik.code : '';

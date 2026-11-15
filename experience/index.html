@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en" data-stage="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; media-src 'self'; connect-src 'self'; font-src 'none'; frame-src 'none'; object-src 'none'; form-action 'none'; base-uri 'none'">
+<title>VaultManager | The 3D tour</title>
+<meta name="description" content="A live 3D tour of VaultManager, the zero-knowledge password manager: spin the vault, open it up, repaint it, and play a round on its screen.">
+<meta name="theme-color" content="#0b0d10">
+<link rel="icon" href="../icons/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="site.css">
+</head>
+<body>
+<a class="skip" href="#c-open">Skip the tour and open the vault</a>
+<div class="sky" aria-hidden="true"></div>
+<div class="word" aria-hidden="true">VAULT</div>
+<img class="poster" src="media/board.jpg" alt="" hidden>
+<canvas id="stage" aria-label="A 3D model of the VaultManager pocket vault. Drag to spin it."></canvas>
+<div id="pins"></div>
+
+<header class="nav">
+  <a class="brand" href="#c-hero">VAULTMANAGER</a>
+  <nav aria-label="Chapters">
+    <a href="#c-profile">Profile</a>
+    <a href="#c-items">Items</a>
+    <a href="#c-inside">Inside</a>
+    <a href="#c-tools">Tools</a>
+    <a href="#c-play">Play</a>
+  </nav>
+  <div class="nav-end">
+    <button type="button" class="btn ghost" id="sound" aria-pressed="false">Sound off</button>
+    <a class="btn solid" href="../">Open the vault</a>
+  </div>
+</header>
+
+<aside class="clock" aria-hidden="true">
+  <b id="clock">06:00</b>
+  <div class="scale"><i id="dot"></i><span>Dawn</span><span>Noon</span><span>Dusk</span><span>Night</span></div>
+</aside>
+
+<div class="specs" aria-hidden="true">
+  <span>AES-256-GCM</span><span>PBKDF2 600,000 rounds</span><span>Zero-knowledge</span><span>Works offline</span>
+</div>
+<div class="hint" aria-hidden="true">SCROLL TO EXPLORE · DRAG TO SPIN</div>
+<div class="chips" role="group" aria-label="Colour of the vault" id="chips"></div>
+
+<main id="chapters">
+  <section id="c-hero" class="ch hero" data-ch="hero">
+    <div class="panel">
+      <h1>Your passwords, in a vault only you can open.</h1>
+      <p>VaultManager encrypts everything on your own device. No account, no server, nothing to phone home. Scroll to walk around it.</p>
+      <div class="row"><a class="btn solid big" href="../">Open the vault</a><a class="btn ghost big" href="#c-profile">Take the tour</a></div>
+    </div>
+  </section>
+
+  <section id="c-profile" class="ch right" data-ch="profile">
+    <div class="panel">
+      <small class="no">01 · Profiles</small>
+      <h2>One profile per person.</h2>
+      <p>Each profile is its own vault with its own master password. Nothing is shared between them.</p>
+      <ul class="facts">
+        <li><b>Create</b> Pick a name, a picture and Auto, Dark or Light. Ask for a passphrase and you get ten random words, about 103 bits.</li>
+        <li><b>Import</b> Bring a whole profile back from an encrypted backup, with a new master password or the backup's own.</li>
+        <li><b>Delete</b> Removing a profile wipes that vault from this device, and only after you confirm.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section id="c-tour" class="ch left" data-ch="tour">
+    <div class="panel">
+      <small class="no">02 · Welcome and tour</small>
+      <h2>A welcome, then a guided tour.</h2>
+      <p>The first run opens with a welcome splash and a short tour. You can replay it any time from the system menu.</p>
+      <p class="do">Tap the numbered pins on the vault.</p>
+    </div>
+  </section>
+
+  <section id="c-items" class="ch left" data-ch="items">
+    <div class="panel">
+      <small class="no">03 · Items</small>
+      <h2><span id="catcount">28</span> kinds of item. One vault.</h2>
+      <p>Logins, cards, Wi-Fi, wallets, IDs and more. Every item also takes a title, a description, notes, tags, files and your own custom fields.</p>
+      <div class="row"><button type="button" class="btn solid big" id="chart">Chart a new item</button></div>
+      <div class="catcard" id="catcard" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <section id="c-inside" class="ch left" data-ch="inside">
+    <div class="panel">
+      <small class="no">04 · Inside</small>
+      <h2>Seven parts. Nothing leaves.</h2>
+      <p>Open it up. Each part of the model stands for one promise the real app keeps.</p>
+      <ul class="facts tight" id="parts"></ul>
+    </div>
+  </section>
+
+  <section id="c-settings" class="ch right" data-ch="settings">
+    <div class="panel">
+      <small class="no">05 · System menu and settings</small>
+      <h2>Make it yours.</h2>
+      <p>Pick a colour below and the vault repaints. Settings in the app cover the look, auto-lock, clipboard clearing, sync, passkeys and the audit trail. The system menu holds Lock, Purge memory, Switch profile and the Task manager.</p>
+      <div class="seg" role="group" aria-label="Stage">
+        <button type="button" data-stage-pick="dark" aria-pressed="true">Dark</button>
+        <button type="button" data-stage-pick="light" aria-pressed="false">Light</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="c-tools" class="ch left" data-ch="tools">
+    <div class="panel">
+      <small class="no">06 · Tools</small>
+      <h2>Tools that travel.</h2>
+      <ul class="facts">
+        <li><b>QR tools</b> Seal a secret, an item or a whole backup into password-protected QR codes.</li>
+        <li><b>Beam</b> Sync two devices directly, with no server in between.</li>
+        <li><b>Vault health</b> Weak, reused and expiring entries, found on your device.</li>
+      </ul>
+      <div class="gen">
+        <button type="button" class="btn solid" id="suggest">Suggest a passphrase</button>
+        <output id="phrase" aria-live="polite">Press the button. This runs the app's real generator.</output>
+        <small id="bits"></small>
+      </div>
+    </div>
+  </section>
+
+  <section id="c-play" class="ch right" data-ch="play">
+    <div class="panel">
+      <small class="no">07 · Play</small>
+      <h2>Key Runner.</h2>
+      <p>The screen is a real game. Jump the spikes, slide under the hooks. The buttons on the 3D model work too.</p>
+      <div class="row"><button type="button" class="btn solid big" data-act="jump">Jump <kbd>Z</kbd></button><button type="button" class="btn ghost big" data-act="slide">Slide <kbd>X</kbd></button></div>
+      <p class="score">Best this visit: <b id="best">0</b></p>
+    </div>
+  </section>
+
+  <section id="c-open" class="ch left" data-ch="open">
+    <div class="panel">
+      <small class="no">08 · Night watch</small>
+      <h2>It locks itself.</h2>
+      <p>Walk away and the vault locks after a few minutes. Close the tab and nothing readable is left behind. The items that matter most can carry a passcode of their own.</p>
+      <div class="row"><a class="btn solid big" href="../">Open the vault</a></div>
+    </div>
+  </section>
+</main>
+
+<section class="outro" id="outro">
+  <div class="wrap">
+    <h2>One vault. Yours.</h2>
+    <div class="cards">
+      <figure><img src="media/card-1.jpg" alt="Two hands holding a teal pocket vault over a desk with brass keys" loading="lazy" width="960" height="720"><figcaption><b>In your hands</b> Runs in the browser, on a phone, or from one offline file.</figcaption></figure>
+      <figure><img src="media/card-2.jpg" alt="The teal pocket vault standing among brass keys, a bank card, a passport and an open padlock" loading="lazy" width="960" height="720"><figcaption><b>Everything in one place</b> Logins, cards, IDs, wallets and files.</figcaption></figure>
+      <figure><img src="media/card-3.jpg" alt="The teal pocket vault on a windowsill at night, a padlock on its screen" loading="lazy" width="960" height="720"><figcaption><b>Locked by morning</b> Auto-lock, and its own passcode for the items that need one.</figcaption></figure>
+    </div>
+    <div class="row"><a class="btn solid big" href="../">Open the vault</a><a class="btn ghost big" href="#c-hero">Back to the top</a></div>
+    <p class="fine">This page is a tour. The pocket vault is a 3D model, not a product you can buy. The app it describes is real and free. The photos, the powder bursts and the music were made with Higgsfield. Everything that moves is code.</p>
+  </div>
+</section>
+
+<div class="card" id="card" role="dialog" aria-live="polite" hidden><button type="button" class="x" aria-label="Close">×</button><b></b><p></p></div>
+<noscript><p class="noscript">The 3D tour needs JavaScript. <a href="../">Open VaultManager</a> instead.</p></noscript>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

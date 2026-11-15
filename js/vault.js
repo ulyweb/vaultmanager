@@ -27,16 +27,20 @@ export const LOCK_UNLOCK_MS = 10 * 60 * 1000;
 
 export const DEFAULT_SETTINGS = {
   autolock: 5, clipboard: 30, theme: 'auto', lockOnHide: false, trashDays: 30, logReveal: true, displayName: '', tourSeen: false, welcomeAlways: false,
-  gen: { mode: 'password', length: 20, lower: true, upper: true, digits: true, symbols: true, noAmbiguous: false, words: 5, separator: '-', capitalize: false, number: false },
+  gen: { mode: 'password', length: 20, lower: true, upper: true, digits: true, symbols: true, noAmbiguous: false, words: 10, separator: '-', capitalize: false, number: false },
   sync: { method: 'off', token: '', gistId: '', passphrase: '', auto: true, attachments: true, last: null },
   look: LOOK_DEFAULTS,
 };
 
+/* "now" as a local date + time, the value of a datetime-local input: 2026-11-15T23:41 */
+export const stampNow = (d = new Date()) => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+const autoFields = (type) => Object.fromEntries(((TEMPLATES[type] || {}).fields || []).filter((f) => f.auto).map((f) => [f.k, stampNow()]));
+
 export function newItem(type = 'login', init = {}) {
   const now = Date.now();
   return {
-    id: uid(), type, name: '', description: '', username: '', password: '', url: '', totp: '', notes: '', tags: [], favorite: false,
-    card: { holder: '', number: '', expiry: '', cvv: '', pin: '' }, fields: {}, custom: [], attachments: [], revisions: [], ft: {}, sv: {}, attRemoved: {}, conflicts: [], cr: {},
+    id: uid(), type, name: '', description: '', username: '', password: '', url: '', totp: '', notes: '', tags: [], favorite: false, favName: '',
+    card: { holder: '', number: '', expiry: '', cvv: '', pin: '' }, fields: autoFields(type), custom: [], attachments: [], revisions: [], ft: {}, sv: {}, attRemoved: {}, conflicts: [], cr: {},
     history: [], created: now, updated: now, pwChanged: now, deleted: 0, lock: '', ...init,
   };
 }
@@ -48,8 +52,8 @@ const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
    Two devices that edit DIFFERENT fields of one item both keep their changes. If both edited the SAME field
    since they last merged, the newest wins deterministically (both devices pick the same winner) and the other
    value is kept as a conflict for the user to review. */
-const MERGE_KEYS = ['name', 'description', 'username', 'url', 'password', 'totp', 'notes', 'tags', 'card', 'custom', 'lock', 'favorite', 'deleted'];
-const NO_CONFLICT = new Set(['favorite', 'deleted']);
+const MERGE_KEYS = ['name', 'description', 'username', 'url', 'password', 'totp', 'notes', 'tags', 'card', 'custom', 'lock', 'favorite', 'favName', 'deleted'];
+const NO_CONFLICT = new Set(['favorite', 'favName', 'deleted']);
 const keysOf = (it) => [...MERGE_KEYS, ...Object.keys(it.fields || {}).map((k) => 'f:' + k)];
 const getKey = (it, k) => (k.startsWith('f:') ? (it.fields || {})[k.slice(2)] ?? '' : it[k]);
 const setKey = (it, k, v) => { if (k.startsWith('f:')) { it.fields = it.fields || {}; if (v === '' || v == null) delete it.fields[k.slice(2)]; else it.fields[k.slice(2)] = v; } else it[k] = v; };
@@ -57,7 +61,7 @@ const ftOf = (it, k) => (it.ft && it.ft[k] !== undefined ? it.ft[k] : it.sv && i
 const svOf = (it, k) => (it.sv && it.sv[k] !== undefined ? it.sv[k] : null);   // null: never merged, so nothing counts as "edited since"
 export function keyLabel(it, k) {
   if (k.startsWith('f:')) { const f = ((TEMPLATES[it.type] || {}).fields || []).find((x) => x.k === k.slice(2)); return f ? f.l : k.slice(2); }
-  return ({ name: 'Title', description: 'Description', username: 'Username', url: 'Website', password: 'Password', totp: 'One-time code secret', notes: 'Notes', tags: 'Tags', card: 'Card details', custom: 'Custom fields', lock: 'Secondary passcode lock' })[k] || k;
+  return ({ favName: 'Favorite name', name: 'Title', description: 'Description', username: 'Username', url: 'Website', password: 'Password', totp: 'One-time code secret', notes: 'Notes', tags: 'Tags', card: 'Card details', custom: 'Custom fields', lock: 'Secondary passcode lock' })[k] || k;
 }
 export function keyIsSecret(it, k) {
   if (['password', 'totp', 'card', 'lock'].includes(k)) return true;
@@ -356,6 +360,8 @@ export class VaultStore {
   }
 
   active() { return this.data.items.filter((i) => !i.deleted); }
+  /* the custom names given to favorites ("Work", "Family"…), most used first */
+  favNames() { const m = new Map(); for (const i of this.active()) if (i.favorite && i.favName) m.set(i.favName, (m.get(i.favName) || 0) + 1); return [...m].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([n, c]) => [n, c]); }
   trashed() { return this.data.items.filter((i) => i.deleted); }
   tags() { const m = new Map(); for (const i of this.active()) for (const t of i.tags || []) m.set(t, (m.get(t) || 0) + 1); return [...m].sort((a, b) => a[0].localeCompare(b[0])); }
 
@@ -599,7 +605,7 @@ export function sanitizeGen(g = {}) {
   const o = {};
   if (['password', 'passphrase', 'pin'].includes(g.mode)) o.mode = g.mode;
   if (g.length !== undefined) o.length = clampInt(g.length, 4, 128, 20);
-  if (g.words !== undefined) o.words = clampInt(g.words, 3, 12, 5);
+  if (g.words !== undefined) o.words = (g.words === 5 ? 10 : clampInt(g.words, 3, 16, 10));
   for (const k of ['lower', 'upper', 'digits', 'symbols', 'noAmbiguous', 'capitalize', 'number']) if (typeof g[k] === 'boolean') o[k] = g[k];
   if (typeof g.separator === 'string') o.separator = g.separator.replace(/[\u0000-\u001f]/g, '').slice(0, 4);
   if (typeof g.customSymbols === 'string') o.customSymbols = g.customSymbols.replace(/[\u0000-\u001f\s]/g, '').slice(0, 64);
@@ -649,7 +655,7 @@ export function sanitiseItem(r, { keepMeta = false, keepAttachments = false } = 
   const c = r.card && typeof r.card === 'object' ? r.card : {};
   const it = newItem(type, {
     name: s(r.name, 300), description: s(r.description, 2000), username: s(r.username, 500), password: s(r.password, 2000), url: s(r.url, 2000), totp: s(r.totp, 1000), notes: s(r.notes, 50000),
-    tags: Array.isArray(r.tags) ? r.tags.map((t) => s(t, 50)).filter(Boolean).slice(0, 30) : [], favorite: !!r.favorite,
+    tags: Array.isArray(r.tags) ? r.tags.map((t) => s(t, 50)).filter(Boolean).slice(0, 30) : [], favorite: !!r.favorite, favName: s(r.favName, 40).trim(),
     card: { holder: s(c.holder, 200), number: s(c.number, 40), expiry: s(c.expiry, 10), cvv: s(c.cvv, 10), pin: s(c.pin, 20) },
   });
   if (TEMPLATES[type] && r.fields && typeof r.fields === 'object') for (const f of TEMPLATES[type].fields) { const v = r.fields[f.k]; if (typeof v === 'string' && v) it.fields[f.k] = v.slice(0, f.kind === 'multiline' || isFieldLocked(v) ? 20000 : 1000); }
@@ -667,7 +673,7 @@ export function sanitiseItem(r, { keepMeta = false, keepAttachments = false } = 
     const numMap = (o) => Object.fromEntries(Object.entries(o && typeof o === 'object' && !Array.isArray(o) ? o : {}).slice(0, 80).filter(([k, v]) => typeof k === 'string' && k.length < 60 && Number.isFinite(v)));
     it.ft = numMap(r.ft); it.sv = numMap(r.sv); it.attRemoved = numMap(r.attRemoved); it.cr = numMap(r.cr);
     if (Array.isArray(r.conflicts)) it.conflicts = r.conflicts.filter((c) => c && typeof c.id === 'string' && /^[0-9a-f]{8}$/.test(c.id) && typeof c.key === 'string' && c.key.length < 60 && JSON.stringify(c.value ?? '').length < 60000).slice(0, 20).map((c) => ({ id: c.id, key: c.key, value: c.value ?? '', at: num(c.at) }));
-    it.favorite = !!r.favorite;
+    it.favorite = !!r.favorite; it.favName = s(r.favName, 40).trim();
     if (Array.isArray(r.revisions)) it.revisions = r.revisions.filter((v) => v && v.snap && typeof v.snap === 'object').slice(0, REVISIONS_MAX).map((v) => {
       const sn = sanitiseItem(v.snap);
       return { at: num(v.at), changed: Array.isArray(v.changed) ? v.changed.map((x) => s(x, 20)).slice(0, 10) : [], snap: Object.fromEntries(TRACKED.map((k) => [k, sn[k]])) };

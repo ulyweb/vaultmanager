@@ -7,6 +7,7 @@
      gen       offers the password generator in the editor
      words     recovery phrase: numbered boxes, one per word, each hidden on its own
      lockable  can be locked with a passcode of its own (see fieldlock.js)
+     stamp     a date AND time (YYYY-MM-DDTHH:MM, your local time); with auto: true it is filled in the moment a new item is created
      expiry    a date that feeds the "expiring soon" report in Vault health */
 
 export const CORE = {
@@ -19,6 +20,7 @@ const S = (k, l, o = {}) => ({ k, l, kind: 'secret', mono: true, ...o });
 const T = (k, l, o = {}) => ({ k, l, kind: 'text', ...o });
 const D = (k, l, o = {}) => ({ k, l, kind: 'date', ...o });
 const U = (k, l, o = {}) => ({ k, l, kind: 'url', ...o });
+const DT = (k, l, o = {}) => ({ k, l, kind: 'stamp', ...o });   // date + time (auto: filled with "now" when the item is first created)
 const SEL = (k, l, options) => ({ k, l, kind: 'select', options });
 
 export const TEMPLATES = {
@@ -72,9 +74,15 @@ export const TEMPLATES = {
     { k: 'recovery', l: 'Recovery / backup codes', kind: 'multiline', secret: true },
   ] },
   crypto: { label: 'Crypto wallet', plural: 'Crypto', icon: '{{crypto}}', sub: 'wallet', tip: 'Anyone who gets a recovery seed phrase or private key controls the funds. Keep an offline copy too, never photograph it, and avoid syncing it to devices you do not fully trust.', fields: [
-    T('wallet', 'Wallet / exchange'), SEL('kind', 'Type', ['Hardware wallet', 'Software wallet', 'Exchange account', 'Paper wallet', 'Other']), T('network', 'Blockchain / network'), T('address', 'Public address', { mono: true }),
+    T('wallet', 'Wallet / exchange'), SEL('kind', 'Type', ['Hardware wallet', 'Software wallet', 'Exchange account', 'Paper wallet', 'Other']), DT('added', 'Added to vault (date & time)', { auto: true }), DT('created', 'Wallet created (date & time)'), T('network', 'Blockchain / network'), T('address', 'Public address', { mono: true }),
     { k: 'seed', l: 'Recovery seed phrase', kind: 'multiline', secret: true, words: true, lockable: true }, S('privkey', 'Private key'), S('pin', 'Wallet PIN / password', { gen: true }), S('passphrase', 'Extra passphrase (25th word)', { lockable: true }),
     U('url', 'Website'), T('username', 'Username / email'), S('password', 'Account password', { gen: true }),
+    DT('backedup', 'Seed phrase backed up (date & time)'), DT('checked', 'Last balance check (date & time)'),
+  ] },
+  social: { label: 'Social network', plural: 'Social', icon: '{{social}}', sub: 'platform', tip: 'Turn on two-factor sign-in for every social account and keep its backup codes here. Social accounts are the ones most often taken over.', fields: [
+    SEL('platform', 'Platform', ['YouTube', 'Facebook', 'X (Twitter)', 'Instagram', 'TikTok', 'LinkedIn', 'Snapchat', 'Pinterest', 'Reddit', 'Threads', 'Discord', 'Twitch', 'WhatsApp', 'Telegram', 'Other']), T('handle', 'Handle / username (@…)'), T('display', 'Display / channel / page name'), U('url', 'Profile / channel link'),
+    T('email', 'Sign-in email'), T('phone', 'Linked phone', { mono: true }), S('password', 'Password', { gen: true }), SEL('twofa', 'Two-factor method', ['Authenticator app', 'SMS', 'Security key / passkey', 'Email', 'None']),
+    { k: 'backup', l: 'Backup / recovery codes', kind: 'multiline', secret: true }, T('accountid', 'Channel / page / business ID', { mono: true }), S('apikey', 'API key / app secret', { gen: true }), D('opened', 'Account created'), DT('added', 'Added to vault (date & time)', { auto: true }),
   ] },
   emergency: { label: 'Emergency numbers', plural: 'Emergency', icon: '{{emergency}}', sub: 'phone', fields: [
     T('person', 'Name'), SEL('role', 'Role', ['Emergency contact', 'Doctor', 'Hospital', 'Poison control', 'Insurance claims', 'Roadside assistance', 'Lawyer', 'Embassy / consulate', 'Other']),
@@ -128,7 +136,7 @@ export const TEMPLATES = {
 /* Categories are shown grouped by purpose (sidebar, "new item" picker, categories dialog). */
 export const GROUPS = [
   ['Everyday', ['login', 'note', 'card']],
-  ['Accounts & access', ['technical', 'shopping', 'app', 'server', 'computer', 'locker']],
+  ['Accounts & access', ['technical', 'social', 'shopping', 'app', 'server', 'computer', 'locker']],
   ['Home & devices', ['network', 'internet', 'phone', 'serial']],
   ['Money', ['bank', 'crypto', 'insurance']],
   ['IDs & documents', ['identity', 'voter', 'photoid', 'library', 'membership']],

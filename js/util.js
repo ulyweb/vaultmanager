@@ -30,6 +30,8 @@ export const uid = () => {
 };
 
 export const fmtDate = (ts) => (ts ? new Date(ts).toISOString().slice(0, 10) : '—');
+/* a stored datetime-local value (2026-11-15T23:41) shown as 2026-11-15 23:41 */
+export const stampText = (v) => String(v || '').replace('T', ' ');
 export const fmtInt = (n) => Number(n).toLocaleString('en-US');
 export const clamp = (n, lo, hi) => Math.min(hi, Math.max(lo, n));
 

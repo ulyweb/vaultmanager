@@ -128,7 +128,7 @@ test('full journey: create → add → lock → unlock → tools → QR round tr
   const g1 = await page.textContent('.genout'); await page.getByRole('button', { name: /Regenerate/ }).click();
   assert.notEqual(g1, await page.textContent('.genout'));
   await page.getByRole('tab', { name: 'Passphrase' }).click();
-  assert.equal((await page.textContent('.genout')).split('-').length, 5);
+  assert.equal((await page.textContent('.genout')).split('-').length, 10);
 
   // health
   await page.getByRole('button', { name: /Vault health/ }).click(); await page.waitForSelector('.ring');
@@ -241,7 +241,7 @@ async function phoneFlow(name) {
 
   // add items from the center button (every category picker button is reachable and tall enough)
   await page.getByRole('button', { name: 'New item' }).click(); await page.waitForSelector('.modal-sheet .catgroup'); await fits('picker');
-  assert.equal(await page.locator('.modal-sheet .cats .btn').count(), 28); await tall('.modal-sheet .cats .btn', 44, 'category picker');
+  assert.equal(await page.locator('.modal-sheet .cats .btn').count(), 29); await tall('.modal-sheet .cats .btn', 44, 'category picker');
   const sheet = await page.locator('.modal-sheet').boundingBox(); assert.ok(sheet.width >= vw - 1 && sheet.y + sheet.height <= dev.viewport.height + 1, `${name}: dialogs are bottom sheets`);
   await page.locator('.modal-sheet .cats .btn', { hasText: 'Login' }).first().click();
   await page.fill('#f_name', 'GitHub'); await page.fill('#f_username', 'octocat'); await fits('editor');
@@ -256,7 +256,7 @@ async function phoneFlow(name) {
 
   // More sheet: everything is reachable, nothing overflows
   await page.getByRole('button', { name: 'More' }).click(); await page.waitForSelector('.msheet'); await fits('more');
-  assert.equal(await page.locator('.msheet-item .ico.cat').count(), 28, 'all 28 categories are reachable on a phone'); await tall('.msheet-item', 44, 'more sheet');
+  assert.equal(await page.locator('.msheet-item .ico.cat').count(), 29, 'all 29 categories are reachable on a phone'); await tall('.msheet-item', 44, 'more sheet');
   assert.ok(!EMOJI.test(await page.textContent('.msheet')), `${name}: no emoji glyphs in the menu`);
   await page.locator('.msheet-item', { hasText: 'Network' }).first().click(); await page.waitForSelector('.item'); await fits('category');
   await page.getByRole('button', { name: 'More' }).click(); await page.locator('.msheet-item', { hasText: 'Settings' }).first().click(); await page.waitForSelector('.tabs');
@@ -346,7 +346,7 @@ test('icons are identical on desktop and phone (one SVG set, no emoji)', async (
     await page.waitForSelector('.modal-sheet .cats'); const out = await page.$$eval('.modal-sheet .cats .btn', (bs) => Object.fromEntries(bs.map((b) => [b.textContent.trim(), b.querySelector('svg').outerHTML]))); await ctx.close(); return out;
   };
   const desk = await grab({}), phone = await grab({ ...(({ defaultBrowserType, ...d }) => d)(devices['iPhone 13']), colorScheme: 'dark', reducedMotion: 'reduce' });
-  assert.equal(Object.keys(desk).length, 28); assert.deepEqual(desk, phone);
+  assert.equal(Object.keys(desk).length, 29); assert.deepEqual(desk, phone);
   const html = Object.values(desk).join('').replace(/aria-label="[^"]*"/g, ''); assert.ok(!EMOJI.test(html), 'icons are drawn shapes, not emoji glyphs');
 });
 
@@ -368,7 +368,9 @@ async function createVault(page, pw = MASTER) {
   await page.evaluate(() => document.querySelectorAll('.ngroup[aria-expanded=false]').forEach((b) => b.click()));   // category groups start collapsed (except Everyday)
 }
 async function addLogin(page, name, extra = async () => {}) {
-  await page.getByRole('button', { name: '＋ New' }).click(); await page.getByRole('button', { name: '🔑 Login', exact: true }).click();
+  await page.getByRole('button', { name: '＋ New' }).click(); await page.waitForSelector('.modal-sheet');
+  if (await page.locator('.c3-stage').count()) await page.locator('.pickseg button').nth(1).click();   // motion on: the picker opens as the 3D carousel, this helper wants the list
+  await page.getByRole('button', { name: '🔑 Login', exact: true }).click();
   await page.fill('#f_name', name); await page.fill('#f_username', 'user-' + name); await page.getByRole('button', { name: '⚡ Generate' }).click();
   await extra(); await page.getByRole('button', { name: 'Save' }).click(); await page.waitForSelector(`.detail h2:has-text("${name}")`);
 }
@@ -902,7 +904,7 @@ test('v0.7 categories: all 15 new ones are visible, grouped, creatable from the 
   await page.getByRole('button', { name: '＋ New' }).click(); await page.waitForSelector('.modal-sheet .catgroup');
   assert.equal(await page.locator('.modal-sheet .catgroup').count(), GROUPS.length);
   for (const [g] of GROUPS) assert.ok((await page.textContent('.modal-sheet')).includes(g), 'group ' + g);
-  assert.equal(await page.locator('.modal-sheet .cats .btn').count(), 28);
+  assert.equal(await page.locator('.modal-sheet .cats .btn').count(), 29);
   await shot(page, '35-picker-groups'); await page.keyboard.press('Escape');
 
   for (const k of NEW) {
@@ -1813,4 +1815,216 @@ test('v0.29.2: importing a profile — name, picture, password choice, confirmat
     assert.equal(await B.page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth <= 1), true, label + ': no sideways scroll');
     await B.ctx.close();
   }
+});
+
+test('v0.30.0: the 3D tour page loads (with or without WebGL), its chapters, colours, categories, generator and game respond, and the sign-in screen links to it', async () => {
+  const quiet = (p) => !/Failed to load resource|WebGL|THREE\.|GPU|context/i.test(p);
+  for (const [label, opts] of [['desktop', {}], ['phone', (({ defaultBrowserType, ...d }) => d)(devices['iPhone SE'])]]) {
+    const { ctx, page, problems } = await newPage(opts);
+    await page.goto(base + 'experience/'); await page.waitForFunction(() => window.__vm3d && window.__vm3d.ready, null, { timeout: 60000 });
+    assert.equal(await page.locator('main .ch').count(), 9, label + ': nine chapters');
+    assert.equal(await page.textContent('#catcount'), String(Object.keys(TEMPLATES).length + 3), label + ': the category count comes from the app');
+    assert.ok(await page.locator('a.btn.solid[href="../"]').count() >= 2, label + ': Open the vault leads back to the app');
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth <= 1), true, label + ': no sideways scroll');
+    // the screen is a real game: it plays itself until a key is pressed
+    assert.equal(await page.evaluate(() => window.__vm3d.screen.auto), true); await page.keyboard.press('z');
+    assert.equal(await page.evaluate(() => window.__vm3d.screen.auto), false, label + ': Z takes over the game');
+    // chart a new item: next category, next colour
+    await page.evaluate(() => window.scrollTo(0, document.querySelector('#c-items').offsetTop)); await page.waitForFunction(() => window.__vm3d.chapter() === 'items');
+    const before = [await page.textContent('#catcard b'), await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--accent').trim())];
+    await page.click('#chart');
+    assert.notEqual(await page.textContent('#catcard b'), before[0]); assert.notEqual(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--accent').trim()), before[1]);
+    // colour chips and the light stage
+    await page.locator('#chips .chip').nth(3).click(); assert.equal(await page.locator('#chips .chip').nth(3).getAttribute('aria-pressed'), 'true');
+    await page.evaluate(() => window.scrollTo(0, document.querySelector('#c-settings').offsetTop)); await page.waitForFunction(() => window.__vm3d.chapter() === 'settings');
+    await page.locator('[data-stage-pick=light]').click(); assert.equal(await page.evaluate(() => document.documentElement.dataset.stage), 'light');
+    // the app's real passphrase generator
+    await page.evaluate(() => window.scrollTo(0, document.querySelector('#c-tools').offsetTop)); await page.waitForFunction(() => window.__vm3d.chapter() === 'tools');
+    await page.click('#suggest'); const bits = Number(/~(\d+) bits/.exec(await page.textContent('#bits'))[1]); assert.ok(bits >= 100, label + ': ' + bits + ' bits');
+    assert.equal((await page.textContent('#phrase')).split('-').length, 10);
+    assert.deepEqual(problems.filter(quiet), [], label);
+    await ctx.close();
+  }
+  const { ctx, page } = await newPage(); await page.goto(base); await page.waitForSelector('#pw1');
+  assert.equal(await page.getAttribute('.gate-foot a.tourlink', 'href'), 'experience/', 'the sign-in screen offers the tour');
+  await ctx.close();
+});
+
+test('v0.31.0: New item opens a 3D category carousel (spin with keys, drag and group chips), creates the chosen kind, and keeps a plain list as the choice for reduced motion', async () => {
+  const quiet = (p) => !/Failed to load resource/.test(p);
+  // reduced motion (what every other test runs with): the plain list comes first, so nothing about the old picker changed
+  const R = await newPage(); await createVault(R.page);
+  await R.page.getByRole('button', { name: '＋ New' }).click(); await R.page.waitForSelector('.modal-sheet .cats .btn');
+  assert.equal(await R.page.locator('.c3-stage').count(), 0, 'list first for people who ask for reduced motion');
+  await R.page.locator('.pickseg button').first().click(); await R.page.waitForSelector('.c3-stage'); assert.equal(await R.page.locator('.c3-card').count(), Object.keys(TEMPLATES).length + 3, 'one card per category, even held still');
+  await R.ctx.close();
+  // motion on: the carousel is the default
+  for (const [label, opts] of [['desktop', { reducedMotion: 'no-preference' }], ['phone', { ...(({ defaultBrowserType, ...d }) => d)(devices['iPhone SE']), reducedMotion: 'no-preference' }]]) {
+    const { ctx, page, problems } = await newPage(opts); await createVault(page);
+    await page.getByRole('button', { name: label === 'phone' ? 'New item' : '＋ New' }).click({ force: true }); await page.waitForSelector('.c3-stage');
+    assert.equal(await page.locator('.c3-card').count(), Object.keys(TEMPLATES).length + 3, label + ': a card for every category');
+    assert.equal(await page.textContent('.c3-name'), 'Login', label + ': starts on Login');
+    assert.ok(await page.evaluate(() => document.activeElement && document.activeElement.classList.contains('c3-stage')), label + ': the ring has the keyboard focus');
+    const t = await page.evaluate(() => getComputedStyle(document.querySelector('.c3-card.front')).transform); assert.match(t, /^matrix3d/, label + ': cards are really placed in 3D');
+    await page.keyboard.press('ArrowRight'); await page.waitForFunction(() => document.querySelector('.c3-name').textContent !== 'Login'); const second = await page.textContent('.c3-name');
+    await page.keyboard.press('ArrowLeft'); await page.waitForFunction((s) => document.querySelector('.c3-name').textContent !== s, second);
+    // a group chip jumps to that group
+    await page.locator('.c3-group', { hasText: 'Money' }).click(); await page.waitForFunction(() => /^Money/i.test(document.querySelector('.c3-meta').textContent));
+    // drag the ring
+    const box = await page.locator('.c3-stage').boundingBox(), before = await page.textContent('.c3-name');
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2); await page.mouse.down(); await page.mouse.move(box.x + box.width / 2 - 150, box.y + box.height / 2, { steps: 6 }); await page.mouse.up();
+    await page.waitForFunction((b) => document.querySelector('.c3-name').textContent !== b, before);
+    // create the card in front
+    await page.waitForSelector('.c3-stage[data-rest="1"]', { timeout: 30000 });   // the ring has finished coasting
+    const kind = await page.textContent('.c3-name'); await page.locator('.c3-create').click();
+    await page.waitForSelector('#f_name'); const head = await page.textContent('.modal-sheet h2'); assert.match(head, new RegExp('^New ' + kind.toLowerCase().replace(/[^a-z]+/g, '.*'), 'i'), label + ': the editor opens for ' + kind + ' but its title is “' + head + '”');
+    await page.keyboard.press('Escape');
+    // the list switch is remembered
+    await page.getByRole('button', { name: label === 'phone' ? 'New item' : '＋ New' }).click({ force: true }); await page.waitForSelector('.c3-stage');
+    await page.locator('.pickseg button').nth(1).click(); await page.waitForSelector('.modal-sheet .cats .btn'); await page.keyboard.press('Escape');
+    await page.getByRole('button', { name: label === 'phone' ? 'New item' : '＋ New' }).click({ force: true }); await page.waitForSelector('.modal-sheet .cats .btn'); assert.equal(await page.locator('.c3-stage').count(), 0, label + ': the list choice sticks');
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth <= 1), true, label + ': no sideways scroll');
+    assert.deepEqual(problems.filter(quiet), [], label); await ctx.close();
+  }
+});
+
+test('v0.32.0: the 3D card space flows behind the sign-in, create and Home screens, holds still for reduced motion, never blocks a click, and can be switched off', async () => {
+  const quiet = (p) => !/Failed to load resource/.test(p);
+  // reduced motion (what the other tests run with): the cards are there but nothing is animated
+  const R = await newPage(); await R.page.goto(base); await R.page.waitForSelector('#pw1');
+  assert.equal(await R.page.locator('#space3d .s3-card').count(), 16, 'sixteen item cards in the space');
+  assert.equal(await R.page.evaluate(() => document.body.dataset.space), 'gate');
+  { const t = () => R.page.evaluate(() => document.querySelector('.s3-card').style.transform); const a = await t(); await R.page.waitForTimeout(700); assert.equal(await t(), a, 'still under reduce motion'); }
+  await R.ctx.close();
+  // motion on
+  const { ctx, page, problems } = await newPage({ reducedMotion: 'no-preference' });
+  await page.goto(base); await page.waitForSelector('#pw1');
+  assert.equal(await page.evaluate(() => getComputedStyle(document.getElementById('space3d')).pointerEvents), 'none', 'the space never takes a click');
+  const spin = async () => page.evaluate(() => document.querySelector('.s3-card').style.transform);
+  const a = await spin(); await page.waitForTimeout(700); assert.notEqual(await spin(), a, 'the cards really move');
+  assert.match(await page.evaluate(() => getComputedStyle(document.querySelector('.s3-card')).transform), /^matrix3d/, 'in 3D');
+  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth <= 1), true, 'no sideways scroll');
+  /* safety: no card may ever get near the camera plane (that is what made one card fill the screen), also during a surge and on a phone-sized window */
+  const near = async () => page.evaluate(() => { const persp = parseFloat(getComputedStyle(document.getElementById('space3d')).perspective); const z = Math.max(...[...document.querySelectorAll('.s3-card')].map((c) => new DOMMatrix(getComputedStyle(c).transform).m43)); return { persp, z }; });
+  { const n = await near(); assert.ok(n.z + 70 + 100 < n.persp * 0.85, `nearest card z ${n.z} vs perspective ${n.persp}`); }
+  await page.evaluate(() => document.getElementById('space3d').classList.add('surge')); await page.waitForTimeout(500);
+  { const n = await near(); assert.equal(n.persp, 1150, 'a surge never changes the perspective'); assert.ok(n.z + 70 + 100 < n.persp * 0.85); }
+  await page.evaluate(() => document.getElementById('space3d').classList.remove('surge'));
+  await page.setViewportSize({ width: 390, height: 800 }); await page.waitForTimeout(300);
+  { const n = await near(); assert.ok(n.z + 70 + 100 < n.persp * 0.85, `phone: nearest card z ${n.z} vs perspective ${n.persp}`); }
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await createVault(page);                                             // creating a profile works with the cards flowing behind it
+  assert.equal(await page.evaluate(() => document.body.dataset.space), 'home', 'quieter behind the Home widgets');
+  assert.ok(await page.locator('.widget').count() > 3);
+  assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector('.widget')).backdropFilter), 'none', 'no backdrop blur over the moving cards behind Home');
+  // a dialog open over Home: the card space rests (no animated scene under the dialog's backdrop blur) and wakes again when it closes
+  await page.getByRole('button', { name: '＋ New' }).click(); await page.waitForSelector('.modal-sheet');
+  assert.equal(await page.evaluate(() => document.body.dataset.modal), '1'); assert.equal(await page.evaluate(() => getComputedStyle(document.getElementById('space3d')).display), 'none', 'the space rests behind a dialog on Home');
+  await page.keyboard.press('Escape'); await page.waitForFunction(() => !document.querySelector('.modal-sheet'));
+  assert.equal(await page.evaluate(() => document.body.dataset.modal), undefined); assert.equal(await page.evaluate(() => getComputedStyle(document.getElementById('space3d')).display), 'block');
+  await page.locator('.side .nav', { hasText: 'All items' }).click(); assert.equal(await page.evaluate(() => document.body.dataset.space), 'off', 'off on the item pages');
+  await page.locator('.side .nav', { hasText: 'Home' }).first().click(); assert.equal(await page.evaluate(() => document.body.dataset.space), 'home');
+  // switch it off in Settings → Effects
+  await settingsTab(page, 'Effects'); await page.locator('button[aria-label="fx3d"]').click();
+  assert.equal(await page.evaluate(() => document.documentElement.dataset.fx3d), 'off');
+  await page.locator('.side .nav', { hasText: 'Home' }).first().click(); assert.equal(await page.evaluate(() => getComputedStyle(document.getElementById('space3d')).display), 'none', 'gone when switched off');
+  assert.deepEqual(problems.filter(quiet), []); await ctx.close();
+  // the import dialog opens over the cards
+  const I = await newPage({ reducedMotion: 'no-preference' }); await I.page.goto(base); await I.page.waitForSelector('#pw1');
+  await I.page.getByRole('button', { name: /Import a profile backup/ }).click(); await I.page.waitForSelector('.modal-sheet.m3d');
+  assert.equal(await I.page.evaluate(() => getComputedStyle(document.getElementById('space3d')).display), 'block', 'the cards stay visible behind the import dialog');
+  await I.ctx.close();
+});
+
+test('v0.33.0: thick cards and windows, tilt / thickness / float settings from the sign-in screen and Settings, kept when the profile is created', async () => {
+  const quiet = (p) => !/Failed to load resource/.test(p);
+  const { ctx, page, problems } = await newPage({ reducedMotion: 'no-preference' });
+  await page.goto(base); await page.waitForSelector('#pw1');
+  const css = (name) => page.evaluate((n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim(), name);
+  const data = (k) => page.evaluate((x) => document.documentElement.dataset[x], k);
+  // every floating card is a slab: a face plus slices behind it, and the windows carry a stacked edge
+  const layers = (sel) => page.evaluate((q) => (getComputedStyle(document.querySelector(q)).boxShadow.match(/(rgba?|color)\(/g) || []).length, sel);
+  assert.equal(await page.locator('.s3-card').count(), 16); assert.ok(await layers('.s3-inner') >= 9, 'each floating card has a solid edge, one layer per card (no extra 3D layers behind it)');
+  assert.equal(await page.locator('.s3-card > *').count(), 16, 'exactly one layer inside each card: the face');
+  assert.ok(await page.evaluate(() => document.querySelector('.s3-card').style.getPropertyValue('--ex') !== ''), 'the edge direction follows the card across the screen');
+  assert.equal(await css('--fx3d-thick'), '14'); assert.equal(await data('thick'), 'on');
+  assert.ok(((await page.evaluate(() => getComputedStyle(document.querySelector('.gate-card')).boxShadow)).match(/(rgba?|color)\(/g) || []).length >= 12, 'the sign-in window has a stacked edge');
+  assert.equal(await css('--fx3d-float'), '3');
+  assert.equal(await data('float'), 'off', 'scripted browsers get a still window so clicks stay reliable (real browsers float)');
+  // the 3D effects panel on the create screen
+  await page.click('.gfx-btn'); await page.waitForSelector('.gfx-panel:not([hidden])');
+  assert.deepEqual(await page.locator('.gfx-panel input[type=range]').evaluateAll((els) => els.map((e) => e.getAttribute('aria-label'))), ['Card thickness', '3D tilt', 'Card float']);
+  await page.locator('input[aria-label="Card thickness"]').fill('24'); assert.equal(await css('--fx3d-thick'), '24');
+  await page.locator('input[aria-label="3D tilt"]').fill('0');
+  const box = await page.locator('.gate-card').boundingBox(); await page.mouse.move(box.x + box.width * 0.85, box.y + box.height * 0.2);
+  assert.ok(!(await page.evaluate(() => document.querySelector('.gate-card').style.getPropertyValue('--ry'))) || /^0(\.0+)?deg$/.test(await page.evaluate(() => document.querySelector('.gate-card').style.getPropertyValue('--ry'))), 'tilt 0 keeps the window straight');
+  await page.locator('input[aria-label="3D tilt"]').fill('9'); await page.mouse.move(box.x + box.width * 0.9, box.y + box.height * 0.3);
+  assert.notEqual(parseFloat(await page.evaluate(() => document.querySelector('.gate-card').style.getPropertyValue('--ry')) || '0'), 0, 'tilt 9 leans the window toward the pointer');
+  await page.locator('input[aria-label="Card thickness"]').fill('0'); assert.equal(await data('thick'), 'off', 'thickness 0 makes everything flat');
+  assert.ok(!(await page.evaluate(() => getComputedStyle(document.querySelector('.gate-card')).getPropertyValue('--stack'))), 'no stacked edge when flat');
+  assert.ok(await layers('.s3-inner') < 4, 'no edge on the floating cards when flat');
+  await page.locator('input[aria-label="Card thickness"]').fill('20'); await page.locator('input[aria-label="Card float"]').fill('6'); await page.click('.gfx-btn');
+  // create the profile: the tuned values come with it
+  await createVault(page);
+  assert.equal(await css('--fx3d-thick'), '20'); assert.equal(await css('--fx3d-float'), '6');
+  await settingsTab(page, 'Effects');
+  assert.equal(await page.locator('input[aria-label="fx3dThick"]').inputValue(), '20'); assert.equal(await page.locator('input[aria-label="fx3dFloat"]').inputValue(), '6'); assert.equal(await page.locator('input[aria-label="fxTilt"]').inputValue(), '9');
+  assert.equal(await page.locator('button[aria-label="fx3d"]').getAttribute('aria-checked'), 'true');
+  await page.locator('input[aria-label="fx3dThick"]').fill('8'); assert.equal(await css('--fx3d-thick'), '8', 'the same slider lives in Settings');
+  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth <= 1), true, 'no sideways scroll with thick widgets');
+  assert.deepEqual(problems.filter(quiet), []); await ctx.close();
+});
+
+test('v0.33.2: every generate-a-password button makes 100+ bits (export, whole-profile backup, master password)', async () => {
+  const bits = async (page) => +(/~(\d+) bits/.exec(await page.textContent('.modal-sheet .meter-label'))[1]);
+  const A = await newPage(); await createVault(A.page);
+  await settingsTab(A.page, 'General');
+  await A.page.getByRole('button', { name: /Export whole profile/ }).click();
+  await A.page.locator('.modal-sheet button[aria-label="Generate a passphrase"]').click();
+  const b = await bits(A.page);
+  assert.ok(b >= 100, 'the export dialog generator gave only ' + b + ' bits');
+  assert.equal((await A.page.inputValue('input[aria-label="Backup password"]')).split('-').length, 10);
+  assert.deepEqual(A.problems.filter((p) => !/Failed to load resource/.test(p)), []); await A.ctx.close();
+});
+
+test('v0.33.2: social network category (YouTube, Facebook, X, Instagram, TikTok, LinkedIn) and the auto date & time on a crypto wallet', async () => {
+  const { ctx, page, problems } = await newPage(); await createVault(page);
+  const openPicker = async () => { await page.getByRole('button', { name: '＋ New' }).click(); await page.waitForSelector('.modal-sheet'); if (await page.locator('.c3-stage').count()) await page.locator('.pickseg button').nth(1).click(); };
+  await openPicker();
+  const btn = page.locator('.modal-sheet .cats .btn', { hasText: 'Social network' }); assert.equal(await btn.count(), 1, 'Social network is in the category picker');
+  await btn.click(); await page.waitForSelector('#f_name'); await page.fill('#f_name', 'My channel');
+  const opts = await page.locator('#tf_platform option').allTextContents();
+  for (const n of ['YouTube', 'Facebook', 'X (Twitter)', 'Instagram', 'TikTok', 'LinkedIn']) assert.ok(opts.includes(n), n + ' is a platform');
+  await page.selectOption('#tf_platform', 'TikTok'); await page.fill('#tf_handle', '@mychannel');
+  const auto = await page.inputValue('#tf_added'); assert.match(auto, /^\d{4}-\d\d-\d\dT\d\d:\d\d$/, 'social accounts are stamped when added');
+  await page.getByRole('button', { name: 'Save' }).click(); await page.waitForSelector('.detail h2:has-text("My channel")');
+  assert.match(await page.textContent('.detail'), /TikTok[\s\S]*@mychannel/);
+  await page.keyboard.press('Escape');
+  await openPicker(); await page.locator('.modal-sheet .cats .btn', { hasText: 'Crypto wallet' }).click(); await page.waitForSelector('#f_name'); await page.fill('#f_name', 'Ledger');
+  const stamp = await page.inputValue('#tf_added'); assert.match(stamp, /^\d{4}-\d\d-\d\dT\d\d:\d\d$/, 'the wallet has its date & time filled in already');
+  assert.ok(Math.abs(new Date(stamp) - Date.now()) < 300000, 'it is the current local time');
+  assert.equal(await page.getAttribute('#tf_added', 'type'), 'datetime-local');
+  await page.getByRole('button', { name: 'Save' }).click(); await page.waitForSelector('.detail h2:has-text("Ledger")');
+  assert.ok((await page.textContent('.detail')).includes(stamp.replace('T', ' ')), 'the detail page shows it as date and time');
+  assert.deepEqual(problems.filter((p) => !/Failed to load resource/.test(p)), []); await ctx.close();
+});
+
+test('v0.34.1: custom favorite names — name a favorite, filter the Favorites page by it, keep it after a re-edit', async () => {
+  const { ctx, page, problems } = await newPage(); await createVault(page);
+  await addLogin(page, 'Payroll', async () => { await page.fill('#f_favname', 'Work'); assert.equal(await page.locator('.modal-sheet input[type=checkbox]').first().isChecked().catch(() => true), true); });
+  await addLogin(page, 'Netflix', async () => { await page.fill('#f_favname', 'Family'); });
+  await addLogin(page, 'Plain', async () => { await page.locator('label.chk:has-text("Favorite") input').check(); });
+  await page.locator('.side .nav:has-text("Favorites")').click();
+  await page.waitForSelector('.favchips');
+  const chips = await page.locator('.favchip').allTextContents(); assert.deepEqual(chips.map((t) => t.replace(/\s+/g, ' ').trim()).sort(), ['All · 3', 'Family · 1', 'Work · 1']);
+  assert.equal(await page.locator('.items .row, .items [role=option]').count(), 3);
+  await page.locator('.favchip', { hasText: 'Work' }).click();
+  assert.equal(await page.locator('.items [role=option]').count(), 1); assert.match(await page.textContent('.items'), /Payroll/);
+  await page.locator('.items [role=option]').first().click();
+  assert.match(await page.textContent('.detail .act-edit, .detail'), /Work/, 'the detail page shows the favorite name');
+  await page.locator('.detail .act-edit').click(); await page.waitForSelector('#f_favname');
+  assert.equal(await page.inputValue('#f_favname'), 'Work');
+  assert.deepEqual(await page.locator('#f_favnames option').evaluateAll((o) => o.map((x) => x.value).sort()), ['Family', 'Work']);
+  await page.getByRole('button', { name: 'Save' }).click(); await page.waitForSelector('.detail h2:has-text("Payroll")');
+  assert.deepEqual(problems.filter((p) => !/Failed to load resource/.test(p)), []); await ctx.close();
 });

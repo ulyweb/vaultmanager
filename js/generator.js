@@ -56,10 +56,10 @@ export function generatePassword(opt = {}) {
   return shuffle(out).join('');
 }
 
-export const PASSPHRASE_DEFAULTS = { words: 5, separator: '-', capitalize: false, number: false };
+export const PASSPHRASE_DEFAULTS = { words: 10, separator: '-', capitalize: false, number: false };
 
 export function passphraseEntropy(o = PASSPHRASE_DEFAULTS) {
-  const w = Math.max(1, o.words || 5);
+  const w = Math.max(1, o.words || PASSPHRASE_DEFAULTS.words);
   return w * Math.log2(WORDS.length) + (o.number ? Math.log2(10 * w) : 0) + (o.capitalize ? 0 : 0);
 }
 

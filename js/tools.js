@@ -1,7 +1,7 @@
 /* Tool pages: generator, health, QR tools, import / export, settings. */
 
 import { h, clear, modal, toast, confirmDialog, askPassword, copyText, download, readFileText } from './dom.js';
-import { generatePassword, generatePassphrase, generatePin, passwordEntropy, passphraseEntropy } from './generator.js';
+import { generatePassword, generatePassphrase, generateStrongPassphrase, generatePin, passwordEntropy, passphraseEntropy } from './generator.js';
 import { estimate, crackTime } from './strength.js';
 import { TYPE_META } from './templates.js';
 import { health, importAny, exportCSV, decryptBackup, newItem, sanitiseItem, OLD_DAYS } from './vault.js';
@@ -48,7 +48,7 @@ export function renderGenerator(ctx) {
   const drawControls = () => {
     clear(controls);
     if (g.mode === 'password') controls.append(slider('length', 8, 128, 'Length'), h('div', { class: 'checks' }, chk('lower', 'Lowercase a–z'), chk('upper', 'Uppercase A–Z'), chk('digits', 'Digits 0–9'), chk('symbols', 'Symbols !@#$'), chk('noAmbiguous', 'Avoid look-alikes (O 0 l 1 I)')));
-    else if (g.mode === 'passphrase') controls.append(slider('words', 3, 12, 'Words'), field('Separator', sel(g.separator, [['-', 'hyphen  -'], [' ', 'space'], ['.', 'dot  .'], ['_', 'underscore  _'], ['', 'none']], (v) => { g.separator = v; save(); gen(); })), h('div', { class: 'checks' }, chk('capitalize', 'Capitalise words'), chk('number', 'Add a digit')),
+    else if (g.mode === 'passphrase') controls.append(slider('words', 3, 16, 'Words'), field('Separator', sel(g.separator, [['-', 'hyphen  -'], [' ', 'space'], ['.', 'dot  .'], ['_', 'underscore  _'], ['', 'none']], (v) => { g.separator = v; save(); gen(); })), h('div', { class: 'checks' }, chk('capitalize', 'Capitalise words'), chk('number', 'Add a digit')),
       h('p', { class: 'hint', text: 'Words come from the EFF short wordlist (1,296 words, 10.3 bits each). Easy to type and remember.' }));
     else controls.append(slider('length', 4, 24, 'Digits'), h('p', { class: 'hint', text: 'PINs are weak by nature — use only where a site forces digits, and prefer a long password everywhere else.' }));
   };
@@ -103,7 +103,7 @@ function qrOutputs(canvas, name) {
 
 function sealTab(ctx) {
   const text = h('textarea', { class: 'ta', rows: '5', placeholder: 'A Wi-Fi password, a recovery code, a short note…', 'aria-label': 'Text to seal', spellcheck: 'false' });
-  const pw = h('input', { class: 'inp mono', type: 'text', value: generatePassphrase({ words: 5 }), autocomplete: 'off', spellcheck: 'false', 'aria-label': 'QR password' });
+  const pw = h('input', { class: 'inp mono', type: 'text', value: generateStrongPassphrase(), autocomplete: 'off', spellcheck: 'false', 'aria-label': 'QR password' });
   const out = h('div'), err = h('p', { class: 'err', role: 'alert' });
   const btn = h('button', { class: 'btn primary', on: { click: async () => {
     err.textContent = ''; clear(out);
@@ -225,7 +225,7 @@ function qrBackupGuide(ctx, { short = false } = {}) {
 }
 
 function backupTab(ctx) {
-  const pw = h('input', { class: 'inp mono', type: 'text', value: generatePassphrase({ words: 6 }), autocomplete: 'off', spellcheck: 'false', 'aria-label': 'Backup password' });
+  const pw = h('input', { class: 'inp mono', type: 'text', value: generateStrongPassphrase(), autocomplete: 'off', spellcheck: 'false', 'aria-label': 'Backup password' });
   const out = h('div'), err = h('p', { class: 'err', role: 'alert' });
   const bkRow = passwordRow('Backup password', pw);
   const btn = h('button', { class: 'btn primary', on: { click: async () => {
@@ -296,7 +296,7 @@ export function renderData(ctx) {
   };
   const fileIn = h('input', { type: 'file', accept: '.csv,.json,.txt,text/csv,application/json', class: 'offscreen', 'aria-label': 'Import file', on: { change: async (e) => { const f = e.target.files[0]; if (f) runImport(await readFileText(f), f.name); e.target.value = ''; } } });
 
-  const bkPw = h('input', { class: 'inp mono', type: 'text', value: generatePassphrase({ words: 5 }), autocomplete: 'off', spellcheck: 'false', 'aria-label': 'Backup password' });
+  const bkPw = h('input', { class: 'inp mono', type: 'text', value: generateStrongPassphrase(), autocomplete: 'off', spellcheck: 'false', 'aria-label': 'Backup password' });
   const bkErr = h('p', { class: 'err', role: 'alert' });
   const bkPwRow = passwordRow('Backup password', bkPw);
   const bkAtt = h('input', { type: 'checkbox', checked: true });

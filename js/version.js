@@ -1,6 +1,6 @@
 /* Application version, data-format versions and changelog (shown in Settings → About). */
 
-export const APP_VERSION = '0.29.2';
+export const APP_VERSION = '0.34.1';
 export const APP_NAME = 'VaultManager';
 export const REPO_URL = 'https://github.com/ulyweb/vaultmanager';
 
@@ -16,6 +16,38 @@ export const FORMATS = [
 ];
 
 export const CHANGELOG = [
+  { v: '0.34.1', date: '2026-11-15', notes: [
+    'Custom favorite names: give a favorite your own name (Work, Family, Trip…) in the item editor (“Favorite name”, with your earlier names suggested) or leave it as plain Favorites. The Favorites page shows your names as filter chips (All · Work · Family), the item’s star button shows its name, and the names are kept in backups, sync and locked items.',
+  ] },
+  { v: '0.34.0', date: '2026-11-15', notes: [
+    'New category: Social network (29 categories now). One card for YouTube, Facebook, X, Instagram, TikTok, LinkedIn and more (pick the platform): handle, channel or page name and ID, profile link, sign-in email and phone, password with the generator, two-factor method, backup codes, API key, when the account was created.',
+    'Crypto wallets now stamp the date and time they were added to your vault automatically (your local time; you can edit it), and have fields for when the wallet was created, when the seed phrase was backed up and the last balance check. Social accounts get the same automatic “added” stamp. The new date-and-time field type is available to any category.',
+  ] },
+  { v: '0.33.2', date: '2026-11-15', notes: [
+    'Every generated password now has about 100+ bits of entropy: the backup-password generators (export, whole-profile backup, QR seal), the sync passphrase suggestion and the lightning button on every password pair make 10 random words (about 103 bits) instead of 4–6 words (about 41–62 bits). The Generator page and the editor “Passphrase” button also default to 10 words (the slider now goes up to 16).',
+  ] },
+  { v: '0.33.1', date: '2026-11-15', notes: [
+    'Fix: a flat block of colour could cover most of the screen for a moment, for example while typing a password in a dialog. Cause: the 3D card space’s “swell” pushed a card almost onto the camera so it filled the screen, and the cards’ thick edges (extra 3D layers) could be drawn over their own faces in some browsers. The swell is now a short, safe push; no card can get close to the camera on any screen size; each floating card is a single layer with a solid edge drawn toward the middle of the screen; and the cards rest behind Home while a dialog is open.',
+    'Lighter on the graphics card: panels no longer blur the moving cards behind them (they use a near-solid fill while the card space shows), the cards are positioned once per frame instead of by stacked CSS animations, and there are about a hundred fewer 3D layers.',
+  ] },
+  { v: '0.33.0', date: '2026-11-15', notes: [
+    'Thick cards and windows: the floating cards in the 3D card space are now real slabs, a face with layered depth behind it that shows as an edge when they turn, and the sign-in, create-profile and import windows and the Home widgets have a solid edge that shifts as they lean toward your pointer. Dialogs get the edge too.',
+    'Adjust it yourself: Settings → Effects has Card thickness (0–28 px, 0 makes everything flat), 3D tilt (0–12°) and a new Card float (0–10: windows and widgets drift gently, and hold still under your pointer or while you type), next to the 3D card space switch. The sign-in and create screens have a “3D effects” button in the corner with the same controls, so you can tune it before you are signed in. What you set comes with you when you unlock or create the profile.',
+  ] },
+  { v: '0.32.0', date: '2026-11-15', notes: [
+    'The sign-in, create-profile, add-a-profile and import screens, and the Home page, now sit in a 3D card space: item cards (Login, Payment card, Wi-Fi, Crypto wallet, Passport…) flow around you on their own orbits at different depths and speeds, always turning to face you, drifting past the sides, away behind the cards you use and swooping in close again. They show only category names and blurred placeholder bars, never anything from your vault.',
+    'The cards you use fly in from depth, lean toward the pointer with a moving sheen, and the whole space swells toward you for a moment while a key is being derived (unlocking, creating a profile, opening or restoring a backup). The import dialog leans toward the pointer too, with the cards visible behind it.',
+    'It is all plain CSS 3D, so nothing extra is loaded and it works in the offline copy. Turn it off with Settings → Effects → “3D card space”. With animations off, or “reduce motion” on your device, the cards hold still and nothing flies in.',
+  ] },
+  { v: '0.31.0', date: '2026-11-15', notes: [
+    'New item: the “Choose a category” step is now a 3D carousel. All 28 categories are cards on a ring that flows around you: they pop out of the centre one after another, drift in a slow wave, the card in front grows and tilts toward your pointer, and the ones behind turn back to face you. Drag, swipe, scroll or use the arrow keys to spin it; click the front card (or press Enter) to create that kind of item. Group chips jump to Everyday, Money, Health and so on, and the caption shows the fields each category holds.',
+    'A 3D / List switch at the top keeps the plain grouped list one tap away, and your choice is remembered on this device. With animations off in Settings, or “reduce motion” on your device, the list is shown first and the carousel (if you pick it) holds still instead of drifting. It is plain CSS 3D, so nothing extra is loaded and it works in the offline copy.',
+  ] },
+  { v: '0.30.0', date: '2026-11-15', notes: [
+    'New: a 3D tour of VaultManager at experience/ (link on the sign-in screen: “Take the 3D tour”). The whole page is one live 3D scene: a pocket vault you can drag to spin, that opens into seven labelled parts, repaints in five colours, and whose screen runs a small playable game (Z to jump, X to slide; the 3D buttons work too).',
+    'Scrolling moves the camera and the clock from dawn to night through nine chapters (profiles, welcome and tour, items, inside, system menu and settings, tools, play, night watch), and each new chapter sets off a powder burst behind the vault. “Chart a new item” gathers a particle cloud into the icon of each of the 28 item categories. The passphrase button there runs the app’s real generator.',
+    'The tour is a separate page: the vault app itself is unchanged, still loads nothing from outside, and the tour is not part of the offline copy or the native apps. three.js is bundled locally (MIT). Photos, powder stills and the music loop were made with Higgsfield; sound is off until you turn it on, and motion is reduced when your device asks for that.',
+  ] },
   { v: '0.29.2', date: '2026-11-15', notes: [
     'Import a profile: the second step is now centred — the profile name, the picture and its Letter / Emoji / Photo buttons, the “use the backup password” choice, the confirmation box and the Create profile button all sit on the centre line, on desktop and phone.',
   ] },

@@ -27,6 +27,7 @@ const G = {
   crypto: ['<circle cx="12" cy="12" r="9"/><path d="M9.5 7.5v9M9.5 8.5h4a1.8 1.8 0 010 3.5h-4m0 0h4.5a1.8 1.8 0 010 3.5H9.5M12 6v1.5M12 16.5V18"/>', '🪙', ['#fbbf24', '#f59e0b']],
   insurance: ['<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/>', '🛡️', ['#34d399', '#16a34a']],
   identity: ['<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M5.5 16c.5-2 2-3 3.5-3s3 1 3.5 3M14 10h4M14 14h4"/>', '🪪', ['#f59e0b', '#ef4444']],
+  social: ['<circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="M8.2 10.8l7.6-3.6M8.2 13.2l7.6 3.6"/>', '💬', ['#f472b6', '#db2777']],
   voter: ['<rect x="4" y="12" width="16" height="9" rx="2"/><path d="M8 15.5h8M9 3h6v6H9z"/><path d="M10.5 6l1 1 2-2"/>', '🗳️', ['#f59e0b', '#ef4444']],
   photoid: ['<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10" r="1.5"/><path d="M3 17l5-4 4 3 3-2 6 4"/>', '🖼️', ['#f59e0b', '#ef4444']],
   library: ['<path d="M4 4h4v16H4zM10 4h4v16h-4zM16 5l4-1 2 15-4 1z"/>', '📚', ['#f59e0b', '#ef4444']],

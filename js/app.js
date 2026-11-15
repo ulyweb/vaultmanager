@@ -5,6 +5,8 @@ if (window.top !== window.self) { document.documentElement.textContent = 'VaultM
 import { h, clear, setLabel, clearClipboardNow, confirmDialog, buzz, closeAllModals, closeTopModal, modalOpen, modal, toast, copyText } from './dom.js';
 import { VaultStore } from './vault.js';
 import { clearOpenFields } from './fieldlock.js';
+import { mountSpace } from './space3d.js';
+import { gateFxControl } from './gate-fx.js';
 import { available } from './crypto.js';
 import { estimate } from './strength.js';
 import { generateStrongPassphrase } from './generator.js';
@@ -133,12 +135,22 @@ function setTheme(v) { store.settings.theme = v; applyTheme(); saveSoon(); }
 
 /* tilt toward the pointer (widgets, sign-in card) */
 document.addEventListener('pointermove', (e) => {
-  const L = curLook(); if (!L.fxTilt || !L.animations || !e.target.closest) return;
-  const el = e.target.closest('.widget, .gate-card'); if (!el) return;
+  const L = curLook(); if (!L.animations || !e.target.closest) return;
+  const tilt = reducedMotion() ? 0 : L.fxTilt; if (!tilt) return;
+  const el = e.target.closest('.widget, .gate-card, .modal-sheet.m3d'); if (!el) return;
   const r = el.getBoundingClientRect(), px = (e.clientX - r.left) / r.width - 0.5, py = (e.clientY - r.top) / r.height - 0.5;
-  el.style.setProperty('--rx', (-py * 2 * L.fxTilt).toFixed(2) + 'deg'); el.style.setProperty('--ry', (px * 2 * L.fxTilt).toFixed(2) + 'deg');
+  el.style.setProperty('--rx', (-py * 2 * tilt).toFixed(2) + 'deg'); el.style.setProperty('--ry', (px * 2 * tilt).toFixed(2) + 'deg');
+  el.style.setProperty('--mx', ((px + 0.5) * 100).toFixed(1) + '%'); el.style.setProperty('--my', ((py + 0.5) * 100).toFixed(1) + '%');   // where the sheen follows the pointer
+  el.style.setProperty('--ex', (0.5 - px * 1.1).toFixed(2)); el.style.setProperty('--ey', (0.8 - py * 1.1).toFixed(2));   // which way the thick edge shows
 });
-document.addEventListener('pointerleave', (e) => { if (e.target.classList && e.target.matches && e.target.matches('.widget, .gate-card')) { e.target.style.setProperty('--rx', '0deg'); e.target.style.setProperty('--ry', '0deg'); } }, true);
+document.addEventListener('pointerleave', (e) => { if (e.target.classList && e.target.matches && e.target.matches('.widget, .gate-card, .modal-sheet.m3d')) { for (const k of ['--rx', '--ry']) e.target.style.setProperty(k, '0deg'); for (const k of ['--ex', '--ey']) e.target.style.removeProperty(k); } }, true);
+
+/* the 3D card space behind the sign-in, create, import and Home screens */
+const space = mountSpace();
+ctx.surge = () => space.surge();
+/* tuning the 3D look from the sign-in / create screens: applied and cached at once, then folded into the profile's own settings on unlock / create */
+ctx.setGateLook = (patch) => { bootLook = normalizeLook({ ...bootLook, ...patch }); ctx.S.pendingLook = { ...(ctx.S.pendingLook || {}), ...patch }; applyTheme(); };
+const syncSpace = () => space.set(!store.unlocked ? 'gate' : ctx.S.view === 'home' && !ctx.S.sel ? 'home' : 'off');
 
 /* unlock animation: a short, skippable log of what actually just happened */
 function showBoot(L, done) {
@@ -167,6 +179,7 @@ function onUnlocked(note) {
   ctx.S.view = L.startPage === 'home' ? 'home' : 'all';
   if (ctx.S.lastView && ctx.S.lastProfile === ctx.S.profileId) ctx.S.view = ctx.S.lastView;   // after an auto-lock you land where you were, not back on Home
   ctx.S.lastView = null;
+  if (ctx.S.pendingLook) { store.settings.look = normalizeLook({ ...store.settings.look, ...ctx.S.pendingLook }); ctx.S.pendingLook = null; saveSoon(); }   // 3D tweaks made on the sign-in screen
   applyTheme(); armAutolock(); draw();
   const after = () => { armSync(); tour.maybeWelcome(); if (note === 'recovery') toast('Unlocked with your recovery key — set a new master password in Settings.', 'ok', 7000); };
   if (L.animations && L.bootAnim && !reducedMotion()) showBoot(L, after); else after();
@@ -256,7 +269,7 @@ function pwInput(id, label, auto) {
 const contactAdminDialog = () => admin.contactAdmin({ profileName: store && store.unlocked ? (ctx.profile() || {}).name || '' : '' });
 
 const gateFoot = () => h('p', { class: 'gate-foot' }, h('span', { class: 'gate-ver', text: 'VaultManager v' + APP_VERSION + (isSingleFile() ? ' · offline copy' : '') }), ...gateFootLinks());
-const gateFootLinks = () => (admin.enabled() || canOfferCopy() ? [ admin.enabled() ? h('button', { type: 'button', class: 'linkbtn', on: { click: contactAdminDialog } }, '{{mailsend}} Contact admin') : null, canOfferCopy() ? h('button', { type: 'button', class: 'linkbtn', on: { click: async () => { try { await saveOfflineCopy(); } catch (e) { toast(e.message, 'err', 7000); } } } }, '{{download}} Download the offline copy — one file, ' + OFFLINE_NAME + ' (v' + APP_VERSION + ')') : null] : []);
+const gateFootLinks = () => (admin.enabled() || canOfferCopy() ? [ canOfferCopy() ? h('a', { class: 'linkbtn tourlink', href: 'experience/' }, '{{sparkles}} Take the 3D tour') : null, admin.enabled() ? h('button', { type: 'button', class: 'linkbtn', on: { click: contactAdminDialog } }, '{{mailsend}} Contact admin') : null, canOfferCopy() ? h('button', { type: 'button', class: 'linkbtn', on: { click: async () => { try { await saveOfflineCopy(); } catch (e) { toast(e.message, 'err', 7000); } } } }, '{{download}} Download the offline copy — one file, ' + OFFLINE_NAME + ' (v' + APP_VERSION + ')') : null] : []);
 
 function profileHead(p, sub) {
   return h('div', { class: 'brand prof' }, profileAvatar(p, 68), h('div', null, h('h1', { text: p.name }), h('p', { text: sub })));
@@ -294,9 +307,9 @@ function gateCreate({ first }) {
     if (p1.input.value !== p2.input.value) { err.textContent = 'The two passwords do not match.'; return; }
     const pol = ctx.passwordPolicy(p1.input.value); if (pol) { err.textContent = pol; return; }
     if (!ack.checked) { err.textContent = 'Please confirm that you understand there is no password recovery.'; return; }
-    btn.disabled = true; btn.classList.add('busy'); btn.textContent = 'Deriving key (600,000 rounds)…';
+    btn.disabled = true; btn.classList.add('busy'); btn.textContent = 'Deriving key (600,000 rounds)…'; ctx.surge();
     const id = newProfileId(), k = keysFor(id), st = new VaultStore(env.storage, k.vault, env.blobs, k.fails);
-    try { await st.create(p1.input.value); st.data.settings.displayName = nm; st.data.settings.theme = themeChoice; await st.save(); } catch (x) { err.textContent = x.message; btn.disabled = false; btn.classList.remove('busy'); btn.textContent = first ? 'Create my vault' : 'Create profile'; return; }
+    try { await st.create(p1.input.value); st.data.settings.displayName = nm; st.data.settings.theme = themeChoice; { const { fx3d, fxTilt, fx3dThick, fx3dFloat } = bootLook; st.data.settings.look = normalizeLook({ fx3d, fxTilt, fx3dThick, fx3dFloat }); } ctx.S.pendingLook = null; await st.save(); } catch (x) { err.textContent = x.message; btn.disabled = false; btn.classList.remove('busy'); btn.textContent = first ? 'Create my vault' : 'Create profile'; return; }
     env.profiles.add({ id, name: nm, avatar: picker.get() }); env.profiles.setLast(id);
     if (notifyOn) admin.notifyNewProfile(nm, { contact: contact.value.trim().slice(0, 120) });
     store = st; ctx.S.profileId = id; ctx.S.gate = null;
@@ -359,7 +372,7 @@ function gateUnlock(profile) {
   const form = h('form', { novalidate: true, on: { submit: async (e) => {
     e.preventDefault(); err.textContent = '';
     if (store.delayLeft() > 0) { throttle(); return; }
-    btn.disabled = true; btn.textContent = 'Unlocking…';
+    btn.disabled = true; btn.textContent = 'Unlocking…'; ctx.surge();   // the cards swell while the key is derived
     try {
       await store.unlock(mode === 'password' ? { password: p1.input.value } : { recovery: rk.value });
       p1.input.value = ''; rk.value = '';
@@ -404,7 +417,7 @@ function drawGate() {
   else if (ctx.S.gate === 'create') card = gateCreate({ first: false });
   else if (ctx.S.gate === 'picker' && list.length > 0) card = gatePicker(list);
   else { let p = env.profiles.get(ctx.S.profileId); if (!p) { p = list[0]; openProfile(p.id); applyTheme(); } card = gateUnlock(p); }
-  root.append(h('div', { class: 'gate' }, h('div', null, storageWarn, card)));
+  root.append(h('div', { class: 'gate' }, h('div', null, storageWarn, card)), gateFxControl(ctx));
   const f = root.querySelector('input'); if (f) f.focus();
 }
 
@@ -572,6 +585,7 @@ function drawMain() {
 }
 
 function draw() {
+  syncSpace();
   if (!store.unlocked) { shell = null; drawGate(); return; }
   if (!shell) { buildShell(); clear(root).append(shell.el); }
   drawSide(); drawMain(); drawDock(); drawMbar(); drawTitle(); drawSecBar();
