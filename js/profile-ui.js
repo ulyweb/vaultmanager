@@ -5,7 +5,7 @@ import { h, clear, modal, toast, readFileText, download } from './dom.js';
 import { decryptProfile } from './vault.js';
 import { createProfileFromImport, sanitizeAvatar } from './profiles.js';
 import { meter, passwordRow } from './views.js';
-import { generatePassphrase } from './generator.js';
+import { generateStrongPassphrase } from './generator.js';
 import { fmtDate, fmtInt, stamp } from './util.js';
 
 const hue = (s) => { let x = 0; for (const c of String(s || '?')) x = (x * 31 + c.codePointAt(0)) >>> 0; return x % 360; };
@@ -36,19 +36,22 @@ export async function cropPhoto(file) {
 export function avatarPicker(initial, nameOf = () => '', onChange = null) {
   let state = sanitizeAvatar(initial);
   const prev = h('div', { class: 'avprev' }), grid = h('div', { class: 'emojigrid', hidden: true }), err = h('p', { class: 'err photo-err', role: 'alert' });
-  const draw = () => clear(prev).append(profileAvatar({ name: nameOf(), avatar: state }, 72));
-  const set = (a) => { state = sanitizeAvatar(a); draw(); if (onChange) onChange(state); };
-  for (const e of EMOJIS) grid.append(h('button', { type: 'button', class: 'emo', 'aria-label': 'Emoji ' + e, on: { click: () => { set({ type: 'emoji', value: e }); grid.hidden = true; } } }, e));
+  const kinds = {}, mark = () => { for (const [k, b] of Object.entries(kinds)) { b.setAttribute('aria-pressed', String(state.type === k)); b.classList.toggle('on', state.type === k); } };
+  const draw = () => { clear(prev).append(profileAvatar({ name: nameOf(), avatar: state }, 72)); mark(); };
+  const pop = () => { prev.classList.remove('pop'); void prev.offsetWidth; prev.classList.add('pop'); };   // a little bounce whenever the picture changes
+  const set = (a) => { state = sanitizeAvatar(a); draw(); pop(); if (onChange) onChange(state); };
+  EMOJIS.forEach((e, i) => { const b = h('button', { type: 'button', class: 'emo', 'aria-label': 'Emoji ' + e, on: { click: () => { set({ type: 'emoji', value: e }); grid.hidden = true; } } }, e); b.style.setProperty('--i', String(i)); grid.append(b); });
   const file = h('input', { type: 'file', accept: 'image/*', class: 'offscreen', 'aria-label': 'Profile photo', on: { change: async (ev) => {
     err.textContent = ''; const f = ev.target.files[0]; ev.target.value = ''; if (!f) return;
     try { set({ type: 'photo', value: await cropPhoto(f) }); } catch { err.textContent = 'Could not read that picture.'; }
   } } });
   draw();
   const el = h('div', { class: 'avpick' }, prev, h('div', null, h('div', { class: 'row wrap' },
-    h('button', { type: 'button', class: 'btn sm', on: { click: () => set({ type: 'letter' }) } }, 'Letter'),
-    h('button', { type: 'button', class: 'btn sm', on: { click: () => { grid.hidden = !grid.hidden; } } }, 'Emoji'),
-    h('button', { type: 'button', class: 'btn sm', on: { click: () => file.click() } }, '{{camera}} Photo…'), file), grid, err));
-  return { el, get: () => state, refresh: draw };
+    kinds.letter = h('button', { type: 'button', class: 'btn sm avbtn', 'aria-pressed': 'false', on: { click: () => { grid.hidden = true; set({ type: 'letter' }); } } }, '{{letter}} Letter'),
+    kinds.emoji = h('button', { type: 'button', class: 'btn sm avbtn', 'aria-pressed': 'false', on: { click: () => { grid.hidden = !grid.hidden; } } }, '{{smile}} Emoji'),
+    kinds.photo = h('button', { type: 'button', class: 'btn sm avbtn', 'aria-pressed': 'false', on: { click: () => file.click() } }, '{{camera}} Photo…'), file), grid, err));
+  draw();
+  return { el, get: () => state, refresh: () => { clear(prev).append(profileAvatar({ name: nameOf(), avatar: state }, 72)); } };
 }
 
 const slug = (s) => String(s || 'profile').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 30) || 'profile';
@@ -85,7 +88,7 @@ export function importProfileDialog(ctx, { onDone } = {}) {
   const fname = h('span', { class: 'hint', text: 'No file chosen' });
   const paste = h('textarea', { class: 'ta', rows: '2', placeholder: 'Or paste the backup text here (starts with VMP1: or VMX1:)', 'aria-label': 'Backup text', spellcheck: 'false' });
   const bpw = h('input', { class: 'inp mono', type: 'password', autocomplete: 'off', 'aria-label': 'Backup password' });
-  const err1 = h('p', { class: 'err', role: 'alert' }), step1 = h('div'), step2 = h('div', { hidden: true });
+  const err1 = h('p', { class: 'err', role: 'alert' }), step1 = h('div'), step2 = h('div', { class: 'impcenter', hidden: true });
   const openBtn = h('button', { class: 'btn primary', type: 'button' }, 'Open backup');
   step1.append(h('p', { class: 'hint', text: 'Bring a profile back from an encrypted backup (.vmprofile from “Export profile”, or a .vmvault backup). The whole database — items, attachments, settings — is restored into a new profile with a master password you choose now.' }),
     h('div', { class: 'row wrap' }, h('button', { class: 'btn', type: 'button', on: { click: () => file.click() } }, '{{folder}} Choose backup file'), file, fname), paste,
@@ -100,10 +103,10 @@ export function importProfileDialog(ctx, { onDone } = {}) {
   const createBtn = h('button', { class: 'btn primary', type: 'button' }, 'Create profile');
   /* optional: reuse the backup password (just typed in step 1) as this profile's master password — the backup file never contains the master password itself */
   const same = h('input', { type: 'checkbox', id: 'f_samepw' });
-  const own = h('div', null,
+  const own = h('div', { class: 'own' },
     h('div', { class: 'field' }, h('label', { text: 'New master password for this profile' }), p1, meterBox, h('p', { class: 'hint', text: '12+ characters. It can be different from the one the backup came from.' })),
     h('div', { class: 'field' }, h('label', { text: 'Repeat master password' }), p2),
-    h('button', { class: 'btn sm', type: 'button', on: { click: () => { const pw = generatePassphrase({ words: 6 }); p1.value = p2.value = pw; p1.type = p2.type = 'text'; p1.dispatchEvent(new Event('input')); } } }, '{{bolt}} Suggest a passphrase'));
+    h('button', { class: 'btn sm', type: 'button', title: 'Ten random words: about 103 bits of entropy', on: { click: () => { const pw = generateStrongPassphrase(); p1.value = p2.value = pw; p1.type = p2.type = 'text'; p1.dispatchEvent(new Event('input')); } } }, '{{bolt}} Suggest a passphrase'));
   const sameNote = h('p', { class: 'hint', hidden: true, text: 'This profile will open with the same password you just typed to open the backup. Handy, but it means the backup file and the profile share one password, so keep that password strong.' });
   same.addEventListener('change', () => { own.hidden = same.checked; sameNote.hidden = !same.checked; });
   step2.append(summary, h('div', { class: 'field' }, h('label', { text: 'Profile name' }), name), picker.el,

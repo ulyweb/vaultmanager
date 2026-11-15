@@ -853,3 +853,52 @@ html[data-barlabels="0"] .topbar .newbtn { padding: 6px 10px 6px 8px; }
 .gate-card .or { text-align: center; }
 .gate-card .avpick { display: grid; justify-items: center; gap: 12px; }
 .gate-card .avpick .row { justify-content: center; }
+
+/* ---------- create-profile screen: theme picker, live avatar buttons, animated Create button ----------
+   Motion follows Settings → Look → Animations (html[data-fxanim=on]) and is off for people who prefer reduced motion. */
+.themefield .seg { width: 100%; display: grid; grid-template-columns: repeat(3, 1fr); }
+.themefield .seg button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 38px; cursor: pointer; transition: background-color .2s, color .2s, transform .15s; }
+.themefield .seg button:hover { color: var(--ink); }
+.avbtn[aria-pressed=true] { border-color: var(--accent); background: rgba(var(--accent-rgb), .16); color: var(--accent); }
+.avprev { position: relative; }
+.avprev .pav { position: relative; z-index: 1; }
+html.theme-fade, html.theme-fade body, html.theme-fade .panel, html.theme-fade .btn, html.theme-fade .inp, html.theme-fade .seg, html.theme-fade .seg button { transition: background-color .4s ease, color .4s ease, border-color .4s ease, box-shadow .4s ease; }
+@keyframes av-pop { 0% { transform: scale(.6) rotate(-12deg); } 55% { transform: scale(1.14) rotate(4deg); } 100% { transform: none; } }
+@keyframes av-spin { to { transform: rotate(360deg); } }
+@keyframes emo-in { from { opacity: 0; transform: translateY(8px) scale(.6); } to { opacity: 1; transform: none; } }
+@keyframes cta-flow { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+@keyframes cta-shine { 0%, 62% { transform: translateX(-130%) skewX(-18deg); } 100% { transform: translateX(260%) skewX(-18deg); } }
+@keyframes cta-breathe { 0%, 100% { box-shadow: 0 2px 12px rgba(var(--accent-rgb), .25); } 50% { box-shadow: 0 4px 26px rgba(var(--accent-rgb), .5); } }
+@keyframes cta-busy { to { background-position: 40px 0; } }
+@keyframes seg-pop { 0% { transform: scale(.7) rotate(-30deg); } 60% { transform: scale(1.25) rotate(8deg); } 100% { transform: none; } }
+html[data-fxanim=on] .avpick .avbtn { transition: transform .18s cubic-bezier(.2, 1.3, .4, 1), box-shadow .2s, background-color .2s, border-color .2s; }
+html[data-fxanim=on] .avpick .avbtn:hover { transform: translateY(-3px) scale(1.06); box-shadow: 0 6px 16px rgba(var(--accent-rgb), .28); }
+html[data-fxanim=on] .avpick .avbtn:active { transform: scale(.94); }
+html[data-fxanim=on] .avpick .avbtn:hover .ico { animation: icon-bob .6s; }
+html[data-fxanim=on] .avpick .avbtn[aria-pressed=true] .ico { animation: seg-pop .5s; }
+html[data-fxanim=on] .avprev.pop .pav { animation: av-pop .5s cubic-bezier(.2, 1.4, .4, 1); }
+html[data-fxanim=on] .gate-card .avprev::before { content: ''; position: absolute; inset: -4px; border-radius: 50%; background: conic-gradient(from 0deg, var(--accent), #7c5cff, #ff7ac8, var(--accent)); filter: blur(7px); opacity: .55; animation: av-spin 7s linear infinite; z-index: 0; }
+html[data-fxanim=on] .emojigrid:not([hidden]) .emo { animation: emo-in .32s cubic-bezier(.2, 1.3, .4, 1) both; animation-delay: calc(var(--i, 0) * 14ms); }
+html[data-fxanim=on] .emo { transition: transform .15s cubic-bezier(.2, 1.4, .4, 1), background-color .2s, border-color .2s; }
+html[data-fxanim=on] .emo:hover { transform: scale(1.25) rotate(-6deg); }
+html[data-fxanim=on] .themefield .seg button:hover { transform: translateY(-1px); }
+html[data-fxanim=on] .themefield .seg button.on .ico { animation: seg-pop .5s; }
+html[data-fxanim=on] .btn.cta { position: relative; overflow: hidden; background: linear-gradient(110deg, var(--accent), #7c5cff, var(--accent)); background-size: 220% 100%; animation: cta-flow 7s ease-in-out infinite, cta-breathe 3.2s ease-in-out infinite; transition: transform .18s cubic-bezier(.2, 1.3, .4, 1), filter .2s; }
+html[data-fxanim=on] .btn.cta::after { content: ''; position: absolute; top: 0; bottom: 0; left: 0; width: 38%; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .5), transparent); animation: cta-shine 4.2s ease-in-out infinite; pointer-events: none; }
+html[data-fxanim=on] .btn.cta:hover { transform: translateY(-2px) scale(1.015); }
+html[data-fxanim=on] .btn.cta:active { transform: scale(.97); }
+html[data-fxanim=on] .btn.cta.busy { background: repeating-linear-gradient(45deg, var(--accent) 0 14px, color-mix(in srgb, var(--accent) 70%, #fff) 14px 28px); background-size: 40px 100%; animation: cta-busy .8s linear infinite; }
+html[data-fxanim=on] .btn.cta.busy::after { display: none; }
+@media (prefers-reduced-motion: reduce) { html .avprev::before, html .btn.cta, html .btn.cta::after, html .emo, html .avbtn { animation: none !important; } }
+html[data-icons] .themeseg .ico:not(.cat) { color: inherit; filter: none; }   /* the sun and moon follow the pill's colour, so they stay readable on light and dark */
+
+/* Import a profile, step 2: the name, picture, password choice, confirmation and Create button all sit on the centre line */
+.impcenter .field > label { display: block; text-align: center; }
+.impcenter .inp[aria-label="Profile name"] { text-align: center; }
+.impcenter .avpick { display: grid; justify-items: center; gap: 12px; margin: 14px 0; }
+.impcenter .avpick .row, .impcenter .row { justify-content: center; }
+.impcenter .emojigrid { justify-self: stretch; }
+.impcenter .chk { justify-content: center; text-align: center; }
+.impcenter .hint, .impcenter .err { text-align: center; }
+.impcenter .own > .btn { display: flex; margin: 8px auto 0; }
+.impcenter .kv { margin-bottom: 10px; }

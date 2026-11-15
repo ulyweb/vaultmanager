@@ -1758,3 +1758,59 @@ test('v0.28.1: deleting an item asks first; Cancel keeps it, confirming moves it
   assert.deepEqual(problems.filter((p) => !/Failed to load resource/.test(p)), []);
   await ctx.close();
 });
+
+test('v0.29.0: the create-profile screen has an Appearance picker (kept by the new profile), live avatar buttons and an animated Create button', async () => {
+  const { ctx, page, problems } = await newPage({ colorScheme: 'dark' });
+  await page.goto(base); await page.waitForSelector('#pw1');
+  const theme = () => page.evaluate(() => document.documentElement.dataset.theme);
+  assert.equal(await theme(), 'dark');
+  assert.deepEqual(await page.locator('.themeseg button').allTextContents().then((t) => t.map((x) => x.trim())), ['Auto', 'Dark', 'Light']);
+  await page.locator('.themeseg button[data-theme-choice=light]').click(); assert.equal(await theme(), 'light', 'the screen switches at once');
+  assert.equal(await page.getAttribute('.themeseg button[data-theme-choice=light]', 'aria-pressed'), 'true');
+  // avatar buttons show which kind is picked, and the preview reacts
+  const av = page.locator('.avpick');
+  assert.equal(await av.getByRole('button', { name: 'Letter', exact: true }).getAttribute('aria-pressed'), 'true');
+  await av.getByRole('button', { name: 'Emoji', exact: true }).click(); await page.locator('.emojigrid .emo').first().click();
+  assert.equal(await av.getByRole('button', { name: 'Letter', exact: true }).getAttribute('aria-pressed'), 'false');
+  assert.equal(await av.getByRole('button', { name: 'Emoji', exact: true }).getAttribute('aria-pressed'), 'true');
+  assert.ok(await page.locator('.avprev.pop').count(), 'the preview does its little bounce');
+  assert.ok(await page.locator('button.btn.cta[type=submit]').isVisible(), 'the Create button carries the animated style');
+  await page.getByRole('button', { name: /Suggest a passphrase/ }).click();   // 10 random words: at least 100 bits
+  const bits = Number(/~(\d+) bits/.exec(await page.locator('.gate-card .meter-label').textContent())[1]); assert.ok(bits >= 100, 'suggested passphrase is ' + bits + ' bits');
+  assert.equal((await page.inputValue('#pw1')).split('-').length, 10);
+  await page.fill('#pw1', MASTER); await page.fill('#pw2', MASTER); await page.check('#ack'); await page.click('button[type=submit]');
+  await page.getByRole('button', { name: 'Skip for now' }).click(); await dismissWelcome(page); await page.waitForSelector('.topbar');
+  assert.equal(await theme(), 'light', 'the new vault opens in the chosen theme');
+  await page.reload(); await page.waitForSelector('#upw'); assert.equal(await theme(), 'light', 'and the sign-in screen remembers it');
+  await page.fill('#upw', MASTER); await page.keyboard.press('Enter'); await page.waitForSelector('.topbar', { timeout: 90000 });
+  assert.equal(await theme(), 'light'); assert.equal((await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)) <= 1, true);
+  assert.deepEqual(problems.filter((p) => !/Failed to load resource/.test(p)), []);
+  await ctx.close();
+});
+
+test('v0.29.2: importing a profile — name, picture, password choice, confirmation and Create button are centred', async () => {
+  const A = await newPage(); await createVault(A.page);
+  await settingsTab(A.page, 'General'); await A.page.getByRole('button', { name: /Export whole profile/ }).first().click();
+  await A.page.fill('input[aria-label="Backup password"]', 'backup-pass-phrase-1'); await A.page.fill('input[aria-label="Confirm Backup password"]', 'backup-pass-phrase-1');
+  const [dl] = await Promise.all([A.page.waitForEvent('download'), A.page.getByRole('button', { name: 'Download backup' }).click()]);
+  const text = fs.readFileSync(await dl.path(), 'utf8'); await A.ctx.close();
+  for (const [label, opts] of [['desktop', {}], ['phone', (({ defaultBrowserType, ...d }) => d)(devices['iPhone SE'])]]) {
+    const B = await newPage(opts); await B.page.goto(base); await B.page.waitForSelector('#pw1');
+    await B.page.getByRole('button', { name: /Import a profile backup/ }).click();
+    await B.page.fill('textarea[aria-label="Backup text"]', text); await B.page.fill('input[aria-label="Backup password"]', 'backup-pass-phrase-1');
+    await B.page.getByRole('button', { name: 'Open backup' }).click(); await B.page.waitForSelector('#f_samepw');
+    await B.page.check('#f_samepw');
+    const off = await B.page.evaluate(() => {
+      const body = document.querySelector('.impcenter'), br = body.getBoundingClientRect(), mid = br.left + br.width / 2;
+      const d = (r) => Math.round(Math.abs(r.left + r.width / 2 - mid));
+      const content = (el) => { const r = document.createRange(); r.selectNodeContents(el); return r.getBoundingClientRect(); };
+      const nameInput = document.querySelector('.impcenter input[aria-label="Profile name"]'), cs = getComputedStyle(nameInput);
+      const btns = [...document.querySelectorAll('.impcenter .avpick .avbtn')].map((b) => b.getBoundingClientRect()), l = Math.min(...btns.map((b) => b.left)), r = Math.max(...btns.map((b) => b.right));
+      return { nameLabel: d(content(document.querySelector('.impcenter .field > label'))), nameText: cs.textAlign === 'center' ? 0 : 99, avatar: d(document.querySelector('.impcenter .avprev .pav').getBoundingClientRect()), avatarButtons: d({ left: l, width: r - l }),
+        samePw: d(content(document.querySelector('label[for=f_samepw]'))), create: d(document.querySelector('.impcenter .row .btn.primary').getBoundingClientRect()) };
+    });
+    for (const [k, v] of Object.entries(off)) assert.ok(v <= 10, `${label}: ${k} is ${v}px off the centre line`);
+    assert.equal(await B.page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth <= 1), true, label + ': no sideways scroll');
+    await B.ctx.close();
+  }
+});

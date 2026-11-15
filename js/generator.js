@@ -72,6 +72,11 @@ export function generatePassphrase(opt = {}) {
   return words.join(o.separator === undefined ? '-' : o.separator);
 }
 
+/* What every "Suggest a passphrase" button for a MASTER password hands out: 10 random words from the 1,296-word list
+   = 10 × 10.34 ≈ 103 bits (6 words were only ≈ 62). Still easy to read, write down and type. */
+export const STRONG_WORDS = 10;
+export const generateStrongPassphrase = () => generatePassphrase({ words: STRONG_WORDS });
+
 export function generatePin(len = 6) {
   const n = Math.max(4, Math.min(24, Math.floor(len)));
   return Array.from({ length: n }, () => randInt(10)).join('');

@@ -866,3 +866,11 @@ test('field lock: seed phrase and 25th word sealed under their own passcode', as
   assert.ok(!JSON.stringify(v.get(it.id).revisions).includes('one two three'), 'revisions hold the sealed text, not the words');
   assert.ok(!JSON.stringify(v.data).includes('one two three'));
 });
+
+test('master-password suggestion is at least 100 bits (10 words), well above the old 6 words (~62 bits)', async () => {
+  const { generateStrongPassphrase, STRONG_WORDS, passphraseEntropy } = await import('../js/generator.js');
+  assert.ok(passphraseEntropy({ words: STRONG_WORDS }) >= 100, 'formula: ' + passphraseEntropy({ words: STRONG_WORDS }));
+  assert.ok(passphraseEntropy({ words: 6 }) < 70);
+  const p = generateStrongPassphrase(); assert.equal(p.split('-').length, 10);
+  assert.ok(estimate(p).bits >= 100, 'estimator agrees: ' + estimate(p).bits); assert.notEqual(p, generateStrongPassphrase());
+});

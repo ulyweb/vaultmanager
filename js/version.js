@@ -1,6 +1,6 @@
 /* Application version, data-format versions and changelog (shown in Settings → About). */
 
-export const APP_VERSION = '0.28.1';
+export const APP_VERSION = '0.29.2';
 export const APP_NAME = 'VaultManager';
 export const REPO_URL = 'https://github.com/ulyweb/vaultmanager';
 
@@ -16,6 +16,17 @@ export const FORMATS = [
 ];
 
 export const CHANGELOG = [
+  { v: '0.29.2', date: '2026-11-15', notes: [
+    'Import a profile: the second step is now centred — the profile name, the picture and its Letter / Emoji / Photo buttons, the “use the backup password” choice, the confirmation box and the Create profile button all sit on the centre line, on desktop and phone.',
+  ] },
+  { v: '0.29.1', date: '2026-11-15', notes: [
+    'Stronger “Suggest a passphrase”: it now makes 10 random words (about 103 bits of entropy, rated Excellent) instead of 6 (about 62 bits). This applies to the master password when you create a profile, import a profile backup, or change your master password.',
+  ] },
+  { v: '0.29.0', date: '2026-11-15', notes: [
+    'Create-profile screen: a new Appearance choice (Auto, Dark or Light). The screen switches the moment you pick, and the new profile keeps the choice (you can change it later in Settings).',
+    'The Letter, Emoji and Photo buttons are livelier: they show which kind is chosen, lift and wiggle their icon under the pointer, the picture bounces when it changes, a soft colour ring turns around it, and the emoji tiles pop in one after another. The Create button flows with colour, shines every few seconds, lifts on hover and shows a moving stripe while the key is being derived.',
+    'All of this follows Settings → Look → Animations and “reduce motion” on your device: with animations off, the screen is calm and static.',
+  ] },
   { v: '0.28.1', date: '2026-11-14', notes: [
     'Deleting an item now asks for confirmation first (“Move to trash?”). Cancel keeps the item; confirming moves it to the trash, where it can be restored for the number of days set in Settings (or until you empty the trash).',
   ] },
