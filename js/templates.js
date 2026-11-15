@@ -5,6 +5,8 @@
    field: { k: key, l: label, kind: text | secret | url | date | multiline | select, options?, gen?, expiry?, mono?, ph? }
      secret    masked in the UI, copy/reveal audited, never indexed by search
      gen       offers the password generator in the editor
+     words     recovery phrase: numbered boxes, one per word, each hidden on its own
+     lockable  can be locked with a passcode of its own (see fieldlock.js)
      expiry    a date that feeds the "expiring soon" report in Vault health */
 
 export const CORE = {
@@ -71,7 +73,7 @@ export const TEMPLATES = {
   ] },
   crypto: { label: 'Crypto wallet', plural: 'Crypto', icon: '{{crypto}}', sub: 'wallet', tip: 'Anyone who gets a recovery seed phrase or private key controls the funds. Keep an offline copy too, never photograph it, and avoid syncing it to devices you do not fully trust.', fields: [
     T('wallet', 'Wallet / exchange'), SEL('kind', 'Type', ['Hardware wallet', 'Software wallet', 'Exchange account', 'Paper wallet', 'Other']), T('network', 'Blockchain / network'), T('address', 'Public address', { mono: true }),
-    { k: 'seed', l: 'Recovery seed phrase', kind: 'multiline', secret: true }, S('privkey', 'Private key'), S('pin', 'Wallet PIN / password', { gen: true }), S('passphrase', 'Extra passphrase (25th word)'),
+    { k: 'seed', l: 'Recovery seed phrase', kind: 'multiline', secret: true, words: true, lockable: true }, S('privkey', 'Private key'), S('pin', 'Wallet PIN / password', { gen: true }), S('passphrase', 'Extra passphrase (25th word)', { lockable: true }),
     U('url', 'Website'), T('username', 'Username / email'), S('password', 'Account password', { gen: true }),
   ] },
   emergency: { label: 'Emergency numbers', plural: 'Emergency', icon: '{{emergency}}', sub: 'phone', fields: [

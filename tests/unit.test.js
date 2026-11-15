@@ -840,3 +840,29 @@ test('description: kept by sanitiseItem, merged, searchable, sealed away by the 
   const l2 = newItem('login', { name: 'x', custom: [{ label: 'a', value: '1', secret: false }, { label: 'b', value: '2', secret: false }] }), r2 = structuredClone(l2); r2.custom.reverse(); r2.ft = { custom: Date.now() + 5000 };
   mergeItem(l2, r2); assert.deepEqual(l2.custom.map((c) => c.label), ['b', 'a'], 'a re-ordered custom list syncs');
 });
+
+test('field lock: seed phrase and 25th word sealed under their own passcode', async () => {
+  const { sealField, openField, fieldValue, relockField, clearOpenFields, isFieldLocked } = await import('../js/fieldlock.js');
+  const opt = { iterations: 100000 };
+  const sealed = await sealField('abandon ability able about', 'seed-code-1', opt);
+  assert.ok(isFieldLocked(sealed) && !sealed.includes('abandon'), 'sealed text does not contain the words');
+  assert.equal(fieldValue(sealed), null, 'a freshly locked field starts closed');
+  await assert.rejects(() => openField(sealed, 'wrong-code-1'), /bad-passcode/);
+  await assert.rejects(() => openField(sealed, 'seed-code-1'), /Too many wrong passcodes/, 'a wrong attempt makes the next one wait');
+  await assert.rejects(() => sealField('x', '12345'), /at least 6/);
+  clearOpenFields();
+  const sealed2 = await sealField('words here', 'seed-code-1', opt); assert.notEqual(sealed2, await sealField('words here', 'seed-code-1', opt), 'every seal is unique');
+  assert.equal(await openField(sealed2, 'seed-code-1'), 'words here'); assert.equal(fieldValue(sealed2), 'words here');
+  relockField(sealed2); assert.equal(fieldValue(sealed2), null);
+  // sanitiseItem keeps a long sealed value whole, and merge treats it like any other field
+  const big = sanitiseItem({ type: 'crypto', name: 'W', fields: { seed: sealed, passphrase: sealed } });
+  assert.equal(big.fields.seed, sealed); assert.equal(big.fields.passphrase, sealed);
+  assert.ok(TEMPLATES.crypto.fields.find((f) => f.k === 'seed').words && TEMPLATES.crypto.fields.find((f) => f.k === 'passphrase').lockable);
+  // earlier versions do not keep the readable text once the field has a passcode
+  const v = new VaultStore(new MemStorage()); await v.create('correct horse battery', FAST);
+  const it = newItem('crypto', { name: 'Ledger', fields: { seed: 'one two three four' } }); await v.add(it);
+  await v.update(it.id, { notes: 'edit' });
+  await v.update(it.id, { fields: { seed: sealed } });
+  assert.ok(!JSON.stringify(v.get(it.id).revisions).includes('one two three'), 'revisions hold the sealed text, not the words');
+  assert.ok(!JSON.stringify(v.data).includes('one two three'));
+});

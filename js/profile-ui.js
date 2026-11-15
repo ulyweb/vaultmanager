@@ -98,10 +98,16 @@ export function importProfileDialog(ctx, { onDone } = {}) {
   let picker = avatarPicker(null, () => name.value);
   name.addEventListener('input', () => picker.refresh());
   const createBtn = h('button', { class: 'btn primary', type: 'button' }, 'Create profile');
-  step2.append(summary, h('div', { class: 'field' }, h('label', { text: 'Profile name' }), name), picker.el,
+  /* optional: reuse the backup password (just typed in step 1) as this profile's master password — the backup file never contains the master password itself */
+  const same = h('input', { type: 'checkbox', id: 'f_samepw' });
+  const own = h('div', null,
     h('div', { class: 'field' }, h('label', { text: 'New master password for this profile' }), p1, meterBox, h('p', { class: 'hint', text: '12+ characters. It can be different from the one the backup came from.' })),
     h('div', { class: 'field' }, h('label', { text: 'Repeat master password' }), p2),
-    h('button', { class: 'btn sm', type: 'button', on: { click: () => { const pw = generatePassphrase({ words: 6 }); p1.value = p2.value = pw; p1.type = p2.type = 'text'; p1.dispatchEvent(new Event('input')); } } }, '{{bolt}} Suggest a passphrase'),
+    h('button', { class: 'btn sm', type: 'button', on: { click: () => { const pw = generatePassphrase({ words: 6 }); p1.value = p2.value = pw; p1.type = p2.type = 'text'; p1.dispatchEvent(new Event('input')); } } }, '{{bolt}} Suggest a passphrase'));
+  const sameNote = h('p', { class: 'hint', hidden: true, text: 'This profile will open with the same password you just typed to open the backup. Handy, but it means the backup file and the profile share one password, so keep that password strong.' });
+  same.addEventListener('change', () => { own.hidden = same.checked; sameNote.hidden = !same.checked; });
+  step2.append(summary, h('div', { class: 'field' }, h('label', { text: 'Profile name' }), name), picker.el,
+    h('label', { class: 'chk', for: 'f_samepw' }, same, '{{lock}} Use the backup password as this profile’s master password'), sameNote, own,
     h('label', { class: 'chk' }, ack, 'I understand that if I forget this master password, nobody can recover this profile.'), err2, h('div', { class: 'row' }, createBtn));
 
   const m = modal({ title: 'Import a profile', sub: 'Restore everything from an encrypted backup', wide: false, body: h('div', null, step1, step2), actions: [{ label: 'Cancel' }] });
@@ -126,13 +132,14 @@ export function importProfileDialog(ctx, { onDone } = {}) {
   createBtn.addEventListener('click', async () => {
     err2.textContent = '';
     if (!name.value.trim()) { err2.textContent = 'Give the profile a name.'; return; }
-    if (p1.value !== p2.value) { err2.textContent = 'The two passwords do not match.'; return; }
-    const pol = ctx.passwordPolicy(p1.value); if (pol) { err2.textContent = pol; return; }
+    const master = same.checked ? bpw.value : p1.value;
+    if (!same.checked && p1.value !== p2.value) { err2.textContent = 'The two passwords do not match.'; return; }
+    const pol = ctx.passwordPolicy(master); if (pol) { err2.textContent = same.checked ? 'The backup password cannot be used as a master password: ' + pol + ' Untick the box and choose a new master password.' : pol; return; }
     if (!ack.checked) { err2.textContent = 'Please confirm that you understand there is no password recovery.'; return; }
     createBtn.disabled = true; createBtn.textContent = 'Restoring everything…';
     try {
-      const r = await createProfileFromImport(ctx.env, data, { name: name.value.trim(), avatar: picker.get(), masterPassword: p1.value });
-      const pw = p1.value; p1.value = p2.value = bpw.value = ''; m.close();
+      const r = await createProfileFromImport(ctx.env, data, { name: name.value.trim(), avatar: picker.get(), masterPassword: master });
+      const pw = master; p1.value = p2.value = bpw.value = ''; m.close();
       toast(`Profile “${r.profile.name}” restored: ${r.items} item${r.items === 1 ? '' : 's'}, ${r.attachments} attachment${r.attachments === 1 ? '' : 's'}`, 'ok', 6000);
       if (onDone) await onDone(r.profile, pw);
     } catch (e) { err2.textContent = e.message; createBtn.disabled = false; createBtn.textContent = 'Create profile'; }

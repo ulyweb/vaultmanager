@@ -1,6 +1,7 @@
 /* Vault data layer: encrypted persistence, items, attachments, audit trail, sync merge, health,
    import / export. DOM-free so it can be unit-tested in Node. */
 
+import { isFieldLocked, clearOpenFields } from './fieldlock.js';
 import { createVault, openVault, sealText, openText, innerSeal, innerOpen, rand, ITER_DEFAULT } from './crypto.js';
 import { uid, hostOf, b64, debounce } from './util.js';
 import { estimate } from './strength.js';
@@ -174,7 +175,7 @@ export class VaultStore {
     if (!s) return;
     this._auditSave.cancel();
     if (this._auditDirty) { this._auditDirty = false; this.save().catch(() => {}); }
-    this.session = null; this.data = null; this.itemKeys.clear();
+    this.session = null; this.data = null; this.itemKeys.clear(); clearOpenFields();
     this.chain = this.chain.then(() => s.lock(), () => s.lock());
   }
 
@@ -317,6 +318,8 @@ export class VaultStore {
       it.pwChanged = Date.now();
     }
     Object.assign(it, patch, { updated: Date.now() });
+    /* earlier versions must not keep the readable text of a field that now has a passcode of its own: they keep the sealed text instead */
+    for (const [fk, fv] of Object.entries(it.fields || {})) if (isFieldLocked(fv)) for (const r of it.revisions || []) { const sf = r.snap && r.snap.fields; if (sf && sf[fk] && !isFieldLocked(sf[fk])) sf[fk] = fv; }
     if (changed.length) this.log('item', 'Edited “' + it.name + '” (' + changed.join(', ') + ')');
     return this.save();
   }
@@ -649,7 +652,7 @@ export function sanitiseItem(r, { keepMeta = false, keepAttachments = false } = 
     tags: Array.isArray(r.tags) ? r.tags.map((t) => s(t, 50)).filter(Boolean).slice(0, 30) : [], favorite: !!r.favorite,
     card: { holder: s(c.holder, 200), number: s(c.number, 40), expiry: s(c.expiry, 10), cvv: s(c.cvv, 10), pin: s(c.pin, 20) },
   });
-  if (TEMPLATES[type] && r.fields && typeof r.fields === 'object') for (const f of TEMPLATES[type].fields) { const v = r.fields[f.k]; if (typeof v === 'string' && v) it.fields[f.k] = v.slice(0, f.kind === 'multiline' ? 20000 : 1000); }
+  if (TEMPLATES[type] && r.fields && typeof r.fields === 'object') for (const f of TEMPLATES[type].fields) { const v = r.fields[f.k]; if (typeof v === 'string' && v) it.fields[f.k] = v.slice(0, f.kind === 'multiline' || isFieldLocked(v) ? 20000 : 1000); }
   if (Array.isArray(r.custom)) it.custom = r.custom.filter((c) => c && typeof c === 'object').slice(0, MAX_CUSTOM).map((c) => ({ label: s(c.label, 60), value: s(c.value, 5000), secret: !!c.secret })).filter((c) => c.label || c.value);
   if (typeof r.lock === 'string' && r.lock.length <= 400000 && /^[A-Za-z0-9+/=]+$/.test(r.lock)) { it.lock = r.lock; Object.assign(it, BLANK()); }
   if (Number.isFinite(r.created)) it.created = r.created;

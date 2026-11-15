@@ -1,6 +1,6 @@
 /* Application version, data-format versions and changelog (shown in Settings → About). */
 
-export const APP_VERSION = '0.26.0';
+export const APP_VERSION = '0.28.1';
 export const APP_NAME = 'VaultManager';
 export const REPO_URL = 'https://github.com/ulyweb/vaultmanager';
 
@@ -16,6 +16,16 @@ export const FORMATS = [
 ];
 
 export const CHANGELOG = [
+  { v: '0.28.1', date: '2026-11-14', notes: [
+    'Deleting an item now asks for confirmation first (“Move to trash?”). Cancel keeps the item; confirming moves it to the trash, where it can be restored for the number of days set in Settings (or until you empty the trash).',
+  ] },
+  { v: '0.28.0', date: '2026-11-14', notes: [
+    'Importing a profile backup: a new optional box “Use the backup password as this profile’s master password” (off by default). The backup file never contains your master password, so it cannot be copied over by itself, but the backup password you just typed can be reused. If it is too short or too easy to guess for a master password, you are told and can choose a new one instead.',
+  ] },
+  { v: '0.27.0', date: '2026-11-14', notes: [
+    'Crypto wallet: the recovery seed phrase is now entered in numbered boxes, one per word (12, 15, 18, 21 or 24 words, or your own count). Every word is hidden and has its own show / hide button, plus Show all and Clear. Paste a whole phrase into any box and it spreads over the boxes. In the detail view each word is a numbered tile that stays hidden until you tap it.',
+    'Passcode of their own: the recovery seed phrase and the extra passphrase (25th word) can each be locked with a separate passcode (“Lock with its own passcode” in the editor). A locked value is encrypted again (PBKDF2 600,000 rounds, AES-256-GCM), stays hidden even when the vault and the item are open, opens for 10 minutes after you enter the passcode, and never leaves a readable copy in the version history. It stays locked through sync, backups and QR codes. If you forget that passcode nobody can recover the value.',
+  ] },
   { v: '0.26.0', date: '2026-11-14', notes: [
     'Every item now has a Title and an optional Description. The old “Name” box is now called Title, and the new Description (a short summary of what the item is for) sits under it. It shows in the item list, the detail view, search, Seal as QR, backups and sync, and — like the other details — is hidden while an item is locked with a secondary passcode.',
     'Custom fields can be put in any order: each one has Move up / Move down buttons in the editor, and the order is kept in the detail view, QR codes, backups and sync.',
