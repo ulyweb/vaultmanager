@@ -112,6 +112,14 @@ function applyTheme() {
   const m = document.querySelector('meta[name=theme-color]'); if (m) m.content = theme === 'dark' ? '#05080d' : '#eef2f6';
 }
 lightMQ.addEventListener('change', applyTheme);
+/* the create-profile screen: show a theme the moment it is chosen, without saving anything yet (the profile's own settings keep it once it exists) */
+function previewTheme(v) {
+  bootTheme = v; if (store && store.unlocked) return;
+  const theme = resolveTheme(v, lightMQ.matches), el = document.documentElement;
+  el.classList.add('theme-fade'); setTimeout(() => el.classList.remove('theme-fade'), 500);
+  applyLook(bootLook, theme, landscapes);
+  const m = document.querySelector('meta[name=theme-color]'); if (m) m.content = theme === 'dark' ? '#05080d' : '#eef2f6';
+}
 let lookSaveTimer = null;
 const saveSoon = () => { clearTimeout(lookSaveTimer); lookSaveTimer = setTimeout(() => store.save().catch(() => {}), 500); };
 /* opt.redraw: re-render the page; opt.shell: rebuild top bar / dock too; opt.live: slider drag (no save churn) */
@@ -271,7 +279,14 @@ function gateCreate({ first }) {
   const ack = h('input', { type: 'checkbox', id: 'ack' });
   const notifyOn = admin.notifyEnabled(), contact = h('input', { class: 'inp', id: 'contactemail', type: 'email', maxlength: '120', autocomplete: 'email', placeholder: 'Your email (optional — lets the admin reach you)', 'aria-label': 'Optional contact email' });
   p1.input.addEventListener('input', () => clear(m).append(meter(p1.input.value).el));
-  const btn = h('button', { class: 'btn primary', type: 'submit', style: null }, first ? 'Create my vault' : 'Create profile');
+  const btn = h('button', { class: 'btn primary cta', type: 'submit', style: null }, first ? 'Create my vault' : 'Create profile');
+  /* appearance: Auto follows the device; the choice is kept in the new profile's settings */
+  const originalTheme = bootTheme; let themeChoice = ['auto', 'dark', 'light'].includes(bootTheme) ? bootTheme : 'auto';
+  const THEMES = [['auto', 'monitor', 'Auto'], ['dark', 'moon', 'Dark'], ['light', 'sun', 'Light']];
+  const themeSeg = h('div', { class: 'seg themeseg', role: 'group', 'aria-label': 'Appearance' }, THEMES.map(([v, icon, label]) => h('button', { type: 'button', class: v === themeChoice ? 'on' : '', 'aria-pressed': String(v === themeChoice), 'data-theme-choice': v, on: { click: () => {
+    themeChoice = v; for (const b of themeSeg.children) { const on = b.dataset.themeChoice === v; b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on)); }
+    previewTheme(v);
+  } } }, '{{' + icon + '}} ' + label)));
   const suggest = h('button', { type: 'button', class: 'btn sm', on: { click: () => { const pw = generatePassphrase({ words: 6 }); p1.input.value = p2.input.value = pw; p1.input.type = p2.input.type = 'text'; p1.input.dispatchEvent(new Event('input')); } } }, '{{bolt}} Suggest a passphrase');
   const form = h('form', { novalidate: true, on: { submit: async (e) => {
     e.preventDefault(); err.textContent = '';
@@ -279,9 +294,9 @@ function gateCreate({ first }) {
     if (p1.input.value !== p2.input.value) { err.textContent = 'The two passwords do not match.'; return; }
     const pol = ctx.passwordPolicy(p1.input.value); if (pol) { err.textContent = pol; return; }
     if (!ack.checked) { err.textContent = 'Please confirm that you understand there is no password recovery.'; return; }
-    btn.disabled = true; btn.textContent = 'Deriving key (600,000 rounds)…';
+    btn.disabled = true; btn.classList.add('busy'); btn.textContent = 'Deriving key (600,000 rounds)…';
     const id = newProfileId(), k = keysFor(id), st = new VaultStore(env.storage, k.vault, env.blobs, k.fails);
-    try { await st.create(p1.input.value); st.data.settings.displayName = nm; await st.save(); } catch (x) { err.textContent = x.message; btn.disabled = false; btn.textContent = first ? 'Create my vault' : 'Create profile'; return; }
+    try { await st.create(p1.input.value); st.data.settings.displayName = nm; st.data.settings.theme = themeChoice; await st.save(); } catch (x) { err.textContent = x.message; btn.disabled = false; btn.classList.remove('busy'); btn.textContent = first ? 'Create my vault' : 'Create profile'; return; }
     env.profiles.add({ id, name: nm, avatar: picker.get() }); env.profiles.setLast(id);
     if (notifyOn) admin.notifyNewProfile(nm, { contact: contact.value.trim().slice(0, 120) });
     store = st; ctx.S.profileId = id; ctx.S.gate = null;
@@ -294,6 +309,7 @@ function gateCreate({ first }) {
   } } },
     h('div', { class: 'field' }, h('label', { for: 'pname', text: 'Profile name' }), name, h('p', { class: 'hint', text: first ? 'One profile per person — each has its own master password and its own completely separate vault.' : 'This profile gets its own master password and its own separate vault.' })),
     picker.el,
+    h('div', { class: 'field themefield' }, h('label', { text: 'Appearance' }), themeSeg, h('p', { class: 'hint', text: 'Auto follows your device. You can change this any time in Settings.' })),
     h('div', { class: 'field' }, h('label', { for: 'pw1', text: 'Master password' }), p1.el, m, h('p', { class: 'hint', text: '12+ characters. A passphrase of 5+ random words is easy to remember and hard to crack.' })),
     h('div', { class: 'field' }, h('label', { for: 'pw2', text: 'Repeat master password' }), p2.el),
     h('div', { class: 'row wrap' }, suggest),
@@ -301,7 +317,7 @@ function gateCreate({ first }) {
     notifyOn ? h('div', { class: 'note', id: 'notifynote' }, 'ℹ ' + admin.DISCLOSURE, contact) : null,
     err, h('div', { class: 'row' }, btn));
   return h('div', { class: 'panel gate-card' }, brand(first ? 'Create your profile and encrypted vault' : 'Add a profile'), form,
-    h('div', { class: 'gate-links' }, h('button', { type: 'button', class: 'linkbtn', on: { click: () => ctx.importProfile(enterProfile) } }, '{{importfile}} Import a profile backup — restore a whole database'), list.length ? h('button', { type: 'button', class: 'linkbtn', on: { click: () => { ctx.S.gate = 'picker'; draw(); } } }, '← Back to profiles') : null),
+    h('div', { class: 'gate-links' }, h('button', { type: 'button', class: 'linkbtn', on: { click: () => ctx.importProfile(enterProfile) } }, '{{importfile}} Import a profile backup — restore a whole database'), list.length ? h('button', { type: 'button', class: 'linkbtn', on: { click: () => { previewTheme(originalTheme); ctx.S.gate = 'picker'; draw(); } } }, '← Back to profiles') : null),
     trustChips(), gateFoot());
 }
 

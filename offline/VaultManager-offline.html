@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VaultManager v0.28.1 — single-file offline build. Verify with the .sha256 file next to it. -->
+<!-- VaultManager v0.29.0 — single-file offline build. Verify with the .sha256 file next to it. -->
 <html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
@@ -11,7 +11,7 @@
 <meta name="application-name" content="VaultManager">
 <meta name="format-detection" content="telephone=no">
 <meta name="referrer" content="no-referrer">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-tauzjAWYvkq2EEey6/r1GOXzEWNzSydbYj43JCIjd2U=' 'sha256-S5DBWbmjSt4U2sioXM1LNfALKu+3QFuPxGps7hGD2GY=' blob:; style-src 'sha256-/taJibJcD/BnQjaH/bYkTvZbYbczvBYuIiXVXoQVReM='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-tauzjAWYvkq2EEey6/r1GOXzEWNzSydbYj43JCIjd2U=' 'sha256-0jG8oQKJ8RbLgoKFnTWJpagK7hau9MbkA29z46EsTZQ=' blob:; style-src 'sha256-vpUdONVG3hKpQsa3/iK8SxueMeVv846WIAor6lRxnRM='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
 <title>VaultManager | Zero-Knowledge Password Manager</title>
 <meta name="description" content="VaultManager: an offline-first, zero-knowledge, end-to-end encrypted password manager with a strong password generator, TOTP codes and QR-sealed sharing and backup. Runs entirely in your browser.">
 <meta name="theme-color" content="#05080d">
@@ -871,6 +871,44 @@ html[data-barlabels="0"] .topbar .newbtn { padding: 6px 10px 6px 8px; }
 .gate-card .or { text-align: center; }
 .gate-card .avpick { display: grid; justify-items: center; gap: 12px; }
 .gate-card .avpick .row { justify-content: center; }
+
+/* ---------- create-profile screen: theme picker, live avatar buttons, animated Create button ----------
+   Motion follows Settings → Look → Animations (html[data-fxanim=on]) and is off for people who prefer reduced motion. */
+.themefield .seg { width: 100%; display: grid; grid-template-columns: repeat(3, 1fr); }
+.themefield .seg button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 38px; cursor: pointer; transition: background-color .2s, color .2s, transform .15s; }
+.themefield .seg button:hover { color: var(--ink); }
+.avbtn[aria-pressed=true] { border-color: var(--accent); background: rgba(var(--accent-rgb), .16); color: var(--accent); }
+.avprev { position: relative; }
+.avprev .pav { position: relative; z-index: 1; }
+html.theme-fade, html.theme-fade body, html.theme-fade .panel, html.theme-fade .btn, html.theme-fade .inp, html.theme-fade .seg, html.theme-fade .seg button { transition: background-color .4s ease, color .4s ease, border-color .4s ease, box-shadow .4s ease; }
+@keyframes av-pop { 0% { transform: scale(.6) rotate(-12deg); } 55% { transform: scale(1.14) rotate(4deg); } 100% { transform: none; } }
+@keyframes av-spin { to { transform: rotate(360deg); } }
+@keyframes emo-in { from { opacity: 0; transform: translateY(8px) scale(.6); } to { opacity: 1; transform: none; } }
+@keyframes cta-flow { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+@keyframes cta-shine { 0%, 62% { transform: translateX(-130%) skewX(-18deg); } 100% { transform: translateX(260%) skewX(-18deg); } }
+@keyframes cta-breathe { 0%, 100% { box-shadow: 0 2px 12px rgba(var(--accent-rgb), .25); } 50% { box-shadow: 0 4px 26px rgba(var(--accent-rgb), .5); } }
+@keyframes cta-busy { to { background-position: 40px 0; } }
+@keyframes seg-pop { 0% { transform: scale(.7) rotate(-30deg); } 60% { transform: scale(1.25) rotate(8deg); } 100% { transform: none; } }
+html[data-fxanim=on] .avpick .avbtn { transition: transform .18s cubic-bezier(.2, 1.3, .4, 1), box-shadow .2s, background-color .2s, border-color .2s; }
+html[data-fxanim=on] .avpick .avbtn:hover { transform: translateY(-3px) scale(1.06); box-shadow: 0 6px 16px rgba(var(--accent-rgb), .28); }
+html[data-fxanim=on] .avpick .avbtn:active { transform: scale(.94); }
+html[data-fxanim=on] .avpick .avbtn:hover .ico { animation: icon-bob .6s; }
+html[data-fxanim=on] .avpick .avbtn[aria-pressed=true] .ico { animation: seg-pop .5s; }
+html[data-fxanim=on] .avprev.pop .pav { animation: av-pop .5s cubic-bezier(.2, 1.4, .4, 1); }
+html[data-fxanim=on] .gate-card .avprev::before { content: ''; position: absolute; inset: -4px; border-radius: 50%; background: conic-gradient(from 0deg, var(--accent), #7c5cff, #ff7ac8, var(--accent)); filter: blur(7px); opacity: .55; animation: av-spin 7s linear infinite; z-index: 0; }
+html[data-fxanim=on] .emojigrid:not([hidden]) .emo { animation: emo-in .32s cubic-bezier(.2, 1.3, .4, 1) both; animation-delay: calc(var(--i, 0) * 14ms); }
+html[data-fxanim=on] .emo { transition: transform .15s cubic-bezier(.2, 1.4, .4, 1), background-color .2s, border-color .2s; }
+html[data-fxanim=on] .emo:hover { transform: scale(1.25) rotate(-6deg); }
+html[data-fxanim=on] .themefield .seg button:hover { transform: translateY(-1px); }
+html[data-fxanim=on] .themefield .seg button.on .ico { animation: seg-pop .5s; }
+html[data-fxanim=on] .btn.cta { position: relative; overflow: hidden; background: linear-gradient(110deg, var(--accent), #7c5cff, var(--accent)); background-size: 220% 100%; animation: cta-flow 7s ease-in-out infinite, cta-breathe 3.2s ease-in-out infinite; transition: transform .18s cubic-bezier(.2, 1.3, .4, 1), filter .2s; }
+html[data-fxanim=on] .btn.cta::after { content: ''; position: absolute; top: 0; bottom: 0; left: 0; width: 38%; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .5), transparent); animation: cta-shine 4.2s ease-in-out infinite; pointer-events: none; }
+html[data-fxanim=on] .btn.cta:hover { transform: translateY(-2px) scale(1.015); }
+html[data-fxanim=on] .btn.cta:active { transform: scale(.97); }
+html[data-fxanim=on] .btn.cta.busy { background: repeating-linear-gradient(45deg, var(--accent) 0 14px, color-mix(in srgb, var(--accent) 70%, #fff) 14px 28px); background-size: 40px 100%; animation: cta-busy .8s linear infinite; }
+html[data-fxanim=on] .btn.cta.busy::after { display: none; }
+@media (prefers-reduced-motion: reduce) { html .avprev::before, html .btn.cta, html .btn.cta::after, html .emo, html .avbtn { animation: none !important; } }
+html[data-icons] .themeseg .ico:not(.cat) { color: inherit; filter: none; }   /* the sun and moon follow the pill's colour, so they stay readable on light and dark */
 </style>
 </head>
 <body>
@@ -995,6 +1033,11 @@ html[data-barlabels="0"] .topbar .newbtn { padding: 6px 10px 6px 8px; }
     archive: ['<path d="M6 3h12v18H6z"/><path d="M12 3v3M12 8v2M12 12v2M10 16h4v3h-4z"/>', "\u{1F5DC}"],
     undo: ['<path d="M4 9l5-5M4 9l5 5M4 9h10a6 6 0 010 12h-3"/>', "\u21A9"],
     menu: ['<path d="M4 6h16M4 12h16M4 18h16"/>', "\u2630"],
+    sun: ['<circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6L7 7M17 17l1.4 1.4M5.6 18.4L7 17M17 7l1.4-1.4"/>', ""],
+    moon: ['<path d="M20 14.5A8 8 0 019.5 4a8 8 0 1010.5 10.5z"/>', ""],
+    monitor: ['<path d="M3 5h18v12H3zM8 21h8M12 17v4"/>', ""],
+    letter: ['<path d="M3 19l5-13 5 13M5 14h6M20.5 12.6V19M20.5 15.4c-1.2-1.5-5.5-1.4-5.5 1.3 0 2.5 4 2.7 5.5 1"/>', ""],
+    smile: ['<circle cx="12" cy="12" r="9"/><path d="M8 14c1 1.6 2.4 2.4 4 2.4s3-.8 4-2.4M9 9.5v.6M15 9.5v.6"/>', ""],
     chevup: ['<path d="M6 15l6-6 6 6"/>', ""],
     chevdown: ['<path d="M6 9l6 6 6-6"/>', ""],
     chevright: ['<path d="M9 6l6 6-6 6"/>', ""],
@@ -1979,7 +2022,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   }
 
   // js/version.js
-  var APP_VERSION = "0.28.1";
+  var APP_VERSION = "0.29.0";
   var APP_NAME = "VaultManager";
   var REPO_URL = "https://github.com/ulyweb/vaultmanager";
   var FORMATS = [
@@ -1993,6 +2036,11 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     ["Attachments at rest", "AES-256-GCM per file, bound to vault + file id"]
   ];
   var CHANGELOG = [
+    { v: "0.29.0", date: "2026-11-15", notes: [
+      "Create-profile screen: a new Appearance choice (Auto, Dark or Light). The screen switches the moment you pick, and the new profile keeps the choice (you can change it later in Settings).",
+      "The Letter, Emoji and Photo buttons are livelier: they show which kind is chosen, lift and wiggle their icon under the pointer, the picture bounces when it changes, a soft colour ring turns around it, and the emoji tiles pop in one after another. The Create button flows with colour, shines every few seconds, lifts on hover and shows a moving stripe while the key is being derived.",
+      "All of this follows Settings \u2192 Look \u2192 Animations and \u201Creduce motion\u201D on your device: with animations off, the screen is calm and static."
+    ] },
     { v: "0.28.1", date: "2026-11-14", notes: [
       "Deleting an item now asks for confirmation first (\u201CMove to trash?\u201D). Cancel keeps the item; confirming moves it to the trash, where it can be restored for the number of days set in Settings (or until you empty the trash)."
     ] },
@@ -7863,16 +7911,35 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   function avatarPicker(initial, nameOf = () => "", onChange = null) {
     let state = sanitizeAvatar(initial);
     const prev = h("div", { class: "avprev" }), grid = h("div", { class: "emojigrid", hidden: true }), err = h("p", { class: "err photo-err", role: "alert" });
-    const draw2 = () => clear(prev).append(profileAvatar({ name: nameOf(), avatar: state }, 72));
+    const kinds = {}, mark = () => {
+      for (const [k, b] of Object.entries(kinds)) {
+        b.setAttribute("aria-pressed", String(state.type === k));
+        b.classList.toggle("on", state.type === k);
+      }
+    };
+    const draw2 = () => {
+      clear(prev).append(profileAvatar({ name: nameOf(), avatar: state }, 72));
+      mark();
+    };
+    const pop = () => {
+      prev.classList.remove("pop");
+      void prev.offsetWidth;
+      prev.classList.add("pop");
+    };
     const set = (a) => {
       state = sanitizeAvatar(a);
       draw2();
+      pop();
       if (onChange) onChange(state);
     };
-    for (const e of EMOJIS) grid.append(h("button", { type: "button", class: "emo", "aria-label": "Emoji " + e, on: { click: () => {
-      set({ type: "emoji", value: e });
-      grid.hidden = true;
-    } } }, e));
+    EMOJIS.forEach((e, i) => {
+      const b = h("button", { type: "button", class: "emo", "aria-label": "Emoji " + e, on: { click: () => {
+        set({ type: "emoji", value: e });
+        grid.hidden = true;
+      } } }, e);
+      b.style.setProperty("--i", String(i));
+      grid.append(b);
+    });
     const file = h("input", { type: "file", accept: "image/*", class: "offscreen", "aria-label": "Profile photo", on: { change: async (ev) => {
       err.textContent = "";
       const f = ev.target.files[0];
@@ -7888,14 +7955,20 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     const el = h("div", { class: "avpick" }, prev, h("div", null, h(
       "div",
       { class: "row wrap" },
-      h("button", { type: "button", class: "btn sm", on: { click: () => set({ type: "letter" }) } }, "Letter"),
-      h("button", { type: "button", class: "btn sm", on: { click: () => {
+      kinds.letter = h("button", { type: "button", class: "btn sm avbtn", "aria-pressed": "false", on: { click: () => {
+        grid.hidden = true;
+        set({ type: "letter" });
+      } } }, "{{letter}} Letter"),
+      kinds.emoji = h("button", { type: "button", class: "btn sm avbtn", "aria-pressed": "false", on: { click: () => {
         grid.hidden = !grid.hidden;
-      } } }, "Emoji"),
-      h("button", { type: "button", class: "btn sm", on: { click: () => file.click() } }, "{{camera}} Photo\u2026"),
+      } } }, "{{smile}} Emoji"),
+      kinds.photo = h("button", { type: "button", class: "btn sm avbtn", "aria-pressed": "false", on: { click: () => file.click() } }, "{{camera}} Photo\u2026"),
       file
     ), grid, err));
-    return { el, get: () => state, refresh: draw2 };
+    draw2();
+    return { el, get: () => state, refresh: () => {
+      clear(prev).append(profileAvatar({ name: nameOf(), avatar: state }, 72));
+    } };
   }
   var slug = (s) => String(s || "profile").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 30) || "profile";
   function exportProfileDialog(ctx2) {
@@ -9872,6 +9945,16 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     if (m) m.content = theme === "dark" ? "#05080d" : "#eef2f6";
   }
   lightMQ.addEventListener("change", applyTheme);
+  function previewTheme(v) {
+    bootTheme = v;
+    if (store && store.unlocked) return;
+    const theme = resolveTheme(v, lightMQ.matches), el = document.documentElement;
+    el.classList.add("theme-fade");
+    setTimeout(() => el.classList.remove("theme-fade"), 500);
+    applyLook(bootLook, theme, landscapes);
+    const m = document.querySelector("meta[name=theme-color]");
+    if (m) m.content = theme === "dark" ? "#05080d" : "#eef2f6";
+  }
   var lookSaveTimer = null;
   var saveSoon = () => {
     clearTimeout(lookSaveTimer);
@@ -10105,7 +10188,19 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     const ack = h("input", { type: "checkbox", id: "ack" });
     const notifyOn = notifyEnabled(), contact = h("input", { class: "inp", id: "contactemail", type: "email", maxlength: "120", autocomplete: "email", placeholder: "Your email (optional \u2014 lets the admin reach you)", "aria-label": "Optional contact email" });
     p1.input.addEventListener("input", () => clear(m).append(meter(p1.input.value).el));
-    const btn = h("button", { class: "btn primary", type: "submit", style: null }, first ? "Create my vault" : "Create profile");
+    const btn = h("button", { class: "btn primary cta", type: "submit", style: null }, first ? "Create my vault" : "Create profile");
+    const originalTheme = bootTheme;
+    let themeChoice = ["auto", "dark", "light"].includes(bootTheme) ? bootTheme : "auto";
+    const THEMES = [["auto", "monitor", "Auto"], ["dark", "moon", "Dark"], ["light", "sun", "Light"]];
+    const themeSeg = h("div", { class: "seg themeseg", role: "group", "aria-label": "Appearance" }, THEMES.map(([v, icon, label]) => h("button", { type: "button", class: v === themeChoice ? "on" : "", "aria-pressed": String(v === themeChoice), "data-theme-choice": v, on: { click: () => {
+      themeChoice = v;
+      for (const b of themeSeg.children) {
+        const on = b.dataset.themeChoice === v;
+        b.classList.toggle("on", on);
+        b.setAttribute("aria-pressed", String(on));
+      }
+      previewTheme(v);
+    } } }, "{{" + icon + "}} " + label)));
     const suggest = h("button", { type: "button", class: "btn sm", on: { click: () => {
       const pw = generatePassphrase({ words: 6 });
       p1.input.value = p2.input.value = pw;
@@ -10137,15 +10232,18 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
           return;
         }
         btn.disabled = true;
+        btn.classList.add("busy");
         btn.textContent = "Deriving key (600,000 rounds)\u2026";
         const id = newProfileId(), k = keysFor(id), st = new VaultStore(env.storage, k.vault, env.blobs, k.fails);
         try {
           await st.create(p1.input.value);
           st.data.settings.displayName = nm;
+          st.data.settings.theme = themeChoice;
           await st.save();
         } catch (x) {
           err.textContent = x.message;
           btn.disabled = false;
+          btn.classList.remove("busy");
           btn.textContent = first ? "Create my vault" : "Create profile";
           return;
         }
@@ -10175,6 +10273,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       } } },
       h("div", { class: "field" }, h("label", { for: "pname", text: "Profile name" }), name, h("p", { class: "hint", text: first ? "One profile per person \u2014 each has its own master password and its own completely separate vault." : "This profile gets its own master password and its own separate vault." })),
       picker.el,
+      h("div", { class: "field themefield" }, h("label", { text: "Appearance" }), themeSeg, h("p", { class: "hint", text: "Auto follows your device. You can change this any time in Settings." })),
       h("div", { class: "field" }, h("label", { for: "pw1", text: "Master password" }), p1.el, m, h("p", { class: "hint", text: "12+ characters. A passphrase of 5+ random words is easy to remember and hard to crack." })),
       h("div", { class: "field" }, h("label", { for: "pw2", text: "Repeat master password" }), p2.el),
       h("div", { class: "row wrap" }, suggest),
@@ -10189,6 +10288,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       brand2(first ? "Create your profile and encrypted vault" : "Add a profile"),
       form,
       h("div", { class: "gate-links" }, h("button", { type: "button", class: "linkbtn", on: { click: () => ctx.importProfile(enterProfile) } }, "{{importfile}} Import a profile backup \u2014 restore a whole database"), list.length ? h("button", { type: "button", class: "linkbtn", on: { click: () => {
+        previewTheme(originalTheme);
         ctx.S.gate = "picker";
         draw();
       } } }, "\u2190 Back to profiles") : null),

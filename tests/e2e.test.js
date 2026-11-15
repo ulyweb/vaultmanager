@@ -1758,3 +1758,29 @@ test('v0.28.1: deleting an item asks first; Cancel keeps it, confirming moves it
   assert.deepEqual(problems.filter((p) => !/Failed to load resource/.test(p)), []);
   await ctx.close();
 });
+
+test('v0.29.0: the create-profile screen has an Appearance picker (kept by the new profile), live avatar buttons and an animated Create button', async () => {
+  const { ctx, page, problems } = await newPage({ colorScheme: 'dark' });
+  await page.goto(base); await page.waitForSelector('#pw1');
+  const theme = () => page.evaluate(() => document.documentElement.dataset.theme);
+  assert.equal(await theme(), 'dark');
+  assert.deepEqual(await page.locator('.themeseg button').allTextContents().then((t) => t.map((x) => x.trim())), ['Auto', 'Dark', 'Light']);
+  await page.locator('.themeseg button[data-theme-choice=light]').click(); assert.equal(await theme(), 'light', 'the screen switches at once');
+  assert.equal(await page.getAttribute('.themeseg button[data-theme-choice=light]', 'aria-pressed'), 'true');
+  // avatar buttons show which kind is picked, and the preview reacts
+  const av = page.locator('.avpick');
+  assert.equal(await av.getByRole('button', { name: 'Letter', exact: true }).getAttribute('aria-pressed'), 'true');
+  await av.getByRole('button', { name: 'Emoji', exact: true }).click(); await page.locator('.emojigrid .emo').first().click();
+  assert.equal(await av.getByRole('button', { name: 'Letter', exact: true }).getAttribute('aria-pressed'), 'false');
+  assert.equal(await av.getByRole('button', { name: 'Emoji', exact: true }).getAttribute('aria-pressed'), 'true');
+  assert.ok(await page.locator('.avprev.pop').count(), 'the preview does its little bounce');
+  assert.ok(await page.locator('button.btn.cta[type=submit]').isVisible(), 'the Create button carries the animated style');
+  await page.fill('#pw1', MASTER); await page.fill('#pw2', MASTER); await page.check('#ack'); await page.click('button[type=submit]');
+  await page.getByRole('button', { name: 'Skip for now' }).click(); await dismissWelcome(page); await page.waitForSelector('.topbar');
+  assert.equal(await theme(), 'light', 'the new vault opens in the chosen theme');
+  await page.reload(); await page.waitForSelector('#upw'); assert.equal(await theme(), 'light', 'and the sign-in screen remembers it');
+  await page.fill('#upw', MASTER); await page.keyboard.press('Enter'); await page.waitForSelector('.topbar', { timeout: 90000 });
+  assert.equal(await theme(), 'light'); assert.equal((await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)) <= 1, true);
+  assert.deepEqual(problems.filter((p) => !/Failed to load resource/.test(p)), []);
+  await ctx.close();
+});

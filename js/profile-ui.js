@@ -36,19 +36,22 @@ export async function cropPhoto(file) {
 export function avatarPicker(initial, nameOf = () => '', onChange = null) {
   let state = sanitizeAvatar(initial);
   const prev = h('div', { class: 'avprev' }), grid = h('div', { class: 'emojigrid', hidden: true }), err = h('p', { class: 'err photo-err', role: 'alert' });
-  const draw = () => clear(prev).append(profileAvatar({ name: nameOf(), avatar: state }, 72));
-  const set = (a) => { state = sanitizeAvatar(a); draw(); if (onChange) onChange(state); };
-  for (const e of EMOJIS) grid.append(h('button', { type: 'button', class: 'emo', 'aria-label': 'Emoji ' + e, on: { click: () => { set({ type: 'emoji', value: e }); grid.hidden = true; } } }, e));
+  const kinds = {}, mark = () => { for (const [k, b] of Object.entries(kinds)) { b.setAttribute('aria-pressed', String(state.type === k)); b.classList.toggle('on', state.type === k); } };
+  const draw = () => { clear(prev).append(profileAvatar({ name: nameOf(), avatar: state }, 72)); mark(); };
+  const pop = () => { prev.classList.remove('pop'); void prev.offsetWidth; prev.classList.add('pop'); };   // a little bounce whenever the picture changes
+  const set = (a) => { state = sanitizeAvatar(a); draw(); pop(); if (onChange) onChange(state); };
+  EMOJIS.forEach((e, i) => { const b = h('button', { type: 'button', class: 'emo', 'aria-label': 'Emoji ' + e, on: { click: () => { set({ type: 'emoji', value: e }); grid.hidden = true; } } }, e); b.style.setProperty('--i', String(i)); grid.append(b); });
   const file = h('input', { type: 'file', accept: 'image/*', class: 'offscreen', 'aria-label': 'Profile photo', on: { change: async (ev) => {
     err.textContent = ''; const f = ev.target.files[0]; ev.target.value = ''; if (!f) return;
     try { set({ type: 'photo', value: await cropPhoto(f) }); } catch { err.textContent = 'Could not read that picture.'; }
   } } });
   draw();
   const el = h('div', { class: 'avpick' }, prev, h('div', null, h('div', { class: 'row wrap' },
-    h('button', { type: 'button', class: 'btn sm', on: { click: () => set({ type: 'letter' }) } }, 'Letter'),
-    h('button', { type: 'button', class: 'btn sm', on: { click: () => { grid.hidden = !grid.hidden; } } }, 'Emoji'),
-    h('button', { type: 'button', class: 'btn sm', on: { click: () => file.click() } }, '{{camera}} Photo…'), file), grid, err));
-  return { el, get: () => state, refresh: draw };
+    kinds.letter = h('button', { type: 'button', class: 'btn sm avbtn', 'aria-pressed': 'false', on: { click: () => { grid.hidden = true; set({ type: 'letter' }); } } }, '{{letter}} Letter'),
+    kinds.emoji = h('button', { type: 'button', class: 'btn sm avbtn', 'aria-pressed': 'false', on: { click: () => { grid.hidden = !grid.hidden; } } }, '{{smile}} Emoji'),
+    kinds.photo = h('button', { type: 'button', class: 'btn sm avbtn', 'aria-pressed': 'false', on: { click: () => file.click() } }, '{{camera}} Photo…'), file), grid, err));
+  draw();
+  return { el, get: () => state, refresh: () => { clear(prev).append(profileAvatar({ name: nameOf(), avatar: state }, 72)); } };
 }
 
 const slug = (s) => String(s || 'profile').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 30) || 'profile';
