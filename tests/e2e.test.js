@@ -1775,6 +1775,9 @@ test('v0.29.0: the create-profile screen has an Appearance picker (kept by the n
   assert.equal(await av.getByRole('button', { name: 'Emoji', exact: true }).getAttribute('aria-pressed'), 'true');
   assert.ok(await page.locator('.avprev.pop').count(), 'the preview does its little bounce');
   assert.ok(await page.locator('button.btn.cta[type=submit]').isVisible(), 'the Create button carries the animated style');
+  await page.getByRole('button', { name: /Suggest a passphrase/ }).click();   // 10 random words: at least 100 bits
+  const bits = Number(/~(\d+) bits/.exec(await page.locator('.gate-card .meter-label').textContent())[1]); assert.ok(bits >= 100, 'suggested passphrase is ' + bits + ' bits');
+  assert.equal((await page.inputValue('#pw1')).split('-').length, 10);
   await page.fill('#pw1', MASTER); await page.fill('#pw2', MASTER); await page.check('#ack'); await page.click('button[type=submit]');
   await page.getByRole('button', { name: 'Skip for now' }).click(); await dismissWelcome(page); await page.waitForSelector('.topbar');
   assert.equal(await theme(), 'light', 'the new vault opens in the chosen theme');

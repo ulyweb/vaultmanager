@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VaultManager v0.29.0 — single-file offline build. Verify with the .sha256 file next to it. -->
+<!-- VaultManager v0.29.1 — single-file offline build. Verify with the .sha256 file next to it. -->
 <html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
@@ -11,7 +11,7 @@
 <meta name="application-name" content="VaultManager">
 <meta name="format-detection" content="telephone=no">
 <meta name="referrer" content="no-referrer">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-tauzjAWYvkq2EEey6/r1GOXzEWNzSydbYj43JCIjd2U=' 'sha256-0jG8oQKJ8RbLgoKFnTWJpagK7hau9MbkA29z46EsTZQ=' blob:; style-src 'sha256-vpUdONVG3hKpQsa3/iK8SxueMeVv846WIAor6lRxnRM='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-tauzjAWYvkq2EEey6/r1GOXzEWNzSydbYj43JCIjd2U=' 'sha256-EZuvFpBeYhlcKeYsFmFk69grpG+VIwLNzfZaERhbOQE=' blob:; style-src 'sha256-vpUdONVG3hKpQsa3/iK8SxueMeVv846WIAor6lRxnRM='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
 <title>VaultManager | Zero-Knowledge Password Manager</title>
 <meta name="description" content="VaultManager: an offline-first, zero-knowledge, end-to-end encrypted password manager with a strong password generator, TOTP codes and QR-sealed sharing and backup. Runs entirely in your browser.">
 <meta name="theme-color" content="#05080d">
@@ -2022,7 +2022,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   }
 
   // js/version.js
-  var APP_VERSION = "0.29.0";
+  var APP_VERSION = "0.29.1";
   var APP_NAME = "VaultManager";
   var REPO_URL = "https://github.com/ulyweb/vaultmanager";
   var FORMATS = [
@@ -2036,6 +2036,9 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     ["Attachments at rest", "AES-256-GCM per file, bound to vault + file id"]
   ];
   var CHANGELOG = [
+    { v: "0.29.1", date: "2026-11-15", notes: [
+      "Stronger \u201CSuggest a passphrase\u201D: it now makes 10 random words (about 103 bits of entropy, rated Excellent) instead of 6 (about 62 bits). This applies to the master password when you create a profile, import a profile backup, or change your master password."
+    ] },
     { v: "0.29.0", date: "2026-11-15", notes: [
       "Create-profile screen: a new Appearance choice (Auto, Dark or Light). The screen switches the moment you pick, and the new profile keeps the choice (you can change it later in Settings).",
       "The Letter, Emoji and Photo buttons are livelier: they show which kind is chosen, lift and wiggle their icon under the pointer, the picture bounces when it changes, a soft colour ring turns around it, and the emoji tiles pop in one after another. The Create button flows with colour, shines every few seconds, lifts on hover and shows a moving stripe while the key is being derived.",
@@ -4106,6 +4109,8 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     }
     return words.join(o.separator === void 0 ? "-" : o.separator);
   }
+  var STRONG_WORDS = 10;
+  var generateStrongPassphrase = () => generatePassphrase({ words: STRONG_WORDS });
   function generatePin(len = 6) {
     const n = Math.max(4, Math.min(24, Math.floor(len)));
     return Array.from({ length: n }, () => randInt(10)).join("");
@@ -8056,8 +8061,8 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       null,
       h("div", { class: "field" }, h("label", { text: "New master password for this profile" }), p1, meterBox, h("p", { class: "hint", text: "12+ characters. It can be different from the one the backup came from." })),
       h("div", { class: "field" }, h("label", { text: "Repeat master password" }), p2),
-      h("button", { class: "btn sm", type: "button", on: { click: () => {
-        const pw = generatePassphrase({ words: 6 });
+      h("button", { class: "btn sm", type: "button", title: "Ten random words: about 103 bits of entropy", on: { click: () => {
+        const pw = generateStrongPassphrase();
         p1.value = p2.value = pw;
         p1.type = p2.type = "text";
         p1.dispatchEvent(new Event("input"));
@@ -8369,9 +8374,9 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
             pwErr.textContent = x.message;
           }
           e.target.disabled = false;
-        } } }, "Change master password"), h("button", { class: "btn", on: { click: () => {
+        } } }, "Change master password"), h("button", { class: "btn", title: "Ten random words: about 103 bits of entropy", on: { click: () => {
           pw1.type = pw2.type = "text";
-          pw1.value = pw2.value = generatePassphrase({ words: 6 });
+          pw1.value = pw2.value = generateStrongPassphrase();
           pw1.dispatchEvent(new Event("input"));
         } } }, "{{bolt}} Suggest a passphrase")),
         pwErr
@@ -10201,8 +10206,8 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       }
       previewTheme(v);
     } } }, "{{" + icon + "}} " + label)));
-    const suggest = h("button", { type: "button", class: "btn sm", on: { click: () => {
-      const pw = generatePassphrase({ words: 6 });
+    const suggest = h("button", { type: "button", class: "btn sm", title: "Ten random words: about 103 bits of entropy", on: { click: () => {
+      const pw = generateStrongPassphrase();
       p1.input.value = p2.input.value = pw;
       p1.input.type = p2.input.type = "text";
       p1.input.dispatchEvent(new Event("input"));

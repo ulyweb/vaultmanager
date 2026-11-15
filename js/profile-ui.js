@@ -5,7 +5,7 @@ import { h, clear, modal, toast, readFileText, download } from './dom.js';
 import { decryptProfile } from './vault.js';
 import { createProfileFromImport, sanitizeAvatar } from './profiles.js';
 import { meter, passwordRow } from './views.js';
-import { generatePassphrase } from './generator.js';
+import { generateStrongPassphrase } from './generator.js';
 import { fmtDate, fmtInt, stamp } from './util.js';
 
 const hue = (s) => { let x = 0; for (const c of String(s || '?')) x = (x * 31 + c.codePointAt(0)) >>> 0; return x % 360; };
@@ -106,7 +106,7 @@ export function importProfileDialog(ctx, { onDone } = {}) {
   const own = h('div', null,
     h('div', { class: 'field' }, h('label', { text: 'New master password for this profile' }), p1, meterBox, h('p', { class: 'hint', text: '12+ characters. It can be different from the one the backup came from.' })),
     h('div', { class: 'field' }, h('label', { text: 'Repeat master password' }), p2),
-    h('button', { class: 'btn sm', type: 'button', on: { click: () => { const pw = generatePassphrase({ words: 6 }); p1.value = p2.value = pw; p1.type = p2.type = 'text'; p1.dispatchEvent(new Event('input')); } } }, '{{bolt}} Suggest a passphrase'));
+    h('button', { class: 'btn sm', type: 'button', title: 'Ten random words: about 103 bits of entropy', on: { click: () => { const pw = generateStrongPassphrase(); p1.value = p2.value = pw; p1.type = p2.type = 'text'; p1.dispatchEvent(new Event('input')); } } }, '{{bolt}} Suggest a passphrase'));
   const sameNote = h('p', { class: 'hint', hidden: true, text: 'This profile will open with the same password you just typed to open the backup. Handy, but it means the backup file and the profile share one password, so keep that password strong.' });
   same.addEventListener('change', () => { own.hidden = same.checked; sameNote.hidden = !same.checked; });
   step2.append(summary, h('div', { class: 'field' }, h('label', { text: 'Profile name' }), name), picker.el,

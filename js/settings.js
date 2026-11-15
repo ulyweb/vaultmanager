@@ -1,7 +1,7 @@
 /* Settings: one place for every adjustment, plus sync, audit trail and About / versioning. */
 
 import { h, clear, setLabel, modal, toast, confirmDialog, askPassword, download, readFileText } from './dom.js';
-import { generatePassphrase } from './generator.js';
+import { generatePassphrase, generateStrongPassphrase } from './generator.js';
 import { estimate } from './strength.js';
 import { meter, fmtSize } from './views.js';
 import { page, field, sel, persist, selfTest, backupGuide } from './tools.js';
@@ -126,7 +126,7 @@ function security(ctx) {
         e.target.disabled = true;
         try { await store.changePassword(pw0.value, pw1.value); pw0.value = pw1.value = pw2.value = ''; clear(pwM); toast('Master password changed'); } catch (x) { pwErr.textContent = x.message; }
         e.target.disabled = false;
-      } } }, 'Change master password'), h('button', { class: 'btn', on: { click: () => { pw1.type = pw2.type = 'text'; pw1.value = pw2.value = generatePassphrase({ words: 6 }); pw1.dispatchEvent(new Event('input')); } } }, '{{bolt}} Suggest a passphrase')), pwErr),
+      } } }, 'Change master password'), h('button', { class: 'btn', title: 'Ten random words: about 103 bits of entropy', on: { click: () => { pw1.type = pw2.type = 'text'; pw1.value = pw2.value = generateStrongPassphrase(); pw1.dispatchEvent(new Event('input')); } } }, '{{bolt}} Suggest a passphrase')), pwErr),
     passkeys(ctx),
     panel('Key derivation',
       h('div', { class: 'kv' }, h('span', { text: 'Encryption' }), h('b', { text: 'AES-256-GCM, fresh 96-bit IV per write' }), h('span', { text: 'Key derivation' }), h('b', { text: `PBKDF2-HMAC-SHA256 · ${fmtInt(sess.iterations())} rounds` }), h('span', { text: 'Master key' }), h('b', { text: 'random 256-bit, stored only wrapped' })),

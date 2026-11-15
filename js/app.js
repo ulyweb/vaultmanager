@@ -7,7 +7,7 @@ import { VaultStore } from './vault.js';
 import { clearOpenFields } from './fieldlock.js';
 import { available } from './crypto.js';
 import { estimate } from './strength.js';
-import { generatePassphrase } from './generator.js';
+import { generateStrongPassphrase } from './generator.js';
 import { renderVaultView, newItemMenu, showRecoveryKit, meter } from './views.js';
 import { renderGenerator, renderHealth, renderQR, renderData } from './tools.js';
 import { renderTaskManager } from './taskman.js';
@@ -287,7 +287,7 @@ function gateCreate({ first }) {
     themeChoice = v; for (const b of themeSeg.children) { const on = b.dataset.themeChoice === v; b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on)); }
     previewTheme(v);
   } } }, '{{' + icon + '}} ' + label)));
-  const suggest = h('button', { type: 'button', class: 'btn sm', on: { click: () => { const pw = generatePassphrase({ words: 6 }); p1.input.value = p2.input.value = pw; p1.input.type = p2.input.type = 'text'; p1.input.dispatchEvent(new Event('input')); } } }, '{{bolt}} Suggest a passphrase');
+  const suggest = h('button', { type: 'button', class: 'btn sm', title: 'Ten random words: about 103 bits of entropy', on: { click: () => { const pw = generateStrongPassphrase(); p1.input.value = p2.input.value = pw; p1.input.type = p2.input.type = 'text'; p1.input.dispatchEvent(new Event('input')); } } }, '{{bolt}} Suggest a passphrase');
   const form = h('form', { novalidate: true, on: { submit: async (e) => {
     e.preventDefault(); err.textContent = '';
     const nm = name.value.trim(); if (!nm) { err.textContent = 'Give this profile a name.'; name.focus(); return; }
