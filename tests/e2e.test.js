@@ -1894,20 +1894,34 @@ test('v0.32.0: the 3D card space flows behind the sign-in, create and Home scree
   const R = await newPage(); await R.page.goto(base); await R.page.waitForSelector('#pw1');
   assert.equal(await R.page.locator('#space3d .s3-card').count(), 16, 'sixteen item cards in the space');
   assert.equal(await R.page.evaluate(() => document.body.dataset.space), 'gate');
-  assert.equal(await R.page.evaluate(() => getComputedStyle(document.querySelector('.s3-orbit')).animationName), 'none', 'still under reduce motion');
+  { const t = () => R.page.evaluate(() => document.querySelector('.s3-card').style.transform); const a = await t(); await R.page.waitForTimeout(700); assert.equal(await t(), a, 'still under reduce motion'); }
   await R.ctx.close();
   // motion on
   const { ctx, page, problems } = await newPage({ reducedMotion: 'no-preference' });
   await page.goto(base); await page.waitForSelector('#pw1');
-  assert.match(await page.evaluate(() => getComputedStyle(document.querySelector('.s3-orbit')).animationName), /s3-orbit/, 'the orbits run');
   assert.equal(await page.evaluate(() => getComputedStyle(document.getElementById('space3d')).pointerEvents), 'none', 'the space never takes a click');
-  const spin = async () => page.evaluate(() => getComputedStyle(document.querySelector('.s3-orbit')).transform);
+  const spin = async () => page.evaluate(() => document.querySelector('.s3-card').style.transform);
   const a = await spin(); await page.waitForTimeout(700); assert.notEqual(await spin(), a, 'the cards really move');
   assert.match(await page.evaluate(() => getComputedStyle(document.querySelector('.s3-card')).transform), /^matrix3d/, 'in 3D');
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth <= 1), true, 'no sideways scroll');
+  /* safety: no card may ever get near the camera plane (that is what made one card fill the screen), also during a surge and on a phone-sized window */
+  const near = async () => page.evaluate(() => { const persp = parseFloat(getComputedStyle(document.getElementById('space3d')).perspective); const z = Math.max(...[...document.querySelectorAll('.s3-card')].map((c) => new DOMMatrix(getComputedStyle(c).transform).m43)); return { persp, z }; });
+  { const n = await near(); assert.ok(n.z + 70 + 100 < n.persp * 0.85, `nearest card z ${n.z} vs perspective ${n.persp}`); }
+  await page.evaluate(() => document.getElementById('space3d').classList.add('surge')); await page.waitForTimeout(500);
+  { const n = await near(); assert.equal(n.persp, 1150, 'a surge never changes the perspective'); assert.ok(n.z + 70 + 100 < n.persp * 0.85); }
+  await page.evaluate(() => document.getElementById('space3d').classList.remove('surge'));
+  await page.setViewportSize({ width: 390, height: 800 }); await page.waitForTimeout(300);
+  { const n = await near(); assert.ok(n.z + 70 + 100 < n.persp * 0.85, `phone: nearest card z ${n.z} vs perspective ${n.persp}`); }
+  await page.setViewportSize({ width: 1280, height: 800 });
   await createVault(page);                                             // creating a profile works with the cards flowing behind it
   assert.equal(await page.evaluate(() => document.body.dataset.space), 'home', 'quieter behind the Home widgets');
   assert.ok(await page.locator('.widget').count() > 3);
+  assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector('.widget')).backdropFilter), 'none', 'no backdrop blur over the moving cards behind Home');
+  // a dialog open over Home: the card space rests (no animated scene under the dialog's backdrop blur) and wakes again when it closes
+  await page.getByRole('button', { name: '＋ New' }).click(); await page.waitForSelector('.modal-sheet');
+  assert.equal(await page.evaluate(() => document.body.dataset.modal), '1'); assert.equal(await page.evaluate(() => getComputedStyle(document.getElementById('space3d')).display), 'none', 'the space rests behind a dialog on Home');
+  await page.keyboard.press('Escape'); await page.waitForFunction(() => !document.querySelector('.modal-sheet'));
+  assert.equal(await page.evaluate(() => document.body.dataset.modal), undefined); assert.equal(await page.evaluate(() => getComputedStyle(document.getElementById('space3d')).display), 'block');
   await page.locator('.side .nav', { hasText: 'All items' }).click(); assert.equal(await page.evaluate(() => document.body.dataset.space), 'off', 'off on the item pages');
   await page.locator('.side .nav', { hasText: 'Home' }).first().click(); assert.equal(await page.evaluate(() => document.body.dataset.space), 'home');
   // switch it off in Settings → Effects
@@ -1929,7 +1943,10 @@ test('v0.33.0: thick cards and windows, tilt / thickness / float settings from t
   const css = (name) => page.evaluate((n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim(), name);
   const data = (k) => page.evaluate((x) => document.documentElement.dataset[x], k);
   // every floating card is a slab: a face plus slices behind it, and the windows carry a stacked edge
-  assert.equal(await page.locator('.s3-slice').count(), 16 * 6, 'six slices behind each of the sixteen cards');
+  const layers = (sel) => page.evaluate((q) => (getComputedStyle(document.querySelector(q)).boxShadow.match(/(rgba?|color)\(/g) || []).length, sel);
+  assert.equal(await page.locator('.s3-card').count(), 16); assert.ok(await layers('.s3-inner') >= 9, 'each floating card has a solid edge, one layer per card (no extra 3D layers behind it)');
+  assert.equal(await page.locator('.s3-card > *').count(), 16, 'exactly one layer inside each card: the face');
+  assert.ok(await page.evaluate(() => document.querySelector('.s3-card').style.getPropertyValue('--ex') !== ''), 'the edge direction follows the card across the screen');
   assert.equal(await css('--fx3d-thick'), '14'); assert.equal(await data('thick'), 'on');
   assert.ok(((await page.evaluate(() => getComputedStyle(document.querySelector('.gate-card')).boxShadow)).match(/(rgba?|color)\(/g) || []).length >= 12, 'the sign-in window has a stacked edge');
   assert.equal(await css('--fx3d-float'), '3');
@@ -1945,7 +1962,7 @@ test('v0.33.0: thick cards and windows, tilt / thickness / float settings from t
   assert.notEqual(parseFloat(await page.evaluate(() => document.querySelector('.gate-card').style.getPropertyValue('--ry')) || '0'), 0, 'tilt 9 leans the window toward the pointer');
   await page.locator('input[aria-label="Card thickness"]').fill('0'); assert.equal(await data('thick'), 'off', 'thickness 0 makes everything flat');
   assert.ok(!(await page.evaluate(() => getComputedStyle(document.querySelector('.gate-card')).getPropertyValue('--stack'))), 'no stacked edge when flat');
-  assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector('.s3-slice')).display), 'none');
+  assert.ok(await layers('.s3-inner') < 4, 'no edge on the floating cards when flat');
   await page.locator('input[aria-label="Card thickness"]').fill('20'); await page.locator('input[aria-label="Card float"]').fill('6'); await page.click('.gfx-btn');
   // create the profile: the tuned values come with it
   await createVault(page);

@@ -63,6 +63,7 @@ export function modal({ title, sub, body, actions = [], wide = false, onClose })
   const prev = document.activeElement;
   const close = () => {
     const i = stack.indexOf(api); if (i >= 0) stack.splice(i, 1);
+    if (!stack.length) delete document.body.dataset.modal;
     overlay.remove();
     if (prev && prev.focus && document.contains(prev)) prev.focus();
     if (onClose) onClose();
@@ -87,6 +88,7 @@ export function modal({ title, sub, body, actions = [], wide = false, onClose })
   for (const el of [grabber, head]) { el.addEventListener('pointerdown', down); el.addEventListener('pointermove', move); el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up); }
   const api = { close, el: sheet, overlay };
   stack.push(api);
+  document.body.dataset.modal = '1';   // lets the page rest the 3D card space behind a dialog
   document.body.append(overlay);
   const f = sheet.querySelector('[autofocus], input:not([type=hidden]):not([type=checkbox]), textarea, select');
   (f || sheet.querySelector('.btn') || sheet).focus();

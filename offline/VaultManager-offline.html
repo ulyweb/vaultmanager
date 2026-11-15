@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VaultManager v0.33.0 — single-file offline build. Verify with the .sha256 file next to it. -->
+<!-- VaultManager v0.33.1 — single-file offline build. Verify with the .sha256 file next to it. -->
 <html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
@@ -11,7 +11,7 @@
 <meta name="application-name" content="VaultManager">
 <meta name="format-detection" content="telephone=no">
 <meta name="referrer" content="no-referrer">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-tauzjAWYvkq2EEey6/r1GOXzEWNzSydbYj43JCIjd2U=' 'sha256-gfKX0dJQFSmdcgqzkDwXKsQ1Zen81J6AT1RRPoiqEtQ=' blob:; style-src 'sha256-UuFnUBPADH3e7PjtIbGkC9Btv9Yp+ZBS/1bSAbk8KCM='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-tauzjAWYvkq2EEey6/r1GOXzEWNzSydbYj43JCIjd2U=' 'sha256-NK73t3UdKy17Bivtb563Y+dP0OtFaUzeO8xkmFicslg=' blob:; style-src 'sha256-XRa7nX603ibC29ED1KQWHHmVpx9Rp9xMG48He1g4o9s='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
 <title>VaultManager | Zero-Knowledge Password Manager</title>
 <meta name="description" content="VaultManager: an offline-first, zero-knowledge, end-to-end encrypted password manager with a strong password generator, TOTP codes and QR-sealed sharing and backup. Runs entirely in your browser.">
 <meta name="theme-color" content="#05080d">
@@ -962,16 +962,13 @@ html[data-icons] .themeseg .ico:not(.cat) { color: inherit; filter: none; }   /*
    Item cards on private orbits around the middle of the screen, behind the sign-in / create / import screens and the Home widgets.
    Everything animates with CSS only; "reduce motion" (the rule at the top of this file) leaves a still scatter, and
    Settings → Look & feel → 3D card space turns it off (html[data-fx3d]). */
-.s3 { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; display: none; perspective: 1150px; perspective-origin: 50% 42%; transition: perspective 1.3s cubic-bezier(.2, .7, .2, 1); }
+.s3 { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; display: none; perspective: 1150px; perspective-origin: 50% 42%; }   /* js/space3d.js scales every orbit radius (x .9, x .55 on phones) so the nearest card always stays well in front of the camera (perspective 1150 / 900) */
 html[data-fx3d=on] body[data-space=gate] .s3, html[data-fx3d=on] body[data-space=home] .s3 { display: block; }
 body[data-space=home] .s3 { opacity: .72; }
-.s3.surge { perspective: 640px; transition: perspective .45s cubic-bezier(.2, .9, .3, 1.15); }   /* the whole space swells toward you for a moment */
+.s3-ring { transition: translate .9s ease; }
+.s3.surge .s3-ring { translate: 0 0 70px; transition: translate .4s cubic-bezier(.2, .9, .3, 1.15); }   /* the whole space swells toward you a little: a short push, never close to the camera */
 .s3-ring { position: absolute; left: 50%; top: 50%; width: 0; height: 0; transform-style: preserve-3d; transform: rotateX(var(--ly, 0deg)) rotateY(var(--lx, 0deg)); }
-.s3-orbit { position: absolute; left: 0; top: 0; width: 0; height: 0; transform-style: preserve-3d; transform: rotateY(calc(var(--ang) * 1deg)); }
-.s3-card { position: absolute; left: 0; top: 0; width: calc(172px * var(--s)); height: calc(106px * var(--s)); margin: calc(-53px * var(--s)) 0 0 calc(-86px * var(--s)); transform-style: preserve-3d; transform: translateZ(var(--r)) translateY(var(--y)) rotateY(calc(var(--ang) * -1deg)) rotateX(var(--rx)) rotateZ(var(--rz)); }
-.s3-slab { position: absolute; inset: 0; transform-style: preserve-3d; }
-.s3-slice { position: absolute; inset: 0; border-radius: 16px; transform: translateZ(calc(var(--k) * var(--fx3d-thick, 14) * -.1667px)); background: hsl(var(--h) 40% calc(40% - var(--k) * 3.4%)); border: 1px solid hsl(var(--h) 50% calc(60% - var(--k) * 4%) / .75); }
-html[data-thick=off] .s3-slice { display: none; }
+.s3-card { position: absolute; left: 0; top: 0; width: calc(172px * var(--s)); height: calc(106px * var(--s)); margin: calc(-53px * var(--s)) 0 0 calc(-86px * var(--s)); transform-style: preserve-3d; }   /* its position is written every frame by js/space3d.js */
 .s3-inner { position: absolute; inset: 0; box-sizing: border-box; padding: 12px 13px; display: flex; flex-direction: column; gap: 9px; border-radius: 16px; border: 1px solid hsl(var(--h) 55% 58% / .45); background: linear-gradient(155deg, hsl(var(--h) 42% 24% / .92), rgba(11, 19, 30, .92) 70%); box-shadow: 0 18px 40px rgba(0, 0, 0, .42), inset 0 1px 0 rgba(255, 255, 255, .14); }
 .s3-top { display: flex; align-items: center; gap: 9px; font: 700 13px/1.15 var(--mono); color: var(--ink); }
 .s3-ico { display: grid; place-items: center; flex: none; width: 34px; height: 34px; border-radius: 10px; background: hsl(var(--h) 60% 45% / .4); }
@@ -979,14 +976,7 @@ html[data-thick=off] .s3-slice { display: none; }
 .s3-bar { display: block; height: 8px; border-radius: 4px; background: hsl(var(--h) 45% 62% / .3); } .s3-bar.w1 { width: 88%; } .s3-bar.w2 { width: 62%; } .s3-bar.w3 { width: 40%; }
 :root[data-theme="light"] .s3-inner { background: linear-gradient(155deg, hsl(var(--h) 80% 91%), #fff 72%); border-color: hsl(var(--h) 50% 62% / .55); box-shadow: 0 14px 30px rgba(30, 45, 60, .2), inset 0 1px 0 #fff; }
 :root[data-theme="light"] .s3-top { color: #1b2430; }
-:root[data-theme="light"] .s3-slice { background: hsl(var(--h) 38% calc(80% - var(--k) * 4.4%)); border-color: hsl(var(--h) 40% calc(66% - var(--k) * 4%) / .8); }
-@keyframes s3-orbit { from { transform: rotateY(0deg); } to { transform: rotateY(360deg); } }
-@keyframes s3-face { from { transform: translateZ(var(--r)) translateY(var(--y)) rotateY(0deg) rotateX(var(--rx)) rotateZ(var(--rz)); } to { transform: translateZ(var(--r)) translateY(var(--y)) rotateY(-360deg) rotateX(var(--rx)) rotateZ(var(--rz)); } }
-@keyframes s3-bob { from { transform: translate3d(0, -11px, 0) rotate3d(1, .4, 0, -3.2deg); } to { transform: translate3d(0, 13px, 0) rotate3d(1, .4, 0, 3.2deg); } }
-html[data-fx3d=on] .s3-orbit { animation: s3-orbit var(--dur) linear infinite; animation-delay: calc(var(--ang) / 360 * var(--dur) * -1); }
-html[data-fx3d=on] .s3-card { animation: s3-face var(--dur) linear infinite; animation-delay: calc(var(--ang) / 360 * var(--dur) * -1); }   /* turns exactly against its orbit, so it always faces you */
-html[data-fx3d=on] .s3-slab { animation: s3-bob 7s ease-in-out infinite alternate; animation-delay: var(--bob); }
-@media (max-width: 700px) { .s3 { perspective: 820px; } .s3-card { width: calc(138px * var(--s)); height: calc(86px * var(--s)); margin: calc(-43px * var(--s)) 0 0 calc(-69px * var(--s)); } .s3-inner { padding: 9px 10px; gap: 7px; } .s3-top { font-size: 11px; } .s3-ico { width: 28px; height: 28px; } .s3-orbit:nth-child(n+11) { display: none; } }
+@media (max-width: 700px) { .s3 { perspective: 900px; } .s3-card { width: calc(138px * var(--s)); height: calc(86px * var(--s)); margin: calc(-43px * var(--s)) 0 0 calc(-69px * var(--s)); } .s3-inner { padding: 9px 10px; gap: 7px; } .s3-top { font-size: 11px; } .s3-ico { width: 28px; height: 28px; } .s3-card:nth-child(n+11) { display: none; } }
 
 /* the cards that sit in front of the space: widgets, the sign-in / create card, and the import dialog */
 .widget::after, .gate-card::after { content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; opacity: 0; transition: opacity .25s; background: radial-gradient(340px circle at var(--mx, 50%) var(--my, 0%), rgba(255, 255, 255, .11), transparent 62%); }
@@ -1023,6 +1013,20 @@ html[data-float=on] .widget:hover, html[data-float=on] .widget:focus-within, htm
 .gfx-row input[type=range] { grid-column: 1 / -1; width: 100%; }
 .gfx-row .val { font: 600 12px var(--mono); color: var(--muted); }
 .gfx-panel .hint { margin: 0; }
+
+/* ---------- keep the 3D card space cheap and safe ----------
+   Blurring what is behind a panel means re-blurring it every frame while the cards move behind it, and a dialog's backdrop blur sampling an animated
+   3D scene is the heaviest case. So while the card space shows, panels use a near-solid fill instead of a blur, and behind Home the space rests while a dialog is open. */
+:root { --glass-solid: rgba(12, 22, 34, .9); }
+:root[data-theme="light"] { --glass-solid: rgba(255, 255, 255, .94); }
+html[data-fx3d=on] body[data-space=home] .panel, html[data-fx3d=on] body[data-space=gate] .panel { background: linear-gradient(180deg, rgba(255, 255, 255, .04), rgba(255, 255, 255, .01)), var(--glass-solid); }
+html[data-fx3d=on] body[data-space=home] .panel, html[data-fx3d=on] body[data-space=home] .topbar, html[data-fx3d=on] body[data-space=home] .dock, html[data-fx3d=on] body[data-space=home] .mbar, html[data-fx3d=on] body[data-space=gate] .panel, html[data-fx3d=on] body[data-space=gate] .modal-overlay { -webkit-backdrop-filter: none; backdrop-filter: none; }
+body[data-modal][data-space=home] .s3 { display: none !important; }
+
+/* the floating cards' thickness: a solid edge from the face toward the middle of the screen (what a slab in perspective shows); one layer per card */
+html[data-thick=on] .s3-card { --tn: calc(var(--fx3d-thick, 14) * .125px); }
+html[data-thick=on] .s3-inner { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .16), calc(var(--ex, .2) * var(--tn) * 1) calc(var(--ey, .4) * var(--tn) * 1) 0 0 hsl(var(--h) 46% calc(40% - 1 * 3.4%)), calc(var(--ex, .2) * var(--tn) * 2) calc(var(--ey, .4) * var(--tn) * 2) 0 0 hsl(var(--h) 46% calc(40% - 2 * 3.4%)), calc(var(--ex, .2) * var(--tn) * 3) calc(var(--ey, .4) * var(--tn) * 3) 0 0 hsl(var(--h) 46% calc(40% - 3 * 3.4%)), calc(var(--ex, .2) * var(--tn) * 4) calc(var(--ey, .4) * var(--tn) * 4) 0 0 hsl(var(--h) 46% calc(40% - 4 * 3.4%)), calc(var(--ex, .2) * var(--tn) * 5) calc(var(--ey, .4) * var(--tn) * 5) 0 0 hsl(var(--h) 46% calc(40% - 5 * 3.4%)), calc(var(--ex, .2) * var(--tn) * 6) calc(var(--ey, .4) * var(--tn) * 6) 0 0 hsl(var(--h) 46% calc(40% - 6 * 3.4%)), calc(var(--ex, .2) * var(--tn) * 7) calc(var(--ey, .4) * var(--tn) * 7) 0 0 hsl(var(--h) 46% calc(40% - 7 * 3.4%)), calc(var(--ex, .2) * var(--tn) * 8) calc(var(--ey, .4) * var(--tn) * 8) 0 0 hsl(var(--h) 46% calc(40% - 8 * 3.4%)), 0 26px 44px rgba(0, 0, 0, .4); }
+:root[data-theme="light"][data-thick=on] .s3-inner { box-shadow: inset 0 1px 0 #fff, calc(var(--ex, .2) * var(--tn) * 1) calc(var(--ey, .4) * var(--tn) * 1) 0 0 hsl(var(--h) 40% calc(78% - 1 * 4.4%)), calc(var(--ex, .2) * var(--tn) * 2) calc(var(--ey, .4) * var(--tn) * 2) 0 0 hsl(var(--h) 40% calc(78% - 2 * 4.4%)), calc(var(--ex, .2) * var(--tn) * 3) calc(var(--ey, .4) * var(--tn) * 3) 0 0 hsl(var(--h) 40% calc(78% - 3 * 4.4%)), calc(var(--ex, .2) * var(--tn) * 4) calc(var(--ey, .4) * var(--tn) * 4) 0 0 hsl(var(--h) 40% calc(78% - 4 * 4.4%)), calc(var(--ex, .2) * var(--tn) * 5) calc(var(--ey, .4) * var(--tn) * 5) 0 0 hsl(var(--h) 40% calc(78% - 5 * 4.4%)), calc(var(--ex, .2) * var(--tn) * 6) calc(var(--ey, .4) * var(--tn) * 6) 0 0 hsl(var(--h) 40% calc(78% - 6 * 4.4%)), calc(var(--ex, .2) * var(--tn) * 7) calc(var(--ey, .4) * var(--tn) * 7) 0 0 hsl(var(--h) 40% calc(78% - 7 * 4.4%)), calc(var(--ex, .2) * var(--tn) * 8) calc(var(--ey, .4) * var(--tn) * 8) 0 0 hsl(var(--h) 40% calc(78% - 8 * 4.4%)), 0 22px 36px rgba(30, 45, 60, .22); }
 </style>
 </head>
 <body>
@@ -1313,6 +1317,7 @@ html[data-float=on] .widget:hover, html[data-float=on] .widget:focus-within, htm
     const close = () => {
       const i = stack.indexOf(api);
       if (i >= 0) stack.splice(i, 1);
+      if (!stack.length) delete document.body.dataset.modal;
       overlay.remove();
       if (prev && prev.focus && document.contains(prev)) prev.focus();
       if (onClose) onClose();
@@ -1375,6 +1380,7 @@ html[data-float=on] .widget:hover, html[data-float=on] .widget:focus-within, htm
     }
     const api = { close, el: sheet, overlay };
     stack.push(api);
+    document.body.dataset.modal = "1";
     document.body.append(overlay);
     const f = sheet.querySelector("[autofocus], input:not([type=hidden]):not([type=checkbox]), textarea, select");
     (f || sheet.querySelector(".btn") || sheet).focus();
@@ -2136,7 +2142,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   }
 
   // js/version.js
-  var APP_VERSION = "0.33.0";
+  var APP_VERSION = "0.33.1";
   var APP_NAME = "VaultManager";
   var REPO_URL = "https://github.com/ulyweb/vaultmanager";
   var FORMATS = [
@@ -2150,6 +2156,10 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     ["Attachments at rest", "AES-256-GCM per file, bound to vault + file id"]
   ];
   var CHANGELOG = [
+    { v: "0.33.1", date: "2026-11-15", notes: [
+      "Fix: a flat block of colour could cover most of the screen for a moment, for example while typing a password in a dialog. Cause: the 3D card space\u2019s \u201Cswell\u201D pushed a card almost onto the camera so it filled the screen, and the cards\u2019 thick edges (extra 3D layers) could be drawn over their own faces in some browsers. The swell is now a short, safe push; no card can get close to the camera on any screen size; each floating card is a single layer with a solid edge drawn toward the middle of the screen; and the cards rest behind Home while a dialog is open.",
+      "Lighter on the graphics card: panels no longer blur the moving cards behind them (they use a near-solid fill while the card space shows), the cards are positioned once per frame instead of by stacked CSS animations, and there are about a hundred fewer 3D layers."
+    ] },
     { v: "0.33.0", date: "2026-11-15", notes: [
       "Thick cards and windows: the floating cards in the 3D card space are now real slabs, a face with layered depth behind it that shows as an edge when they turn, and the sign-in, create-profile and import windows and the Home widgets have a solid edge that shifts as they lean toward your pointer. Dialogs get the edge too.",
       "Adjust it yourself: Settings \u2192 Effects has Card thickness (0\u201328 px, 0 makes everything flat), 3D tilt (0\u201312\xB0) and a new Card float (0\u201310: windows and widgets drift gently, and hold still under your pointer or while you type), next to the 3D card space switch. The sign-in and create screens have a \u201C3D effects\u201D button in the corner with the same controls, so you can tune it before you are signed in. What you set comes with you when you unlock or create the profile."
@@ -4225,42 +4235,77 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     [500, -60, 40, 8, 114, 0.9],
     [610, 190, 200, -6, 98, 1]
   ];
+  var RAD = Math.PI / 180;
   function mountSpace() {
     const ring = h("div", { class: "s3-ring" });
-    CARDS.forEach(([name, icon, hue2], i) => {
+    const cards = CARDS.map(([name, icon, hue2], i) => {
       const [r, y, ang, rz, dur, size] = SPREAD[i];
-      const slices = Array.from({ length: 6 }, (_, k) => {
-        const s = h("i", { class: "s3-slice" });
-        s.style.setProperty("--k", String(k + 1));
-        return s;
-      });
-      const card = h("div", { class: "s3-card" }, h("div", { class: "s3-slab" }, ...slices, h(
+      const el = h("div", { class: "s3-card" }, h(
         "div",
         { class: "s3-inner" },
         h("div", { class: "s3-top" }, h("span", { class: "s3-ico" }, h("span", { class: "icn", text: icon })), h("b", { text: name })),
         h("i", { class: "s3-bar w1" }),
         h("i", { class: "s3-bar w2" }),
         h("i", { class: "s3-bar w3" })
-      )));
-      const orbit = h("div", { class: "s3-orbit" }, card);
-      orbit.style.cssText = `--ang:${ang};--r:${r}px;--y:${y}px;--rz:${rz}deg;--rx:${(i % 3 - 1) * 11}deg;--dur:${dur}s;--s:${size};--h:${hue2};--bob:${i % 5 * -1.1 - 2}s`;
-      ring.append(orbit);
+      ));
+      el.style.setProperty("--s", String(size));
+      el.style.setProperty("--h", String(hue2));
+      ring.append(el);
+      return { el, r, y, ang, rz, dur, rx: (i % 3 - 1) * 11, ph: i * 0.9 };
     });
-    const root2 = h("div", { id: "space3d", class: "s3", "aria-hidden": "true" }, ring);
+    const root2 = h("div", { class: "s3", "aria-hidden": "true" }, ring);
+    root2.id = "space3d";
     document.body.insertBefore(root2, document.getElementById("app"));
-    let tx = 0, ty = 0, cx = 0, cy = 0, raf = 0;
-    const loop = () => {
+    const reduced = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const rs = () => innerWidth <= 700 ? 0.55 : 0.9;
+    const place = (t) => {
+      const k = rs();
+      for (const c of cards) {
+        const th = (c.ang + t * 360 / c.dur) * RAD, r = c.r * k;
+        const x = Math.sin(th) * r, z = Math.cos(th) * r, bob = Math.sin(t / 1.1 + c.ph) * 12, sway = Math.sin(t / 1.7 + c.ph) * 3.2;
+        c.el.style.transform = `translate3d(${x.toFixed(1)}px, ${(c.y + bob).toFixed(1)}px, ${z.toFixed(1)}px) rotateX(${c.rx}deg) rotateZ(${c.rz}deg) rotate3d(1, .4, 0, ${sway.toFixed(2)}deg)`;
+        c.el.style.setProperty("--ex", Math.max(-1, Math.min(1, 0.2 - x / 640)).toFixed(2));
+        c.el.style.setProperty("--ey", Math.max(-1, Math.min(1, 0.38 - (c.y + bob) / 480)).toFixed(2));
+      }
+    };
+    place(0);
+    const visible2 = () => document.documentElement.dataset.fx3d === "on" && ["gate", "home"].includes(document.body.dataset.space) && !(document.body.dataset.modal && document.body.dataset.space === "home");
+    let raf = 0;
+    const t0 = performance.now();
+    const loop = (now) => {
+      raf = 0;
+      if (!visible2() || document.hidden) return;
+      if (reduced()) {
+        place(0);
+        return;
+      }
+      place((now - t0) / 1e3);
+      raf = requestAnimationFrame(loop);
+    };
+    const wake = () => {
+      if (!raf) raf = requestAnimationFrame(loop);
+    };
+    new MutationObserver(wake).observe(document.body, { attributes: true, attributeFilter: ["data-space", "data-modal"] });
+    new MutationObserver(wake).observe(document.documentElement, { attributes: true, attributeFilter: ["data-fx3d"] });
+    document.addEventListener("visibilitychange", wake);
+    window.addEventListener("resize", () => {
+      place((performance.now() - t0) / 1e3);
+      wake();
+    });
+    wake();
+    let tx = 0, ty = 0, cx = 0, cy = 0, lean = 0;
+    const leanLoop = () => {
       cx += (tx - cx) * 0.06;
       cy += (ty - cy) * 0.06;
       ring.style.setProperty("--lx", cx.toFixed(2) + "deg");
       ring.style.setProperty("--ly", cy.toFixed(2) + "deg");
-      raf = Math.abs(tx - cx) + Math.abs(ty - cy) > 0.02 ? requestAnimationFrame(loop) : 0;
+      lean = Math.abs(tx - cx) + Math.abs(ty - cy) > 0.02 ? requestAnimationFrame(leanLoop) : 0;
     };
     window.addEventListener("pointermove", (e) => {
-      if (document.body.dataset.space === "off" || document.documentElement.dataset.fx3d !== "on") return;
+      if (!visible2() || reduced()) return;
       tx = (e.clientX / innerWidth - 0.5) * 12;
       ty = -(e.clientY / innerHeight - 0.5) * 7;
-      if (!raf) raf = requestAnimationFrame(loop);
+      if (!lean) lean = requestAnimationFrame(leanLoop);
     }, { passive: true });
     let timer = 0;
     return {
@@ -4269,7 +4314,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       set(mode) {
         if (document.body.dataset.space !== mode) document.body.dataset.space = mode;
       },
-      /* the whole space swells toward you for a moment: something important just happened (unlock, create, backup opened) */
+      /* the whole space is pushed toward you for a moment: something important just happened (unlock, create, backup opened) */
       surge() {
         root2.classList.add("surge");
         clearTimeout(timer);

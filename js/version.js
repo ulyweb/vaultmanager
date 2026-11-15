@@ -1,6 +1,6 @@
 /* Application version, data-format versions and changelog (shown in Settings → About). */
 
-export const APP_VERSION = '0.33.0';
+export const APP_VERSION = '0.33.1';
 export const APP_NAME = 'VaultManager';
 export const REPO_URL = 'https://github.com/ulyweb/vaultmanager';
 
@@ -16,6 +16,10 @@ export const FORMATS = [
 ];
 
 export const CHANGELOG = [
+  { v: '0.33.1', date: '2026-11-15', notes: [
+    'Fix: a flat block of colour could cover most of the screen for a moment, for example while typing a password in a dialog. Cause: the 3D card space’s “swell” pushed a card almost onto the camera so it filled the screen, and the cards’ thick edges (extra 3D layers) could be drawn over their own faces in some browsers. The swell is now a short, safe push; no card can get close to the camera on any screen size; each floating card is a single layer with a solid edge drawn toward the middle of the screen; and the cards rest behind Home while a dialog is open.',
+    'Lighter on the graphics card: panels no longer blur the moving cards behind them (they use a near-solid fill while the card space shows), the cards are positioned once per frame instead of by stacked CSS animations, and there are about a hundred fewer 3D layers.',
+  ] },
   { v: '0.33.0', date: '2026-11-15', notes: [
     'Thick cards and windows: the floating cards in the 3D card space are now real slabs, a face with layered depth behind it that shows as an edge when they turn, and the sign-in, create-profile and import windows and the Home widgets have a solid edge that shifts as they lean toward your pointer. Dialogs get the edge too.',
     'Adjust it yourself: Settings → Effects has Card thickness (0–28 px, 0 makes everything flat), 3D tilt (0–12°) and a new Card float (0–10: windows and widgets drift gently, and hold still under your pointer or while you type), next to the 3D card space switch. The sign-in and create screens have a “3D effects” button in the corner with the same controls, so you can tune it before you are signed in. What you set comes with you when you unlock or create the profile.',
