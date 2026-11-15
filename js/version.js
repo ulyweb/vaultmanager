@@ -1,6 +1,6 @@
 /* Application version, data-format versions and changelog (shown in Settings → About). */
 
-export const APP_VERSION = '0.31.0';
+export const APP_VERSION = '0.32.0';
 export const APP_NAME = 'VaultManager';
 export const REPO_URL = 'https://github.com/ulyweb/vaultmanager';
 
@@ -16,6 +16,11 @@ export const FORMATS = [
 ];
 
 export const CHANGELOG = [
+  { v: '0.32.0', date: '2026-11-15', notes: [
+    'The sign-in, create-profile, add-a-profile and import screens, and the Home page, now sit in a 3D card space: item cards (Login, Payment card, Wi-Fi, Crypto wallet, Passport…) flow around you on their own orbits at different depths and speeds, always turning to face you, drifting past the sides, away behind the cards you use and swooping in close again. They show only category names and blurred placeholder bars, never anything from your vault.',
+    'The cards you use fly in from depth, lean toward the pointer with a moving sheen, and the whole space swells toward you for a moment while a key is being derived (unlocking, creating a profile, opening or restoring a backup). The import dialog leans toward the pointer too, with the cards visible behind it.',
+    'It is all plain CSS 3D, so nothing extra is loaded and it works in the offline copy. Turn it off with Settings → Effects → “3D card space”. With animations off, or “reduce motion” on your device, the cards hold still and nothing flies in.',
+  ] },
   { v: '0.31.0', date: '2026-11-15', notes: [
     'New item: the “Choose a category” step is now a 3D carousel. All 28 categories are cards on a ring that flows around you: they pop out of the centre one after another, drift in a slow wave, the card in front grows and tilts toward your pointer, and the ones behind turn back to face you. Drag, swipe, scroll or use the arrow keys to spin it; click the front card (or press Enter) to create that kind of item. Group chips jump to Everyday, Money, Health and so on, and the caption shows the fields each category holds.',
     'A 3D / List switch at the top keeps the plain grouped list one tap away, and your choice is remembered on this device. With animations off in Settings, or “reduce motion” on your device, the list is shown first and the carousel (if you pick it) holds still instead of drifting. It is plain CSS 3D, so nothing extra is loaded and it works in the offline copy.',

@@ -1887,3 +1887,37 @@ test('v0.31.0: New item opens a 3D category carousel (spin with keys, drag and g
     assert.deepEqual(problems.filter(quiet), [], label); await ctx.close();
   }
 });
+
+test('v0.32.0: the 3D card space flows behind the sign-in, create and Home screens, holds still for reduced motion, never blocks a click, and can be switched off', async () => {
+  const quiet = (p) => !/Failed to load resource/.test(p);
+  // reduced motion (what the other tests run with): the cards are there but nothing is animated
+  const R = await newPage(); await R.page.goto(base); await R.page.waitForSelector('#pw1');
+  assert.equal(await R.page.locator('#space3d .s3-card').count(), 16, 'sixteen item cards in the space');
+  assert.equal(await R.page.evaluate(() => document.body.dataset.space), 'gate');
+  assert.equal(await R.page.evaluate(() => getComputedStyle(document.querySelector('.s3-orbit')).animationName), 'none', 'still under reduce motion');
+  await R.ctx.close();
+  // motion on
+  const { ctx, page, problems } = await newPage({ reducedMotion: 'no-preference' });
+  await page.goto(base); await page.waitForSelector('#pw1');
+  assert.match(await page.evaluate(() => getComputedStyle(document.querySelector('.s3-orbit')).animationName), /s3-orbit/, 'the orbits run');
+  assert.equal(await page.evaluate(() => getComputedStyle(document.getElementById('space3d')).pointerEvents), 'none', 'the space never takes a click');
+  const spin = async () => page.evaluate(() => getComputedStyle(document.querySelector('.s3-orbit')).transform);
+  const a = await spin(); await page.waitForTimeout(700); assert.notEqual(await spin(), a, 'the cards really move');
+  assert.match(await page.evaluate(() => getComputedStyle(document.querySelector('.s3-card')).transform), /^matrix3d/, 'in 3D');
+  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth <= 1), true, 'no sideways scroll');
+  await createVault(page);                                             // creating a profile works with the cards flowing behind it
+  assert.equal(await page.evaluate(() => document.body.dataset.space), 'home', 'quieter behind the Home widgets');
+  assert.ok(await page.locator('.widget').count() > 3);
+  await page.locator('.side .nav', { hasText: 'All items' }).click(); assert.equal(await page.evaluate(() => document.body.dataset.space), 'off', 'off on the item pages');
+  await page.locator('.side .nav', { hasText: 'Home' }).first().click(); assert.equal(await page.evaluate(() => document.body.dataset.space), 'home');
+  // switch it off in Settings → Effects
+  await settingsTab(page, 'Effects'); await page.locator('button[aria-label="fx3d"]').click();
+  assert.equal(await page.evaluate(() => document.documentElement.dataset.fx3d), 'off');
+  await page.locator('.side .nav', { hasText: 'Home' }).first().click(); assert.equal(await page.evaluate(() => getComputedStyle(document.getElementById('space3d')).display), 'none', 'gone when switched off');
+  assert.deepEqual(problems.filter(quiet), []); await ctx.close();
+  // the import dialog opens over the cards
+  const I = await newPage({ reducedMotion: 'no-preference' }); await I.page.goto(base); await I.page.waitForSelector('#pw1');
+  await I.page.getByRole('button', { name: /Import a profile backup/ }).click(); await I.page.waitForSelector('.modal-sheet.m3d');
+  assert.equal(await I.page.evaluate(() => getComputedStyle(document.getElementById('space3d')).display), 'block', 'the cards stay visible behind the import dialog');
+  await I.ctx.close();
+});

@@ -20,7 +20,7 @@ const wrap = (ctx, def, w, idx, body, grid) => {
   const pin = h('button', { class: 'icon-btn wpin' + (w.pinned ? ' on' : ''), 'aria-pressed': String(!!w.pinned), 'aria-label': (w.pinned ? 'Unpin ' : 'Pin ') + def.label, title: w.pinned ? 'Pinned to the top — click to unpin' : 'Pin to the top of Home', on: { click: () => setW(ctx, w.id, { pinned: !w.pinned }, true) } }, '{{pin}}');
   const grip = h('button', { class: 'wgrip', type: 'button', 'aria-label': 'Resize ' + def.label + ' — drag, or use the arrow keys; double-click resets', title: 'Drag to resize · double-click to reset' });
   const el = h('section', { class: 'panel widget ' + w.size + (w.pinned ? ' pinned' : ''), 'aria-label': def.label }, h('div', { class: 'whead' }, h('span', { class: 'icn', text: def.icon }), h('span', { text: def.label }), pin), h('div', { class: 'wbody' }, body), grip);
-  el.style.setProperty('--wc', HUES[idx % HUES.length]);
+  el.style.setProperty('--wc', HUES[idx % HUES.length]); el.style.setProperty('--i', String(idx));   // staggers the 3D fly-in
   if (w.cw) { el.dataset.cw = String(w.cw); el.style.setProperty('--cw', String(w.cw)); }
   if (w.ch) { el.dataset.ch = String(w.ch); el.style.setProperty('--ch', w.ch + 'px'); }
   const cols = () => Math.max(1, getComputedStyle(grid).gridTemplateColumns.split(' ').length);

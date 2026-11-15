@@ -5,6 +5,7 @@ if (window.top !== window.self) { document.documentElement.textContent = 'VaultM
 import { h, clear, setLabel, clearClipboardNow, confirmDialog, buzz, closeAllModals, closeTopModal, modalOpen, modal, toast, copyText } from './dom.js';
 import { VaultStore } from './vault.js';
 import { clearOpenFields } from './fieldlock.js';
+import { mountSpace } from './space3d.js';
 import { available } from './crypto.js';
 import { estimate } from './strength.js';
 import { generateStrongPassphrase } from './generator.js';
@@ -133,12 +134,19 @@ function setTheme(v) { store.settings.theme = v; applyTheme(); saveSoon(); }
 
 /* tilt toward the pointer (widgets, sign-in card) */
 document.addEventListener('pointermove', (e) => {
-  const L = curLook(); if (!L.fxTilt || !L.animations || !e.target.closest) return;
-  const el = e.target.closest('.widget, .gate-card'); if (!el) return;
+  const L = curLook(); if (!L.animations || !e.target.closest) return;
+  const tilt = L.fxTilt || (L.fx3d && !reducedMotion() ? 5 : 0); if (!tilt) return;   // the 3D card space brings a gentle lean of its own
+  const el = e.target.closest('.widget, .gate-card, .modal-sheet.m3d'); if (!el) return;
   const r = el.getBoundingClientRect(), px = (e.clientX - r.left) / r.width - 0.5, py = (e.clientY - r.top) / r.height - 0.5;
-  el.style.setProperty('--rx', (-py * 2 * L.fxTilt).toFixed(2) + 'deg'); el.style.setProperty('--ry', (px * 2 * L.fxTilt).toFixed(2) + 'deg');
+  el.style.setProperty('--rx', (-py * 2 * tilt).toFixed(2) + 'deg'); el.style.setProperty('--ry', (px * 2 * tilt).toFixed(2) + 'deg');
+  el.style.setProperty('--mx', ((px + 0.5) * 100).toFixed(1) + '%'); el.style.setProperty('--my', ((py + 0.5) * 100).toFixed(1) + '%');   // where the sheen follows the pointer
 });
-document.addEventListener('pointerleave', (e) => { if (e.target.classList && e.target.matches && e.target.matches('.widget, .gate-card')) { e.target.style.setProperty('--rx', '0deg'); e.target.style.setProperty('--ry', '0deg'); } }, true);
+document.addEventListener('pointerleave', (e) => { if (e.target.classList && e.target.matches && e.target.matches('.widget, .gate-card, .modal-sheet.m3d')) { e.target.style.setProperty('--rx', '0deg'); e.target.style.setProperty('--ry', '0deg'); } }, true);
+
+/* the 3D card space behind the sign-in, create, import and Home screens */
+const space = mountSpace();
+ctx.surge = () => space.surge();
+const syncSpace = () => space.set(!store.unlocked ? 'gate' : ctx.S.view === 'home' && !ctx.S.sel ? 'home' : 'off');
 
 /* unlock animation: a short, skippable log of what actually just happened */
 function showBoot(L, done) {
@@ -294,7 +302,7 @@ function gateCreate({ first }) {
     if (p1.input.value !== p2.input.value) { err.textContent = 'The two passwords do not match.'; return; }
     const pol = ctx.passwordPolicy(p1.input.value); if (pol) { err.textContent = pol; return; }
     if (!ack.checked) { err.textContent = 'Please confirm that you understand there is no password recovery.'; return; }
-    btn.disabled = true; btn.classList.add('busy'); btn.textContent = 'Deriving key (600,000 rounds)…';
+    btn.disabled = true; btn.classList.add('busy'); btn.textContent = 'Deriving key (600,000 rounds)…'; ctx.surge();
     const id = newProfileId(), k = keysFor(id), st = new VaultStore(env.storage, k.vault, env.blobs, k.fails);
     try { await st.create(p1.input.value); st.data.settings.displayName = nm; st.data.settings.theme = themeChoice; await st.save(); } catch (x) { err.textContent = x.message; btn.disabled = false; btn.classList.remove('busy'); btn.textContent = first ? 'Create my vault' : 'Create profile'; return; }
     env.profiles.add({ id, name: nm, avatar: picker.get() }); env.profiles.setLast(id);
@@ -359,7 +367,7 @@ function gateUnlock(profile) {
   const form = h('form', { novalidate: true, on: { submit: async (e) => {
     e.preventDefault(); err.textContent = '';
     if (store.delayLeft() > 0) { throttle(); return; }
-    btn.disabled = true; btn.textContent = 'Unlocking…';
+    btn.disabled = true; btn.textContent = 'Unlocking…'; ctx.surge();   // the cards swell while the key is derived
     try {
       await store.unlock(mode === 'password' ? { password: p1.input.value } : { recovery: rk.value });
       p1.input.value = ''; rk.value = '';
@@ -572,6 +580,7 @@ function drawMain() {
 }
 
 function draw() {
+  syncSpace();
   if (!store.unlocked) { shell = null; drawGate(); return; }
   if (!shell) { buildShell(); clear(root).append(shell.el); }
   drawSide(); drawMain(); drawDock(); drawMbar(); drawTitle(); drawSecBar();

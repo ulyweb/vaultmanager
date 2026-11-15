@@ -114,12 +114,13 @@ export function importProfileDialog(ctx, { onDone } = {}) {
     h('label', { class: 'chk' }, ack, 'I understand that if I forget this master password, nobody can recover this profile.'), err2, h('div', { class: 'row' }, createBtn));
 
   const m = modal({ title: 'Import a profile', sub: 'Restore everything from an encrypted backup', wide: false, body: h('div', null, step1, step2), actions: [{ label: 'Cancel' }] });
+  m.el.classList.add('m3d');   // leans toward the pointer over the 3D card space
 
   openBtn.addEventListener('click', async () => {
     err1.textContent = ''; const t = (text || paste.value).trim();
     if (!t) { err1.textContent = 'Choose a backup file or paste its text.'; return; }
     if (!bpw.value) { err1.textContent = 'Enter the backup password.'; return; }
-    openBtn.disabled = true; openBtn.textContent = 'Deriving the key…';
+    openBtn.disabled = true; openBtn.textContent = 'Deriving the key…'; ctx.surge();
     try {
       data = await decryptProfile(t, bpw.value);
       const atts = Object.keys(data.attachments || {}).length;
@@ -139,7 +140,7 @@ export function importProfileDialog(ctx, { onDone } = {}) {
     if (!same.checked && p1.value !== p2.value) { err2.textContent = 'The two passwords do not match.'; return; }
     const pol = ctx.passwordPolicy(master); if (pol) { err2.textContent = same.checked ? 'The backup password cannot be used as a master password: ' + pol + ' Untick the box and choose a new master password.' : pol; return; }
     if (!ack.checked) { err2.textContent = 'Please confirm that you understand there is no password recovery.'; return; }
-    createBtn.disabled = true; createBtn.textContent = 'Restoring everything…';
+    createBtn.disabled = true; createBtn.textContent = 'Restoring everything…'; ctx.surge();
     try {
       const r = await createProfileFromImport(ctx.env, data, { name: name.value.trim(), avatar: picker.get(), masterPassword: master });
       const pw = master; p1.value = p2.value = bpw.value = ''; m.close();
