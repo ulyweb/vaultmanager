@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VaultManager v0.36.2 — single-file offline build. Verify with the .sha256 file next to it. -->
+<!-- VaultManager v0.36.3 — single-file offline build. Verify with the .sha256 file next to it. -->
 <html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
@@ -11,7 +11,7 @@
 <meta name="application-name" content="VaultManager">
 <meta name="format-detection" content="telephone=no">
 <meta name="referrer" content="no-referrer">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-tauzjAWYvkq2EEey6/r1GOXzEWNzSydbYj43JCIjd2U=' 'sha256-fco11aqq62xWo6fmdVFxe31lqiekCfyrzZVqArKJLJ4=' blob:; style-src 'sha256-rV8FZEegyHF6SEm2B5n+jO7mjxPcehaVVfqeQzNXek4='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-tauzjAWYvkq2EEey6/r1GOXzEWNzSydbYj43JCIjd2U=' 'sha256-m3K01qz8k8pqsl+B7N5B5qYOIwFf+BK29nXdUG+yk14=' blob:; style-src 'sha256-uxs0fOhS7EjDV4Pkd5vVde4DZOA8VvAPWpqISH7IH7s='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
 <title>VaultManager | Zero-Knowledge Password Manager</title>
 <meta name="description" content="VaultManager: an offline-first, zero-knowledge, end-to-end encrypted password manager with a strong password generator, TOTP codes and QR-sealed sharing and backup. Runs entirely in your browser.">
 <meta name="theme-color" content="#05080d">
@@ -56,7 +56,7 @@ a { color: var(--link); }
 [hidden] { display: none !important; }
 
 .aurora { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
-.aurora i { position: absolute; border-radius: 50%; filter: blur(80px); opacity: calc(var(--fx-aurora, 65) / 100 * .34); animation: drift 30s ease-in-out infinite alternate; }
+.aurora i { position: absolute; border-radius: 50%; opacity: calc(var(--fx-aurora, 65) / 100 * .34); animation: drift 30s ease-in-out infinite alternate; }
 .aurora .g1 { width: 46vw; height: 46vw; background: radial-gradient(circle, var(--accent), transparent 70%); top: -14%; left: -10%; }
 .aurora .g2 { width: 40vw; height: 40vw; background: radial-gradient(circle, var(--violet), transparent 70%); bottom: -16%; right: -6%; animation-delay: -10s; }
 .aurora .g3 { width: 30vw; height: 30vw; background: radial-gradient(circle, #ffcf5c, transparent 70%); top: 40%; left: 40%; opacity: calc(var(--fx-aurora, 65) / 100 * .12); animation-delay: -18s; }
@@ -962,11 +962,11 @@ html[data-icons] .themeseg .ico:not(.cat) { color: inherit; filter: none; }   /*
    Item cards on private orbits around the middle of the screen, behind the sign-in / create / import screens and the Home widgets.
    Everything animates with CSS only; "reduce motion" (the rule at the top of this file) leaves a still scatter, and
    Settings → Look & feel → 3D card space turns it off (html[data-fx3d]). */
-.s3 { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; display: none; perspective: 1150px; perspective-origin: 50% 42%; }   /* js/space3d.js scales every orbit radius (x .9, x .55 on phones) so the nearest card always stays well in front of the camera (perspective 1150 / 900) */
-html[data-fx3d=on] body[data-space=gate] .s3, html[data-fx3d=on] body[data-space=home] .s3 { display: block; }
-body[data-space=home] .s3 { opacity: .72; }
+.space3d { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; display: none; perspective: 1150px; perspective-origin: 50% 42%; }   /* js/space3d.js scales every orbit radius (x .9, x .55 on phones) so the nearest card always stays well in front of the camera (perspective 1150 / 900) */
+html[data-fx3d=on] body[data-space=gate] .space3d, html[data-fx3d=on] body[data-space=home] .space3d { display: block; }
+body[data-space=home] .space3d { opacity: .72; }
 .s3-ring { transition: translate .9s ease; }
-.s3.surge .s3-ring { translate: 0 0 70px; transition: translate .4s cubic-bezier(.2, .9, .3, 1.15); }   /* the whole space swells toward you a little: a short push, never close to the camera */
+.space3d.surge .s3-ring { translate: 0 0 70px; transition: translate .4s cubic-bezier(.2, .9, .3, 1.15); }   /* the whole space swells toward you a little: a short push, never close to the camera */
 .s3-ring { position: absolute; left: 50%; top: 50%; width: 0; height: 0; transform-style: preserve-3d; transform: rotateX(var(--ly, 0deg)) rotateY(var(--lx, 0deg)); }
 .s3-card { position: absolute; left: 0; top: 0; width: calc(172px * var(--s)); height: calc(106px * var(--s)); margin: calc(-53px * var(--s)) 0 0 calc(-86px * var(--s)); transform-style: preserve-3d; }   /* its position is written every frame by js/space3d.js */
 .s3-inner { position: absolute; inset: 0; box-sizing: border-box; padding: 12px 13px; display: flex; flex-direction: column; gap: 9px; border-radius: 16px; border: 1px solid hsl(var(--h) 55% 58% / .45); background: linear-gradient(155deg, hsl(var(--h) 42% 24% / .92), rgba(11, 19, 30, .92) 70%); box-shadow: 0 18px 40px rgba(0, 0, 0, .42), inset 0 1px 0 rgba(255, 255, 255, .14); }
@@ -976,7 +976,7 @@ body[data-space=home] .s3 { opacity: .72; }
 .s3-bar { display: block; height: 8px; border-radius: 4px; background: hsl(var(--h) 45% 62% / .3); } .s3-bar.w1 { width: 88%; } .s3-bar.w2 { width: 62%; } .s3-bar.w3 { width: 40%; }
 :root[data-theme="light"] .s3-inner { background: linear-gradient(155deg, hsl(var(--h) 80% 91%), #fff 72%); border-color: hsl(var(--h) 50% 62% / .55); box-shadow: 0 14px 30px rgba(30, 45, 60, .2), inset 0 1px 0 #fff; }
 :root[data-theme="light"] .s3-top { color: #1b2430; }
-@media (max-width: 700px) { .s3 { perspective: 900px; } .s3-card { width: calc(138px * var(--s)); height: calc(86px * var(--s)); margin: calc(-43px * var(--s)) 0 0 calc(-69px * var(--s)); } .s3-inner { padding: 9px 10px; gap: 7px; } .s3-top { font-size: 11px; } .s3-ico { width: 28px; height: 28px; } .s3-card:nth-child(n+11) { display: none; } }
+@media (max-width: 700px) { .space3d { perspective: 900px; } .s3-card { width: calc(138px * var(--s)); height: calc(86px * var(--s)); margin: calc(-43px * var(--s)) 0 0 calc(-69px * var(--s)); } .s3-inner { padding: 9px 10px; gap: 7px; } .s3-top { font-size: 11px; } .s3-ico { width: 28px; height: 28px; } .s3-card:nth-child(n+11) { display: none; } }
 
 /* the cards that sit in front of the space: widgets, the sign-in / create card, and the import dialog */
 .widget::after, .gate-card::after { content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; opacity: 0; transition: opacity .25s; background: radial-gradient(340px circle at var(--mx, 50%) var(--my, 0%), rgba(255, 255, 255, .11), transparent 62%); }
@@ -1021,7 +1021,7 @@ html[data-float=on] .widget:hover, html[data-float=on] .widget:focus-within, htm
 :root[data-theme="light"] { --glass-solid: rgba(255, 255, 255, .94); }
 html[data-fx3d=on] body[data-space=home] .panel, html[data-fx3d=on] body[data-space=gate] .panel { background: linear-gradient(180deg, rgba(255, 255, 255, .04), rgba(255, 255, 255, .01)), var(--glass-solid); }
 html[data-fx3d=on] body[data-space=home] .panel, html[data-fx3d=on] body[data-space=home] .topbar, html[data-fx3d=on] body[data-space=home] .dock, html[data-fx3d=on] body[data-space=home] .mbar, html[data-fx3d=on] body[data-space=gate] .panel, html[data-fx3d=on] body[data-space=gate] .modal-overlay { -webkit-backdrop-filter: none; backdrop-filter: none; }
-body[data-modal][data-space=home] .s3 { display: none !important; }
+body[data-modal][data-space=home] .space3d { display: none !important; }
 
 /* the floating cards' thickness: a solid edge from the face toward the middle of the screen (what a slab in perspective shows); one layer per card */
 html[data-thick=on] .s3-card { --tn: calc(var(--fx3d-thick, 14) * .125px); }
@@ -1087,6 +1087,14 @@ html[data-icons="3d"] .topbar .newbtn .newico::before { display: none !important
 html[data-icons="3d"] .topbar .newbtn .newico .ico { width: 34px !important; height: 34px !important; margin: 0 !important; }
 html[data-icons="3d"] .topbar .newbtn:hover .newico .ico { transform: scale(1.15) !important; }
 html[data-icons="3d"] .mbar-fab .ico { background-color: transparent !important; }
+
+/* A dialog is open: nothing behind it blurs or moves.
+   Blurring (backdrop-filter) a page that has animated layers under it (floating widgets, bobbing 3D icons, the card space) can make some
+   browsers repaint the blurred area as one flat block of colour while you type in a field, so the dialog gets a plain dim instead. */
+.modal-overlay, body[data-space=gate] .modal-overlay { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; background: rgba(2, 4, 8, .84); }
+body[data-space=gate] .modal-overlay { background: rgba(2, 4, 8, .6); }
+body[data-modal] :is(.widget, .gate-card, .panel, .topbar, .dock, .mbar, .side, .modal-sheet) { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+body[data-modal] :is(.widget, .gate-card, .modal-sheet, .ico, .ico svg, .newico, .c3-obj, .aurora i) { animation: none !important; }
 </style>
 </head>
 <body>
@@ -2211,7 +2219,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   }
 
   // js/version.js
-  var APP_VERSION = "0.36.2";
+  var APP_VERSION = "0.36.3";
   var APP_NAME = "VaultManager";
   var REPO_URL = "https://github.com/ulyweb/vaultmanager";
   var FORMATS = [
@@ -2225,6 +2233,10 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     ["Attachments at rest", "AES-256-GCM per file, bound to vault + file id"]
   ];
   var CHANGELOG = [
+    { v: "0.36.3", date: "2026-11-16", notes: [
+      "Fixed the flat green-blue block that covered the screen while you typed a password (for example when exporting a profile) and went away as you kept typing. Cause: the 3D card space and the password strength bar both used a style class called \u201Cs3\u201D, so when a password reached \u201CGood\u201D the strength bar stretched across the whole screen. The card space now has its own class name.",
+      "Also: nothing behind an open dialog blurs or moves any more (no backdrop blur, floating widgets, bobbing icons or aurora animation), and the aurora is plain soft gradients instead of a heavy 80 px blur filter."
+    ] },
     { v: "0.36.2", date: "2026-11-16", notes: [
       "3D live animated is now the default icon style for new profiles and for \u201CReset appearance\u201D. Profiles that already picked an icon style keep their choice (Settings \u2192 Appearance \u2192 Icons \u2192 Icon style)."
     ] },
@@ -2570,6 +2582,8 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
         `html[data-icons="3d"] .ico:is(${list})::before, html[data-icons="3d"] .ico:is(${list})::after { display: none !important; }`,
         `html[data-icons="3d"][data-fxanim=on] .ico:is(${list}) { animation: vm-bob3d 4.8s ease-in-out infinite !important; animation-delay: var(--d, 0s) !important; }`,
         `html[data-icons="3d"] .ico:is(${list}):hover, html[data-icons="3d"] :is(.nav, .dock-item, .mbar-item, .msheet-item, .btn, .icon-btn, .tabs button, .menuitem, [role=menuitem]):hover .ico:is(${list}) { animation: none !important; transform: scale(1.15) translateY(-1px) !important; }`,
+        `html[data-icons="3d"] body[data-modal] .ico:is(${list}) { animation: none !important; }`,
+        // nothing moves behind an open dialog
         ...ICONS3D.map((n) => `html[data-icons="3d"] .ico[data-n="${n}"] { background-image: url("${icon3dUrl(n)}") !important; }`)
       ];
       sheet.replaceSync(rules.join("\n"));
@@ -4432,7 +4446,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       ring.append(el);
       return { el, r, y, ang, rz, dur, rx: (i % 3 - 1) * 11, ph: i * 0.9 };
     });
-    const root2 = h("div", { class: "s3", "aria-hidden": "true" }, ring);
+    const root2 = h("div", { class: "space3d", "aria-hidden": "true" }, ring);
     root2.id = "space3d";
     document.body.insertBefore(root2, document.getElementById("app"));
     const reduced = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
