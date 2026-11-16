@@ -1054,7 +1054,7 @@ html[data-avatar=icon][data-icons=tint] .avatar .ico.cat { color: var(--accent);
 html[data-icons="3d"] :is(.nav, .dock-item, .msheet-item, .mbar-item) .ico:not(.cat) { background: linear-gradient(150deg, var(--v1), var(--v2)); color: #fff; width: 1.9em; height: 1.9em; padding: .42em; }
 
 /* 3D icon objects on the carousel cards and in the "3D live animated" icon style */
-@keyframes vm-bob3d { 0%, 100% { transform: translateY(0) rotate(-3deg); } 50% { transform: translateY(-3px) rotate(3deg); } }
+@keyframes vm-bob3d { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-1.5px); } }
 @keyframes c3-bob { 0%, 100% { transform: translateY(0) rotate(-4deg) scale(1); } 50% { transform: translateY(-7px) rotate(4deg) scale(1.04); } }
 .c3-obj { width: 98px; height: 98px; object-fit: contain; margin: 2px 0 0; filter: drop-shadow(0 10px 7px rgba(0, 0, 0, .4)); pointer-events: none; user-select: none; -webkit-user-drag: none; }
 html[data-fxanim=on] .c3-card .c3-obj { animation: c3-bob 4.6s ease-in-out infinite; }
@@ -1062,3 +1062,10 @@ html[data-fxanim=on] .c3-card.front .c3-obj { animation-duration: 3.4s; }
 .c3-card.front .c3-obj { filter: drop-shadow(0 14px 10px rgba(0, 0, 0, .45)) drop-shadow(0 0 16px rgba(var(--accent-rgb), .35)); }
 @media (max-width: 559px) { .c3-obj { width: 82px; height: 82px; } }
 @media (prefers-reduced-motion: reduce) { .c3-card .c3-obj { animation: none !important; } }
+
+/* 3D live animated icons: the "New" button's glass tile is replaced by the 3D plus itself */
+html[data-icons="3d"] .topbar .newbtn .newico { background: none !important; box-shadow: none !important; width: 34px; height: 34px; animation: none !important; }
+html[data-icons="3d"] .topbar .newbtn .newico::before { display: none !important; }
+html[data-icons="3d"] .topbar .newbtn .newico .ico { width: 34px !important; height: 34px !important; margin: 0 !important; }
+html[data-icons="3d"] .topbar .newbtn:hover .newico .ico { transform: scale(1.15) !important; }
+html[data-icons="3d"] .mbar-fab .ico { background-color: transparent !important; }

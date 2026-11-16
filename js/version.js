@@ -1,6 +1,6 @@
 /* Application version, data-format versions and changelog (shown in Settings → About). */
 
-export const APP_VERSION = '0.35.1';
+export const APP_VERSION = '0.36.1';
 export const APP_NAME = 'VaultManager';
 export const REPO_URL = 'https://github.com/ulyweb/vaultmanager';
 
@@ -16,6 +16,13 @@ export const FORMATS = [
 ];
 
 export const CHANGELOG = [
+  { v: '0.36.1', date: '2026-11-16', notes: [
+    'Fixed the 3D live animated icons looking off-centre and cropped: each picture is now shown whole and centred in its box (it was zoomed, which cut off the tops and sides and pushed icons up and to the left), inline icons in tabs and buttons sit on the text line, the New button shows the 3D plus without a glass tile behind it, and the phone bottom bar icons no longer overlap their labels. The bobbing is now a small up-and-down only. New 3D menu icon for More.',
+  ] },
+  { v: '0.36.0', date: '2026-11-16', notes: [
+    '3D live animated icons everywhere: with the “3D live animated” icon style, the side-bar, tool, dock, system-menu, Settings-tab, button and widget icons are now real 3D objects too (a house for Home, a trash bin, a heart with a pulse for Vault health, a lightning bolt for the Generator, a QR code, a compass for the tour, a gear, a padlock, a clock and about 50 more), not only the category icons. They bob gently and straighten and lift when you point at them.',
+    'The icon pictures are 256 px, bundled with the app (about 700 KB) and embedded in the single-file offline copy.',
+  ] },
   { v: '0.35.1', date: '2026-11-16', notes: [
     'Real 3D icons: every one of the 29 categories now has its own 3D object (a key for Logins, a credit card, a notepad, a safe, a bank, a gold coin for crypto, a passport, a car, a siren and more), modelled and rendered with three.js in glossy plastic. They are the objects on the “Choose a category” carousel cards, floating and turning, and they are what the category icons show when the icon style is “3D live animated” (they bob, and straighten and lift when you hover them).',
     'The pictures are bundled with the app (about 370 KB) and also travel inside the single-file offline copy. The renderer is in tools/render-icons3d.mjs if you want to change a model or a colour.',

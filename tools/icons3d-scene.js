@@ -203,6 +203,160 @@ const B = {
     return ext(s, 0.5, GOLD(), 0.16);
   },
 };
+
+Object.assign(B, {
+  home() {
+    const wall = at(slab(2.0, 1.4, 1.5, 0.12, M(0xfff1dc), 0.06), 0, -0.45, 0), roof = poly([[-1.5, 0.15], [0, 1.35], [1.5, 0.15]], 1.8, M(0xff6b57), 0.08), door = at(slab(0.5, 0.85, 0.08, 0.2, M(0x35a7ff), 0.03), 0, -0.7, 0.78), win = at(slab(0.42, 0.42, 0.08, 0.06, M(0x9fd8ff), 0.03), 0.62, -0.25, 0.78), knob = at(ball(0.05, GOLD()), 0.14, -0.72, 0.84), chim = at(slab(0.3, 0.6, 0.3, 0.04, M(0xc94f3f), 0.03), 0.7, 0.9, -0.2);
+    return G(chim, wall, roof, door, win, knob);
+  },
+  vault() {   // the "all items" cabinet with drawers
+    const body = slab(2.2, 2.4, 1.2, 0.2, M(0x6f7dff), 0.08);
+    const dr = [0.72, 0, -0.72].map((y) => G(at(slab(1.9, 0.6, 0.12, 0.1, M(0x8b98ff), 0.04), 0, y, 0.62), at(bar(0.6, 0.1, 0.1, GOLD()), 0, y, 0.72), at(bar(0.35, 0.08, 0.05, WHITE()), -0.45, y + 0.12, 0.69)));
+    return G(body, ...dr);
+  },
+  trash() {
+    const bin = at(cyl(0.85, 1.7, M(0xff5d73), 40, 1.0), 0, -0.15, 0), lid = at(cyl(1.12, 0.22, M(0xe03c58), 40), 0, 0.85, 0), grip = at(ring(0.26, 0.07, M(0xe03c58), Math.PI), 0, 0.96, 0), ribs = [-0.4, 0, 0.4].map((x) => at(bar(0.14, 1.2, 0.06, M(0xffa3b0)), x, -0.15, 0.93 - Math.abs(x) * 0.25));
+    return G(bin, lid, grip, ...ribs);
+  },
+  pulse() {   // heart with a pulse line
+    const h = new T.Shape(); h.moveTo(0, -1.2); h.bezierCurveTo(-1.6, 0.1, -0.9, 1.35, 0, 0.55); h.bezierCurveTo(0.9, 1.35, 1.6, 0.1, 0, -1.2);
+    const heart = ext(h, 0.7, M(0xff4d6d), 0.2); const pts = [[-1.0, 0], [-0.5, 0], [-0.3, 0.55], [0.0, -0.45], [0.25, 0.25], [0.4, 0], [1.0, 0]];
+    const segs = []; for (let i = 0; i < pts.length - 1; i++) segs.push(stroke(pts[i], pts[i + 1], 0.11, 0.1, WHITE()).translateZ(0.46));
+    return G(heart, ...segs);
+  },
+  bolt() {
+    const b = poly([[0.2, 1.4], [-0.9, -0.1], [-0.15, -0.1], [-0.4, -1.4], [0.9, 0.3], [0.15, 0.3], [0.55, 1.4]], 0.5, M(0xffb02e), 0.12);
+    return G(b, at(ring(0.0001, 0.0001, WHITE()), 0, 0, 0));
+  },
+  qr() {
+    const c = slab(2.1, 2.1, 0.22, 0.2, WHITE()), f = (x, y) => G(at(slab(0.62, 0.62, 0.08, 0.08, DARK(), 0.02), x, y, 0.14), at(slab(0.36, 0.36, 0.08, 0.04, WHITE(), 0.01), x, y, 0.17), at(slab(0.2, 0.2, 0.08, 0.03, DARK(), 0.01), x, y, 0.2));
+    const dots = [[0.15, 0.2], [0.45, 0.45], [0.7, 0.1], [0.2, -0.3], [0.55, -0.15], [0.75, -0.5], [0.0, -0.65], [0.35, -0.7], [-0.2, 0.55], [0.1, 0.7]].map(([x, y]) => at(slab(0.2, 0.2, 0.08, 0.03, DARK(), 0.01), x, y, 0.15));
+    return G(c, f(-0.62, 0.62), f(0.62, 0.62), f(-0.62, -0.62), ...dots).rotateZ(-0.1);
+  },
+  beam() {
+    const core = ball(0.34, M(0xd16bff)), r = [0.7, 1.1, 1.5].map((R, i) => { const a = ring(R, 0.07, M([0xe9a6ff, 0xc084fc, 0xa855f7][i])); return a; });
+    const sat = [at(ball(0.18, GOLD()), 1.1, 0, 0), at(ball(0.14, M(0x35d6c8)), -0.78, 0.78, 0.1)];
+    return G(core, ...r, ...sat);
+  },
+  swap() {
+    const ar = (dir) => { const a = poly([[-1.1, 0.2], [0.4, 0.2], [0.4, 0.55], [1.15, 0], [0.4, -0.55], [0.4, -0.2], [-1.1, -0.2]], 0.45, M(dir > 0 ? 0x34d399 : 0x38bdf8), 0.09); a.scale.x = dir; return a; };
+    const a1 = ar(1), a2 = ar(-1); a1.position.y = 0.55; a2.position.y = -0.55; return G(a1, a2);
+  },
+  chip() {
+    const pins = []; for (let i = 0; i < 5; i++) { const o = -0.8 + i * 0.4; pins.push(at(bar(0.14, 0.36, 0.1, SILVER()), o, 1.05, 0), at(bar(0.14, 0.36, 0.1, SILVER()), o, -1.05, 0), at(bar(0.36, 0.14, 0.1, SILVER()), 1.05, o, 0), at(bar(0.36, 0.14, 0.1, SILVER()), -1.05, o, 0)); }
+    return G(slab(1.8, 1.8, 0.4, 0.2, M(0x2d3748, { roughness: 0.3 }), 0.08), at(slab(1.1, 1.1, 0.1, 0.14, M(0x38bdf8), 0.03), 0, 0, 0.24), at(ball(0.2, WHITE()), 0, 0, 0.34), ...pins);
+  },
+  gear() { return B.technical(); },
+  help() {
+    const orb = ball(1.15, M(0x4f8bff)), q = new T.Shape(); const pts = []; for (let i = 0; i <= 14; i++) { const a = Math.PI * (1.0 - i / 14 * 1.35); pts.push([Math.cos(a) * 0.38, 0.35 + Math.sin(a) * 0.38]); }
+    const segs = []; for (let i = 0; i < pts.length - 1; i++) segs.push(stroke(pts[i], pts[i + 1], 0.2, 0.12, WHITE()).translateZ(1.12));
+    return G(orb, ...segs, at(bar(0.2, 0.3, 0.12, WHITE()), 0.02, -0.18, 1.12), at(ball(0.12, WHITE()), 0.02, -0.55, 1.12));
+  },
+  info() { const orb = ball(1.15, M(0x38bdf8)); return G(orb, at(ball(0.13, WHITE()), 0, 0.5, 1.1), at(bar(0.22, 0.8, 0.12, WHITE()), 0, -0.2, 1.12)); },
+  keyboard() {
+    const base = slab(2.8, 1.5, 0.3, 0.2, M(0x3b4558), 0.08), keys = []; for (let r = 0; r < 3; r++) for (let c = 0; c < (r === 2 ? 1 : 6); c++) keys.push(at(slab(r === 2 ? 1.6 : 0.34, 0.3, 0.14, 0.07, WHITE(), 0.03), r === 2 ? 0 : -0.95 + c * 0.38, 0.4 - r * 0.42, 0.2));
+    return G(base, ...keys).rotateX(-0.2);
+  },
+  compass() {
+    const rim = at(ring(1.1, 0.14, GOLD()), 0, 0, 0), face = at(disc(1.05, 0.14, WHITE()), 0, 0, 0), n = at(poly([[0, 0.8], [0.22, 0], [-0.22, 0]], 0.1, M(0xff4d6d), 0.02), 0, 0, 0.12), sN = at(poly([[0, -0.8], [0.22, 0], [-0.22, 0]], 0.1, M(0x4f8bff), 0.02), 0, 0, 0.12);
+    return G(face, rim, n, sN, at(ball(0.1, GOLD()), 0, 0, 0.18), ...[0, 1, 2, 3].map((i) => at(ball(0.05, DARK()), Math.sin(i * 1.5708) * 0.9, Math.cos(i * 1.5708) * 0.9, 0.1)));
+  },
+  unlock() {
+    const body = slab(1.9, 1.5, 0.9, 0.3, M(0x34d399), 0.12), sh = ring(0.62, 0.17, SILVER(), Math.PI); sh.rotation.z = 0.5; const l = at(cyl(0.17, 0.8, SILVER()), -0.62, 0.9, 0), kh = at(disc(0.17, 0.12, DARK()), 0, 0.1, 0.5), kb = at(bar(0.12, 0.38, 0.12, DARK()), 0, -0.15, 0.5);
+    return G(at(body, 0, -0.1, 0), at(sh, 0.15, 0.95, 0), l.translateY(-0.2), kh, kb);
+  },
+  sync() {
+    const a = (rot) => { const g = G(ring(0.95, 0.2, M(0x38bdf8), Math.PI * 0.8), at(poly([[-0.34, 0], [0.34, 0], [0, 0.52]], 0.34, M(0x38bdf8), 0.04), 0.95, -0.12, 0)); g.rotation.z = rot; return g; };
+    return G(a(0.2), a(0.2 + Math.PI));
+  },
+  refresh() { return B.sync(); },
+  palette() {
+    const s = new T.Shape(); s.absarc(0, 0, 1.25, 0, Math.PI * 2, false); const hole = new T.Path(); hole.absarc(0.55, -0.55, 0.3, 0, Math.PI * 2, true); s.holes.push(hole);
+    const cols = [0xff4d6d, 0xffb02e, 0x34d399, 0x38bdf8, 0x8b5cf6]; return G(ext(s, 0.3, M(0xffe3c2), 0.09), ...cols.map((c, i) => at(ball(0.2, M(c)), Math.cos(1.7 + i * 0.75) * 0.82, Math.sin(1.7 + i * 0.75) * 0.82 + 0.05, 0.26)));
+  },
+  sparkles() {
+    const st = (r, c) => poly([[0, r], [r * 0.2, r * 0.2], [r, 0], [r * 0.2, -r * 0.2], [0, -r], [-r * 0.2, -r * 0.2], [-r, 0], [-r * 0.2, r * 0.2]], 0.3, M(c), 0.06);
+    return G(st(1.1, 0xffc43d), at(st(0.55, 0xff7ad9), 1.0, 0.9, 0), at(st(0.4, 0x35d6c8), -1.0, -0.8, 0));
+  },
+  puzzle() {
+    const a = at(slab(1.4, 1.4, 0.4, 0.12, M(0x34d399), 0.06), -0.55, -0.1, 0), ka = at(ball(0.3, M(0x34d399)), 0.2, -0.1, 0), b = at(slab(1.4, 1.4, 0.4, 0.12, M(0x8b5cf6), 0.06), 0.65, 0.35, 0), kb = at(ball(0.3, M(0x8b5cf6)), 0.0, 0.55, 0);
+    return G(a, ka, b, kb);
+  },
+  shieldlock() { const sh = B.insurance(); const l = B.lock(); l.scale.setScalar(0.5); l.position.set(0, -0.1, 0.5); return G(sh.children[0], sh.children[1], l); },
+  shield() { return B.insurance(); },
+  scroll() {
+    const body = at(slab(1.8, 2.1, 0.12, 0.1, M(0xfff0c9), 0.04), 0, 0, 0), top = at(cyl(0.28, 2.2, M(0xe6b25a), 32), 0, 1.0, 0), bot = at(cyl(0.28, 2.2, M(0xe6b25a), 32), 0, -1.0, 0); top.rotation.z = bot.rotation.z = Math.PI / 2;
+    return G(body, top, bot, ...[0.5, 0.1, -0.3].map((y, i) => at(bar(1.2 - i * 0.2, 0.1, 0.05, M(0xc0a27a)), 0, y, 0.1)));
+  },
+  mail() {
+    const body = slab(2.5, 1.7, 0.3, 0.15, M(0xfff6e6), 0.07), flap = at(poly([[-1.15, 0.75], [1.15, 0.75], [0, -0.2]], 0.12, M(0xffb02e), 0.04), 0, 0, 0.19);
+    return G(body, flap, at(ball(0.2, M(0xff4d6d)), 0, -0.2, 0.3));
+  },
+  mailsend() { return B.mail(); },
+  download() {
+    const tray = at(slab(2.2, 0.5, 1.0, 0.15, M(0x4f6bff), 0.07), 0, -1.0, 0), ar = poly([[-0.4, 1.2], [0.4, 1.2], [0.4, 0.2], [0.85, 0.2], [0, -0.7], [-0.85, 0.2], [-0.4, 0.2]], 0.5, M(0x34d399), 0.1); return G(tray, ar);
+  },
+  upload() {
+    const tray = at(slab(2.2, 0.5, 1.0, 0.15, M(0x4f6bff), 0.07), 0, -1.0, 0), ar = poly([[-0.4, -0.5], [0.4, -0.5], [0.4, 0.5], [0.85, 0.5], [0, 1.4], [-0.85, 0.5], [-0.4, 0.5]], 0.5, M(0xffb02e), 0.1); return G(tray, ar);
+  },
+  importfile() { return B.download(); }, exportfile() { return B.upload(); },
+  copy() {
+    const a = at(slab(1.5, 1.9, 0.2, 0.14, M(0xc9d6ff), 0.06), -0.35, -0.2, -0.2), b = at(slab(1.5, 1.9, 0.2, 0.14, WHITE(), 0.06), 0.3, 0.25, 0.2);
+    return G(a, b, ...[0.8, 0.45, 0.1].map((y, i) => at(bar(1.0 - i * 0.2, 0.1, 0.05, M(0x6b8cff)), 0.3, y, 0.32)));
+  },
+  dup() { return B.copy(); },
+  eye() {
+    const a = ball(1.2, WHITE()); a.scale.set(1.35, 0.85, 0.7); const iris = at(disc(0.62, 0.1, M(0x4f8bff)), 0, 0, 0.82), pup = at(disc(0.28, 0.12, DARK()), 0, 0, 0.88), gl = at(ball(0.1, WHITE()), 0.15, 0.2, 0.95);
+    return G(a, iris, pup, gl);
+  },
+  plus() { const w = M(0xfdfdff, { roughness: 0.3 }); return G(at(slab(0.7, 2.2, 0.5, 0.25, w, 0.12), 0, 0, 0), at(slab(2.2, 0.7, 0.5, 0.25, w, 0.12), 0, 0, 0)); },
+  check() { const g = M(0x1f9d55); return G(stroke([-0.9, -0.05], [-0.3, -0.7], 0.5, 0.5, g), stroke([-0.3, -0.7], [0.95, 0.8], 0.5, 0.5, g)); },
+  alert() {
+    const t = poly([[0, 1.3], [1.35, -1.0], [-1.35, -1.0]], 0.5, M(0xffb02e), 0.18); return G(t, at(bar(0.22, 0.8, 0.1, DARK()), 0, -0.1, 0.34), at(ball(0.13, DARK()), 0, -0.68, 0.34));
+  },
+  folder() {
+    const s = new T.Shape(); s.moveTo(-1.3, -0.9); s.lineTo(-1.3, 0.9); s.lineTo(-0.4, 0.9); s.lineTo(-0.1, 0.6); s.lineTo(1.3, 0.6); s.lineTo(1.3, -0.9); s.closePath();
+    return G(ext(s, 0.9, M(0xffb02e), 0.08), at(slab(2.5, 1.35, 0.95, 0.1, M(0xffc857), 0.06), 0, -0.4, 0.05));
+  },
+  camera() {
+    const body = slab(2.5, 1.6, 0.9, 0.3, M(0x4b5566), 0.12), top = at(slab(0.8, 0.3, 0.5, 0.1, M(0x4b5566), 0.06), -0.5, 0.92, 0), lens = at(disc(0.62, 0.3, SILVER()), 0, 0, 0.5), glass = at(disc(0.42, 0.12, M(0x1f4fff, { roughness: 0.08 })), 0, 0, 0.6), fl = at(ball(0.12, M(0xffe27a)), 0.9, 0.5, 0.46);
+    return G(body, top, lens, glass, fl);
+  },
+  clip() {
+    const c = M(0xc9d6ff, { metalness: 0.9, roughness: 0.25 }); return G(ring(0.45, 0.1, c, Math.PI), at(bar(0.2, 1.3, 0.2, c), -0.45, -0.65, 0), at(bar(0.2, 1.5, 0.2, c), 0.45, -0.75, 0), at(ring(0.275, 0.1, c, Math.PI), -0.175, -1.35, 0).rotateZ(Math.PI));
+  },
+  print() {
+    const body = slab(2.5, 1.1, 1.0, 0.25, M(0x6b7a90), 0.1), paper = at(slab(1.6, 1.0, 0.06, 0.04, WHITE(), 0.02), 0, 0.8, -0.2), out = at(slab(1.7, 0.9, 0.06, 0.04, WHITE(), 0.02), 0, -0.75, 0.55);
+    paper.rotation.x = -0.2; out.rotation.x = 0.4; return G(paper, body, out, at(ball(0.09, M(0x4ade80)), 1.0, 0.2, 0.52), at(bar(1.0, 0.1, 0.05, DARK()), -0.3, -0.15, 0.51));
+  },
+  edit() {
+    const pen = G(at(bar(0.4, 2.0, 0.4, M(0xffb02e)), 0, 0.1, 0), at(poly([[-0.2, -0.9], [0.2, -0.9], [0, -1.5]], 0.4, M(0xffe2b8), 0.04), 0, 0, 0), at(bar(0.4, 0.35, 0.4, M(0xff6b8a)), 0, 1.25, 0), at(bar(0.4, 0.12, 0.42, SILVER()), 0, 1.0, 0)); pen.rotation.z = -0.7; return pen;
+  },
+  search() {
+    const r = ring(0.85, 0.2, M(0x4f8bff)), g = at(disc(0.82, 0.08, M(0xbfe3ff, { transparent: true, opacity: 0.5, roughness: 0.05 })), 0, 0, 0), h = at(bar(0.34, 1.1, 0.34, M(0xffb02e)), 0.95, -0.95, 0); h.rotation.z = 0.78; return G(r, g, h).translateX(-0.2).translateY(0.2);
+  },
+  history() { return B.clock(); },
+  clock() {
+    const f = disc(1.1, 0.3, WHITE()), r = at(ring(1.1, 0.12, M(0x4f8bff)), 0, 0, 0.1); return G(f, r, at(bar(0.12, 0.7, 0.08, DARK()), 0, 0.25, 0.2), at(bar(0.5, 0.12, 0.08, DARK()), 0.2, 0, 0.2), at(ball(0.1, M(0xff4d6d)), 0, 0, 0.26));
+  },
+  pin() {
+    const head = ball(0.8, M(0xff4d6d)); head.position.y = 0.45; const tip = new T.Mesh(new T.ConeGeometry(0.62, 1.4, 40), M(0xff4d6d)); tip.rotation.x = Math.PI; tip.position.y = -0.55; return G(head, tip, at(ball(0.3, WHITE()), 0, 0.45, 0.62));
+  },
+  dice() {
+    const c = slab(1.6, 1.6, 1.6, 0.25, WHITE(), 0.2); const dot = (x, y, z) => at(ball(0.12, M(0xff4d6d)), x, y, z); const g = G(c, dot(0, 0, 0.82), dot(-0.4, 0.4, 0.82), dot(0.4, -0.4, 0.82), dot(0.82, 0.4, 0.3), dot(0.82, -0.4, -0.3), dot(0.0, 0.82, 0)); g.rotation.set(0.5, -0.6, 0); return G(g);
+  },
+  bulb() {
+    const g = ball(0.9, M(0xffe27a, { emissive: 0xffc43d, emissiveIntensity: 0.4 })); g.position.y = 0.4; return G(g, at(cyl(0.38, 0.5, SILVER(), 32), 0, -0.75, 0), at(cyl(0.3, 0.2, SILVER(), 32), 0, -1.1, 0), at(ring(0.38, 0.05, SILVER()).rotateX(Math.PI / 2), 0, -0.65, 0));
+  },
+  archive() {
+    const base = at(slab(2.2, 1.4, 1.4, 0.15, M(0xffb02e), 0.07), 0, -0.4, 0), lid = at(slab(2.4, 0.5, 1.5, 0.12, M(0xe9941a), 0.06), 0, 0.5, 0), tag = at(bar(0.8, 0.22, 0.06, WHITE()), 0, -0.2, 0.72); return G(base, lid, tag);
+  },
+  doc() { return B.note(); },
+  smile() { const f = ball(1.1, M(0xffd43d)); return G(f, at(ball(0.13, DARK()), -0.36, 0.3, 1.0), at(ball(0.13, DARK()), 0.36, 0.3, 1.0), at(ring(0.45, 0.07, DARK(), Math.PI), 0, -0.1, 1.0).rotateZ(Math.PI)); },
+  menu() { return G(slab(2.3, 2.3, 0.5, 0.5, M(0x6b7a90), 0.14), ...[0.55, 0, -0.55].map((y) => at(bar(1.4, 0.28, 0.1, WHITE()), 0, y, 0.3))); },
+  checkcircle() { return G(disc(1.2, 0.4, M(0x34d399)), stroke([-0.5, 0.0], [-0.12, -0.4], 0.24, 0.12, WHITE()).translateZ(0.25), stroke([-0.12, -0.4], [0.55, 0.4], 0.24, 0.12, WHITE()).translateZ(0.25)); },
+});
+
 export const NAMES = Object.keys(B);
 
 /* One object -> a transparent picture. The caller supplies the renderer. */
