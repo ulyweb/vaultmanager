@@ -819,7 +819,7 @@ test('look & feel: appearance, effects, dock & menu bar, widgets, start page, bo
   await page.locator('.dock-item[aria-label="Settings"]').click(); await page.getByRole('tab', { name: /Appearance/ }).click();
   await page.getByRole('button', { name: /Surprise me/ }).click(); await page.waitForSelector('text=New look');
   await page.getByRole('button', { name: 'Reset appearance' }).click(); await page.getByRole('button', { name: 'Reset', exact: true }).click();
-  await page.waitForFunction(() => document.documentElement.dataset.icons === 'vivid');
+  await page.waitForFunction(() => document.documentElement.dataset.icons === '3d');
   assert.equal(await cssv('--accent'), '#2fe6d0');
   assert.deepEqual(problems, []);
   await ctx.close();
@@ -1275,7 +1275,7 @@ test('v0.16: first login lands on Home with only Everyday expanded; app-style ic
   assert.ok(await page.locator('.side .nav', { hasText: 'Logins' }).isVisible() && !(await page.locator('.side .nav', { hasText: 'Travel' }).isVisible()));
   // real app-icon tiles in the side bar
   const bg = await page.locator('.side .nav', { hasText: 'Favorites' }).locator('.ico').evaluate((e) => getComputedStyle(e).backgroundImage);
-  assert.match(bg, /gradient/); const sz = await page.locator('.side .nav', { hasText: 'Favorites' }).locator('.ico').boundingBox(); assert.ok(sz.width >= 26, 'tile is a real icon size, ' + sz.width);
+  assert.match(bg, /gradient|^url\(/); const sz = await page.locator('.side .nav', { hasText: 'Favorites' }).locator('.ico').boundingBox(); assert.ok(sz.width >= 26, 'tile is a real icon size, ' + sz.width);
   const tb = await page.locator('.topbar [title^="Lock"] .ico').boundingBox(); assert.ok(tb.width >= 24, 'top bar icons are large: ' + tb.width);
   // pin
   const first = async () => page.locator('.widgets .widget').first().getAttribute('aria-label');
@@ -2107,3 +2107,10 @@ for (const [label, offline] of [['served', false], ['single file', true]]) {
     assert.deepEqual(problems.filter((p) => !/Failed to load resource/.test(p)), []); await ctx.close();
   });
 }
+
+test('v0.36.2: a new profile starts with the 3D live animated icon style', async () => {
+  const { ctx, page, problems } = await newPage(); await createVault(page);
+  assert.equal(await page.evaluate(() => document.documentElement.dataset.icons), '3d');
+  assert.match(await page.locator('.side .ico.cat').first().evaluate((e) => getComputedStyle(e).backgroundImage), /^url\(/, 'the category icons are 3D pictures straight away');
+  assert.deepEqual(problems.filter((p) => !/Failed to load resource/.test(p)), []); await ctx.close();
+});

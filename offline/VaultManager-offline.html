@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VaultManager v0.36.1 — single-file offline build. Verify with the .sha256 file next to it. -->
+<!-- VaultManager v0.36.2 — single-file offline build. Verify with the .sha256 file next to it. -->
 <html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
@@ -11,7 +11,7 @@
 <meta name="application-name" content="VaultManager">
 <meta name="format-detection" content="telephone=no">
 <meta name="referrer" content="no-referrer">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-tauzjAWYvkq2EEey6/r1GOXzEWNzSydbYj43JCIjd2U=' 'sha256-FuAaXampkH1WSb7VpwbeeLlAsVTIm/t8Lhvh8qMMlKg=' blob:; style-src 'sha256-rV8FZEegyHF6SEm2B5n+jO7mjxPcehaVVfqeQzNXek4='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-tauzjAWYvkq2EEey6/r1GOXzEWNzSydbYj43JCIjd2U=' 'sha256-fco11aqq62xWo6fmdVFxe31lqiekCfyrzZVqArKJLJ4=' blob:; style-src 'sha256-rV8FZEegyHF6SEm2B5n+jO7mjxPcehaVVfqeQzNXek4='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
 <title>VaultManager | Zero-Knowledge Password Manager</title>
 <meta name="description" content="VaultManager: an offline-first, zero-knowledge, end-to-end encrypted password manager with a strong password generator, TOTP codes and QR-sealed sharing and backup. Runs entirely in your browser.">
 <meta name="theme-color" content="#05080d">
@@ -2211,7 +2211,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   }
 
   // js/version.js
-  var APP_VERSION = "0.36.1";
+  var APP_VERSION = "0.36.2";
   var APP_NAME = "VaultManager";
   var REPO_URL = "https://github.com/ulyweb/vaultmanager";
   var FORMATS = [
@@ -2225,6 +2225,9 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     ["Attachments at rest", "AES-256-GCM per file, bound to vault + file id"]
   ];
   var CHANGELOG = [
+    { v: "0.36.2", date: "2026-11-16", notes: [
+      "3D live animated is now the default icon style for new profiles and for \u201CReset appearance\u201D. Profiles that already picked an icon style keep their choice (Settings \u2192 Appearance \u2192 Icons \u2192 Icon style)."
+    ] },
     { v: "0.36.1", date: "2026-11-16", notes: [
       "Fixed the 3D live animated icons looking off-centre and cropped: each picture is now shown whole and centred in its box (it was zoomed, which cut off the tops and sides and pushed icons up and to the left), inline icons in tabs and buttons sit on the text line, the New button shows the 3D plus without a glass tile behind it, and the phone bottom bar icons no longer overlap their labels. The bobbing is now a small up-and-down only. New 3D menu icon for More."
     ] },
@@ -2607,7 +2610,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     wallImage: "",
     wallUrl: "",
     bgDim: 55,
-    iconStyle: "vivid",
+    iconStyle: "3d",
     iconSize: "medium",
     avatar: "letter",
     uiScale: 100,

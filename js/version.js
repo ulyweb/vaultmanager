@@ -1,6 +1,6 @@
 /* Application version, data-format versions and changelog (shown in Settings → About). */
 
-export const APP_VERSION = '0.36.1';
+export const APP_VERSION = '0.36.2';
 export const APP_NAME = 'VaultManager';
 export const REPO_URL = 'https://github.com/ulyweb/vaultmanager';
 
@@ -16,6 +16,9 @@ export const FORMATS = [
 ];
 
 export const CHANGELOG = [
+  { v: '0.36.2', date: '2026-11-16', notes: [
+    '3D live animated is now the default icon style for new profiles and for “Reset appearance”. Profiles that already picked an icon style keep their choice (Settings → Appearance → Icons → Icon style).',
+  ] },
   { v: '0.36.1', date: '2026-11-16', notes: [
     'Fixed the 3D live animated icons looking off-centre and cropped: each picture is now shown whole and centred in its box (it was zoomed, which cut off the tops and sides and pushed icons up and to the left), inline icons in tabs and buttons sit on the text line, the New button shows the 3D plus without a glass tile behind it, and the phone bottom bar icons no longer overlap their labels. The bobbing is now a small up-and-down only. New 3D menu icon for More.',
   ] },
