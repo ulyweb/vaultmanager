@@ -2096,6 +2096,10 @@ for (const [label, offline] of [['served', false], ['single file', true]]) {
     await page.locator('select').filter({ has: page.locator('option[value="3d"]') }).selectOption('3d');
     const bg = await page.locator('.side .ico.cat[data-n="login"]').evaluate((e) => getComputedStyle(e).backgroundImage); assert.match(bg, /^url\(/, 'the category icon is the 3D picture');
     assert.equal(await page.locator('.side .ico.cat[data-n="login"]').evaluate((e) => getComputedStyle(e).boxShadow), 'none');
+    for (const sel of ['.side .nav:has-text("Home") .ico', '.side .nav:has-text("Settings") .ico', '.side .nav:has-text("Vault health") .ico', '.tabs [role=tab] .ico']) assert.match(await page.locator(sel).first().evaluate((e) => getComputedStyle(e).backgroundImage), /^url\(/, sel + ' is a 3D picture');
+    await page.locator('.topbar').getByText('VaultManager').first().click(); await page.waitForSelector('.menu, [role=menu]');
+    const menuIcons = await page.locator('.menu .ico, [role=menu] .ico').evaluateAll((els) => els.map((e) => getComputedStyle(e).backgroundImage.startsWith('url(')));
+    assert.ok(menuIcons.length >= 8 && menuIcons.every(Boolean), 'every system menu icon is a 3D picture: ' + menuIcons.join()); await page.keyboard.press('Escape');
     await page.locator('select').filter({ has: page.locator('option[value="3d"]') }).selectOption('glass');
     assert.equal(await page.locator('.side .ico.cat[data-n="login"]').evaluate((e) => getComputedStyle(e).backgroundImage.startsWith('url(')), false, 'other icon styles are untouched');
     assert.deepEqual(problems.filter((p) => !/Failed to load resource/.test(p)), []); await ctx.close();
