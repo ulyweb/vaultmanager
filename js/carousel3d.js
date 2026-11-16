@@ -6,6 +6,7 @@
    With "reduce motion" or animations off it still works, just without the idle drifting and the pop-in. */
 
 import { h, clear } from './dom.js';
+import { has3d, icon3dUrl } from './icons3d.js';
 
 const TAU = Math.PI * 2;
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
@@ -24,7 +25,7 @@ export function categoryCarousel({ cards, groups, onPick, still = false, start =
     const b = h('button', { type: 'button', class: 'c3-card', 'data-key': c.key, tabindex: '-1', 'aria-label': `${c.label}, ${c.group}, ${c.count} field${c.count === 1 ? '' : 's'}`, on: {
       click: () => { if (drag.moved) return; if (i === front) onPick(c.key); else go(pos + wrap(i - pos, n)); },
       focus: () => { if (i !== front) go(pos + wrap(i - pos, n)); },
-    } }, h('span', { class: 'c3-ico' }, h('span', { class: 'icn', text: c.icon })), h('b', { text: c.label }), h('small', { text: c.group }), h('i', { class: 'c3-shine', 'aria-hidden': 'true' }));
+    } }, has3d(c.key) ? h('img', { class: 'c3-obj', src: icon3dUrl(c.key), alt: '', draggable: 'false', decoding: 'async' }) : h('span', { class: 'c3-ico' }, h('span', { class: 'icn', text: c.icon })), h('b', { text: c.label }), h('small', { text: c.group }), h('i', { class: 'c3-shine', 'aria-hidden': 'true' }));
     b.style.setProperty('--hue', String(groups.findIndex(([, keys]) => keys.includes(c.key)) * 47 + 160));
     ring.append(b); return b;
   });

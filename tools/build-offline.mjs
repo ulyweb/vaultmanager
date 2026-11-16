@@ -30,6 +30,7 @@ export async function buildOffline() {
   const css = rd('css/style.css');
   const vendor = { 'vendor/qrcode.js': rd('vendor/qrcode.js'), 'vendor/jsQR.js': rd('vendor/jsQR.js') };
   for (const f of fs.readdirSync(path.join(root, 'wallpapers')).filter((n) => n.endsWith('.jpg')).sort()) vendor['wallpapers/' + f] = 'data:image/jpeg;base64,' + fs.readFileSync(path.join(root, 'wallpapers', f)).toString('base64');   // real photos travel inside the one file
+  for (const f of fs.readdirSync(path.join(root, 'icons3d')).filter((n) => n.endsWith('.webp')).sort()) vendor['icons3d/' + f] = 'data:image/webp;base64,' + fs.readFileSync(path.join(root, 'icons3d', f)).toString('base64');   // the 3D icons travel inside the one file
   const LS = String.fromCharCode(0x2028), PS = String.fromCharCode(0x2029);   // line / paragraph separators break inline JSON in some parsers
   const embed = JSON.stringify(vendor).split('<').join('\\u003c').split(LS).join('\\u2028').split(PS).join('\\u2029');
 

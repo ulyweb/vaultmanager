@@ -5,6 +5,7 @@
 
 export const ACCENTS = [['Teal', '#2fe6d0'], ['Mint', '#7dff9b'], ['Sky', '#59b4ff'], ['Violet', '#8b7dff'], ['Pink', '#ff7ad9'], ['Amber', '#ffb547'], ['Coral', '#ff6b6b'], ['Orange', '#ff8a4c'], ['Silver', '#d6e2ee']];
 import { applyCursor } from './cursor.js';
+import { syncIcons3d } from './icons3d.js';
 
 export const ICON_STYLES = [['vivid', 'Colourful & animated'], ['glass', 'Glass'], ['gradient', 'Gradient tile'], ['neon', 'Neon'], ['tint', 'Tinted (accent)'], ['flat', 'Flat (grey)'], ['3d', '3D live animated']];
 export const ANIM_STYLES = [['scale', 'Scale'], ['slide', 'Slide up'], ['fade', 'Fade'], ['zoom', 'Zoom'], ['bounce', 'Bounce'], ['blur', 'Blur in'], ['flip', 'Flip']];
@@ -102,7 +103,7 @@ export function applyLook(look, theme, landscapes = null) {
   set('--wall-dim-rgb', theme === 'light' ? '238,242,246' : '2,6,12');
   applyCursor(look, el);
   const d = el.dataset;
-  d.theme = theme; d.icons = look.iconStyle; d.iconsize = look.iconSize; d.density = look.density; d.avatar = look.avatar;
+  d.theme = theme; d.icons = look.iconStyle; syncIcons3d(look.iconStyle === '3d'); d.iconsize = look.iconSize; d.density = look.density; d.avatar = look.avatar;
   d.motion = look.animations ? 'on' : 'off'; d.fxanim = look.fxAnim && look.animations ? 'on' : 'off'; d.fx3d = look.fx3d && look.animations ? 'on' : 'off'; d.thick = look.fx3dThick > 0 ? 'on' : 'off'; d.tips = look.tips ? 'on' : 'off';
   /* the windows float only when asked to, and never for scripted browsers (automation clicks need a card that holds still) */
   d.float = look.fx3d && look.animations && look.fx3dFloat > 0 && !(typeof navigator !== 'undefined' && navigator.webdriver) ? 'on' : 'off'; d.anim = look.animStyle; d.scan = look.fxScan ? 'on' : 'off';
