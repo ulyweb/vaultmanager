@@ -1,7 +1,7 @@
 /* Profile pictures, and the export / import dialogs for whole-profile backups (the entire database:
    items, attachments, settings, audit trail — encrypted with a backup password). */
 
-import { h, clear, modal, toast, readFileText, download } from './dom.js';
+import { h, clear, focusSoon, modal, toast, readFileText, download } from './dom.js';
 import { decryptProfile } from './vault.js';
 import { createProfileFromImport, sanitizeAvatar } from './profiles.js';
 import { meter, passwordRow } from './views.js';
@@ -127,7 +127,7 @@ export function importProfileDialog(ctx, { onDone } = {}) {
       clear(summary).append(h('span', { text: 'Backup type' }), h('b', { text: data.kind === 'profile' ? 'Whole profile (VMP1)' : 'Items only (VMX1)' }), h('span', { text: 'Items' }), h('b', { text: fmtInt(data.items.length) }), h('span', { text: 'Attachments' }), h('b', { text: fmtInt(atts) }),
         data.exported ? [h('span', { text: 'Exported' }), h('b', { text: fmtDate(data.exported) })] : null, data.kind === 'profile' ? [h('span', { text: 'Includes' }), h('b', { text: 'settings & look · audit trail · version history' })] : null);
       name.value = data.name || 'Imported profile'; picker = replacePicker(picker, data.avatar, () => name.value);
-      step1.hidden = true; step2.hidden = false; setTimeout(() => p1.focus(), 30);
+      step1.hidden = true; step2.hidden = false; focusSoon(p1, 30);
     } catch (e) { err1.textContent = e.message; }
     openBtn.disabled = false; openBtn.textContent = 'Open backup';
   });

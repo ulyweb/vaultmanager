@@ -2,7 +2,7 @@
    The stored value stays one plain string (words joined by spaces; or the sealed "VMFL1:…" text from fieldlock.js), so sync, backups,
    QR codes and search need no special handling. */
 
-import { h, clear, modal } from './dom.js';
+import { h, clear, focusSoon, modal } from './dom.js';
 import { isFieldLocked, fieldValue, openField, relockField, sealField, FIELD_CODE_MIN } from './fieldlock.js';
 import { estimate } from './strength.js';
 
@@ -142,7 +142,7 @@ export function unlockFieldDialog(ctx, sealed, label, { item = null, then = null
   input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); go(); } });
   m = modal({ title: 'Unlock the ' + label.toLowerCase(), sub: item ? item.name : 'Passcode', body: h('div', null, h('p', { text: 'This value has a passcode of its own, on top of your master password. It stays readable for 10 minutes, or until the vault locks.' }), input, err),
     actions: [{ label: 'Cancel' }, { label: 'Unlock', kind: 'primary', onClick: go, close: false }] });
-  setTimeout(() => input.focus(), 50);
+  focusSoon(input, 50);
   return m;
 }
 

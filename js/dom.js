@@ -166,3 +166,8 @@ function blobDownload(filename, data, type) {
 export function readFileText(file) {
   return new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result)); r.onerror = () => rej(new Error('Could not read the file.')); r.readAsText(file); });
 }
+
+/* Focus a field shortly after a dialog opens or a step changes, but never take the focus away from a field the person (or a password manager / autofill) has already moved into. */
+export function focusSoon(el, ms = 50) {
+  setTimeout(() => { const a = document.activeElement; if (!el.isConnected || (a && a !== document.body && a !== el && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) return; el.focus(); }, ms);
+}

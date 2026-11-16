@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VaultManager v0.34.1 — single-file offline build. Verify with the .sha256 file next to it. -->
+<!-- VaultManager v0.35.0 — single-file offline build. Verify with the .sha256 file next to it. -->
 <html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
@@ -11,7 +11,7 @@
 <meta name="application-name" content="VaultManager">
 <meta name="format-detection" content="telephone=no">
 <meta name="referrer" content="no-referrer">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-tauzjAWYvkq2EEey6/r1GOXzEWNzSydbYj43JCIjd2U=' 'sha256-8q+vGk0W87s+IlUwfVQvK1Lrr7NEKhFTfkn+7KxhcWY=' blob:; style-src 'sha256-C8nOTky3L1FushSnsUCa+sjhTlzZ6yt4DIiDdK4lR7Y='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-tauzjAWYvkq2EEey6/r1GOXzEWNzSydbYj43JCIjd2U=' 'sha256-f+5CSXeQAG+xAD+Vxl6S9Ymtxc5iBOUGq3Ae3RWwstg=' blob:; style-src 'sha256-yn3PyH7h3T9qPquunoIBxP59oDJsLf65SXG6Au2XOx0='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
 <title>VaultManager | Zero-Knowledge Password Manager</title>
 <meta name="description" content="VaultManager: an offline-first, zero-knowledge, end-to-end encrypted password manager with a strong password generator, TOTP codes and QR-sealed sharing and backup. Runs entirely in your browser.">
 <meta name="theme-color" content="#05080d">
@@ -680,13 +680,13 @@ html[data-standalone="1"] body { padding-bottom: 0; }
 .panel .btn { max-width: 100%; white-space: normal; }
 
 /* ---- Colourful & animated icons: duotone glyphs on vivid tiles, each with its own colour, phase and motion ---- */
-html[data-icons=vivid] .ico svg :is(rect, circle, ellipse, polygon) { fill: currentColor; fill-opacity: .2; }
-html[data-icons=vivid] .ico svg > :nth-child(even) { stroke: var(--hl, #ffe08a); }
-html[data-icons=vivid] .ico.cat { background: linear-gradient(135deg, var(--i1), var(--i2)); color: #fff; position: relative; overflow: hidden; box-shadow: 0 3px 10px color-mix(in srgb, var(--i1) 45%, transparent), inset 0 1px 0 rgba(255,255,255,.35); }
-html[data-icons=vivid] .ico.cat::after { content: ''; position: absolute; inset: 0; background: linear-gradient(115deg, transparent 35%, rgba(255,255,255,.45) 50%, transparent 65%); transform: translateX(-120%); pointer-events: none; }
-html[data-icons=vivid] .ico:not(.cat) { color: var(--v1); }
-html[data-icons=vivid] .nav .ico:not(.cat), html[data-icons=vivid] .dock-item .ico, html[data-icons=vivid] .mbar-item .ico, html[data-icons=vivid] .btn .ico, html[data-icons=vivid] .icon-btn .ico { color: var(--v1); filter: drop-shadow(0 0 3px color-mix(in srgb, var(--v2) 55%, transparent)); }
-html[data-icons=vivid] .btn.primary .ico { color: inherit; filter: none; }
+html:is([data-icons=vivid],[data-icons=3d]) .ico svg :is(rect, circle, ellipse, polygon) { fill: currentColor; fill-opacity: .2; }
+html:is([data-icons=vivid],[data-icons=3d]) .ico svg > :nth-child(even) { stroke: var(--hl, #ffe08a); }
+html:is([data-icons=vivid],[data-icons=3d]) .ico.cat { background: linear-gradient(135deg, var(--i1), var(--i2)); color: #fff; position: relative; overflow: hidden; box-shadow: 0 3px 10px color-mix(in srgb, var(--i1) 45%, transparent), inset 0 1px 0 rgba(255,255,255,.35); }
+html:is([data-icons=vivid],[data-icons=3d]) .ico.cat::after { content: ''; position: absolute; inset: 0; background: linear-gradient(115deg, transparent 35%, rgba(255,255,255,.45) 50%, transparent 65%); transform: translateX(-120%); pointer-events: none; }
+html:is([data-icons=vivid],[data-icons=3d]) .ico:not(.cat) { color: var(--v1); }
+html:is([data-icons=vivid],[data-icons=3d]) .nav .ico:not(.cat), html:is([data-icons=vivid],[data-icons=3d]) .dock-item .ico, html:is([data-icons=vivid],[data-icons=3d]) .mbar-item .ico, html:is([data-icons=vivid],[data-icons=3d]) .btn .ico, html:is([data-icons=vivid],[data-icons=3d]) .icon-btn .ico { color: var(--v1); filter: drop-shadow(0 0 3px color-mix(in srgb, var(--v2) 55%, transparent)); }
+html:is([data-icons=vivid],[data-icons=3d]) .btn.primary .ico { color: inherit; filter: none; }
 @keyframes vm-float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
 @keyframes vm-shine { 0%,70% { transform: translateX(-120%); } 100% { transform: translateX(120%); } }
 @keyframes vm-wiggle { 0%,80%,100% { transform: rotate(0); } 85% { transform: rotate(-12deg); } 92% { transform: rotate(10deg); } }
@@ -746,18 +746,18 @@ html[data-icons=vivid][data-fxanim=on] .ico[data-n=star] svg, html[data-icons=vi
 @media (max-width: 699px) { .widget .wgrip { width: 30px; height: 30px; } }
 
 /* ---- real app-icon tiles: side bar, dock and menus look like desktop icons (ulyOS style) ---- */
-html[data-icons=vivid] .nav .ico:not(.cat), html[data-icons=vivid] .dock-item .ico, html[data-icons=vivid] .msheet-item .ico, html[data-icons=vivid] .mbar-item .ico {
+html:is([data-icons=vivid],[data-icons=3d]) .nav .ico:not(.cat), html:is([data-icons=vivid],[data-icons=3d]) .dock-item .ico, html:is([data-icons=vivid],[data-icons=3d]) .msheet-item .ico, html:is([data-icons=vivid],[data-icons=3d]) .mbar-item .ico {
   width: 1.9em; height: 1.9em; padding: .42em; border-radius: .6em; position: relative; overflow: hidden; color: #fff; filter: none; margin-right: 0;
   background: linear-gradient(150deg, var(--v1), var(--v2)); box-shadow: 0 3px 9px color-mix(in srgb, var(--v2) 50%, transparent), inset 0 1px 0 rgba(255,255,255,.4), inset 0 -2px 4px rgba(0,0,0,.18);
 }
-html[data-icons=vivid] .nav .ico:not(.cat)::before, html[data-icons=vivid] .dock-item .ico::before, html[data-icons=vivid] .msheet-item .ico::before, html[data-icons=vivid] .mbar-item .ico::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 48%; background: linear-gradient(rgba(255,255,255,.34), rgba(255,255,255,0)); border-radius: .6em .6em 60% 60% / .6em .6em 25% 25%; pointer-events: none; }
-html[data-icons=vivid] .nav .ico:not(.cat) svg, html[data-icons=vivid] .dock-item .ico svg, html[data-icons=vivid] .msheet-item .ico svg, html[data-icons=vivid] .mbar-item .ico svg { stroke-width: 1.9; filter: drop-shadow(0 1px 1px rgba(0,0,0,.25)); }
-html[data-icons=vivid] .nav .ic { width: calc(34px * var(--icon-k)); font-size: calc(15px * var(--icon-k)); } html[data-icons=vivid] .nav { gap: 10px; }
-html[data-icons=vivid] .nav .ico.cat { width: 1.9em; height: 1.9em; }
-html[data-icons=vivid] .dock-item .ico { width: 1.7em; height: 1.7em; padding: .36em; } html[data-icons=vivid] .mbar-item .ico { width: 1.7em; height: 1.7em; padding: .34em; }
-html[data-icons=vivid] .btn.primary .ico, html[data-icons=vivid] .topbar .ico { box-shadow: none; }
+html:is([data-icons=vivid],[data-icons=3d]) .nav .ico:not(.cat)::before, html:is([data-icons=vivid],[data-icons=3d]) .dock-item .ico::before, html:is([data-icons=vivid],[data-icons=3d]) .msheet-item .ico::before, html:is([data-icons=vivid],[data-icons=3d]) .mbar-item .ico::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 48%; background: linear-gradient(rgba(255,255,255,.34), rgba(255,255,255,0)); border-radius: .6em .6em 60% 60% / .6em .6em 25% 25%; pointer-events: none; }
+html:is([data-icons=vivid],[data-icons=3d]) .nav .ico:not(.cat) svg, html:is([data-icons=vivid],[data-icons=3d]) .dock-item .ico svg, html:is([data-icons=vivid],[data-icons=3d]) .msheet-item .ico svg, html:is([data-icons=vivid],[data-icons=3d]) .mbar-item .ico svg { stroke-width: 1.9; filter: drop-shadow(0 1px 1px rgba(0,0,0,.25)); }
+html:is([data-icons=vivid],[data-icons=3d]) .nav .ic { width: calc(34px * var(--icon-k)); font-size: calc(15px * var(--icon-k)); } html:is([data-icons=vivid],[data-icons=3d]) .nav { gap: 10px; }
+html:is([data-icons=vivid],[data-icons=3d]) .nav .ico.cat { width: 1.9em; height: 1.9em; }
+html:is([data-icons=vivid],[data-icons=3d]) .dock-item .ico { width: 1.7em; height: 1.7em; padding: .36em; } html:is([data-icons=vivid],[data-icons=3d]) .mbar-item .ico { width: 1.7em; height: 1.7em; padding: .34em; }
+html:is([data-icons=vivid],[data-icons=3d]) .btn.primary .ico, html:is([data-icons=vivid],[data-icons=3d]) .topbar .ico { box-shadow: none; }
 html[data-icons=vivid][data-fxanim=on] .nav .ico:not(.cat), html[data-icons=vivid][data-fxanim=on] .dock-item .ico { animation: vm-float 4s ease-in-out infinite; animation-delay: var(--d, 0s); }
-html[data-icons=vivid] .nav:hover .ico:not(.cat), html[data-icons=vivid] .dock-item:hover .ico { transform: translateY(-2px) scale(1.06); }
+html:is([data-icons=vivid],[data-icons=3d]) .nav:hover .ico:not(.cat), html:is([data-icons=vivid],[data-icons=3d]) .dock-item:hover .ico { transform: translateY(-2px) scale(1.06); }
 
 /* ---- top bar: bigger icon buttons ---- */
 .topbar .btn { min-height: 42px; } .topbar .btn .ico { font-size: 1.35em; width: 1.35em; height: 1.35em; }
@@ -1032,6 +1032,44 @@ html[data-thick=on] .s3-inner { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .1
 .favchips { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 12px 4px; }
 .favchip { cursor: pointer; background: transparent; color: var(--ink-2, inherit); font: inherit; font-size: .8em; }
 .favchip.on { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 55%, transparent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
+
+/* ---- 3D live animated icons: glossy tiles with a solid edge that slowly turn in 3D; hover to straighten and lift ----
+   One layer per icon (the thick edge is a stack of hard box-shadows), so every browser draws it the same way. */
+html[data-icons="3d"] .ico.cat, html[data-icons="3d"] :is(.nav, .dock-item, .msheet-item, .mbar-item) .ico:not(.cat) {
+  --e: color-mix(in srgb, var(--i2, var(--v2)) 62%, #000); overflow: visible; position: relative; border-radius: 28%;
+  box-shadow: 1px 1px 0 var(--e), 2px 2px 0 var(--e), 3px 3px 0 var(--e), 4px 4px 0 var(--e), 5px 5px 0 var(--e), 6px 7px 8px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.45);
+  transform: perspective(260px) rotateX(8deg) rotateY(-12deg); transition: transform .25s ease, box-shadow .25s ease;
+}
+html[data-icons="3d"] :is(.nav, .dock-item, .msheet-item, .mbar-item) .ico:not(.cat) { --e: color-mix(in srgb, var(--v2) 62%, #000); border-radius: 28%; }
+html[data-icons="3d"] .ico.cat::after, html[data-icons="3d"] :is(.nav, .dock-item, .msheet-item, .mbar-item) .ico:not(.cat)::before {
+  content: ''; position: absolute; inset: 0 0 46% 0; border-radius: 28% 28% 60% 60% / 28% 28% 26% 26%; background: linear-gradient(rgba(255,255,255,.5), rgba(255,255,255,0)); transform: none; animation: none; pointer-events: none;
+}
+html[data-icons="3d"] .ico svg { filter: drop-shadow(1px 2px 1px rgba(0,0,0,.4)); }
+html[data-icons="3d"][data-fxanim=on] .ico.cat, html[data-icons="3d"][data-fxanim=on] :is(.nav, .dock-item, .msheet-item, .mbar-item) .ico:not(.cat) { animation: vm-tilt3d 6.5s ease-in-out infinite; animation-delay: var(--d, 0s); }
+html[data-icons="3d"][data-fxanim=on] .ico.cat svg { animation: vm-pulse 3.4s ease-in-out infinite; animation-delay: var(--d, 0s); }
+html[data-icons="3d"] .ico.cat:hover, html[data-icons="3d"] :is(.nav, .dock-item, .msheet-item, .mbar-item):hover .ico:not(.cat) {
+  animation: none !important; transform: perspective(260px) rotateX(0) rotateY(0) scale(1.14) translateY(-2px);
+  box-shadow: 1px 1px 0 var(--e), 2px 2px 0 var(--e), 3px 3px 0 var(--e), 4px 4px 0 var(--e), 5px 5px 0 var(--e), 8px 12px 14px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.55);
+}
+@keyframes vm-tilt3d { 0%, 100% { transform: perspective(260px) rotateX(9deg) rotateY(-16deg); } 50% { transform: perspective(260px) rotateX(-7deg) rotateY(16deg); } }
+@media (prefers-reduced-motion: reduce) { html[data-icons="3d"] .ico, html[data-icons="3d"] .ico svg { animation: none !important; } }
+
+/* item avatars set to "Category icon": the icon IS the avatar (no coloured box around it), in whatever icon style is chosen */
+html[data-avatar=icon] .avatar { background: none !important; text-shadow: none; overflow: visible; }
+html[data-avatar=icon] .avatar .icn { display: grid; place-items: center; width: 100%; height: 100%; }
+html[data-avatar=icon] .avatar .ico, html[data-avatar=icon] .avatar .ico.cat { width: 100%; height: 100%; padding: .22em; font-size: inherit; }
+
+/* hover tooltips */
+.vm-tip { position: fixed; left: 0; top: 0; z-index: 99999; max-width: min(320px, 86vw); padding: 6px 10px; border-radius: 8px; font: 12px/1.4 var(--sans, system-ui, sans-serif); color: var(--ink, #fff); background: var(--bg-2, #10161d); border: 1px solid var(--line-2, rgba(255,255,255,.2)); box-shadow: 0 8px 24px rgba(0,0,0,.45); pointer-events: none; }
+.vm-tip[hidden] { display: none; }
+html[data-avatar=icon]:is([data-icons=vivid], [data-icons="3d"]) .avatar .ico.cat { background: linear-gradient(135deg, var(--i1), var(--i2)); border-radius: 28%; box-shadow: 0 3px 10px color-mix(in srgb, var(--i1) 45%, transparent), inset 0 1px 0 rgba(255,255,255,.35); }
+html[data-avatar=icon][data-icons="3d"] .avatar .ico.cat { --e: color-mix(in srgb, var(--i2) 62%, #000); box-shadow: 1px 1px 0 var(--e), 2px 2px 0 var(--e), 3px 3px 0 var(--e), 4px 4px 0 var(--e), 5px 5px 0 var(--e), 5px 7px 8px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.45); }
+html[data-avatar=icon][data-icons=glass] .avatar .ico.cat { background: linear-gradient(135deg, rgba(255,255,255,.2), rgba(255,255,255,.04)); border: 1px solid var(--glass-line); color: var(--i1); }
+html[data-avatar=icon][data-icons=gradient] .avatar .ico.cat { background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: var(--accent-ink); border-radius: 28%; }
+html[data-avatar=icon][data-icons=flat] .avatar .ico.cat { background: var(--raise); color: var(--ink-dim); border: 1px solid var(--line); border-radius: 28%; }
+html[data-avatar=icon][data-icons=neon] .avatar .ico.cat { color: var(--i1); filter: drop-shadow(0 0 5px var(--i1)); }
+html[data-avatar=icon][data-icons=tint] .avatar .ico.cat { color: var(--accent); }
+html[data-icons="3d"] :is(.nav, .dock-item, .msheet-item, .mbar-item) .ico:not(.cat) { background: linear-gradient(150deg, var(--v1), var(--v2)); color: #fff; width: 1.9em; height: 1.9em; padding: .42em; }
 </style>
 </head>
 <body>
@@ -1404,7 +1442,7 @@ html[data-thick=on] .s3-inner { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .1
     while (stack.length) stack[stack.length - 1].close();
   };
   var modalOpen = () => stack.length > 0;
-  function confirmDialog({ title, text, okLabel = "Confirm", danger = false }) {
+  function confirmDialog({ title, text: text2, okLabel = "Confirm", danger = false }) {
     return new Promise((resolve) => {
       let done = false;
       const fin = (v) => {
@@ -1413,12 +1451,12 @@ html[data-thick=on] .s3-inner { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .1
           resolve(v);
         }
       };
-      modal({ title, body: h("p", { text }), onClose: () => fin(false), actions: [{ label: "Cancel" }, { label: okLabel, kind: danger ? "danger" : "primary", onClick: () => {
+      modal({ title, body: h("p", { text: text2 }), onClose: () => fin(false), actions: [{ label: "Cancel" }, { label: okLabel, kind: danger ? "danger" : "primary", onClick: () => {
         fin(true);
       } }] });
     });
   }
-  function askPassword({ title, text, okLabel = "Continue", verify }) {
+  function askPassword({ title, text: text2, okLabel = "Continue", verify }) {
     return new Promise((resolve) => {
       let done = false;
       const fin = (v) => {
@@ -1442,16 +1480,16 @@ html[data-thick=on] .s3-inner { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .1
           if (await go() !== false) api.close();
         }
       });
-      const api = modal({ title, body: h("div", null, h("p", { text }), input, err), onClose: () => fin(null), actions: [{ label: "Cancel" }, { label: okLabel, kind: "primary", onClick: go }] });
+      const api = modal({ title, body: h("div", null, h("p", { text: text2 }), input, err), onClose: () => fin(null), actions: [{ label: "Cancel" }, { label: okLabel, kind: "primary", onClick: go }] });
     });
   }
   var clipTimer = null;
-  async function copyText(text, label, clearSecs) {
+  async function copyText(text2, label, clearSecs) {
     try {
-      await navigator.clipboard.writeText(text);
+      await navigator.clipboard.writeText(text2);
     } catch {
       const ta = h("textarea", { class: "offscreen", "aria-hidden": "true" });
-      ta.value = text;
+      ta.value = text2;
       document.body.append(ta);
       ta.select();
       let ok = false;
@@ -1513,6 +1551,13 @@ html[data-thick=on] .s3-inner { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .1
       r.onerror = () => rej(new Error("Could not read the file."));
       r.readAsText(file);
     });
+  }
+  function focusSoon(el, ms = 50) {
+    setTimeout(() => {
+      const a = document.activeElement;
+      if (!el.isConnected || a && a !== document.body && a !== el && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) return;
+      el.focus();
+    }, ms);
   }
 
   // js/util.js
@@ -1626,13 +1671,13 @@ html[data-thick=on] .s3-inner { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .1
     new DataView(h2.buffer).setUint32(1, iterations, false);
     return h2;
   }
-  async function sealText(text, password, opt = {}) {
+  async function sealText(text2, password, opt = {}) {
     const iterations = opt.iterations || ITER_DEFAULT;
     if (!password) throw new Error("A password is required.");
     if (iterations < ITER_MIN || iterations > ITER_MAX) throw new Error("Iteration count out of range.");
     const salt = opt.salt || rand(SALT), iv = opt.iv || rand(IV), hdr = sealHeader(iterations);
     const key = await passwordKey(password, salt, iterations, ["encrypt"]);
-    const ct = new Uint8Array(await subtle().encrypt({ name: "AES-GCM", iv, additionalData: hdr, tagLength: 128 }, key, te.encode(text)));
+    const ct = new Uint8Array(await subtle().encrypt({ name: "AES-GCM", iv, additionalData: hdr, tagLength: 128 }, key, te.encode(text2)));
     return b64.enc(concat(hdr, salt, iv, ct));
   }
   function inspectSeal(payload) {
@@ -1674,8 +1719,8 @@ html[data-thick=on] .s3-inner { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .1
     if (bits) out += B32[val << 5 - bits & 31];
     return out.match(/.{1,4}/g).join("-");
   }
-  function recoveryDecode(text) {
-    const s = String(text).toUpperCase().replace(/[\s-]/g, "").replace(/O/g, "0").replace(/[IL]/g, "1");
+  function recoveryDecode(text2) {
+    const s = String(text2).toUpperCase().replace(/[\s-]/g, "").replace(/O/g, "0").replace(/[IL]/g, "1");
     let bits = 0, val = 0;
     const out = [];
     for (const ch of s) {
@@ -1767,9 +1812,9 @@ html[data-thick=on] .s3-inner { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .1
       const bytes2 = rand(32);
       const w = await recoveryWrap(bytes2, this.mk, this.id);
       this.wraps = this.wraps.filter((x) => x.type !== "recovery").concat(w);
-      const text = recoveryEncode(bytes2);
+      const text2 = recoveryEncode(bytes2);
       wipe(bytes2);
-      return text;
+      return text2;
     }
     removeRecovery() {
       this.wraps = this.wraps.filter((x) => x.type !== "recovery");
@@ -2149,7 +2194,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   }
 
   // js/version.js
-  var APP_VERSION = "0.34.1";
+  var APP_VERSION = "0.35.0";
   var APP_NAME = "VaultManager";
   var REPO_URL = "https://github.com/ulyweb/vaultmanager";
   var FORMATS = [
@@ -2163,6 +2208,12 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     ["Attachments at rest", "AES-256-GCM per file, bound to vault + file id"]
   ];
   var CHANGELOG = [
+    { v: "0.35.0", date: "2026-11-16", notes: [
+      "New icon style \u201C3D live animated\u201D (Settings \u2192 Appearance \u2192 Icons): glossy tiles with a thick solid edge that slowly turn in 3D; hover one and it straightens and lifts. Works for the category, side-bar, dock and menu icons.",
+      "Item avatars set to \u201CCategory icon\u201D now show just the icon, in your chosen icon style (no coloured box around it). Pair it with 3D live animated for animated icon avatars.",
+      "Hover tooltips: hover or keyboard-focus an icon, button or field to see its name and hint (for example \u201CCrypto wallet\u201D, \u201CUsername / email \u2014 \u2026\u201D). Settings \u2192 Appearance \u2192 Icons \u2192 Hover tooltips turns them off.",
+      "Ten new desktop-style wallpapers drawn by the app (Aubergine glow, Teal tide, Sunset mesh, Mint mesh, Rose gold, Indigo night, Silk ribbons, Pastel waves, Sunrise dunes, Deep waves). They work offline. You can still use any picture of your own, such as your desktop wallpaper, under \u201CYour own picture\u201D."
+    ] },
     { v: "0.34.1", date: "2026-11-15", notes: [
       "Custom favorite names: give a favorite your own name (Work, Family, Trip\u2026) in the item editor (\u201CFavorite name\u201D, with your earlier names suggested) or leave it as plain Favorites. The Favorites page shows your names as filter chips (All \xB7 Work \xB7 Family), the item\u2019s star button shows its name, and the names are kept in backups, sync and locked items."
     ] },
@@ -2452,7 +2503,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
 
   // js/look.js
   var ACCENTS = [["Teal", "#2fe6d0"], ["Mint", "#7dff9b"], ["Sky", "#59b4ff"], ["Violet", "#8b7dff"], ["Pink", "#ff7ad9"], ["Amber", "#ffb547"], ["Coral", "#ff6b6b"], ["Orange", "#ff8a4c"], ["Silver", "#d6e2ee"]];
-  var ICON_STYLES = [["vivid", "Colourful & animated"], ["glass", "Glass"], ["gradient", "Gradient tile"], ["neon", "Neon"], ["tint", "Tinted (accent)"], ["flat", "Flat (grey)"]];
+  var ICON_STYLES = [["vivid", "Colourful & animated"], ["glass", "Glass"], ["gradient", "Gradient tile"], ["neon", "Neon"], ["tint", "Tinted (accent)"], ["flat", "Flat (grey)"], ["3d", "3D live animated"]];
   var ANIM_STYLES = [["scale", "Scale"], ["slide", "Slide up"], ["fade", "Fade"], ["zoom", "Zoom"], ["bounce", "Bounce"], ["blur", "Blur in"], ["flip", "Flip"]];
   var NAV_MODES = [["sidebar", "Side bar"], ["dock", "Dock (bottom)"]];
   var WIDGET_DEFS = [
@@ -2496,6 +2547,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     animSpeed: 1,
     bootAnim: true,
     fxAnim: true,
+    tips: true,
     fx3d: true,
     fx3dThick: 14,
     fx3dFloat: 3,
@@ -2540,7 +2592,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       hiddenNav: Array.isArray(o.hiddenNav) ? [...new Set(o.hiddenNav.filter((k) => HIDEABLE.includes(k)))] : [],
       accent: /^#[0-9a-fA-F]{6}$/.test(o.accent) ? o.accent.toLowerCase() : D2.accent,
       bg: oneOf(o.bg, ["default", "plain", "wallpaper"], D2.bg),
-      wallpaper: typeof o.wallpaper === "string" && /^([a-z0-9]{2,20}|(photo|grad):[a-z0-9]{2,20})$/.test(o.wallpaper) && (!wallIds || wallIds.includes(o.wallpaper) || /^(photo|grad|custom|remote)/.test(o.wallpaper)) ? o.wallpaper : D2.wallpaper,
+      wallpaper: typeof o.wallpaper === "string" && /^([a-z0-9]{2,20}|(photo|grad|desk):[a-z0-9]{2,20})$/.test(o.wallpaper) && (!wallIds || wallIds.includes(o.wallpaper) || /^(photo|grad|desk|custom|remote)/.test(o.wallpaper)) ? o.wallpaper : D2.wallpaper,
       wallImage: typeof o.wallImage === "string" && o.wallImage.length <= 8e5 && /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(o.wallImage) ? o.wallImage : "",
       wallUrl: typeof o.wallUrl === "string" && /^https:\/\/[^\s"'()<>\\]{3,1000}$/.test(o.wallUrl) ? o.wallUrl : "",
       bgDim: num(o.bgDim, 0, 90, D2.bgDim),
@@ -2556,6 +2608,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       animSpeed: num(o.animSpeed, 0.5, 2, D2.animSpeed),
       bootAnim: bool(o.bootAnim, D2.bootAnim),
       fxAnim: bool(o.fxAnim, D2.fxAnim),
+      tips: bool(o.tips, D2.tips),
       fx3d: bool(o.fx3d, D2.fx3d),
       fx3dThick: num(o.fx3dThick, 0, 28, D2.fx3dThick),
       fx3dFloat: num(o.fx3dFloat, 0, 10, D2.fx3dFloat),
@@ -2637,6 +2690,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     d.fxanim = look.fxAnim && look.animations ? "on" : "off";
     d.fx3d = look.fx3d && look.animations ? "on" : "off";
     d.thick = look.fx3dThick > 0 ? "on" : "off";
+    d.tips = look.tips ? "on" : "off";
     d.float = look.fx3d && look.animations && look.fx3dFloat > 0 && !(typeof navigator !== "undefined" && navigator.webdriver) ? "on" : "off";
     d.anim = look.animStyle;
     d.scan = look.fxScan ? "on" : "off";
@@ -3403,9 +3457,9 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       if (!it || !it.lock) throw new Error("This item has no passcode lock.");
       const f = this.itemFails.get(id) || { n: 0, until: 0 };
       if (Date.now() < f.until) throw new Error("Too many wrong passcodes. Wait " + Math.ceil((f.until - Date.now()) / 1e3) + "s.");
-      let text;
+      let text2;
       try {
-        text = await openText(it.lock, String(code || ""));
+        text2 = await openText(it.lock, String(code || ""));
       } catch {
         f.n++;
         f.until = Date.now() + Math.min(6e4, 1e3 * 2 ** Math.min(f.n, 6));
@@ -3413,7 +3467,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
         throw new Error("bad-passcode");
       }
       this.itemFails.delete(id);
-      const payload = JSON.parse(text);
+      const payload = JSON.parse(text2);
       this.itemKeys.set(id, { code: String(code), payload, at: Date.now() });
       this.log("access", "Opened passcode-locked \u201C" + it.name + "\u201D");
       if (await this._lockFiles(it, payload)) await this._resealPayload(id);
@@ -4006,8 +4060,8 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     return out;
   }
   var DEFAULT_SETTINGS_FOR_IMPORT = { autolock: 5, clipboard: 30, lockOnHide: false, trashDays: 30, logReveal: true, tourSeen: false, welcomeAlways: false };
-  async function decryptProfile(text, password) {
-    const t = String(text).trim();
+  async function decryptProfile(text2, password) {
+    const t = String(text2).trim();
     if (t.startsWith("VMP1:")) {
       const j = JSON.parse(await openText(t.slice(5), password));
       if (j.format !== "VaultManager-profile" || !Array.isArray(j.items)) throw new Error("Unrecognised profile backup contents.");
@@ -4019,8 +4073,8 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     }
     throw new Error("This is not a VaultManager backup (it should start with VMP1: or VMX1:).");
   }
-  async function decryptBackup(text, password) {
-    const t = String(text).trim();
+  async function decryptBackup(text2, password) {
+    const t = String(text2).trim();
     if (!t.startsWith("VMX1:")) throw new Error("This is not a VaultManager backup (it should start with VMX1:).");
     const j = JSON.parse(await openText(t.slice(5), password));
     if (j.format !== "VaultManager-export" || !Array.isArray(j.items)) throw new Error("Unrecognised backup contents.");
@@ -4078,10 +4132,10 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     }
     return it;
   }
-  function parseCSV(text) {
+  function parseCSV(text2) {
     const rows = [];
     let row2 = [], f = "", q2 = false;
-    const s = String(text).replace(/^﻿/, "");
+    const s = String(text2).replace(/^﻿/, "");
     for (let i = 0; i < s.length; i++) {
       const c = s[i];
       if (q2) {
@@ -4125,8 +4179,8 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     favorite: ["favorite", "fav"],
     type: ["type"]
   };
-  function importCSV(text) {
-    const rows = parseCSV(text);
+  function importCSV(text2) {
+    const rows = parseCSV(text2);
     if (rows.length < 2) throw new Error("The CSV file is empty.");
     const head = rows[0].map((h2) => h2.trim().toLowerCase());
     const col = {};
@@ -4156,8 +4210,8 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     }
     return out;
   }
-  function importBitwardenJSON(text) {
-    const j = JSON.parse(text);
+  function importBitwardenJSON(text2) {
+    const j = JSON.parse(text2);
     if (j.encrypted) throw new Error("This Bitwarden export is encrypted. Export it as unencrypted JSON (or CSV) instead.");
     if (!Array.isArray(j.items)) throw new Error("No items found in this JSON file.");
     const folders = new Map((j.folders || []).map((f) => [f.id, f.name]));
@@ -4180,8 +4234,8 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       });
     });
   }
-  function importAny(text, filename = "") {
-    const t = String(text).trim();
+  function importAny(text2, filename = "") {
+    const t = String(text2).trim();
     if (t.startsWith("{")) return importBitwardenJSON(t);
     if (/\.json$/i.test(filename)) return importBitwardenJSON(t);
     return importCSV(t);
@@ -4416,6 +4470,125 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     return h("div", { class: "gfx" }, button, panel3);
   }
 
+  // js/tooltips.js
+  var NAMES = {
+    login: "Login",
+    note: "Secure note",
+    card: "Payment card",
+    star: "Favorite",
+    starline: "Favorite",
+    bolt: "Generate",
+    lock: "Lock",
+    unlock: "Unlock",
+    eye: "Show or hide",
+    copy: "Copy",
+    edit: "Edit",
+    trash: "Delete",
+    plus: "Add",
+    close: "Close",
+    search: "Search",
+    settings: "Settings",
+    sync: "Sync",
+    refresh: "Refresh",
+    qr: "QR code",
+    home: "Home",
+    vault: "All items",
+    health: "Vault health",
+    pulse: "Vault health",
+    puzzle: "Categories",
+    shield: "Security",
+    shieldlock: "Protected",
+    bell: "Alerts",
+    camera: "Take a photo",
+    attach: "Attach files",
+    paperclip: "Attach files",
+    export: "Export",
+    exportfile: "Import & export",
+    sparkles: "3D effects",
+    dice: "Surprise me"
+  };
+  var pretty = (n) => String(n).replace(/[-_]+/g, " ").replace(/^./, (c) => c.toUpperCase());
+  var iconName = (n) => TYPE_META[n] && TYPE_META[n].label || NAMES[n] || pretty(n);
+  var text = (el) => (el && el.textContent || "").replace(/\s+/g, " ").trim();
+  function tipFor(t) {
+    if (t.closest("[data-tip]")) return { el: t.closest("[data-tip]"), tip: t.closest("[data-tip]").dataset.tip };
+    const ico = t.closest(".ico");
+    if (ico && ico.dataset.n) {
+      const host = ico.closest("button, a, [role=button], .nav, .dock-item, .mbar-item, .msheet-item");
+      if (!(host && host.matches(".nav, .dock-item, .mbar-item, .msheet-item, .btn") && text(host))) return { el: host || ico, tip: host && (host.dataset.tipTitle || host.getAttribute("aria-label")) || iconName(ico.dataset.n) };
+    }
+    const ti = t.closest("[title]");
+    if (ti && ti.getAttribute("title")) {
+      ti.dataset.tipTitle = ti.getAttribute("title");
+      ti.removeAttribute("title");
+      return { el: ti, tip: ti.dataset.tipTitle };
+    }
+    if (t.closest("[data-tip-title]")) {
+      const e = t.closest("[data-tip-title]");
+      return { el: e, tip: e.dataset.tipTitle };
+    }
+    const ctl = t.closest(".field input, .field select, .field textarea");
+    if (ctl) {
+      const f = ctl.closest(".field"), label = text(f.querySelector(":scope > label")), hint = text(f.querySelector(".hint"));
+      return label ? { el: ctl, tip: label + (hint ? " \u2014 " + hint : "") } : null;
+    }
+    const row2 = t.closest(".f");
+    if (row2 && row2.querySelector(".k")) {
+      const k = text(row2.querySelector(".k"));
+      return k ? { el: row2, tip: k + (row2.querySelector('[aria-label^="Copy"], .copy') ? " \u2014 use Copy to copy it" : "") } : null;
+    }
+    return null;
+  }
+  function initTooltips() {
+    const tip = document.createElement("div");
+    tip.className = "vm-tip";
+    tip.id = "vm-tip";
+    tip.setAttribute("role", "tooltip");
+    tip.hidden = true;
+    document.body.append(tip);
+    let timer = 0, cur = null;
+    const on = () => document.documentElement.dataset.tips !== "off";
+    const hide = () => {
+      clearTimeout(timer);
+      timer = 0;
+      tip.hidden = true;
+      if (cur) {
+        cur.removeAttribute("aria-describedby");
+        cur = null;
+      }
+    };
+    const show = (el, msg) => {
+      if (!msg || !el.isConnected) return;
+      tip.textContent = msg;
+      tip.hidden = false;
+      cur = el;
+      el.setAttribute("aria-describedby", "vm-tip");
+      const r = el.getBoundingClientRect(), w = tip.offsetWidth, hh = tip.offsetHeight;
+      let x = Math.min(Math.max(8, r.left + r.width / 2 - w / 2), innerWidth - w - 8), y = r.bottom + 8;
+      if (y + hh > innerHeight - 8) y = Math.max(8, r.top - hh - 8);
+      tip.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px)`;
+    };
+    const arm = (t, delay) => {
+      hide();
+      if (!on() || !(t instanceof Element)) return;
+      const f = tipFor(t);
+      if (!f || !f.tip) return;
+      timer = setTimeout(() => show(f.el, f.tip), delay);
+    };
+    document.addEventListener("pointerover", (e) => {
+      if (e.pointerType === "touch") return;
+      arm(e.target, 450);
+    }, true);
+    document.addEventListener("pointerout", hide, true);
+    document.addEventListener("focusin", (e) => {
+      if (e.target.matches && e.target.matches(":focus-visible")) arm(e.target, 150);
+    }, true);
+    document.addEventListener("focusout", hide, true);
+    document.addEventListener("keydown", hide, true);
+    document.addEventListener("pointerdown", hide, true);
+    window.addEventListener("scroll", hide, true);
+  }
+
   // js/generator.js
   var SETS = {
     lower: "abcdefghijklmnopqrstuvwxyz",
@@ -4510,21 +4683,21 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     });
     return loaded[src];
   }
-  async function makeQR(text) {
+  async function makeQR(text2) {
     await loadScript("vendor/qrcode.js");
     for (const ecc of ["M", "L"]) {
       try {
         const qr = globalThis.qrcode(0, ecc);
-        qr.addData(text, "Byte");
+        qr.addData(text2, "Byte");
         qr.make();
         return { qr, ecc, size: qr.getModuleCount(), version: (qr.getModuleCount() - 17) / 4 };
       } catch (e) {
-        if (ecc === "L") throw new Error("Too much data for a single QR code (" + text.length + " characters). Use the multi-QR backup instead.");
+        if (ecc === "L") throw new Error("Too much data for a single QR code (" + text2.length + " characters). Use the multi-QR backup instead.");
       }
     }
   }
-  async function drawQR(canvas, text, { scale = 6, margin = 4 } = {}) {
-    const r = await makeQR(text);
+  async function drawQR(canvas, text2, { scale = 6, margin = 4 } = {}) {
+    const r = await makeQR(text2);
     const n = r.size, px = (n + margin * 2) * scale;
     canvas.width = canvas.height = px;
     const ctx2 = canvas.getContext("2d");
@@ -4596,8 +4769,8 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     for (let i = 0; i < count; i++) out.push(`VMQ1|${id}|${i + 1}|${count}|${payload.slice(i * size, (i + 1) * size)}`);
     return out;
   }
-  function parseChunk(text) {
-    const m = /^VMQ1\|([0-9a-f]{6})\|(\d{1,3})\|(\d{1,3})\|([A-Za-z0-9+/=:]+)$/.exec(String(text).trim());
+  function parseChunk(text2) {
+    const m = /^VMQ1\|([0-9a-f]{6})\|(\d{1,3})\|(\d{1,3})\|([A-Za-z0-9+/=:]+)$/.exec(String(text2).trim());
     if (!m) return null;
     const index = +m[2], count = +m[3];
     if (index < 1 || index > count) return null;
@@ -4610,8 +4783,8 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       this.parts = /* @__PURE__ */ new Map();
     }
     /* Returns { status: 'new'|'dup'|'other-set'|'invalid', have, count, done } */
-    add(text) {
-      const c = parseChunk(text);
+    add(text2) {
+      const c = parseChunk(text2);
       if (!c) return { status: "invalid", have: this.parts.size, count: this.count, done: false };
       if (this.set && c.set !== this.set) return { status: "other-set", have: this.parts.size, count: this.count, done: false };
       this.set = c.set;
@@ -4758,8 +4931,8 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     return {
       el,
       get: () => vals.slice(0, last() + 1).map((v) => v.trim()).join(" "),
-      set: (text) => {
-        const w = String(text || "").split(/\s+/).filter(Boolean).slice(0, MAX_WORDS);
+      set: (text2) => {
+        const w = String(text2 || "").split(/\s+/).filter(Boolean).slice(0, MAX_WORDS);
         vals = w.slice();
         const n = WORD_COUNTS.find((c) => c >= w.length) || w.length || 12;
         shown.clear();
@@ -4891,7 +5064,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       body: h("div", null, h("p", { text: "This value has a passcode of its own, on top of your master password. It stays readable for 10 minutes, or until the vault locks." }), input, err),
       actions: [{ label: "Cancel" }, { label: "Unlock", kind: "primary", onClick: go, close: false }]
     });
-    setTimeout(() => input.focus(), 50);
+    focusSoon(input, 50);
     return m;
   }
   function lockedFieldRow(ctx2, it, label, sealed) {
@@ -5211,19 +5384,19 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     const e = estimate(value), n = [...value].length;
     return h("small", { class: "sbits", title: "Estimated strength: " + e.label, text: `${n} characters \xB7 ~${Math.round(e.bits)} bits \xB7 ${e.label}` });
   }
-  function payloadBox(ctx2, text, { label = "Payload text (Base64)", file = "vaultmanager-payload" } = {}) {
-    const ta = h("textarea", { class: "ta mono payload", rows: "3", readonly: true, spellcheck: "false", "aria-label": label }, text);
+  function payloadBox(ctx2, text2, { label = "Payload text (Base64)", file = "vaultmanager-payload" } = {}) {
+    const ta = h("textarea", { class: "ta mono payload", rows: "3", readonly: true, spellcheck: "false", "aria-label": label }, text2);
     return h(
       "details",
       { class: "how payloadbox", open: true },
-      h("summary", { text: label + " \u2014 " + text.length.toLocaleString("en-US") + " characters" }),
+      h("summary", { text: label + " \u2014 " + text2.length.toLocaleString("en-US") + " characters" }),
       h("p", { class: "hint", text: "This is exactly what is inside the QR. Without the password it is unreadable. Paste it into Tools \u2192 QR tools \u2192 Open QR to restore without scanning." }),
       ta,
       h(
         "div",
         { class: "row wrap" },
-        h("button", { class: "btn sm", type: "button", on: { click: () => copyText(text, "Payload text copied") } }, "{{copy}} Copy payload text"),
-        h("button", { class: "btn sm", type: "button", on: { click: () => download(`${file}-${stamp()}.txt`, text, "text/plain") } }, "{{download}} Save as .txt")
+        h("button", { class: "btn sm", type: "button", on: { click: () => copyText(text2, "Payload text copied") } }, "{{copy}} Copy payload text"),
+        h("button", { class: "btn sm", type: "button", on: { click: () => download(`${file}-${stamp()}.txt`, text2, "text/plain") } }, "{{download}} Save as .txt")
       )
     );
   }
@@ -5613,8 +5786,8 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
         it.conflicts.map((c) => {
           const secret = keyIsSecret(it, c.key);
           let shown = !secret;
-          const mk = (text) => {
-            const v = h("div", { class: "cval mono", text: shown ? text : "\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022" });
+          const mk = (text2) => {
+            const v = h("div", { class: "cval mono", text: shown ? text2 : "\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022" });
             return v;
           };
           const cur = describeValue(currentValue(it, c.key)), oth = describeValue(c.value);
@@ -6154,7 +6327,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       body: h("div", null, h("p", { text: "This item has its own passcode on top of your master password." }), input, err),
       actions: [{ label: "Cancel" }, { label: "Unlock", kind: "primary", onClick: go, close: false }]
     });
-    setTimeout(() => input.focus(), 50);
+    focusSoon(input, 50);
   }
   function lockDialog(ctx2, it, { change = false } = {}) {
     const store2 = ctx2.store;
@@ -6615,13 +6788,13 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     );
   }
   function sealTab(ctx2) {
-    const text = h("textarea", { class: "ta", rows: "5", placeholder: "A Wi-Fi password, a recovery code, a short note\u2026", "aria-label": "Text to seal", spellcheck: "false" });
+    const text2 = h("textarea", { class: "ta", rows: "5", placeholder: "A Wi-Fi password, a recovery code, a short note\u2026", "aria-label": "Text to seal", spellcheck: "false" });
     const pw = h("input", { class: "inp mono", type: "text", value: generateStrongPassphrase(), autocomplete: "off", spellcheck: "false", "aria-label": "QR password" });
     const out = h("div"), err = h("p", { class: "err", role: "alert" });
     const btn = h("button", { class: "btn primary", on: { click: async () => {
       err.textContent = "";
       clear(out);
-      if (!text.value) {
+      if (!text2.value) {
         err.textContent = "Type something to seal.";
         return;
       }
@@ -6636,10 +6809,10 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       btn.disabled = true;
       const t0 = performance.now();
       try {
-        const sealed = await sealText(text.value, pw.value);
+        const sealed = await sealText(text2.value, pw.value);
         const c = h("canvas", { role: "img", "aria-label": "Encrypted QR code" });
         const r = await drawQR(c, sealed, { scale: 6 });
-        if (await openText(sealed, pw.value) !== text.value) throw new Error("Round-trip check failed.");
+        if (await openText(sealed, pw.value) !== text2.value) throw new Error("Round-trip check failed.");
         out.append(h("div", { class: "qrbox" }, c), payloadBox(ctx2, sealed, { file: "vaultmanager-qr-payload" }), h("p", { class: "hint", text: `QR version ${r.version} \xB7 ECC ${r.ecc} \xB7 ${sealed.length} characters \xB7 sealed in ${Math.round(performance.now() - t0)} ms \xB7 round-trip verified` }), qrOutputs(c, "vaultmanager-qr"));
       } catch (e) {
         err.textContent = e.message;
@@ -6648,12 +6821,12 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     } } }, "{{qr}} Seal into QR");
     const txtStats = h("p", { class: "hint", "aria-live": "polite" });
     const paintTxt = () => {
-      const v = text.value, e = estimate(v);
+      const v = text2.value, e = estimate(v);
       txtStats.textContent = v ? `Secret text: ${[...v].length} characters \xB7 ~${Math.round(e.bits)} bits entropy (${e.label})` : "";
     };
-    text.addEventListener("input", paintTxt);
+    text2.addEventListener("input", paintTxt);
     const pwRow = passwordRow("Password", pw);
-    return h("div", { class: "panel pad" }, field2("Secret text", text), txtStats, pwRow, h("div", { class: "row wrap" }, btn, purgeButton(ctx2)), err, out);
+    return h("div", { class: "panel pad" }, field2("Secret text", text2), txtStats, pwRow, h("div", { class: "row wrap" }, btn, purgeButton(ctx2)), err, out);
   }
   function openTab(ctx2) {
     const payload = h("textarea", { class: "ta", rows: "4", placeholder: "Scan a QR, choose an image, or paste the sealed text (base64 or VMX1:\u2026)", "aria-label": "Sealed payload", spellcheck: "false" });
@@ -6747,10 +6920,10 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
         } else {
           const info = inspectSeal(p);
           if (!info.ok) throw new Error(info.why);
-          const text = await openText(p, pw.value);
+          const text2 = await openText(p, pw.value);
           let item = null, single = null;
           try {
-            const j = JSON.parse(text);
+            const j = JSON.parse(text2);
             if (j && j.vm === 1 && j.item) item = sanitiseItem(j.item);
             else if (j && j.vm === 1 && j.field && typeof j.field.value === "string") single = { name: String(j.name || ""), field: { label: String(j.field.label || "Value").slice(0, 80), value: j.field.value } };
           } catch {
@@ -6779,8 +6952,8 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
               h("div", { class: "row wrap" }, h("button", { class: "btn sm", on: { click: () => copyText(single.field.value, "Copied", ctx2.store.settings.clipboard) } }, "{{copy}} Copy"))
             );
           } else {
-            const pre = h("div", { class: "genout", text });
-            out.append(h("div", { class: "note", text: `Opened (v${info.version}, ${fmtInt(info.iterations)} rounds).` }), pre, h("div", { class: "row wrap" }, h("button", { class: "btn sm", on: { click: () => copyText(text, "Copied", ctx2.store.settings.clipboard) } }, "{{copy}} Copy"), h("button", { class: "btn sm", on: { click: () => {
+            const pre = h("div", { class: "genout", text: text2 });
+            out.append(h("div", { class: "note", text: `Opened (v${info.version}, ${fmtInt(info.iterations)} rounds).` }), pre, h("div", { class: "row wrap" }, h("button", { class: "btn sm", on: { click: () => copyText(text2, "Copied", ctx2.store.settings.clipboard) } }, "{{copy}} Copy"), h("button", { class: "btn sm", on: { click: () => {
               clear(out);
               payload.value = "";
               pw.value = "";
@@ -6984,11 +7157,11 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     const { store: store2 } = ctx2;
     const importOut = h("div"), importErr = h("p", { class: "err", role: "alert" });
     const paste = h("textarea", { class: "ta", rows: "4", placeholder: "Or paste CSV / JSON here", "aria-label": "Import text", spellcheck: "false" });
-    const runImport = (text, name) => {
+    const runImport = (text2, name) => {
       importErr.textContent = "";
       clear(importOut);
       try {
-        const items = importAny(text, name);
+        const items = importAny(text2, name);
         if (!items.length) throw new Error("No usable entries found.");
         importOut.append(
           h("div", { class: "note", text: `Found ${items.length} entr${items.length === 1 ? "y" : "ies"} (${items.filter((i) => i.type === "login").length} logins). Duplicates are skipped.` }),
@@ -7644,6 +7817,49 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     ["sky", "Clear sky", ["#0b3d91", "#3b8fe0", "#bfe6ff"]]
   ];
   var gradSvg = (cols) => "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 9" preserveAspectRatio="none"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">' + cols.map((c, i) => '<stop offset="' + i / (cols.length - 1) + '" stop-color="' + c + '"/>').join("") + '</linearGradient></defs><rect width="16" height="9" fill="url(#g)"/></svg>');
+  var MESH = [
+    ["aubergine", "Aubergine glow", "#2b0a3d", [[0.15, 0.2, 0.6, "#e95420"], [0.85, 0.15, 0.55, "#77216f"], [0.5, 0.95, 0.7, "#5e2750"], [0.9, 0.85, 0.4, "#f6a35a"]]],
+    ["tealtide", "Teal tide", "#04202e", [[0.1, 0.8, 0.6, "#00a6a6"], [0.8, 0.2, 0.55, "#0b6fa4"], [0.55, 0.55, 0.45, "#1fd6b4"], [0.95, 0.95, 0.4, "#164e63"]]],
+    ["sunsetmesh", "Sunset mesh", "#2a0f36", [[0.2, 0.15, 0.55, "#ff6b6b"], [0.85, 0.3, 0.5, "#ffb347"], [0.4, 0.9, 0.6, "#7b2cbf"], [0.95, 0.9, 0.4, "#ff8fab"]]],
+    ["mintmesh", "Mint mesh", "#062a24", [[0.15, 0.25, 0.55, "#2fe6d0"], [0.85, 0.2, 0.5, "#4ade80"], [0.5, 0.95, 0.6, "#0e7490"], [0.9, 0.8, 0.4, "#a7f3d0"]]],
+    ["rosegold", "Rose gold", "#2e1320", [[0.2, 0.2, 0.55, "#f4a6a0"], [0.8, 0.25, 0.5, "#c084fc"], [0.5, 0.9, 0.6, "#9d174d"], [0.9, 0.85, 0.35, "#fcd5b5"]]],
+    ["indigomesh", "Indigo night", "#070b2a", [[0.2, 0.2, 0.55, "#4f46e5"], [0.85, 0.3, 0.5, "#06b6d4"], [0.45, 0.95, 0.6, "#7c3aed"], [0.95, 0.9, 0.35, "#38bdf8"]]]
+  ];
+  var RIBBONS = [
+    ["silk", "Silk ribbons", ["#0b1230", "#2a1a5e"], ["#7c5cff", "#22d3ee", "#f472b6", "#fbbf24"]],
+    ["meadow", "Pastel waves", ["#173a5e", "#2e7d9a"], ["#bde0fe", "#a2d2ff", "#ffc8dd", "#ffafcc"]],
+    ["dunes", "Sunrise dunes", ["#3b1250", "#b4436c"], ["#ffb86b", "#ff7e5f", "#feb47b", "#6a1b9a"]],
+    ["deepwave", "Deep waves", ["#020b1f", "#0a3d62"], ["#1b6ca8", "#2fd0c8", "#5eead4", "#0e7490"]]
+  ];
+  var deskSvg = (id) => {
+    const W2 = 1600, H2 = 900;
+    let defs = "", body = "";
+    const m = MESH.find((x) => "desk:" + x[0] === id);
+    if (m) {
+      body = '<rect width="' + W2 + '" height="' + H2 + '" fill="' + m[2] + '"/>';
+      m[3].forEach(([x, y, r, c], i) => {
+        defs += '<radialGradient id="b' + i + '"><stop offset="0" stop-color="' + c + '" stop-opacity=".9"/><stop offset="1" stop-color="' + c + '" stop-opacity="0"/></radialGradient>';
+        body += '<circle cx="' + x * W2 + '" cy="' + y * H2 + '" r="' + r * W2 * 0.62 + '" fill="url(#b' + i + ')"/>';
+      });
+    } else {
+      const rb = RIBBONS.find((x) => "desk:" + x[0] === id);
+      if (!rb) return "";
+      defs = '<linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="' + rb[2][0] + '"/><stop offset="1" stop-color="' + rb[2][1] + '"/></linearGradient>';
+      body = '<rect width="' + W2 + '" height="' + H2 + '" fill="url(#bg)"/>';
+      rb[3].forEach((c, i) => {
+        const y0 = H2 * (0.28 + i * 0.17), a = 70 + i * 22, ph = i * 1.3 + 0.4;
+        let top = "", bot = "";
+        for (let k = 0; k <= 32; k++) {
+          const x = k / 32 * W2, y = y0 + Math.sin(k * 0.34 + ph) * a + Math.sin(k * 0.13 + ph * 2) * a * 0.6;
+          top += (k ? " L" : "M") + x.toFixed(0) + "," + y.toFixed(0);
+          bot = " L" + x.toFixed(0) + "," + (y + 90 + i * 14).toFixed(0) + bot;
+        }
+        defs += '<linearGradient id="r' + i + '" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="' + c + '" stop-opacity=".05"/><stop offset=".5" stop-color="' + c + '" stop-opacity=".75"/><stop offset="1" stop-color="' + c + '" stop-opacity=".1"/></linearGradient>';
+        body += '<path d="' + top + bot + ' Z" fill="url(#r' + i + ')"/>';
+      });
+    }
+    return "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + W2 + " " + H2 + '" preserveAspectRatio="xMidYMid slice"><defs>' + defs + "</defs>" + body + "</svg>");
+  };
   var embeddedPhotos = null;
   var embeddedPhoto = (src) => {
     if (embeddedPhotos === null) {
@@ -7662,9 +7878,10 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     photos: PHOTOS.filter((p) => p[0] === "space").map((p) => [p[1], p[2]]),
     cities: PHOTOS.filter((p) => p[0] === "city").map((p) => [p[1], p[2]]),
     gradients: GRADS.map((g) => [g[0], g[1]]),
+    desktops: [...MESH.map((m) => [m[0], m[1]]), ...RIBBONS.map((r) => [r[0], r[1]])],
     /** Is this a wallpaper id we know how to draw? (custom / remote depend on the look object) */
     has(id) {
-      return !!SPECS[id] || /^(photo|grad):[a-z0-9]+$/.test(id) && (id.startsWith("photo:") ? PHOTOS.some((p) => "photo:" + p[1] === id) : GRADS.some((g) => "grad:" + g[0] === id)) || id === "custom" || id === "remote";
+      return !!SPECS[id] || /^desk:[a-z0-9]+$/.test(id) && (MESH.some((m) => "desk:" + m[0] === id) || RIBBONS.some((r) => "desk:" + r[0] === id)) || /^(photo|grad):[a-z0-9]+$/.test(id) && (id.startsWith("photo:") ? PHOTOS.some((p) => "photo:" + p[1] === id) : GRADS.some((g) => "grad:" + g[0] === id)) || id === "custom" || id === "remote";
     },
     /** URL usable in CSS url("…"): data: for drawn scenes / gradients / your own picture, a bundled file for photos, https for a remote picture */
     url(id, look = {}) {
@@ -7673,6 +7890,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
         const f = "wallpapers/" + id.slice(6) + ".jpg";
         return embeddedPhoto(f) || f;
       }
+      if (id.startsWith("desk:")) return cache2[id] || (cache2[id] = deskSvg(id));
       if (id.startsWith("grad:")) {
         const g = GRADS.find((x) => "grad:" + x[0] === id);
         return g ? gradSvg(g[2]) : "";
@@ -7856,6 +8074,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
         group("Real photos \u2014 NASA & public domain", "Shipped inside the app, so they work offline.", landscapes.photos.map(([id, n]) => tile("photo:" + id, n, "photo"))),
         group("Cities & lights", "The Earth at night, photographed from orbit.", landscapes.cities.map(([id, n]) => tile("photo:" + id, n, "city"))),
         group("Drawn landscapes", "Painted by the app itself \u2014 tiny and offline.", landscapes.list.map(([id, n]) => tile(id, n, "drawn"))),
+        group("Desktop style", "Soft colour meshes and flowing ribbons, drawn by the app: the feel of a modern desktop wallpaper. Offline, tiny.", landscapes.desktops.map(([id, n]) => tile("desk:" + id, n, "desk"))),
         group("Colour themes", "Smooth gradients.", landscapes.gradients.map(([id, n]) => tile("grad:" + id, n, "grad"))),
         group(
           "Your own picture",
@@ -7904,7 +8123,8 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
         row("Icon style", "How the category and tool icons look", select("iconStyle", ICON_STYLES, { icons: true })),
         demo,
         row("Icon size", null, seg("iconSize", [["small", "Small"], ["medium", "Medium"], ["large", "Large"]])),
-        row("Item avatars", "Show the first letter of the name, or the category icon", seg("avatar", [["letter", "Letter"], ["icon", "Category icon"]], { redraw: true }))
+        row("Item avatars", "Show the first letter of the name, or just the category icon in your icon style (try 3D live animated)", seg("avatar", [["letter", "Letter"], ["icon", "Category icon"]], { redraw: true })),
+        row("Hover tooltips", "Hover or focus an icon, button or field to see its name and hint", sw("tips"))
       ),
       panel(
         "Layout & feel",
@@ -8224,8 +8444,8 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     if (payload.length > maxPayload) throw new Error("The sync bundle is " + (payload.length / 1048576).toFixed(1) + " MB \u2014 too large. Turn off \u201Csync attachments\u201D or remove large files.");
     return payload;
   }
-  async function openBundle(text, passphrase) {
-    const t = String(text).trim();
+  async function openBundle(text2, passphrase) {
+    const t = String(text2).trim();
     if (!t.startsWith(PREFIX)) throw new Error("This is not a VaultManager sync file (it should start with VMS1:).");
     let raw;
     try {
@@ -8324,8 +8544,8 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     store2.log("sync", "Exported an encrypted sync file");
     return sealBundle(await store2.buildBundle({ withAttachments: cfg.attachments }), passphrase);
   }
-  async function importSyncFile(store2, text, passphrase) {
-    const bundle = await openBundle(text, passphrase);
+  async function importSyncFile(store2, text2, passphrase) {
+    const bundle = await openBundle(text2, passphrase);
     const res = await store2.applyRemote(bundle);
     store2.log("sync", "Imported a sync file");
     return res;
@@ -8458,7 +8678,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       ),
       actions: [{ label: "Cancel" }, { label: "Send", kind: "primary", onClick: send }]
     });
-    setTimeout(() => subject.focus(), 60);
+    focusSoon(subject, 60);
   }
 
   // js/profiles.js
@@ -8706,8 +8926,8 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
         }
         e.target.disabled = true;
         try {
-          const text = await store2.exportProfile(pw.value, { profile: { name: prof && prof.name, avatar: prof && prof.avatar && prof.avatar.type === "photo" ? null : prof && prof.avatar }, attachments: att.checked });
-          download(`vaultmanager-profile-${slug(prof && prof.name)}-${stamp()}.vmprofile`, text, "text/plain");
+          const text2 = await store2.exportProfile(pw.value, { profile: { name: prof && prof.name, avatar: prof && prof.avatar && prof.avatar.type === "photo" ? null : prof && prof.avatar }, attachments: att.checked });
+          download(`vaultmanager-profile-${slug(prof && prof.name)}-${stamp()}.vmprofile`, text2, "text/plain");
           toast("Profile backup saved \u2014 keep the password safe!", "ok", 6e3);
           m.close();
         } catch (x) {
@@ -8719,12 +8939,12 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     });
   }
   function importProfileDialog(ctx2, { onDone } = {}) {
-    let text = "", data = null;
+    let text2 = "", data = null;
     const file = h("input", { type: "file", accept: ".vmprofile,.vmvault,.txt", class: "offscreen", "aria-label": "Backup file", on: { change: async (e) => {
       const f = e.target.files[0];
       e.target.value = "";
       if (f) {
-        text = (await readFileText(f)).trim();
+        text2 = (await readFileText(f)).trim();
         fname.textContent = f.name;
       }
     } } });
@@ -8781,7 +9001,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     m.el.classList.add("m3d");
     openBtn.addEventListener("click", async () => {
       err1.textContent = "";
-      const t = (text || paste.value).trim();
+      const t = (text2 || paste.value).trim();
       if (!t) {
         err1.textContent = "Choose a backup file or paste its text.";
         return;
@@ -8810,7 +9030,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
         picker = replacePicker(picker, data.avatar, () => name.value);
         step1.hidden = true;
         step2.hidden = false;
-        setTimeout(() => p1.focus(), 30);
+        focusSoon(p1, 30);
       } catch (e) {
         err1.textContent = e.message;
       }
@@ -9842,7 +10062,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       await maybeSend();
       await maybeApply();
     }
-    const progress = (text, frac) => show(h("div", { class: "panel pad" }, h("p", { class: "hint", "aria-live": "polite", text }), frac === void 0 ? null : h("div", { class: "progress" }, (() => {
+    const progress = (text2, frac) => show(h("div", { class: "panel pad" }, h("p", { class: "hint", "aria-live": "polite", text: text2 }), frac === void 0 ? null : h("div", { class: "progress" }, (() => {
       const i = h("i");
       i.style.width = Math.round(frac * 100) + "%";
       return i;
@@ -10614,9 +10834,9 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       return showRecoveryKit(ctx, key);
     },
     /* copy a secret, honouring the clipboard-clear setting, and note it (never the value) in the audit trail */
-    copySecret(text, label, item, what) {
+    copySecret(text2, label, item, what) {
       if (item && store.settings.logReveal) store.log("access", "Copied " + (what || "value").toLowerCase() + " of \u201C" + item.name + "\u201D");
-      return copyText(text, label, store.settings.clipboard);
+      return copyText(text2, label, store.settings.clipboard);
     },
     passwordPolicy(pw) {
       if (pw.length < 12) return "Use at least 12 characters.";
@@ -10705,6 +10925,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     }
   }, true);
   var space = mountSpace();
+  initTooltips();
   ctx.surge = () => space.surge();
   ctx.setGateLook = (patch) => {
     bootLook = normalizeLook({ ...bootLook, ...patch });

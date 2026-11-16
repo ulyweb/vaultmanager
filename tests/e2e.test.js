@@ -2028,3 +2028,57 @@ test('v0.34.1: custom favorite names — name a favorite, filter the Favorites p
   await page.getByRole('button', { name: 'Save' }).click(); await page.waitForSelector('.detail h2:has-text("Payroll")');
   assert.deepEqual(problems.filter((p) => !/Failed to load resource/.test(p)), []); await ctx.close();
 });
+
+test('v0.35.0: 3D live animated icons, icon-only avatars, hover tooltips, desktop-style wallpapers', async () => {
+  const { ctx, page, problems } = await newPage({ reducedMotion: 'no-preference' }); await createVault(page);
+  await addLogin(page, 'Alpha');
+  await page.locator('.side .nav:has-text("Settings")').click(); await page.getByRole('tab', { name: /Appearance/ }).click();
+  const sel = page.locator('select').filter({ has: page.locator('option[value="3d"]') });
+  assert.equal(await sel.count(), 1, '3D live animated is an icon style');
+  assert.equal((await sel.locator('option[value="3d"]').textContent()).trim(), '3D live animated');
+  await sel.selectOption('3d'); assert.equal(await page.evaluate(() => document.documentElement.dataset.icons), '3d');
+  const cat = page.locator('.side .ico.cat').first();
+  const shadow = await cat.evaluate((e) => getComputedStyle(e).boxShadow); assert.ok((shadow.match(/rgb/g) || []).length >= 6, 'thick solid edge');
+  assert.ok(await cat.evaluate((e) => getComputedStyle(e).transform !== 'none'), 'tilted in 3D');
+  // item avatars: icon only, no coloured box around it
+  await page.getByRole('button', { name: 'Category icon' }).click();
+  await page.locator('.side .nav:has-text("All items")').click();
+  const av = await page.locator('.items .avatar').first().evaluate((e) => ({ bg: getComputedStyle(e).backgroundImage + getComputedStyle(e).backgroundColor, ico: !!e.querySelector('.ico.cat svg'), tile: getComputedStyle(e.querySelector('.ico.cat')).backgroundImage }));
+  assert.ok(av.ico, 'the avatar is the category icon'); assert.match(av.bg, /none.*rgba\(0, 0, 0, 0\)/, 'no coloured box behind it'); assert.match(av.tile, /gradient/, 'the icon is the tile itself');
+  // hover tooltips
+  await page.locator('.side .nav:has-text("Logins") .ico').hover();
+  await page.locator('.items .avatar').first().hover(); await page.waitForSelector('.vm-tip:not([hidden])', { timeout: 3000 });
+  assert.match(await page.textContent('.vm-tip'), /Login/);
+  await page.locator('.items [role=option]').first().click(); await page.locator('.detail .act-edit').click(); await page.waitForSelector('#f_username');
+  await page.locator('#f_username').hover(); await page.waitForFunction(() => /Username/.test(document.querySelector('.vm-tip:not([hidden])')?.textContent || ''), null, { timeout: 3000 });
+  await page.keyboard.press('Escape');
+  // the switch turns them off
+  await page.locator('.side .nav:has-text("Settings")').click(); await page.getByRole('tab', { name: /Appearance/ }).click();
+  await page.locator('button[aria-label="tips"], .row:has-text("Hover tooltips") button.sw').first().click();
+  assert.equal(await page.evaluate(() => document.documentElement.dataset.tips), 'off');
+  await page.locator('.side .nav:has-text("Logins") .ico').hover(); await page.waitForTimeout(800);
+  assert.equal(await page.locator('.vm-tip:not([hidden])').count(), 0, 'no tooltip while the switch is off');
+  // desktop-style wallpapers
+  const tile = page.locator('.wall[aria-label="Wallpaper Aubergine glow"]'); await tile.scrollIntoViewIfNeeded(); await tile.click();
+  assert.match(await page.evaluate(() => document.documentElement.style.getPropertyValue('--wall')), /data:image\/svg\+xml/);
+  assert.equal(await page.locator('.wall[data-group=desk]').count(), 10, 'ten desktop-style wallpapers');
+  assert.deepEqual(problems.filter((p) => !/Failed to load resource/.test(p)), []); await ctx.close();
+});
+
+test('v0.35.0: a dialog never steals the focus back from a field you already moved into (import step 2)', async () => {
+  const A = await newPage(); await createVault(A.page);
+  await settingsTab(A.page, 'General'); await A.page.getByRole('button', { name: /Export whole profile/ }).click();
+  await A.page.fill('input[aria-label="Backup password"]', 'backup-pass-phrase-1'); await A.page.fill('input[aria-label="Confirm Backup password"]', 'backup-pass-phrase-1');
+  const [dl] = await Promise.all([A.page.waitForEvent('download'), A.page.getByRole('button', { name: 'Download backup' }).click()]);
+  const text = fs.readFileSync(await dl.path(), 'utf8'); await A.ctx.close();
+  const B = await newPage(); await B.page.goto(base); await B.page.waitForSelector('#pw1');
+  await B.page.getByRole('button', { name: /Import a profile backup/ }).click();
+  await B.page.fill('textarea[aria-label="Backup text"]', text); await B.page.fill('input[aria-label="Backup password"]', 'backup-pass-phrase-1');
+  // the moment step 2 appears, move into the second field (a fast typist, or an autofill), while the dialog's own delayed focus is still pending
+  await B.page.evaluate(() => { const p2 = document.querySelector('input[aria-label="Repeat new master password"]'); new MutationObserver((_, o) => { if (p2.offsetParent) { p2.focus(); o.disconnect(); } }).observe(document.querySelector('.modal-sheet'), { attributes: true, subtree: true, attributeFilter: ['hidden'] }); });
+  await B.page.getByRole('button', { name: 'Open backup' }).click();
+  await B.page.waitForSelector('input[aria-label="Repeat new master password"]:visible');
+  await B.page.waitForTimeout(300);
+  assert.equal(await B.page.evaluate(() => document.activeElement.getAttribute('aria-label')), 'Repeat new master password', 'focus stayed where the person put it');
+  assert.deepEqual(B.problems.filter((p) => !/Failed to load resource/.test(p)), []); await B.ctx.close();
+});

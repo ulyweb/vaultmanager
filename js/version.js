@@ -1,6 +1,6 @@
 /* Application version, data-format versions and changelog (shown in Settings → About). */
 
-export const APP_VERSION = '0.34.1';
+export const APP_VERSION = '0.35.0';
 export const APP_NAME = 'VaultManager';
 export const REPO_URL = 'https://github.com/ulyweb/vaultmanager';
 
@@ -16,6 +16,12 @@ export const FORMATS = [
 ];
 
 export const CHANGELOG = [
+  { v: '0.35.0', date: '2026-11-16', notes: [
+    'New icon style “3D live animated” (Settings → Appearance → Icons): glossy tiles with a thick solid edge that slowly turn in 3D; hover one and it straightens and lifts. Works for the category, side-bar, dock and menu icons.',
+    'Item avatars set to “Category icon” now show just the icon, in your chosen icon style (no coloured box around it). Pair it with 3D live animated for animated icon avatars.',
+    'Hover tooltips: hover or keyboard-focus an icon, button or field to see its name and hint (for example “Crypto wallet”, “Username / email — …”). Settings → Appearance → Icons → Hover tooltips turns them off.',
+    'Ten new desktop-style wallpapers drawn by the app (Aubergine glow, Teal tide, Sunset mesh, Mint mesh, Rose gold, Indigo night, Silk ribbons, Pastel waves, Sunrise dunes, Deep waves). They work offline. You can still use any picture of your own, such as your desktop wallpaper, under “Your own picture”.',
+  ] },
   { v: '0.34.1', date: '2026-11-15', notes: [
     'Custom favorite names: give a favorite your own name (Work, Family, Trip…) in the item editor (“Favorite name”, with your earlier names suggested) or leave it as plain Favorites. The Favorites page shows your names as filter chips (All · Work · Family), the item’s star button shows its name, and the names are kept in backups, sync and locked items.',
   ] },

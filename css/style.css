@@ -662,13 +662,13 @@ html[data-standalone="1"] body { padding-bottom: 0; }
 .panel .btn { max-width: 100%; white-space: normal; }
 
 /* ---- Colourful & animated icons: duotone glyphs on vivid tiles, each with its own colour, phase and motion ---- */
-html[data-icons=vivid] .ico svg :is(rect, circle, ellipse, polygon) { fill: currentColor; fill-opacity: .2; }
-html[data-icons=vivid] .ico svg > :nth-child(even) { stroke: var(--hl, #ffe08a); }
-html[data-icons=vivid] .ico.cat { background: linear-gradient(135deg, var(--i1), var(--i2)); color: #fff; position: relative; overflow: hidden; box-shadow: 0 3px 10px color-mix(in srgb, var(--i1) 45%, transparent), inset 0 1px 0 rgba(255,255,255,.35); }
-html[data-icons=vivid] .ico.cat::after { content: ''; position: absolute; inset: 0; background: linear-gradient(115deg, transparent 35%, rgba(255,255,255,.45) 50%, transparent 65%); transform: translateX(-120%); pointer-events: none; }
-html[data-icons=vivid] .ico:not(.cat) { color: var(--v1); }
-html[data-icons=vivid] .nav .ico:not(.cat), html[data-icons=vivid] .dock-item .ico, html[data-icons=vivid] .mbar-item .ico, html[data-icons=vivid] .btn .ico, html[data-icons=vivid] .icon-btn .ico { color: var(--v1); filter: drop-shadow(0 0 3px color-mix(in srgb, var(--v2) 55%, transparent)); }
-html[data-icons=vivid] .btn.primary .ico { color: inherit; filter: none; }
+html:is([data-icons=vivid],[data-icons=3d]) .ico svg :is(rect, circle, ellipse, polygon) { fill: currentColor; fill-opacity: .2; }
+html:is([data-icons=vivid],[data-icons=3d]) .ico svg > :nth-child(even) { stroke: var(--hl, #ffe08a); }
+html:is([data-icons=vivid],[data-icons=3d]) .ico.cat { background: linear-gradient(135deg, var(--i1), var(--i2)); color: #fff; position: relative; overflow: hidden; box-shadow: 0 3px 10px color-mix(in srgb, var(--i1) 45%, transparent), inset 0 1px 0 rgba(255,255,255,.35); }
+html:is([data-icons=vivid],[data-icons=3d]) .ico.cat::after { content: ''; position: absolute; inset: 0; background: linear-gradient(115deg, transparent 35%, rgba(255,255,255,.45) 50%, transparent 65%); transform: translateX(-120%); pointer-events: none; }
+html:is([data-icons=vivid],[data-icons=3d]) .ico:not(.cat) { color: var(--v1); }
+html:is([data-icons=vivid],[data-icons=3d]) .nav .ico:not(.cat), html:is([data-icons=vivid],[data-icons=3d]) .dock-item .ico, html:is([data-icons=vivid],[data-icons=3d]) .mbar-item .ico, html:is([data-icons=vivid],[data-icons=3d]) .btn .ico, html:is([data-icons=vivid],[data-icons=3d]) .icon-btn .ico { color: var(--v1); filter: drop-shadow(0 0 3px color-mix(in srgb, var(--v2) 55%, transparent)); }
+html:is([data-icons=vivid],[data-icons=3d]) .btn.primary .ico { color: inherit; filter: none; }
 @keyframes vm-float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
 @keyframes vm-shine { 0%,70% { transform: translateX(-120%); } 100% { transform: translateX(120%); } }
 @keyframes vm-wiggle { 0%,80%,100% { transform: rotate(0); } 85% { transform: rotate(-12deg); } 92% { transform: rotate(10deg); } }
@@ -728,18 +728,18 @@ html[data-icons=vivid][data-fxanim=on] .ico[data-n=star] svg, html[data-icons=vi
 @media (max-width: 699px) { .widget .wgrip { width: 30px; height: 30px; } }
 
 /* ---- real app-icon tiles: side bar, dock and menus look like desktop icons (ulyOS style) ---- */
-html[data-icons=vivid] .nav .ico:not(.cat), html[data-icons=vivid] .dock-item .ico, html[data-icons=vivid] .msheet-item .ico, html[data-icons=vivid] .mbar-item .ico {
+html:is([data-icons=vivid],[data-icons=3d]) .nav .ico:not(.cat), html:is([data-icons=vivid],[data-icons=3d]) .dock-item .ico, html:is([data-icons=vivid],[data-icons=3d]) .msheet-item .ico, html:is([data-icons=vivid],[data-icons=3d]) .mbar-item .ico {
   width: 1.9em; height: 1.9em; padding: .42em; border-radius: .6em; position: relative; overflow: hidden; color: #fff; filter: none; margin-right: 0;
   background: linear-gradient(150deg, var(--v1), var(--v2)); box-shadow: 0 3px 9px color-mix(in srgb, var(--v2) 50%, transparent), inset 0 1px 0 rgba(255,255,255,.4), inset 0 -2px 4px rgba(0,0,0,.18);
 }
-html[data-icons=vivid] .nav .ico:not(.cat)::before, html[data-icons=vivid] .dock-item .ico::before, html[data-icons=vivid] .msheet-item .ico::before, html[data-icons=vivid] .mbar-item .ico::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 48%; background: linear-gradient(rgba(255,255,255,.34), rgba(255,255,255,0)); border-radius: .6em .6em 60% 60% / .6em .6em 25% 25%; pointer-events: none; }
-html[data-icons=vivid] .nav .ico:not(.cat) svg, html[data-icons=vivid] .dock-item .ico svg, html[data-icons=vivid] .msheet-item .ico svg, html[data-icons=vivid] .mbar-item .ico svg { stroke-width: 1.9; filter: drop-shadow(0 1px 1px rgba(0,0,0,.25)); }
-html[data-icons=vivid] .nav .ic { width: calc(34px * var(--icon-k)); font-size: calc(15px * var(--icon-k)); } html[data-icons=vivid] .nav { gap: 10px; }
-html[data-icons=vivid] .nav .ico.cat { width: 1.9em; height: 1.9em; }
-html[data-icons=vivid] .dock-item .ico { width: 1.7em; height: 1.7em; padding: .36em; } html[data-icons=vivid] .mbar-item .ico { width: 1.7em; height: 1.7em; padding: .34em; }
-html[data-icons=vivid] .btn.primary .ico, html[data-icons=vivid] .topbar .ico { box-shadow: none; }
+html:is([data-icons=vivid],[data-icons=3d]) .nav .ico:not(.cat)::before, html:is([data-icons=vivid],[data-icons=3d]) .dock-item .ico::before, html:is([data-icons=vivid],[data-icons=3d]) .msheet-item .ico::before, html:is([data-icons=vivid],[data-icons=3d]) .mbar-item .ico::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 48%; background: linear-gradient(rgba(255,255,255,.34), rgba(255,255,255,0)); border-radius: .6em .6em 60% 60% / .6em .6em 25% 25%; pointer-events: none; }
+html:is([data-icons=vivid],[data-icons=3d]) .nav .ico:not(.cat) svg, html:is([data-icons=vivid],[data-icons=3d]) .dock-item .ico svg, html:is([data-icons=vivid],[data-icons=3d]) .msheet-item .ico svg, html:is([data-icons=vivid],[data-icons=3d]) .mbar-item .ico svg { stroke-width: 1.9; filter: drop-shadow(0 1px 1px rgba(0,0,0,.25)); }
+html:is([data-icons=vivid],[data-icons=3d]) .nav .ic { width: calc(34px * var(--icon-k)); font-size: calc(15px * var(--icon-k)); } html:is([data-icons=vivid],[data-icons=3d]) .nav { gap: 10px; }
+html:is([data-icons=vivid],[data-icons=3d]) .nav .ico.cat { width: 1.9em; height: 1.9em; }
+html:is([data-icons=vivid],[data-icons=3d]) .dock-item .ico { width: 1.7em; height: 1.7em; padding: .36em; } html:is([data-icons=vivid],[data-icons=3d]) .mbar-item .ico { width: 1.7em; height: 1.7em; padding: .34em; }
+html:is([data-icons=vivid],[data-icons=3d]) .btn.primary .ico, html:is([data-icons=vivid],[data-icons=3d]) .topbar .ico { box-shadow: none; }
 html[data-icons=vivid][data-fxanim=on] .nav .ico:not(.cat), html[data-icons=vivid][data-fxanim=on] .dock-item .ico { animation: vm-float 4s ease-in-out infinite; animation-delay: var(--d, 0s); }
-html[data-icons=vivid] .nav:hover .ico:not(.cat), html[data-icons=vivid] .dock-item:hover .ico { transform: translateY(-2px) scale(1.06); }
+html:is([data-icons=vivid],[data-icons=3d]) .nav:hover .ico:not(.cat), html:is([data-icons=vivid],[data-icons=3d]) .dock-item:hover .ico { transform: translateY(-2px) scale(1.06); }
 
 /* ---- top bar: bigger icon buttons ---- */
 .topbar .btn { min-height: 42px; } .topbar .btn .ico { font-size: 1.35em; width: 1.35em; height: 1.35em; }
@@ -1014,3 +1014,41 @@ html[data-thick=on] .s3-inner { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .1
 .favchips { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 12px 4px; }
 .favchip { cursor: pointer; background: transparent; color: var(--ink-2, inherit); font: inherit; font-size: .8em; }
 .favchip.on { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 55%, transparent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
+
+/* ---- 3D live animated icons: glossy tiles with a solid edge that slowly turn in 3D; hover to straighten and lift ----
+   One layer per icon (the thick edge is a stack of hard box-shadows), so every browser draws it the same way. */
+html[data-icons="3d"] .ico.cat, html[data-icons="3d"] :is(.nav, .dock-item, .msheet-item, .mbar-item) .ico:not(.cat) {
+  --e: color-mix(in srgb, var(--i2, var(--v2)) 62%, #000); overflow: visible; position: relative; border-radius: 28%;
+  box-shadow: 1px 1px 0 var(--e), 2px 2px 0 var(--e), 3px 3px 0 var(--e), 4px 4px 0 var(--e), 5px 5px 0 var(--e), 6px 7px 8px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.45);
+  transform: perspective(260px) rotateX(8deg) rotateY(-12deg); transition: transform .25s ease, box-shadow .25s ease;
+}
+html[data-icons="3d"] :is(.nav, .dock-item, .msheet-item, .mbar-item) .ico:not(.cat) { --e: color-mix(in srgb, var(--v2) 62%, #000); border-radius: 28%; }
+html[data-icons="3d"] .ico.cat::after, html[data-icons="3d"] :is(.nav, .dock-item, .msheet-item, .mbar-item) .ico:not(.cat)::before {
+  content: ''; position: absolute; inset: 0 0 46% 0; border-radius: 28% 28% 60% 60% / 28% 28% 26% 26%; background: linear-gradient(rgba(255,255,255,.5), rgba(255,255,255,0)); transform: none; animation: none; pointer-events: none;
+}
+html[data-icons="3d"] .ico svg { filter: drop-shadow(1px 2px 1px rgba(0,0,0,.4)); }
+html[data-icons="3d"][data-fxanim=on] .ico.cat, html[data-icons="3d"][data-fxanim=on] :is(.nav, .dock-item, .msheet-item, .mbar-item) .ico:not(.cat) { animation: vm-tilt3d 6.5s ease-in-out infinite; animation-delay: var(--d, 0s); }
+html[data-icons="3d"][data-fxanim=on] .ico.cat svg { animation: vm-pulse 3.4s ease-in-out infinite; animation-delay: var(--d, 0s); }
+html[data-icons="3d"] .ico.cat:hover, html[data-icons="3d"] :is(.nav, .dock-item, .msheet-item, .mbar-item):hover .ico:not(.cat) {
+  animation: none !important; transform: perspective(260px) rotateX(0) rotateY(0) scale(1.14) translateY(-2px);
+  box-shadow: 1px 1px 0 var(--e), 2px 2px 0 var(--e), 3px 3px 0 var(--e), 4px 4px 0 var(--e), 5px 5px 0 var(--e), 8px 12px 14px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.55);
+}
+@keyframes vm-tilt3d { 0%, 100% { transform: perspective(260px) rotateX(9deg) rotateY(-16deg); } 50% { transform: perspective(260px) rotateX(-7deg) rotateY(16deg); } }
+@media (prefers-reduced-motion: reduce) { html[data-icons="3d"] .ico, html[data-icons="3d"] .ico svg { animation: none !important; } }
+
+/* item avatars set to "Category icon": the icon IS the avatar (no coloured box around it), in whatever icon style is chosen */
+html[data-avatar=icon] .avatar { background: none !important; text-shadow: none; overflow: visible; }
+html[data-avatar=icon] .avatar .icn { display: grid; place-items: center; width: 100%; height: 100%; }
+html[data-avatar=icon] .avatar .ico, html[data-avatar=icon] .avatar .ico.cat { width: 100%; height: 100%; padding: .22em; font-size: inherit; }
+
+/* hover tooltips */
+.vm-tip { position: fixed; left: 0; top: 0; z-index: 99999; max-width: min(320px, 86vw); padding: 6px 10px; border-radius: 8px; font: 12px/1.4 var(--sans, system-ui, sans-serif); color: var(--ink, #fff); background: var(--bg-2, #10161d); border: 1px solid var(--line-2, rgba(255,255,255,.2)); box-shadow: 0 8px 24px rgba(0,0,0,.45); pointer-events: none; }
+.vm-tip[hidden] { display: none; }
+html[data-avatar=icon]:is([data-icons=vivid], [data-icons="3d"]) .avatar .ico.cat { background: linear-gradient(135deg, var(--i1), var(--i2)); border-radius: 28%; box-shadow: 0 3px 10px color-mix(in srgb, var(--i1) 45%, transparent), inset 0 1px 0 rgba(255,255,255,.35); }
+html[data-avatar=icon][data-icons="3d"] .avatar .ico.cat { --e: color-mix(in srgb, var(--i2) 62%, #000); box-shadow: 1px 1px 0 var(--e), 2px 2px 0 var(--e), 3px 3px 0 var(--e), 4px 4px 0 var(--e), 5px 5px 0 var(--e), 5px 7px 8px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.45); }
+html[data-avatar=icon][data-icons=glass] .avatar .ico.cat { background: linear-gradient(135deg, rgba(255,255,255,.2), rgba(255,255,255,.04)); border: 1px solid var(--glass-line); color: var(--i1); }
+html[data-avatar=icon][data-icons=gradient] .avatar .ico.cat { background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: var(--accent-ink); border-radius: 28%; }
+html[data-avatar=icon][data-icons=flat] .avatar .ico.cat { background: var(--raise); color: var(--ink-dim); border: 1px solid var(--line); border-radius: 28%; }
+html[data-avatar=icon][data-icons=neon] .avatar .ico.cat { color: var(--i1); filter: drop-shadow(0 0 5px var(--i1)); }
+html[data-avatar=icon][data-icons=tint] .avatar .ico.cat { color: var(--accent); }
+html[data-icons="3d"] :is(.nav, .dock-item, .msheet-item, .mbar-item) .ico:not(.cat) { background: linear-gradient(150deg, var(--v1), var(--v2)); color: #fff; width: 1.9em; height: 1.9em; padding: .42em; }
