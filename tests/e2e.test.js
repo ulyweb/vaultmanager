@@ -819,7 +819,7 @@ test('look & feel: appearance, effects, dock & menu bar, widgets, start page, bo
   await page.locator('.dock-item[aria-label="Settings"]').click(); await page.getByRole('tab', { name: /Appearance/ }).click();
   await page.getByRole('button', { name: /Surprise me/ }).click(); await page.waitForSelector('text=New look');
   await page.getByRole('button', { name: 'Reset appearance' }).click(); await page.getByRole('button', { name: 'Reset', exact: true }).click();
-  await page.waitForFunction(() => document.documentElement.dataset.icons === 'vivid');
+  await page.waitForFunction(() => document.documentElement.dataset.icons === '3d');
   assert.equal(await cssv('--accent'), '#2fe6d0');
   assert.deepEqual(problems, []);
   await ctx.close();
@@ -1275,7 +1275,7 @@ test('v0.16: first login lands on Home with only Everyday expanded; app-style ic
   assert.ok(await page.locator('.side .nav', { hasText: 'Logins' }).isVisible() && !(await page.locator('.side .nav', { hasText: 'Travel' }).isVisible()));
   // real app-icon tiles in the side bar
   const bg = await page.locator('.side .nav', { hasText: 'Favorites' }).locator('.ico').evaluate((e) => getComputedStyle(e).backgroundImage);
-  assert.match(bg, /gradient/); const sz = await page.locator('.side .nav', { hasText: 'Favorites' }).locator('.ico').boundingBox(); assert.ok(sz.width >= 26, 'tile is a real icon size, ' + sz.width);
+  assert.match(bg, /gradient|^url\(/); const sz = await page.locator('.side .nav', { hasText: 'Favorites' }).locator('.ico').boundingBox(); assert.ok(sz.width >= 26, 'tile is a real icon size, ' + sz.width);
   const tb = await page.locator('.topbar [title^="Lock"] .ico').boundingBox(); assert.ok(tb.width >= 24, 'top bar icons are large: ' + tb.width);
   // pin
   const first = async () => page.locator('.widgets .widget').first().getAttribute('aria-label');
@@ -2107,3 +2107,27 @@ for (const [label, offline] of [['served', false], ['single file', true]]) {
     assert.deepEqual(problems.filter((p) => !/Failed to load resource/.test(p)), []); await ctx.close();
   });
 }
+
+test('v0.36.2: a new profile starts with the 3D live animated icon style', async () => {
+  const { ctx, page, problems } = await newPage(); await createVault(page);
+  assert.equal(await page.evaluate(() => document.documentElement.dataset.icons), '3d');
+  assert.match(await page.locator('.side .ico.cat').first().evaluate((e) => getComputedStyle(e).backgroundImage), /^url\(/, 'the category icons are 3D pictures straight away');
+  assert.deepEqual(problems.filter((p) => !/Failed to load resource/.test(p)), []); await ctx.close();
+});
+
+test('v0.36.3: while a dialog is open nothing behind it blurs or animates (no flat colour block while typing a password)', async () => {
+  const { ctx, page, problems } = await newPage({ reducedMotion: 'no-preference' }); await createVault(page);
+  await page.locator('.side .nav:has-text("Home")').click(); await page.waitForSelector('.widget');
+  await page.getByRole('button', { name: '＋ New' }).click(); await page.waitForSelector('.modal-sheet'); await page.waitForTimeout(400);
+  const st = await page.evaluate(() => { const g = (s, p) => { const e = document.querySelector(s); return e ? getComputedStyle(e)[p] : 'missing'; }; return { overlay: g('.modal-overlay', 'backdropFilter'), panel: g('.widget', 'backdropFilter'), top: g('.topbar', 'backdropFilter'), wanim: g('.widget', 'animationName'), icoAnim: g('.side .ico.cat', 'animationName'), sheet: g('.modal-sheet', 'backdropFilter') }; });
+  assert.equal(st.overlay, 'none'); assert.equal(st.panel, 'none'); assert.equal(st.top, 'none'); assert.equal(st.sheet, 'none'); assert.equal(st.wanim, 'none', 'widgets hold still behind a dialog'); assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector('.aurora i')).filter), 'none', 'the aurora is plain gradients, no big blur filter'); assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector('.aurora i')).animationName), 'none', 'the aurora holds still behind a dialog'); assert.equal(st.icoAnim, 'none', 'icons hold still behind a dialog');
+  await page.keyboard.press('Escape');
+  await page.locator('.side .nav:has-text("Settings")').click(); await page.getByRole('tab', { name: 'General' }).click();
+  await page.getByRole('button', { name: /Export whole profile/ }).click(); await page.waitForSelector('input[aria-label="Backup password"]');
+  await page.locator('input[aria-label="Backup password"]').click();
+  for (const ch of 'squid-rust-fade-crane-angel') { await page.keyboard.type(ch); const covered = await page.evaluate(() => { const vw = innerWidth, vh = innerHeight; return [...document.querySelectorAll('body *')].filter((e) => { const r = e.getBoundingClientRect(), c = getComputedStyle(e); return r.width > vw * 0.6 && r.height > vh * 0.6 && c.position === 'fixed' && c.visibility !== 'hidden' && c.display !== 'none' && !e.classList.contains('modal-overlay') && !e.classList.contains('aurora') && e.id !== 'space3d'; }).map((e) => e.className || e.id); }); assert.deepEqual(covered, [], 'a large fixed layer appeared while typing: ' + covered.join()); }
+  // the strength bar has the classes s0..s4; none of them may collide with another rule (the 3D card space once used .s3, which made the bar fill the whole screen at "Good")
+  const pos = await page.evaluate(() => ['s0', 's1', 's2', 's3', 's4'].map((c) => { const m = document.createElement('div'); m.className = 'meter'; const i = document.createElement('i'); i.className = c; m.append(i); document.querySelector('.modal-sheet').append(m); const r = getComputedStyle(i).position + '/' + getComputedStyle(i).display + '/' + Math.round(i.getBoundingClientRect().width); m.remove(); return r; }));
+  assert.deepEqual(pos.map((x) => x.split('/')[0]), ['static', 'static', 'static', 'static', 'static'], 'meter bars stay in their box: ' + pos.join(' '));
+  assert.deepEqual(problems.filter((p) => !/Failed to load resource/.test(p)), []); await ctx.close();
+});

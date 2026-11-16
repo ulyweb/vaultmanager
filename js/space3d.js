@@ -38,7 +38,7 @@ export function mountSpace() {
     ring.append(el);
     return { el, r, y, ang, rz, dur, rx: (i % 3 - 1) * 11, ph: i * 0.9 };
   });
-  const root = h('div', { class: 's3', 'aria-hidden': 'true' }, ring);
+  const root = h('div', { class: 'space3d', 'aria-hidden': 'true' }, ring);
   root.id = 'space3d';
   document.body.insertBefore(root, document.getElementById('app'));
 

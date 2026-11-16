@@ -30,6 +30,7 @@ export function syncIcons3d(on) {
       `html[data-icons="3d"] .ico:is(${list})::before, html[data-icons="3d"] .ico:is(${list})::after { display: none !important; }`,
       `html[data-icons="3d"][data-fxanim=on] .ico:is(${list}) { animation: vm-bob3d 4.8s ease-in-out infinite !important; animation-delay: var(--d, 0s) !important; }`,
       `html[data-icons="3d"] .ico:is(${list}):hover, html[data-icons="3d"] :is(.nav, .dock-item, .mbar-item, .msheet-item, .btn, .icon-btn, .tabs button, .menuitem, [role=menuitem]):hover .ico:is(${list}) { animation: none !important; transform: scale(1.15) translateY(-1px) !important; }`,
+      `html[data-icons="3d"] body[data-modal] .ico:is(${list}) { animation: none !important; }`,   // nothing moves behind an open dialog
       ...ICONS3D.map((n) => `html[data-icons="3d"] .ico[data-n="${n}"] { background-image: url("${icon3dUrl(n)}") !important; }`),
     ];
     sheet.replaceSync(rules.join('\n'));

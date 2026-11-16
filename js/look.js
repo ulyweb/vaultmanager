@@ -27,7 +27,7 @@ export const WIDGET_DEFS = [
 
 export const LOOK_DEFAULTS = {
   // appearance
-  accent: '#2fe6d0', cursor: false, cursorStyle: 'neon', cursorSize: 100, cursorColor: '', cursorRing: true, hiddenCats: [], hiddenNav: [], bg: 'default', wallpaper: 'forest', wallImage: '', wallUrl: '', bgDim: 55, iconStyle: 'vivid', iconSize: 'medium', avatar: 'letter',
+  accent: '#2fe6d0', cursor: false, cursorStyle: 'neon', cursorSize: 100, cursorColor: '', cursorRing: true, hiddenCats: [], hiddenNav: [], bg: 'default', wallpaper: 'forest', wallImage: '', wallUrl: '', bgDim: 55, iconStyle: '3d', iconSize: 'medium', avatar: 'letter',
   uiScale: 100, density: 'comfortable', radius: 12, widgetStyle: 'vivid',
   // effects
   animations: true, animStyle: 'scale', animSpeed: 1, bootAnim: true, fxAnim: true, tips: true, fx3d: true, fx3dThick: 14, fx3dFloat: 3, fxAurora: 65, fxTilt: 5, fxGlow: 35, fxScan: false, blur: 12, glassAlpha: 0.72,

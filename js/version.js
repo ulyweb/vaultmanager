@@ -1,6 +1,6 @@
 /* Application version, data-format versions and changelog (shown in Settings → About). */
 
-export const APP_VERSION = '0.36.1';
+export const APP_VERSION = '0.36.3';
 export const APP_NAME = 'VaultManager';
 export const REPO_URL = 'https://github.com/ulyweb/vaultmanager';
 
@@ -16,6 +16,13 @@ export const FORMATS = [
 ];
 
 export const CHANGELOG = [
+  { v: '0.36.3', date: '2026-11-16', notes: [
+    'Fixed the flat green-blue block that covered the screen while you typed a password (for example when exporting a profile) and went away as you kept typing. Cause: the 3D card space and the password strength bar both used a style class called “s3”, so when a password reached “Good” the strength bar stretched across the whole screen. The card space now has its own class name.',
+    'Also: nothing behind an open dialog blurs or moves any more (no backdrop blur, floating widgets, bobbing icons or aurora animation), and the aurora is plain soft gradients instead of a heavy 80 px blur filter.',
+  ] },
+  { v: '0.36.2', date: '2026-11-16', notes: [
+    '3D live animated is now the default icon style for new profiles and for “Reset appearance”. Profiles that already picked an icon style keep their choice (Settings → Appearance → Icons → Icon style).',
+  ] },
   { v: '0.36.1', date: '2026-11-16', notes: [
     'Fixed the 3D live animated icons looking off-centre and cropped: each picture is now shown whole and centred in its box (it was zoomed, which cut off the tops and sides and pushed icons up and to the left), inline icons in tabs and buttons sit on the text line, the New button shows the 3D plus without a glass tile behind it, and the phone bottom bar icons no longer overlap their labels. The bobbing is now a small up-and-down only. New 3D menu icon for More.',
   ] },
