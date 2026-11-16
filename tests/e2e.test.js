@@ -2097,6 +2097,8 @@ for (const [label, offline] of [['served', false], ['single file', true]]) {
     const bg = await page.locator('.side .ico.cat[data-n="login"]').evaluate((e) => getComputedStyle(e).backgroundImage); assert.match(bg, /^url\(/, 'the category icon is the 3D picture');
     assert.equal(await page.locator('.side .ico.cat[data-n="login"]').evaluate((e) => getComputedStyle(e).boxShadow), 'none');
     for (const sel of ['.side .nav:has-text("Home") .ico', '.side .nav:has-text("Settings") .ico', '.side .nav:has-text("Vault health") .ico', '.tabs [role=tab] .ico']) assert.match(await page.locator(sel).first().evaluate((e) => getComputedStyle(e).backgroundImage), /^url\(/, sel + ' is a 3D picture');
+    for (const sel of ['.side .nav:has-text("Home") .ico', '.tabs [role=tab] .ico', '.topbar .newbtn .ico']) assert.equal(await page.locator(sel).first().evaluate((e) => getComputedStyle(e).backgroundSize), 'contain', sel + ': the picture is shown whole, never zoomed or cropped');
+    assert.equal(await page.locator('.topbar .newbtn .newico').evaluate((e) => getComputedStyle(e).backgroundImage), 'none', 'no glass tile behind the 3D plus');
     await page.locator('.topbar').getByText('VaultManager').first().click(); await page.waitForSelector('.menu, [role=menu]');
     const menuIcons = await page.locator('.menu .ico, [role=menu] .ico').evaluateAll((els) => els.map((e) => getComputedStyle(e).backgroundImage.startsWith('url(')));
     assert.ok(menuIcons.length >= 8 && menuIcons.every(Boolean), 'every system menu icon is a 3D picture: ' + menuIcons.join()); await page.keyboard.press('Escape');

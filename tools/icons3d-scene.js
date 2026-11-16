@@ -309,8 +309,8 @@ Object.assign(B, {
     const a = ball(1.2, WHITE()); a.scale.set(1.35, 0.85, 0.7); const iris = at(disc(0.62, 0.1, M(0x4f8bff)), 0, 0, 0.82), pup = at(disc(0.28, 0.12, DARK()), 0, 0, 0.88), gl = at(ball(0.1, WHITE()), 0.15, 0.2, 0.95);
     return G(a, iris, pup, gl);
   },
-  plus() { return G(at(slab(0.7, 2.2, 0.5, 0.25, M(0x34d399), 0.12), 0, 0, 0), at(slab(2.2, 0.7, 0.5, 0.25, M(0x34d399), 0.12), 0, 0, 0)); },
-  check() { return G(stroke([-0.9, -0.05], [-0.3, -0.7], 0.5, 0.5, M(0x34d399)), stroke([-0.3, -0.7], [0.95, 0.8], 0.5, 0.5, M(0x34d399))); },
+  plus() { const w = M(0xfdfdff, { roughness: 0.3 }); return G(at(slab(0.7, 2.2, 0.5, 0.25, w, 0.12), 0, 0, 0), at(slab(2.2, 0.7, 0.5, 0.25, w, 0.12), 0, 0, 0)); },
+  check() { const g = M(0x1f9d55); return G(stroke([-0.9, -0.05], [-0.3, -0.7], 0.5, 0.5, g), stroke([-0.3, -0.7], [0.95, 0.8], 0.5, 0.5, g)); },
   alert() {
     const t = poly([[0, 1.3], [1.35, -1.0], [-1.35, -1.0]], 0.5, M(0xffb02e), 0.18); return G(t, at(bar(0.22, 0.8, 0.1, DARK()), 0, -0.1, 0.34), at(ball(0.13, DARK()), 0, -0.68, 0.34));
   },
@@ -353,6 +353,7 @@ Object.assign(B, {
   },
   doc() { return B.note(); },
   smile() { const f = ball(1.1, M(0xffd43d)); return G(f, at(ball(0.13, DARK()), -0.36, 0.3, 1.0), at(ball(0.13, DARK()), 0.36, 0.3, 1.0), at(ring(0.45, 0.07, DARK(), Math.PI), 0, -0.1, 1.0).rotateZ(Math.PI)); },
+  menu() { return G(slab(2.3, 2.3, 0.5, 0.5, M(0x6b7a90), 0.14), ...[0.55, 0, -0.55].map((y) => at(bar(1.4, 0.28, 0.1, WHITE()), 0, y, 0.3))); },
   checkcircle() { return G(disc(1.2, 0.4, M(0x34d399)), stroke([-0.5, 0.0], [-0.12, -0.4], 0.24, 0.12, WHITE()).translateZ(0.25), stroke([-0.12, -0.4], [0.55, 0.4], 0.24, 0.12, WHITE()).translateZ(0.25)); },
 });
 
