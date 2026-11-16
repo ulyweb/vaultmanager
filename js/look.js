@@ -6,7 +6,7 @@
 export const ACCENTS = [['Teal', '#2fe6d0'], ['Mint', '#7dff9b'], ['Sky', '#59b4ff'], ['Violet', '#8b7dff'], ['Pink', '#ff7ad9'], ['Amber', '#ffb547'], ['Coral', '#ff6b6b'], ['Orange', '#ff8a4c'], ['Silver', '#d6e2ee']];
 import { applyCursor } from './cursor.js';
 
-export const ICON_STYLES = [['vivid', 'Colourful & animated'], ['glass', 'Glass'], ['gradient', 'Gradient tile'], ['neon', 'Neon'], ['tint', 'Tinted (accent)'], ['flat', 'Flat (grey)']];
+export const ICON_STYLES = [['vivid', 'Colourful & animated'], ['glass', 'Glass'], ['gradient', 'Gradient tile'], ['neon', 'Neon'], ['tint', 'Tinted (accent)'], ['flat', 'Flat (grey)'], ['3d', '3D live animated']];
 export const ANIM_STYLES = [['scale', 'Scale'], ['slide', 'Slide up'], ['fade', 'Fade'], ['zoom', 'Zoom'], ['bounce', 'Bounce'], ['blur', 'Blur in'], ['flip', 'Flip']];
 export const NAV_MODES = [['sidebar', 'Side bar'], ['dock', 'Dock (bottom)']];
 
@@ -29,7 +29,7 @@ export const LOOK_DEFAULTS = {
   accent: '#2fe6d0', cursor: false, cursorStyle: 'neon', cursorSize: 100, cursorColor: '', cursorRing: true, hiddenCats: [], hiddenNav: [], bg: 'default', wallpaper: 'forest', wallImage: '', wallUrl: '', bgDim: 55, iconStyle: 'vivid', iconSize: 'medium', avatar: 'letter',
   uiScale: 100, density: 'comfortable', radius: 12, widgetStyle: 'vivid',
   // effects
-  animations: true, animStyle: 'scale', animSpeed: 1, bootAnim: true, fxAnim: true, fx3d: true, fx3dThick: 14, fx3dFloat: 3, fxAurora: 65, fxTilt: 5, fxGlow: 35, fxScan: false, blur: 12, glassAlpha: 0.72,
+  animations: true, animStyle: 'scale', animSpeed: 1, bootAnim: true, fxAnim: true, tips: true, fx3d: true, fx3dThick: 14, fx3dFloat: 3, fxAurora: 65, fxTilt: 5, fxGlow: 35, fxScan: false, blur: 12, glassAlpha: 0.72,
   // layout (dock & menu bar)
   haptics: true, nav: 'sidebar', dockSize: 46, dockMagnify: true, dockLabels: false, dockAutoHide: false,
   clock: true, clockPos: 'right', clock24: false, dateFmt: 'short', barLabels: true, startPage: 'home',
@@ -57,14 +57,14 @@ export function normalizeLook(o = {}, wallIds = null) {
     hiddenNav: Array.isArray(o.hiddenNav) ? [...new Set(o.hiddenNav.filter((k) => HIDEABLE.includes(k)))] : [],
     accent: /^#[0-9a-fA-F]{6}$/.test(o.accent) ? o.accent.toLowerCase() : D.accent,
     bg: oneOf(o.bg, ['default', 'plain', 'wallpaper'], D.bg),
-    wallpaper: typeof o.wallpaper === 'string' && /^([a-z0-9]{2,20}|(photo|grad):[a-z0-9]{2,20})$/.test(o.wallpaper) && (!wallIds || wallIds.includes(o.wallpaper) || /^(photo|grad|custom|remote)/.test(o.wallpaper)) ? o.wallpaper : D.wallpaper,
+    wallpaper: typeof o.wallpaper === 'string' && /^([a-z0-9]{2,20}|(photo|grad|desk):[a-z0-9]{2,20})$/.test(o.wallpaper) && (!wallIds || wallIds.includes(o.wallpaper) || /^(photo|grad|desk|custom|remote)/.test(o.wallpaper)) ? o.wallpaper : D.wallpaper,
     wallImage: typeof o.wallImage === 'string' && o.wallImage.length <= 800000 && /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(o.wallImage) ? o.wallImage : '',
     wallUrl: typeof o.wallUrl === 'string' && /^https:\/\/[^\s"'()<>\\]{3,1000}$/.test(o.wallUrl) ? o.wallUrl : '',
     bgDim: num(o.bgDim, 0, 90, D.bgDim),
     iconStyle: oneOf(o.iconStyle, ICON_STYLES.map((x) => x[0]), D.iconStyle), iconSize: oneOf(o.iconSize, ['small', 'medium', 'large'], D.iconSize), avatar: oneOf(o.avatar, ['letter', 'icon'], D.avatar),
     uiScale: num(o.uiScale, 85, 130, D.uiScale), density: oneOf(o.density, ['comfortable', 'compact'], D.density), radius: num(o.radius, 4, 24, D.radius), widgetStyle: oneOf(o.widgetStyle, ['vivid', 'glass'], D.widgetStyle),
     animations: bool(o.animations, D.animations), animStyle: oneOf(o.animStyle, [...ANIM_STYLES.map((x) => x[0]), 'random'], D.animStyle), animSpeed: num(o.animSpeed, 0.5, 2, D.animSpeed), bootAnim: bool(o.bootAnim, D.bootAnim), fxAnim: bool(o.fxAnim, D.fxAnim),
-    fx3d: bool(o.fx3d, D.fx3d), fx3dThick: num(o.fx3dThick, 0, 28, D.fx3dThick), fx3dFloat: num(o.fx3dFloat, 0, 10, D.fx3dFloat), fxAurora: num(o.fxAurora, 0, 100, D.fxAurora),
+    tips: bool(o.tips, D.tips), fx3d: bool(o.fx3d, D.fx3d), fx3dThick: num(o.fx3dThick, 0, 28, D.fx3dThick), fx3dFloat: num(o.fx3dFloat, 0, 10, D.fx3dFloat), fxAurora: num(o.fxAurora, 0, 100, D.fxAurora),
     fxTilt: o.fx3d === undefined && !o.fxTilt ? D.fxTilt : num(o.fxTilt, 0, 12, D.fxTilt),   // a look saved before the 3D card space has tilt 0 (the old default): give it the new default; a deliberate 0 later stays 0
     fxGlow: num(o.fxGlow, 0, 100, D.fxGlow), fxScan: bool(o.fxScan, D.fxScan), blur: num(o.blur, 0, 40, D.blur), glassAlpha: num(o.glassAlpha, 0.4, 0.98, D.glassAlpha),
     haptics: bool(o.haptics, D.haptics), nav: oneOf(o.nav, NAV_MODES.map((x) => x[0]), D.nav), dockSize: num(o.dockSize, 32, 72, D.dockSize), dockMagnify: bool(o.dockMagnify, D.dockMagnify), dockLabels: bool(o.dockLabels, D.dockLabels), dockAutoHide: bool(o.dockAutoHide, D.dockAutoHide),
@@ -103,7 +103,7 @@ export function applyLook(look, theme, landscapes = null) {
   applyCursor(look, el);
   const d = el.dataset;
   d.theme = theme; d.icons = look.iconStyle; d.iconsize = look.iconSize; d.density = look.density; d.avatar = look.avatar;
-  d.motion = look.animations ? 'on' : 'off'; d.fxanim = look.fxAnim && look.animations ? 'on' : 'off'; d.fx3d = look.fx3d && look.animations ? 'on' : 'off'; d.thick = look.fx3dThick > 0 ? 'on' : 'off';
+  d.motion = look.animations ? 'on' : 'off'; d.fxanim = look.fxAnim && look.animations ? 'on' : 'off'; d.fx3d = look.fx3d && look.animations ? 'on' : 'off'; d.thick = look.fx3dThick > 0 ? 'on' : 'off'; d.tips = look.tips ? 'on' : 'off';
   /* the windows float only when asked to, and never for scripted browsers (automation clicks need a card that holds still) */
   d.float = look.fx3d && look.animations && look.fx3dFloat > 0 && !(typeof navigator !== 'undefined' && navigator.webdriver) ? 'on' : 'off'; d.anim = look.animStyle; d.scan = look.fxScan ? 'on' : 'off';
   d.bg = look.bg === 'wallpaper' && landscapes ? 'wallpaper' : look.bg === 'plain' ? 'plain' : 'default'; d.wstyle = look.widgetStyle; d.nav = look.nav; d.clockpos = look.clockPos; d.dockautohide = look.dockAutoHide ? '1' : '0'; d.dockmagnify = look.dockMagnify ? '1' : '0'; d.barlabels = look.barLabels ? '1' : '0'; d.haptics = look.haptics ? '1' : '0';

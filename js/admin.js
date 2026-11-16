@@ -4,7 +4,7 @@
      • New profile   → profile name, "protected: yes", the optional contact email you typed, time, site, language, time zone,
                        app version. NEVER passwords, keys, items, files or settings. */
 
-import { h, modal, toast } from './dom.js';
+import { h, modal, toast, focusSoon } from './dom.js';
 import { CONTACT_ENDPOINT, CONTACT_EMAIL, NOTIFY_ON_PROFILE } from './config.js';
 import { APP_VERSION, APP_NAME } from './version.js';
 import { isSingleFile } from './offline.js';
@@ -66,5 +66,5 @@ export function contactAdmin({ profileName = '', fetchImpl } = {}) {
     h('div', { class: 'field' }, h('label', { text: 'Name (optional)' }), name), h('div', { class: 'field' }, h('label', { text: 'Your email (optional)' }), reply),
     h('div', { class: 'field' }, h('label', { text: 'Subject' }), subject), h('div', { class: 'field' }, h('label', { text: 'Message' }), msg), err),
     actions: [{ label: 'Cancel' }, { label: 'Send', kind: 'primary', onClick: send }] });
-  setTimeout(() => subject.focus(), 60);
+  focusSoon(subject, 60);
 }

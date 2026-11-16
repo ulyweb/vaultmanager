@@ -7,6 +7,7 @@ import { VaultStore } from './vault.js';
 import { clearOpenFields } from './fieldlock.js';
 import { mountSpace } from './space3d.js';
 import { gateFxControl } from './gate-fx.js';
+import { initTooltips } from './tooltips.js';
 import { available } from './crypto.js';
 import { estimate } from './strength.js';
 import { generateStrongPassphrase } from './generator.js';
@@ -147,6 +148,7 @@ document.addEventListener('pointerleave', (e) => { if (e.target.classList && e.t
 
 /* the 3D card space behind the sign-in, create, import and Home screens */
 const space = mountSpace();
+initTooltips();
 ctx.surge = () => space.surge();
 /* tuning the 3D look from the sign-in / create screens: applied and cached at once, then folded into the profile's own settings on unlock / create */
 ctx.setGateLook = (patch) => { bootLook = normalizeLook({ ...bootLook, ...patch }); ctx.S.pendingLook = { ...(ctx.S.pendingLook || {}), ...patch }; applyTheme(); };

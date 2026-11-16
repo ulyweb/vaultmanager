@@ -92,6 +92,41 @@ const GRADS = [['dusk', 'Dusk', ['#1a1040', '#6b2d7b', '#f0735a']], ['ocean', 'D
   ['aurora', 'Aurora glow', ['#04121f', '#0f7a6a', '#7c5cff']], ['graphite', 'Graphite', ['#0c0f14', '#232a36', '#4a5568']], ['rose', 'Rose quartz', ['#2a1030', '#b0467a', '#ffc2a8']],
   ['forestg', 'Evergreen', ['#04140c', '#145a3a', '#9ad87a']], ['sky', 'Clear sky', ['#0b3d91', '#3b8fe0', '#bfe6ff']]];
 const gradSvg = (cols) => 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 9" preserveAspectRatio="none"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">' + cols.map((c, i) => '<stop offset="' + (i / (cols.length - 1)) + '" stop-color="' + c + '"/>').join('') + '</linearGradient></defs><rect width="16" height="9" fill="url(#g)"/></svg>');
+/* Desktop-style wallpapers, drawn by the app itself (original art; soft colour meshes and flowing ribbons in the spirit of modern desktops).
+   MESH: base colour + glowing blobs [x, y, radius (fractions of the width), colour]. RIBBONS: sky gradient + flowing wave bands. */
+const MESH = [
+  ['aubergine', 'Aubergine glow', '#2b0a3d', [[.15, .2, .6, '#e95420'], [.85, .15, .55, '#77216f'], [.5, .95, .7, '#5e2750'], [.9, .85, .4, '#f6a35a']]],
+  ['tealtide', 'Teal tide', '#04202e', [[.1, .8, .6, '#00a6a6'], [.8, .2, .55, '#0b6fa4'], [.55, .55, .45, '#1fd6b4'], [.95, .95, .4, '#164e63']]],
+  ['sunsetmesh', 'Sunset mesh', '#2a0f36', [[.2, .15, .55, '#ff6b6b'], [.85, .3, .5, '#ffb347'], [.4, .9, .6, '#7b2cbf'], [.95, .9, .4, '#ff8fab']]],
+  ['mintmesh', 'Mint mesh', '#062a24', [[.15, .25, .55, '#2fe6d0'], [.85, .2, .5, '#4ade80'], [.5, .95, .6, '#0e7490'], [.9, .8, .4, '#a7f3d0']]],
+  ['rosegold', 'Rose gold', '#2e1320', [[.2, .2, .55, '#f4a6a0'], [.8, .25, .5, '#c084fc'], [.5, .9, .6, '#9d174d'], [.9, .85, .35, '#fcd5b5']]],
+  ['indigomesh', 'Indigo night', '#070b2a', [[.2, .2, .55, '#4f46e5'], [.85, .3, .5, '#06b6d4'], [.45, .95, .6, '#7c3aed'], [.95, .9, .35, '#38bdf8']]],
+];
+const RIBBONS = [
+  ['silk', 'Silk ribbons', ['#0b1230', '#2a1a5e'], ['#7c5cff', '#22d3ee', '#f472b6', '#fbbf24']],
+  ['meadow', 'Pastel waves', ['#173a5e', '#2e7d9a'], ['#bde0fe', '#a2d2ff', '#ffc8dd', '#ffafcc']],
+  ['dunes', 'Sunrise dunes', ['#3b1250', '#b4436c'], ['#ffb86b', '#ff7e5f', '#feb47b', '#6a1b9a']],
+  ['deepwave', 'Deep waves', ['#020b1f', '#0a3d62'], ['#1b6ca8', '#2fd0c8', '#5eead4', '#0e7490']],
+];
+const deskSvg = (id) => {
+  const W = 1600, H = 900; let defs = '', body = '';
+  const m = MESH.find((x) => 'desk:' + x[0] === id);
+  if (m) {
+    body = '<rect width="' + W + '" height="' + H + '" fill="' + m[2] + '"/>';
+    m[3].forEach(([x, y, r, c], i) => { defs += '<radialGradient id="b' + i + '"><stop offset="0" stop-color="' + c + '" stop-opacity=".9"/><stop offset="1" stop-color="' + c + '" stop-opacity="0"/></radialGradient>'; body += '<circle cx="' + x * W + '" cy="' + y * H + '" r="' + r * W * 0.62 + '" fill="url(#b' + i + ')"/>'; });
+  } else {
+    const rb = RIBBONS.find((x) => 'desk:' + x[0] === id); if (!rb) return '';
+    defs = '<linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="' + rb[2][0] + '"/><stop offset="1" stop-color="' + rb[2][1] + '"/></linearGradient>';
+    body = '<rect width="' + W + '" height="' + H + '" fill="url(#bg)"/>';
+    rb[3].forEach((c, i) => {
+      const y0 = H * (0.28 + i * 0.17), a = 70 + i * 22, ph = i * 1.3 + 0.4; let top = '', bot = '';
+      for (let k = 0; k <= 32; k++) { const x = (k / 32) * W, y = y0 + Math.sin(k * 0.34 + ph) * a + Math.sin(k * 0.13 + ph * 2) * a * 0.6; top += (k ? ' L' : 'M') + x.toFixed(0) + ',' + y.toFixed(0); bot = ' L' + x.toFixed(0) + ',' + (y + 90 + i * 14).toFixed(0) + bot; }
+      defs += '<linearGradient id="r' + i + '" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="' + c + '" stop-opacity=".05"/><stop offset=".5" stop-color="' + c + '" stop-opacity=".75"/><stop offset="1" stop-color="' + c + '" stop-opacity=".1"/></linearGradient>';
+      body += '<path d="' + top + bot + ' Z" fill="url(#r' + i + ')"/>';
+    });
+  }
+  return 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="xMidYMid slice"><defs>' + defs + '</defs>' + body + '</svg>');
+};
 let embeddedPhotos = null;
 const embeddedPhoto = (src) => { if (embeddedPhotos === null) { embeddedPhotos = {}; try { const el = document.getElementById('vm-embed'); if (el) embeddedPhotos = JSON.parse(el.textContent) || {}; } catch { /* not embedded */ } } return embeddedPhotos[src] || null; };
 const HTTPS = /^https:\/\/[^\s"'()<>\\]{3,1000}$/;
@@ -101,12 +136,14 @@ export const landscapes = {
     photos: PHOTOS.filter((p) => p[0] === 'space').map((p) => [p[1], p[2]]),
     cities: PHOTOS.filter((p) => p[0] === 'city').map((p) => [p[1], p[2]]),
     gradients: GRADS.map((g) => [g[0], g[1]]),
+    desktops: [...MESH.map((m) => [m[0], m[1]]), ...RIBBONS.map((r) => [r[0], r[1]])],
     /** Is this a wallpaper id we know how to draw? (custom / remote depend on the look object) */
-    has(id) { return !!SPECS[id] || /^(photo|grad):[a-z0-9]+$/.test(id) && (id.startsWith('photo:') ? PHOTOS.some((p) => 'photo:' + p[1] === id) : GRADS.some((g) => 'grad:' + g[0] === id)) || id === 'custom' || id === 'remote'; },
+    has(id) { return !!SPECS[id] || /^desk:[a-z0-9]+$/.test(id) && (MESH.some((m) => 'desk:' + m[0] === id) || RIBBONS.some((r) => 'desk:' + r[0] === id)) || /^(photo|grad):[a-z0-9]+$/.test(id) && (id.startsWith('photo:') ? PHOTOS.some((p) => 'photo:' + p[1] === id) : GRADS.some((g) => 'grad:' + g[0] === id)) || id === 'custom' || id === 'remote'; },
     /** URL usable in CSS url("…"): data: for drawn scenes / gradients / your own picture, a bundled file for photos, https for a remote picture */
     url(id, look = {}) {
       if (SPECS[id]) return cache[id] || (cache[id] = 'data:image/svg+xml,' + encodeURIComponent(build(id)));
       if (id.startsWith('photo:')) { const f = 'wallpapers/' + id.slice(6) + '.jpg'; return embeddedPhoto(f) || f; }
+      if (id.startsWith('desk:')) return cache[id] || (cache[id] = deskSvg(id));
       if (id.startsWith('grad:')) { const g = GRADS.find((x) => 'grad:' + x[0] === id); return g ? gradSvg(g[2]) : ''; }
       if (id === 'custom') return /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(look.wallImage || '') ? look.wallImage : '';
       if (id === 'remote') return HTTPS.test(look.wallUrl || '') ? look.wallUrl : '';

@@ -1,6 +1,6 @@
 /* Vault views: item list, detail panel, editor, QR share, recovery kit. */
 
-import { h, clear, modal, toast, confirmDialog, copyText, download } from './dom.js';
+import { h, clear, focusSoon, modal, toast, confirmDialog, copyText, download } from './dom.js';
 import { newItem, sanitiseItem, SENSITIVE, TYPES, matches, totpValid, MAX_ATTACHMENT, MAX_ATTACHMENTS_PER_ITEM, keyLabel, keyIsSecret, describeValue, currentValue } from './vault.js';
 import { TYPE_META, TEMPLATES, GROUPS, isSecretField, MAX_CUSTOM, daysUntil, wifiQRString } from './templates.js';
 import { estimate, crackTime } from './strength.js';
@@ -567,7 +567,7 @@ export function unlockItemDialog(ctx, it, { then = null } = {}) {
   input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); go(); } });
   m = modal({ title: 'Unlock “' + it.name + '”', sub: 'Secondary passcode', body: h('div', null, h('p', { text: 'This item has its own passcode on top of your master password.' }), input, err),
     actions: [{ label: 'Cancel' }, { label: 'Unlock', kind: 'primary', onClick: go, close: false }] });
-  setTimeout(() => input.focus(), 50);
+  focusSoon(input, 50);
 }
 
 export function lockDialog(ctx, it, { change = false } = {}) {
