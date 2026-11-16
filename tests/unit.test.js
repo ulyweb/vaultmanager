@@ -918,3 +918,10 @@ test('custom favorite names: kept, listed by use, survive export/import and merg
   assert.equal(back.favName, 'Family');
   assert.equal(sanitiseItem({ type: 'login', name: 'x', favName: 'y'.repeat(100) }).favName.length, 40);
 });
+
+test('3D icons: every category has a rendered picture in icons3d/, and nothing else is listed', async () => {
+  const fs = await import('node:fs'); const { ICONS3D } = await import('../js/icons3d.js'); const { TYPE_KEYS } = await import('../js/templates.js');
+  for (const k of TYPE_KEYS) assert.ok(ICONS3D.includes(k), 'no 3D icon for category ' + k);
+  for (const n of ICONS3D) { const f = new URL('../icons3d/' + n + '.webp', import.meta.url); assert.ok(fs.existsSync(f), n + '.webp is missing'); assert.ok(fs.statSync(f).size > 2000 && fs.statSync(f).size < 60000, n + '.webp has an odd size'); }
+  const sw = fs.readFileSync(new URL('../sw.js', import.meta.url), 'utf8'); for (const n of ICONS3D) assert.ok(sw.includes("'icons3d/" + n + ".webp'"), n + ' is not cached for offline use');
+});

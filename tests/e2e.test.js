@@ -2038,13 +2038,12 @@ test('v0.35.0: 3D live animated icons, icon-only avatars, hover tooltips, deskto
   assert.equal((await sel.locator('option[value="3d"]').textContent()).trim(), '3D live animated');
   await sel.selectOption('3d'); assert.equal(await page.evaluate(() => document.documentElement.dataset.icons), '3d');
   const cat = page.locator('.side .ico.cat').first();
-  const shadow = await cat.evaluate((e) => getComputedStyle(e).boxShadow); assert.ok((shadow.match(/rgb/g) || []).length >= 6, 'thick solid edge');
-  assert.ok(await cat.evaluate((e) => getComputedStyle(e).transform !== 'none'), 'tilted in 3D');
+  assert.match(await cat.evaluate((e) => getComputedStyle(e).backgroundImage), /^url\(/, 'category icons are the rendered 3D pictures');
   // item avatars: icon only, no coloured box around it
   await page.getByRole('button', { name: 'Category icon' }).click();
   await page.locator('.side .nav:has-text("All items")').click();
   const av = await page.locator('.items .avatar').first().evaluate((e) => ({ bg: getComputedStyle(e).backgroundImage + getComputedStyle(e).backgroundColor, ico: !!e.querySelector('.ico.cat svg'), tile: getComputedStyle(e.querySelector('.ico.cat')).backgroundImage }));
-  assert.ok(av.ico, 'the avatar is the category icon'); assert.match(av.bg, /none.*rgba\(0, 0, 0, 0\)/, 'no coloured box behind it'); assert.match(av.tile, /gradient/, 'the icon is the tile itself');
+  assert.ok(av.ico, 'the avatar is the category icon'); assert.match(av.bg, /none.*rgba\(0, 0, 0, 0\)/, 'no coloured box behind it'); assert.match(av.tile, /gradient|url\(/, 'the icon is the tile itself');
   // hover tooltips
   await page.locator('.side .nav:has-text("Logins") .ico').hover();
   await page.locator('.items .avatar').first().hover(); await page.waitForSelector('.vm-tip:not([hidden])', { timeout: 3000 });
@@ -2082,3 +2081,23 @@ test('v0.35.0: a dialog never steals the focus back from a field you already mov
   assert.equal(await B.page.evaluate(() => document.activeElement.getAttribute('aria-label')), 'Repeat new master password', 'focus stayed where the person put it');
   assert.deepEqual(B.problems.filter((p) => !/Failed to load resource/.test(p)), []); await B.ctx.close();
 });
+
+for (const [label, offline] of [['served', false], ['single file', true]]) {
+  test('v0.35.1: the category carousel and the 3D live animated icon style show real 3D icon pictures: ' + label, async () => {
+    const { ctx, page, problems } = await newPage({ reducedMotion: 'no-preference' });
+    await page.goto(offline ? 'file://' + path.join(ROOT, 'offline/VaultManager-offline.html') : base); await page.waitForSelector('#pw1');
+    await page.fill('#pw1', MASTER); await page.fill('#pw2', MASTER); await page.check('#ack'); await page.click('button[type=submit]');
+    await page.getByRole('button', { name: 'Skip for now' }).click(); await page.waitForSelector('.welcome.in').catch(() => {}); await page.keyboard.press('Escape'); await page.waitForTimeout(250);
+    await page.getByRole('button', { name: '＋ New' }).click(); await page.waitForSelector('.c3-obj');
+    await page.waitForFunction(() => [...document.querySelectorAll('.c3-obj')].every((i) => i.complete && i.naturalWidth > 100), null, { timeout: 15000 });
+    assert.equal(await page.locator('.c3-obj').count(), 29, 'every category card carries its own 3D object');
+    await page.keyboard.press('Escape');
+    await page.locator('.side .nav:has-text("Settings")').click(); await page.getByRole('tab', { name: /Appearance/ }).click();
+    await page.locator('select').filter({ has: page.locator('option[value="3d"]') }).selectOption('3d');
+    const bg = await page.locator('.side .ico.cat[data-n="login"]').evaluate((e) => getComputedStyle(e).backgroundImage); assert.match(bg, /^url\(/, 'the category icon is the 3D picture');
+    assert.equal(await page.locator('.side .ico.cat[data-n="login"]').evaluate((e) => getComputedStyle(e).boxShadow), 'none');
+    await page.locator('select').filter({ has: page.locator('option[value="3d"]') }).selectOption('glass');
+    assert.equal(await page.locator('.side .ico.cat[data-n="login"]').evaluate((e) => getComputedStyle(e).backgroundImage.startsWith('url(')), false, 'other icon styles are untouched');
+    assert.deepEqual(problems.filter((p) => !/Failed to load resource/.test(p)), []); await ctx.close();
+  });
+}
