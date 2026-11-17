@@ -26,7 +26,8 @@ const BLANK = () => ({ description: '', username: '', password: '', url: '', tot
 export const LOCK_UNLOCK_MS = 10 * 60 * 1000;
 
 export const DEFAULT_SETTINGS = {
-  autolock: 5, clipboard: 30, theme: 'auto', lockOnHide: false, trashDays: 30, logReveal: true, displayName: '', tourSeen: false, welcomeAlways: false,
+  autolock: 5, clipboard: 30, theme: 'auto', lockOnHide: typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches,   // phones and tablets lock the moment the app is backgrounded; computers keep the 5 minute timer
+   trashDays: 30, logReveal: true, displayName: '', tourSeen: false, welcomeAlways: false,
   gen: { mode: 'password', length: 20, lower: true, upper: true, digits: true, symbols: true, noAmbiguous: false, words: 10, separator: '-', capitalize: false, number: false },
   sync: { method: 'off', token: '', gistId: '', passphrase: '', auto: true, attachments: true, last: null },
   look: LOOK_DEFAULTS,

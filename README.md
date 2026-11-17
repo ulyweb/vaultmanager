@@ -96,7 +96,7 @@ See [SECURITY.md](SECURITY.md) for the threat model and, importantly, what Vault
 | `js/crypto.js` | key hierarchy, vault record, QR Seal v2 payloads, recovery key |
 | `js/vault.js` | store, items, import / export, health (DOM-free, unit-tested) |
 | `js/generator.js`, `strength.js`, `totp.js`, `qr.js` | generator, strength estimate, TOTP, QR + multi-QR chunking |
-| `vendor/` | `qrcode.js` (MIT, QR encoder) and `jsQR.js` (Apache-2.0, QR decoder) from ulyOS |
+| `vendor/` | `qrcode.js` (MIT, QR encoder) and `jsQR.js` (Apache-2.0, QR decoder) from ulyOS (checksums and notes in `vendor/README.md`) |
 | `experience/` | the 3D tour: `index.html`, `site.css`, `js/main.js` (scroll, camera, clock, UI), `js/device.js` (the model), `js/game.js` (the screen and Key Runner), `js/fx.js` (bursts, debris, particle cloud), `vendor/three.bundle.min.js`, `media/` |
 | `tests/`, `tools/lint.js` | unit tests, Playwright browser tests, static security lint |
 
@@ -112,7 +112,7 @@ The lint enforces the security posture: strict CSP whose `connect-src` may only 
 Version 0.10 — a complete tenth cut (this repo is the test bench for the stand-alone PC + mobile build — see [ROADMAP.md](ROADMAP.md)), **not yet independently audited**. Treat it accordingly and keep an encrypted backup. See [ROADMAP.md](ROADMAP.md).
 
 ## Licences
-Code: see repository owner. EFF short wordlist: CC BY 3.0 US. `vendor/qrcode.js`: MIT (Kazuhiko Arase). `vendor/jsQR.js`: Apache-2.0 (`vendor/LICENSE-jsqr.txt`). `experience/vendor/three.bundle.min.js`: three.js r187, MIT (`experience/vendor/LICENSE-three.txt`).
+Code: MIT (see `LICENSE`). EFF short wordlist: CC BY 3.0 US. `vendor/qrcode.js`: MIT (Kazuhiko Arase). `vendor/jsQR.js`: Apache-2.0 (`vendor/LICENSE-jsqr.txt`). `experience/vendor/three.bundle.min.js`: three.js r187, MIT (`experience/vendor/LICENSE-three.txt`).
 
 ## Contact admin
 

@@ -66,7 +66,7 @@ function general(ctx) {
       h('div', { class: 'grid2' },
         field('Auto-lock after inactivity', sel(s.autolock, [[1, '1 minute'], [5, '5 minutes'], [15, '15 minutes'], [30, '30 minutes'], [60, '1 hour'], [0, 'Never (not recommended)']], (v) => set('autolock', +v, 'Auto-lock'))),
         field('Clear clipboard after copying', sel(s.clipboard, [[15, '15 seconds'], [30, '30 seconds'], [60, '1 minute'], [120, '2 minutes'], [0, 'Never']], (v) => set('clipboard', +v, 'Clipboard clearing')))),
-      chk('Lock immediately when this tab is hidden or the window is minimised', s.lockOnHide, (v) => set('lockOnHide', v, 'Lock on hide')),
+      chk('Lock immediately when this tab is hidden or the window is minimised (on by default on phones and tablets)', s.lockOnHide, (v) => set('lockOnHide', v, 'Lock on hide')),
       chk('Record copy / reveal / download events in the audit trail (never the values)', s.logReveal, (v) => set('logReveal', v, 'Access logging'))),
     panel('Trash',
       field('Delete trashed items permanently after', sel(s.trashDays, [[7, '7 days'], [30, '30 days'], [90, '90 days'], [0, 'Never (I will empty it myself)']], (v) => set('trashDays', +v, 'Trash retention')), 'Trashed items (and their attachments) are removed for good at your next unlock after this time.')),
@@ -118,7 +118,7 @@ function security(ctx) {
         h('div', { class: 'prot' }, h('b', { text: 'Visible on the sign-in screen' }), h('ul', null, ['Each profile’s name and picture (so you can choose who signs in)', 'Harmless appearance choices such as colours and wallpaper', 'A counter of failed unlock attempts']. map((t) => h('li', { text: t }))), h('p', { class: 'hint', text: 'So keep secrets out of profile names. That is the only rule.' }))),
       h('button', { class: 'btn', on: { click: () => { ctx.S.tmTab = 'sec'; ctx.go('tm'); } } }, '{{shieldlock}} Run the device & browser check')),
     panel('Master password',
-      field('Current password', pw0), field('New password', h('div', null, h('div', { class: 'pwwrap' }, pw1), pwM), 'At least 12 characters. A passphrase of 5+ random words is ideal.'), field('Repeat new password', pw2),
+      field('Current password', pw0), field('New password', h('div', null, h('div', { class: 'pwwrap' }, pw1), pwM), 'At least 12 characters. A passphrase of 6+ random words is ideal.'), field('Repeat new password', pw2),
       h('div', { class: 'row wrap' }, h('button', { class: 'btn primary', on: { click: async (e) => {
         pwErr.textContent = '';
         if (pw1.value !== pw2.value) { pwErr.textContent = 'The new passwords do not match.'; return; }

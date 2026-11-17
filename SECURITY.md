@@ -17,6 +17,7 @@ VaultManager runs entirely in the browser. There is no server, no account and no
 | Memory | Raw master key is zeroed on lock; the data key is a non-extractable CryptoKey |
 | Rendering | DOM built with `createElement` / `textContent` only — vault data cannot become markup |
 | Clipboard | Cleared after a configurable delay (best effort — browsers may refuse in the background) |
+| Password managers | Secret fields (master password, backup / QR / sync passwords, item secrets) are masked text rather than `type="password"` inputs, so a browser's password manager does not offer to save them outside the vault. Where a browser cannot mask text, they fall back to real password fields. |
 | Unlock attempts | Escalating delay after repeated failures (a courtesy; real protection is the KDF cost) |
 
 ## Threat model — what it does NOT protect against
@@ -26,7 +27,7 @@ VaultManager runs entirely in the browser. There is no server, no account and no
 - **A stolen GitHub token.** It can read or delete the sync gist (ciphertext), not decrypt it. Use a token with only the `gist` permission and revoke it if a device is lost.
 - **Sync conflicts.** Merging is per item, newest edit wins; two devices editing the same item within seconds can overwrite each other. Version history lets you restore the overwritten version.
 - **The audit trail is not tamper-proof against you.** Anyone who knows the master password can clear it. Failed unlock attempts are noted in plaintext browser storage until the next successful unlock, so someone with disk access can also clear them.
-- **A weak master password.** Anyone who copies the encrypted vault (from browser storage, a backup, or a QR) can guess offline; PBKDF2 slows that down but cannot save a guessable password. VaultManager enforces ≥12 characters and an estimated ≥50 bits, and offers a passphrase generator.
+- **A weak master password.** Anyone who copies the encrypted vault (from browser storage, a backup, or a QR) can guess offline; PBKDF2 slows that down but cannot save a guessable password. VaultManager enforces ≥12 characters and an estimated ≥60 bits, and offers a passphrase generator.
 - **Malware, a compromised browser or a malicious extension on your device.** Once unlocked, secrets exist in page memory and can be read by anything with that access. Lock when you step away.
 - **Shoulder-surfing, screenshots and screen recorders** while items are revealed.
 - **Forgetting both the master password and the recovery key.** There is no reset; that is what zero-knowledge means. Keep an encrypted backup.
@@ -68,3 +69,7 @@ A review of all scripts (crypto, vault, sync, Beam, import / export, profiles, i
 - Beam with "internet" enabled asks a public STUN server (Google) for your address; the default is same-Wi-Fi only.
 - Contact admin / the new-profile notice send what is described on screen to the administrator's relay; the relay's own handling is outside this app.
 - GitHub Actions in the native-build workflow are referenced by version tag, not commit hash (a supply-chain risk for the installers).
+
+## Third-party code and licence
+
+The app is MIT licensed (`LICENSE`). The only third-party code it runs is the two QR libraries in `vendor/`; their provenance and SHA-256 checksums are in `vendor/README.md` and a unit test fails if they change. Phones and tablets lock the vault as soon as the app is hidden by default; computers keep the inactivity timer (both are adjustable in Settings → Security).
