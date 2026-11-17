@@ -886,7 +886,7 @@ test('welcome splash + guided tour + help: first-run experience, replay, dock mo
   await settingsTab(page, /Dock & menu bar/);
   await page.selectOption('.setrow:has-text("Navigation style") select', 'dock'); await page.waitForSelector('.dock .dock-item');
   await page.locator('.dock-item[aria-label="Help"]').click(); await page.getByRole('button', { name: /Guided tour/ }).click();
-  await page.waitForSelector('.tour-card'); await page.getByRole('button', { name: /Next/ }).click(); await page.getByRole('button', { name: /Next/ }).click();
+  await page.waitForSelector('.tour-card'); for (let i = 0; i < 3; i++) await page.getByRole('button', { name: /Next/ }).click();
   await page.waitForFunction(() => document.querySelector('.tour-head b').textContent === 'Find your way around'); await page.waitForTimeout(250);
   const dockBox = await page.locator('.dock').boundingBox(), hole = await page.locator('.tour-hole').boundingBox();
   assert.ok(hole && Math.abs(hole.x + hole.width / 2 - (dockBox.x + dockBox.width / 2)) < 40, 'the spotlight is on the dock');
@@ -2129,5 +2129,18 @@ test('v0.36.3: while a dialog is open nothing behind it blurs or animates (no fl
   // the strength bar has the classes s0..s4; none of them may collide with another rule (the 3D card space once used .s3, which made the bar fill the whole screen at "Good")
   const pos = await page.evaluate(() => ['s0', 's1', 's2', 's3', 's4'].map((c) => { const m = document.createElement('div'); m.className = 'meter'; const i = document.createElement('i'); i.className = c; m.append(i); document.querySelector('.modal-sheet').append(m); const r = getComputedStyle(i).position + '/' + getComputedStyle(i).display + '/' + Math.round(i.getBoundingClientRect().width); m.remove(); return r; }));
   assert.deepEqual(pos.map((x) => x.split('/')[0]), ['static', 'static', 'static', 'static', 'static'], 'meter bars stay in their box: ' + pos.join(' '));
+  assert.deepEqual(problems.filter((p) => !/Failed to load resource/.test(p)), []); await ctx.close();
+});
+
+test('v0.37.0: the honest "How secure is this?" explanation is on the create screen, in the system menu and in the tour, and never claims a guarantee or an audit', async () => {
+  const { ctx, page, problems } = await newPage();
+  await page.goto(base); await page.waitForSelector('#pw1');
+  await page.getByRole('button', { name: /How secure is this/ }).click(); await page.waitForSelector('.trustdoc');
+  const txt = await page.textContent('.trustdoc');
+  for (const must of ['AES-256-GCM', 'PBKDF2', '600,000', 'WebCrypto', 'Rust', 'has not been audited by an independent security firm', 'Check it yourself', 'Network tab']) assert.ok(txt.includes(must), 'missing: ' + must);
+  assert.ok(!/is guaranteed|100% secure|unhackable|military[- ]grade|audited by/i.test(txt.replace('has not been audited by an independent security firm', '').replace(/Nobody can honestly guarantee[^.]*\./, '')), 'no overclaiming');
+  await page.keyboard.press('Escape');
+  await createVault(page);
+  await page.locator('.topbar').getByText('VaultManager').first().click(); await page.getByText('How secure is this?', { exact: false }).first().click(); await page.waitForSelector('.trustdoc'); await page.keyboard.press('Escape');
   assert.deepEqual(problems.filter((p) => !/Failed to load resource/.test(p)), []); await ctx.close();
 });

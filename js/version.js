@@ -1,6 +1,6 @@
 /* Application version, data-format versions and changelog (shown in Settings → About). */
 
-export const APP_VERSION = '0.36.3';
+export const APP_VERSION = '0.37.0';
 export const APP_NAME = 'VaultManager';
 export const REPO_URL = 'https://github.com/ulyweb/vaultmanager';
 
@@ -16,6 +16,9 @@ export const FORMATS = [
 ];
 
 export const CHANGELOG = [
+  { v: '0.37.0', date: '2026-11-17', notes: [
+    'New: “How secure is this? The honest answer”. A plain-language explanation of what protects your data (standard AES-256 done by the browser’s own crypto engine, a slowed-down master password, no server or account, public source, tests on every change), how a browser app compares with a native one, what nobody can promise (no independent audit yet, malware on your device, a weak master password, no password reset) and four ways to check it yourself. It is on the sign-in and create screens, in the system menu, in the guided tour and on the 3D tour page.',
+  ] },
   { v: '0.36.3', date: '2026-11-16', notes: [
     'Fixed the flat green-blue block that covered the screen while you typed a password (for example when exporting a profile) and went away as you kept typing. Cause: the 3D card space and the password strength bar both used a style class called “s3”, so when a password reached “Good” the strength bar stretched across the whole screen. The card space now has its own class name.',
     'Also: nothing behind an open dialog blurs or moves any more (no backdrop blur, floating widgets, bobbing icons or aurora animation), and the aurora is plain soft gradients instead of a heavy 80 px blur filter.',

@@ -8,6 +8,7 @@ import { clearOpenFields } from './fieldlock.js';
 import { mountSpace } from './space3d.js';
 import { gateFxControl } from './gate-fx.js';
 import { initTooltips } from './tooltips.js';
+import { trustDialog } from './trust.js';
 import { available } from './crypto.js';
 import { estimate } from './strength.js';
 import { generateStrongPassphrase } from './generator.js';
@@ -257,7 +258,8 @@ function armSync() {
 
 /* ---------- gate (create / unlock) ---------- */
 function trustChips() {
-  return h('div', { class: 'trust' }, ['Zero-knowledge', 'End-to-end encrypted', 'AES-256-GCM', 'Works offline', 'No account · no server'].map((t) => h('span', { class: 'chip accent', text: '{{check}} ' + t })));
+  return h('div', { class: 'trust' }, ['Zero-knowledge', 'End-to-end encrypted', 'AES-256-GCM', 'Works offline', 'No account · no server'].map((t) => h('span', { class: 'chip accent', text: '{{check}} ' + t })),
+    h('button', { type: 'button', class: 'linkbtn trustlink', on: { click: trustDialog } }, '{{shield}} How secure is this? The honest answer'));
 }
 const brand = (sub) => h('div', { class: 'brand' }, h('img', { src: 'icons/icon.svg', alt: '', width: '44', height: '44' }), h('div', null, h('h1', null, 'Vault', h('span', { text: 'Manager' }), h('small', { class: 'ver', text: ' v' + APP_VERSION })), h('p', { text: sub })));
 
@@ -513,7 +515,7 @@ function systemMenu(anchor) {
   const me = ctx.profile();
   const who = me ? h('button', { class: 'sm-who', role: 'menuitem', type: 'button', title: 'Profile name & picture', on: { click: () => { closeSystemMenu(); ctx.S.setTab = 'general'; ctx.go('settings'); } } }, profileAvatar(me, 38), h('span', { class: 'grow' }, h('b', { text: me.name }), h('small', { text: 'Signed in · ' + store.active().length + ' item' + (store.active().length === 1 ? '' : 's') }))) : null;
   const m = h('div', { class: 'sysmenu', role: 'menu', 'aria-label': 'VaultManager menu' }, who, who ? sep() : null,
-    item('{{info}}', 'About VaultManager ' + APP_VERSION + (isSingleFile() ? ' (offline copy)' : ''), () => { ctx.S.setTab = 'about'; ctx.go('settings'); }), item('{{keyboard}}', 'Keyboard shortcuts…', () => tour.help(), { hint: 'F1' }), item('{{compass}}', 'Guided tour', () => tour.start()), sep(),
+    item('{{info}}', 'About VaultManager ' + APP_VERSION + (isSingleFile() ? ' (offline copy)' : ''), () => { ctx.S.setTab = 'about'; ctx.go('settings'); }), item('{{keyboard}}', 'Keyboard shortcuts…', () => tour.help(), { hint: 'F1' }), item('{{compass}}', 'Guided tour', () => tour.start()), item('{{shield}}', 'How secure is this?', trustDialog), sep(),
     item('{{gear}}', 'Settings…', () => ctx.go('settings')), item('{{chip}}', 'Task manager', () => ctx.go('tm')), sep(),
     item('{{lock}}', 'Lock screen', () => lock(false), { hint: 'Alt+L' }), item('{{trash}}', 'Purge memory now', () => ctx.purgeMemory()), item('{{swap}}', 'Switch profile…', () => ctx.switchProfile()),
     admin.enabled() ? item('{{mailsend}}', 'Contact admin…', () => contactAdminDialog()) : null, item('{{refresh}}', 'Restart…', restartApp, { danger: true }));
