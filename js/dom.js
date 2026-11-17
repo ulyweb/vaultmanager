@@ -21,8 +21,24 @@ export function h(tag, props, ...kids) {
       else el.setAttribute(k, v);
     }
   }
+  if (tag === 'input' && props && props.type === 'password') secretInput(el);
   append(el, kids);
   return el;
+}
+
+/* Secret fields look like password fields (dots) but are not type="password", so the browser's own password manager does not offer to save or
+   capture the master password, a backup password or an item secret outside the vault. The dots come from CSS (-webkit-text-security); where a
+   browser lacks it the field simply stays a real password field, so a secret is never shown by mistake. `el.type` still reads and writes
+   'password' / 'text', so the Show / Hide buttons work unchanged; the state is also in data-pw (hidden | shown). */
+const MASK_OK = typeof CSS !== 'undefined' && typeof CSS.supports === 'function' && (CSS.supports('-webkit-text-security', 'disc') || CSS.supports('text-security', 'disc'));
+const nativeType = typeof HTMLInputElement !== 'undefined' ? Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'type') : null;
+export function secretInput(el) {
+  if (!nativeType || el.dataset.pw) return;
+  let hidden = true;
+  const apply = () => { el.dataset.pw = hidden ? 'hidden' : 'shown'; el.classList.toggle('pwmask', hidden && MASK_OK); nativeType.set.call(el, hidden && !MASK_OK ? 'password' : 'text'); };
+  Object.defineProperty(el, 'type', { configurable: true, get: () => (hidden ? 'password' : 'text'), set: (v) => { hidden = String(v) === 'password'; apply(); } });
+  if (MASK_OK) { el.setAttribute('autocomplete', 'off'); el.setAttribute('autocapitalize', 'off'); el.setAttribute('autocorrect', 'off'); el.setAttribute('spellcheck', 'false'); } else if (!el.getAttribute('autocomplete')) el.setAttribute('autocomplete', 'new-password');
+  apply();
 }
 function setText(el, v) {
   const t = splitToken(v);

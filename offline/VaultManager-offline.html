@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VaultManager v0.37.0 — single-file offline build. Verify with the .sha256 file next to it. -->
+<!-- VaultManager v0.38.0 — single-file offline build. Verify with the .sha256 file next to it. -->
 <html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
@@ -11,7 +11,7 @@
 <meta name="application-name" content="VaultManager">
 <meta name="format-detection" content="telephone=no">
 <meta name="referrer" content="no-referrer">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-tauzjAWYvkq2EEey6/r1GOXzEWNzSydbYj43JCIjd2U=' 'sha256-PzBugHKFZHkGec7erfIeEamNCeQwMrOt1R65GtcrUrA=' blob:; style-src 'sha256-Wqe1AXq1l7qv5uY5Foo8TtU+pTba286u9pzjBojaC90='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-tauzjAWYvkq2EEey6/r1GOXzEWNzSydbYj43JCIjd2U=' 'sha256-J6t/nnLcTwIBGJC3AKZ/RgpxAtYGttvvOAcFtU91dXo=' blob:; style-src 'sha256-x7ED8osvZBOKGTpzHeMr6GNWdm40ZADSHTjxX6hXg3E='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
 <title>VaultManager | Zero-Knowledge Password Manager</title>
 <meta name="description" content="VaultManager: an offline-first, zero-knowledge, end-to-end encrypted password manager with a strong password generator, TOTP codes and QR-sealed sharing and backup. Runs entirely in your browser.">
 <meta name="theme-color" content="#05080d">
@@ -1102,6 +1102,9 @@ body[data-modal] :is(.widget, .gate-card, .modal-sheet, .ico, .ico svg, .newico,
 .trustsec h3 { margin: 0 0 6px; font: 800 14px var(--mono); letter-spacing: .02em; color: var(--accent); }
 .trustlist { margin: 0; padding-left: 20px; display: grid; gap: 7px; font-size: 13.5px; line-height: 1.5; }
 .trustlist b { color: var(--ink); }
+
+/* secret fields: dots without being a password-type input (see secretInput in js/dom.js) */
+.pwmask { -webkit-text-security: disc; text-security: disc; }
 </style>
 </head>
 <body>
@@ -1330,8 +1333,31 @@ body[data-modal] :is(.widget, .gate-card, .modal-sheet, .ico, .ico svg, .newico,
         else el.setAttribute(k, v);
       }
     }
+    if (tag === "input" && props && props.type === "password") secretInput(el);
     append(el, kids);
     return el;
+  }
+  var MASK_OK = typeof CSS !== "undefined" && typeof CSS.supports === "function" && (CSS.supports("-webkit-text-security", "disc") || CSS.supports("text-security", "disc"));
+  var nativeType = typeof HTMLInputElement !== "undefined" ? Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "type") : null;
+  function secretInput(el) {
+    if (!nativeType || el.dataset.pw) return;
+    let hidden = true;
+    const apply = () => {
+      el.dataset.pw = hidden ? "hidden" : "shown";
+      el.classList.toggle("pwmask", hidden && MASK_OK);
+      nativeType.set.call(el, hidden && !MASK_OK ? "password" : "text");
+    };
+    Object.defineProperty(el, "type", { configurable: true, get: () => hidden ? "password" : "text", set: (v) => {
+      hidden = String(v) === "password";
+      apply();
+    } });
+    if (MASK_OK) {
+      el.setAttribute("autocomplete", "off");
+      el.setAttribute("autocapitalize", "off");
+      el.setAttribute("autocorrect", "off");
+      el.setAttribute("spellcheck", "false");
+    } else if (!el.getAttribute("autocomplete")) el.setAttribute("autocomplete", "new-password");
+    apply();
   }
   function setText(el, v) {
     const t = splitToken(v);
@@ -2226,7 +2252,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   }
 
   // js/version.js
-  var APP_VERSION = "0.37.0";
+  var APP_VERSION = "0.38.0";
   var APP_NAME = "VaultManager";
   var REPO_URL = "https://github.com/ulyweb/vaultmanager";
   var FORMATS = [
@@ -2240,6 +2266,10 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     ["Attachments at rest", "AES-256-GCM per file, bound to vault + file id"]
   ];
   var CHANGELOG = [
+    { v: "0.38.0", date: "2026-11-17", notes: [
+      "Security hardening: secret fields (master password, backup, QR and sync passwords, item secrets) now show dots but are not password-type inputs, so a browser\u2019s password manager no longer offers to save them outside the vault (Show / Hide still works; browsers that cannot mask text keep real password fields). New master passwords need an estimated 60 bits instead of 50. Phones and tablets now lock the moment the app is hidden by default (computers keep the 5-minute timer; both adjustable in Settings \u2192 Security).",
+      "Added an MIT licence, and vendor/README.md with the source and SHA-256 of the two QR libraries (a unit test fails if they change)."
+    ] },
     { v: "0.37.0", date: "2026-11-17", notes: [
       "New: \u201CHow secure is this? The honest answer\u201D. A plain-language explanation of what protects your data (standard AES-256 done by the browser\u2019s own crypto engine, a slowed-down master password, no server or account, public source, tests on every change), how a browser app compares with a native one, what nobody can promise (no independent audit yet, malware on your device, a weak master password, no password reset) and four ways to check it yourself. It is on the sign-in and create screens, in the system menu, in the guided tour and on the 3D tour page."
     ] },
@@ -3233,7 +3263,8 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     autolock: 5,
     clipboard: 30,
     theme: "auto",
-    lockOnHide: false,
+    lockOnHide: typeof matchMedia === "function" && matchMedia("(pointer: coarse)").matches,
+    // phones and tablets lock the moment the app is backgrounded; computers keep the 5 minute timer
     trashDays: 30,
     logReveal: true,
     displayName: "",
@@ -5091,7 +5122,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       }
     };
   }
-  function secretInput(initial, { id, label }) {
+  function secretInput2(initial, { id, label }) {
     const input = h("input", { id, type: "password", class: "inp mono", value: initial || "", autocomplete: "off", spellcheck: "false" });
     const eye = h("button", { type: "button", class: "icon-btn eye", "aria-label": "Show or hide " + label, on: { click: () => {
       input.type = input.type === "password" ? "text" : "password";
@@ -5109,7 +5140,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     const id = "tf_" + f.k, stored = (it.fields || {})[f.k] || "";
     const sealed0 = isFieldLocked(stored) ? stored : null;
     const state = { unlocked: !sealed0, code: null };
-    const inner = f.words ? seedEditor(sealed0 ? "" : stored, { id }) : secretInput(sealed0 ? "" : stored, { id, label: f.l });
+    const inner = f.words ? seedEditor(sealed0 ? "" : stored, { id }) : secretInput2(sealed0 ? "" : stored, { id, label: f.l });
     const editor = h("div"), lockedBox = h("div");
     const lockOn = h("input", { type: "checkbox", id: "lk_" + f.k, checked: !!sealed0 });
     const p1 = h("input", { type: "password", class: "inp mono", id: "lk1_" + f.k, autocomplete: "new-password", "aria-label": "Passcode for " + f.l }), p2 = h("input", { type: "password", class: "inp mono", id: "lk2_" + f.k, autocomplete: "new-password", "aria-label": "Repeat passcode for " + f.l });
@@ -5547,8 +5578,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   }
   var purgeButton = (ctx2) => h("button", { class: "btn", type: "button", title: "Wipe revealed values, QR codes, passwords typed here, opened locked items and the clipboard from memory", on: { click: () => ctx2.purgeMemory() } }, "{{trash}} Purge memory");
   function passwordRow(label, input, withGen = true) {
-    input.type = "password";
-    input.autocomplete = "new-password";
+    secretInput(input);
     const conf = h("input", { class: "inp mono", type: "password", autocomplete: "new-password", spellcheck: "false", "aria-label": "Confirm " + (input.getAttribute("aria-label") || label) });
     if (input.value) conf.value = input.value;
     const show = (on) => {
@@ -9312,7 +9342,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
           field2("Auto-lock after inactivity", sel(s.autolock, [[1, "1 minute"], [5, "5 minutes"], [15, "15 minutes"], [30, "30 minutes"], [60, "1 hour"], [0, "Never (not recommended)"]], (v) => set("autolock", +v, "Auto-lock"))),
           field2("Clear clipboard after copying", sel(s.clipboard, [[15, "15 seconds"], [30, "30 seconds"], [60, "1 minute"], [120, "2 minutes"], [0, "Never"]], (v) => set("clipboard", +v, "Clipboard clearing")))
         ),
-        chk("Lock immediately when this tab is hidden or the window is minimised", s.lockOnHide, (v) => set("lockOnHide", v, "Lock on hide")),
+        chk("Lock immediately when this tab is hidden or the window is minimised (on by default on phones and tablets)", s.lockOnHide, (v) => set("lockOnHide", v, "Lock on hide")),
         chk("Record copy / reveal / download events in the audit trail (never the values)", s.logReveal, (v) => set("logReveal", v, "Access logging"))
       ),
       panel2(
@@ -9412,7 +9442,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       panel2(
         "Master password",
         field2("Current password", pw0),
-        field2("New password", h("div", null, h("div", { class: "pwwrap" }, pw1), pwM), "At least 12 characters. A passphrase of 5+ random words is ideal."),
+        field2("New password", h("div", null, h("div", { class: "pwwrap" }, pw1), pwM), "At least 12 characters. A passphrase of 6+ random words is ideal."),
         field2("Repeat new password", pw2),
         h("div", { class: "row wrap" }, h("button", { class: "btn primary", on: { click: async (e) => {
           pwErr.textContent = "";
@@ -10987,7 +11017,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     passwordPolicy(pw) {
       if (pw.length < 12) return "Use at least 12 characters.";
       const e = estimate(pw);
-      if (e.bits < 50) return "That password is too easy to guess" + (e.issues.length ? " (" + e.issues[0] + ")" : "") + ". Try a passphrase of 5 or more random words.";
+      if (e.bits < MIN_MASTER_BITS) return "That password is too easy to guess" + (e.issues.length ? " (" + e.issues[0] + ")" : "") + ". Try a passphrase of 6 or more random words (or press Suggest a passphrase).";
       return "";
     }
   };
@@ -11373,7 +11403,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       h("div", { class: "field" }, h("label", { for: "pname", text: "Profile name" }), name, h("p", { class: "hint", text: first ? "One profile per person \u2014 each has its own master password and its own completely separate vault." : "This profile gets its own master password and its own separate vault." })),
       picker.el,
       h("div", { class: "field themefield" }, h("label", { text: "Appearance" }), themeSeg, h("p", { class: "hint", text: "Auto follows your device. You can change this any time in Settings." })),
-      h("div", { class: "field" }, h("label", { for: "pw1", text: "Master password" }), p1.el, m, h("p", { class: "hint", text: "12+ characters. A passphrase of 5+ random words is easy to remember and hard to crack." })),
+      h("div", { class: "field" }, h("label", { for: "pw1", text: "Master password" }), p1.el, m, h("p", { class: "hint", text: "12+ characters. A passphrase of 6+ random words is easy to remember and hard to crack." })),
       h("div", { class: "field" }, h("label", { for: "pw2", text: "Repeat master password" }), p2.el),
       h("div", { class: "row wrap" }, suggest),
       h("label", { class: "chk", for: "ack" }, ack, "I understand that if I forget this password, nobody can recover my data."),
@@ -11561,6 +11591,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     if (f) f.focus();
   }
   var shell = null;
+  var MIN_MASTER_BITS = 60;
   var NAV = [["home", "{{home}}", "Home"], ["all", "{{vault}}", "All items"], ["fav", "{{star}}", "Favorites"], ["trash", "{{trash}}", "Trash"]];
   var TOOLS = [["health", "{{pulse}}", "Vault health"], ["gen", "{{bolt}}", "Generator"], ["qr", "{{qr}}", "QR tools"], ["beam", "{{beam}}", "Beam sync"], ["data", "{{swap}}", "Import & export"], ["tm", "{{chip}}", "Task manager"], ["settings", "{{gear}}", "Settings"]];
   var hid = { cat: (k) => curLook().hiddenCats.includes(k), nav: (id) => curLook().hiddenNav.includes(id) };

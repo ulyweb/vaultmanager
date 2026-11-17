@@ -91,7 +91,7 @@ const ctx = {
   passwordPolicy(pw) {
     if (pw.length < 12) return 'Use at least 12 characters.';
     const e = estimate(pw);
-    if (e.bits < 50) return 'That password is too easy to guess' + (e.issues.length ? ' (' + e.issues[0] + ')' : '') + '. Try a passphrase of 5 or more random words.';
+    if (e.bits < MIN_MASTER_BITS) return 'That password is too easy to guess' + (e.issues.length ? ' (' + e.issues[0] + ')' : '') + '. Try a passphrase of 6 or more random words (or press Suggest a passphrase).';
     return '';
   },
 };
@@ -327,7 +327,7 @@ function gateCreate({ first }) {
     h('div', { class: 'field' }, h('label', { for: 'pname', text: 'Profile name' }), name, h('p', { class: 'hint', text: first ? 'One profile per person — each has its own master password and its own completely separate vault.' : 'This profile gets its own master password and its own separate vault.' })),
     picker.el,
     h('div', { class: 'field themefield' }, h('label', { text: 'Appearance' }), themeSeg, h('p', { class: 'hint', text: 'Auto follows your device. You can change this any time in Settings.' })),
-    h('div', { class: 'field' }, h('label', { for: 'pw1', text: 'Master password' }), p1.el, m, h('p', { class: 'hint', text: '12+ characters. A passphrase of 5+ random words is easy to remember and hard to crack.' })),
+    h('div', { class: 'field' }, h('label', { for: 'pw1', text: 'Master password' }), p1.el, m, h('p', { class: 'hint', text: '12+ characters. A passphrase of 6+ random words is easy to remember and hard to crack.' })),
     h('div', { class: 'field' }, h('label', { for: 'pw2', text: 'Repeat master password' }), p2.el),
     h('div', { class: 'row wrap' }, suggest),
     h('label', { class: 'chk', for: 'ack' }, ack, 'I understand that if I forget this password, nobody can recover my data.'),
@@ -427,6 +427,7 @@ function drawGate() {
 
 /* ---------- main shell ---------- */
 let shell = null;
+const MIN_MASTER_BITS = 60;   // raised from 50: a stolen copy of the vault can be guessed against offline
 
 const NAV = [['home', '{{home}}', 'Home'], ['all', '{{vault}}', 'All items'], ['fav', '{{star}}', 'Favorites'], ['trash', '{{trash}}', 'Trash']];
 const TOOLS = [['health', '{{pulse}}', 'Vault health'], ['gen', '{{bolt}}', 'Generator'], ['qr', '{{qr}}', 'QR tools'], ['beam', '{{beam}}', 'Beam sync'], ['data', '{{swap}}', 'Import & export'], ['tm', '{{chip}}', 'Task manager'], ['settings', '{{gear}}', 'Settings']];

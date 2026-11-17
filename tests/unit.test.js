@@ -925,3 +925,10 @@ test('3D icons: every category has a rendered picture in icons3d/, and nothing e
   for (const n of ICONS3D) { const f = new URL('../icons3d/' + n + '.webp', import.meta.url); assert.ok(fs.existsSync(f), n + '.webp is missing'); assert.ok(fs.statSync(f).size > 2000 && fs.statSync(f).size < 60000, n + '.webp has an odd size'); }
   const sw = fs.readFileSync(new URL('../sw.js', import.meta.url), 'utf8'); for (const n of ICONS3D) assert.ok(sw.includes("'icons3d/" + n + ".webp'"), n + ' is not cached for offline use');
 });
+
+test('vendor files match their recorded checksums, and the licence is present', async () => {
+  const fs = await import('node:fs'); const { createHash } = await import('node:crypto');
+  const readme = fs.readFileSync(new URL('../vendor/README.md', import.meta.url), 'utf8');
+  for (const f of ['qrcode.js', 'jsQR.js']) { const sum = createHash('sha256').update(fs.readFileSync(new URL('../vendor/' + f, import.meta.url))).digest('hex'); assert.ok(readme.includes(sum), f + ' no longer matches the checksum in vendor/README.md'); }
+  assert.match(fs.readFileSync(new URL('../LICENSE', import.meta.url), 'utf8'), /^MIT License/);
+});

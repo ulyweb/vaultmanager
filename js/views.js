@@ -1,6 +1,6 @@
 /* Vault views: item list, detail panel, editor, QR share, recovery kit. */
 
-import { h, clear, focusSoon, modal, toast, confirmDialog, copyText, download } from './dom.js';
+import { h, clear, focusSoon, secretInput, modal, toast, confirmDialog, copyText, download } from './dom.js';
 import { newItem, sanitiseItem, SENSITIVE, TYPES, matches, totpValid, MAX_ATTACHMENT, MAX_ATTACHMENTS_PER_ITEM, keyLabel, keyIsSecret, describeValue, currentValue } from './vault.js';
 import { TYPE_META, TEMPLATES, GROUPS, isSecretField, MAX_CUSTOM, daysUntil, wifiQRString } from './templates.js';
 import { estimate, crackTime } from './strength.js';
@@ -60,7 +60,7 @@ export const purgeButton = (ctx) => h('button', { class: 'btn', type: 'button', 
 /* ---------- hidden password + confirm ---------- */
 /* A hidden password field with a "confirm" field, a show / copy toggle and a generator. The generated passphrase fills both fields. */
 export function passwordRow(label, input, withGen = true) {
-  input.type = 'password'; input.autocomplete = 'new-password';
+  secretInput(input);   // dots, and no browser password-manager prompt
   const conf = h('input', { class: 'inp mono', type: 'password', autocomplete: 'new-password', spellcheck: 'false', 'aria-label': 'Confirm ' + (input.getAttribute('aria-label') || label) });
   if (input.value) conf.value = input.value;
   const show = (on) => { input.type = conf.type = on ? 'text' : 'password'; };

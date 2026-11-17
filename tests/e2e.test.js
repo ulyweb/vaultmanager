@@ -559,9 +559,9 @@ test('passkey unlock: add (re-auth required), unlock with it, fall back to passw
   await shot(page, '12-passkeys');
   await page.fill('input[aria-label="Passkey name"]', 'Test laptop');
   await page.getByRole('button', { name: /Add a passkey/ }).click();
-  await page.fill('.modal-sheet input[type=password]', 'wrong password!!'); await page.keyboard.press('Enter');
+  await page.fill('.modal-sheet input[data-pw]', 'wrong password!!'); await page.keyboard.press('Enter');
   await page.waitForSelector('text=That is not your master password');
-  await page.fill('.modal-sheet input[type=password]', MASTER); await page.keyboard.press('Enter');
+  await page.fill('.modal-sheet input[data-pw]', MASTER); await page.keyboard.press('Enter');
   await page.waitForSelector('text=1 registered');
   assert.ok((await page.textContent('.page')).includes('Test laptop'));
 
@@ -583,7 +583,7 @@ test('passkey unlock: add (re-auth required), unlock with it, fall back to passw
   // removing it removes the button
   await settingsTab(page, /Security/);
   await page.getByRole('button', { name: 'Remove', exact: true }).first().click();
-  await page.fill('.modal-sheet input[type=password]', MASTER); await page.keyboard.press('Enter');
+  await page.fill('.modal-sheet input[data-pw]', MASTER); await page.keyboard.press('Enter');
   await page.waitForSelector('text=none');
   await page.getByRole('button', { name: '🔒 Lock', exact: true }).click(); await page.waitForSelector('#upw');
   assert.equal(await page.getByRole('button', { name: /Unlock with passkey/ }).count(), 0);
@@ -1000,7 +1000,7 @@ test('profiles: export a whole profile, then import it at the initial stage into
   await addLogin(A.page, 'BankProfile');
   await settingsTab(A.page, 'General');
   await A.page.getByRole('button', { name: /Export whole profile/ }).click();
-  assert.equal(await A.page.getAttribute('input[aria-label="Backup password"]', 'type'), 'password', 'the export password is hidden');
+  assert.equal(await A.page.getAttribute('input[aria-label="Backup password"]', 'data-pw'), 'hidden', 'the export password is hidden');
   await A.page.fill('input[aria-label="Backup password"]', 'backup-pass-phrase-1'); await A.page.fill('input[aria-label="Confirm Backup password"]', 'different-one-xx'); await A.page.getByRole('button', { name: 'Download backup' }).click();
   assert.match(await A.page.locator('.modal-sheet .err:not(:empty)').first().textContent(), /do not match/);
   await A.page.fill('input[aria-label="Confirm Backup password"]', 'backup-pass-phrase-1');
@@ -1201,8 +1201,8 @@ test('v0.15: QR tools hide the password and ask twice; Purge memory; backup guid
   await createVault(page);
   // QR tools: hidden password + confirm + purge
   await page.locator('.side .nav', { hasText: 'QR tools' }).click();
-  assert.equal(await page.getAttribute('input[aria-label="QR password"]', 'type'), 'password');
-  assert.equal(await page.getAttribute('input[aria-label="Confirm QR password"]', 'type'), 'password');
+  assert.equal(await page.getAttribute('input[aria-label="QR password"]', 'data-pw'), 'hidden');
+  assert.equal(await page.getAttribute('input[aria-label="Confirm QR password"]', 'data-pw'), 'hidden');
   await page.fill('textarea[aria-label="Text to seal"]', 'hello'); await page.fill('input[aria-label="QR password"]', 'first-password-1'); await page.fill('input[aria-label="Confirm QR password"]', 'other-password-2');
   await page.getByRole('button', { name: /Seal into QR/ }).click();
   assert.match(await page.locator('.page .err:not(:empty)').first().textContent(), /do not match/);
@@ -1657,7 +1657,7 @@ test('v0.26.0: Title + Description on every item, reorderable custom fields, and
 
   // locked item: Seal as QR is reachable without first finding the Unlock button
   await page.getByRole('button', { name: /Add passcode lock/ }).click();
-  const pcs = page.locator('.modal-sheet input[type=password]'); await pcs.nth(0).fill('item-code-123'); await pcs.nth(1).fill('item-code-123');
+  const pcs = page.locator('.modal-sheet input[data-pw]'); await pcs.nth(0).fill('item-code-123'); await pcs.nth(1).fill('item-code-123');
   await page.getByRole('button', { name: 'Lock item' }).click(); await page.waitForSelector('.lockbox');
   assert.ok(!(await page.textContent('.detail')).includes('Shared inbox'), 'description is hidden while locked');
   await page.getByRole('button', { name: /Unlock & seal as QR/ }).click();
@@ -2142,5 +2142,22 @@ test('v0.37.0: the honest "How secure is this?" explanation is on the create scr
   await page.keyboard.press('Escape');
   await createVault(page);
   await page.locator('.topbar').getByText('VaultManager').first().click(); await page.getByText('How secure is this?', { exact: false }).first().click(); await page.waitForSelector('.trustdoc'); await page.keyboard.press('Escape');
+  assert.deepEqual(problems.filter((p) => !/Failed to load resource/.test(p)), []); await ctx.close();
+});
+
+test('v0.38.0: secret fields are masked text (no browser password-manager prompts), Show/Hide still works, and nothing is ever shown by mistake', async () => {
+  const { ctx, page, problems } = await newPage();
+  await page.goto(base); await page.waitForSelector('#pw1');
+  const st = () => page.evaluate(() => { const i = document.querySelector('#pw1'); return { attr: i.getAttribute('type'), hid: i.dataset.pw, mask: i.classList.contains('pwmask'), cs: getComputedStyle(i).webkitTextSecurity || getComputedStyle(i).textSecurity || '', ac: i.getAttribute('autocomplete') }; });
+  const a = await st();
+  assert.equal(a.hid, 'hidden');
+  assert.ok(a.attr === 'password' || (a.attr === 'text' && a.mask && a.cs === 'disc'), 'hidden means dots: ' + JSON.stringify(a));   // masked text where the browser supports it, otherwise a real password field
+  if (a.attr === 'text') assert.equal(a.ac, 'off');
+  await page.fill('#pw1', 'plum-orbit-velvet'); await page.locator('#pw1 ~ .eye, .pwwrap:has(#pw1) .eye').first().click();
+  const b = await st(); assert.equal(b.hid, 'shown'); assert.ok(!b.mask && b.attr === 'text', 'Show reveals it: ' + JSON.stringify(b));
+  await page.locator('.pwwrap:has(#pw1) .eye').first().click(); assert.equal((await st()).hid, 'hidden');
+  // a weak master password (below 60 bits) is refused
+  await page.fill('#pw1', 'Password12345'); await page.fill('#pw2', 'Password12345'); await page.check('#ack'); await page.click('button[type=submit]');
+  assert.match(await page.locator('.gate-card .err:not(:empty), .err:not(:empty)').first().textContent(), /too easy to guess|Use at least/);
   assert.deepEqual(problems.filter((p) => !/Failed to load resource/.test(p)), []); await ctx.close();
 });
