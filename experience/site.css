@@ -134,3 +134,6 @@ p { margin: 0 0 14px; }
   .card { bottom: 64px; }
 }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } .btn, .chip { transition: none; } }
+
+.trustbox { margin: 26px auto 8px; max-width: 760px; text-align: left; padding: 18px 20px; border: 1px solid var(--line, rgba(255,255,255,.18)); border-radius: 14px; background: rgba(255,255,255,.04); }
+.trustbox h3 { margin: 0 0 10px; font-size: 18px; }
