@@ -42,6 +42,16 @@ export function trustBody() {
     sec('What nobody can promise', TRUST.limits), sec('Check it yourself', TRUST.check, true));
 }
 
+/* Settings → About → FAQ: short answers, the first one is the full honest security explanation */
+export const FAQ = [
+  ['Where is my data stored?', 'Only on this device, inside your browser’s storage, encrypted. There is no server and no account. Clearing the browser’s site data deletes the vault, so export an encrypted backup (Import & export) and keep it somewhere safe.'],
+  ['What if I forget my master password?', 'Nobody can recover it, not even the person who made the app. If you saved the recovery key when you created the profile, it can unlock the vault; otherwise restore from an encrypted backup. Keep both somewhere safe.'],
+  ['Can I use it offline, even air-gapped?', 'Yes, and that is what it was built for. Download the offline copy (one file), keep it on a USB drive and open it on a computer with no internet. Turn off all browser extensions while you use it.'],
+  ['Does it work on a phone?', 'Yes. Open the site in the phone’s browser and add it to the home screen. Phones and tablets lock the vault as soon as the app is hidden.'],
+  ['What leaves my device?', 'Nothing, unless you turn on optional features: GitHub gist sync (encrypted before it leaves), Beam to another device, or the contact-admin note. Watch your browser’s Network tab to see for yourself.'],
+  ['Is it audited?', 'No. It has been tested heavily and its code is public so anyone can read it, but it has not had an independent security audit. Read “How secure is this, honestly?” above for what that means.'],
+];
+
 export function trustDialog() {
   modal({ title: 'How secure is this, honestly?', sub: 'What protects you, and what does not', wide: true, body: trustBody(), actions: [{ label: 'Close', primary: true }] });
 }

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VaultManager v0.38.1 — single-file offline build. Verify with the .sha256 file next to it. -->
+<!-- VaultManager v0.38.2 — single-file offline build. Verify with the .sha256 file next to it. -->
 <html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
@@ -11,7 +11,7 @@
 <meta name="application-name" content="VaultManager">
 <meta name="format-detection" content="telephone=no">
 <meta name="referrer" content="no-referrer">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-tauzjAWYvkq2EEey6/r1GOXzEWNzSydbYj43JCIjd2U=' 'sha256-OVnPO2U54mH8b8w6Cmk9SGfuGBNOs2Mm6L1lhZgI6CQ=' blob:; style-src 'sha256-x7ED8osvZBOKGTpzHeMr6GNWdm40ZADSHTjxX6hXg3E='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-tauzjAWYvkq2EEey6/r1GOXzEWNzSydbYj43JCIjd2U=' 'sha256-1hHhscyDxtrF+nnvNewnCDB0Vc0wtyM+IY0elCLP+Cs=' blob:; style-src 'sha256-1Dnk5BrxqNqf1hwT6GWEXgxmfVbhdp9VVXTF78DMEYQ='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
 <title>VaultManager | Zero-Knowledge Password Manager</title>
 <meta name="description" content="VaultManager: an offline-first, zero-knowledge, end-to-end encrypted password manager with a strong password generator, TOTP codes and QR-sealed sharing and backup. Runs entirely in your browser.">
 <meta name="theme-color" content="#05080d">
@@ -1105,6 +1105,12 @@ body[data-modal] :is(.widget, .gate-card, .modal-sheet, .ico, .ico svg, .newico,
 
 /* secret fields: dots without being a password-type input (see secretInput in js/dom.js) */
 .pwmask { -webkit-text-security: disc; text-security: disc; }
+
+/* Settings → About → FAQ */
+.faq { border-bottom: 1px solid var(--line); padding: 8px 2px; }
+.faq summary { cursor: pointer; font-weight: 700; padding: 4px 0; }
+.faq[open] > summary { color: var(--accent); }
+.faq p { margin: 6px 0 4px; }
 </style>
 </head>
 <body>
@@ -2252,7 +2258,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   }
 
   // js/version.js
-  var APP_VERSION = "0.38.1";
+  var APP_VERSION = "0.38.2";
   var APP_NAME = "VaultManager";
   var REPO_URL = "https://github.com/ulyweb/vaultmanager";
   var FORMATS = [
@@ -2266,6 +2272,9 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     ["Attachments at rest", "AES-256-GCM per file, bound to vault + file id"]
   ];
   var CHANGELOG = [
+    { v: "0.38.2", date: "2026-11-18", notes: [
+      "The \u201CHow secure is this? The honest answer\u201D link is gone from the sign-in and create screens. The explanation now lives in Settings \u2192 About \u2192 FAQ (together with short answers on where your data is stored, forgetting the master password, offline / air-gapped use, phones, what leaves your device, and the audit), and is still in the system menu and the guided tour."
+    ] },
     { v: "0.38.1", date: "2026-11-18", notes: [
       "The \u201CHow secure is this, honestly?\u201D text now says plainly that browser extensions can read an unlocked vault, so we recommend turning off all extensions while you use it, and that the tool was built for offline, air-gapped use (the single offline file on a USB drive, on a computer with no internet) as the most secure way to run it. The same wording is in the guided tour and on the 3D tour page."
     ] },
@@ -4766,6 +4775,14 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       sec("Check it yourself", TRUST.check, true)
     );
   }
+  var FAQ = [
+    ["Where is my data stored?", "Only on this device, inside your browser\u2019s storage, encrypted. There is no server and no account. Clearing the browser\u2019s site data deletes the vault, so export an encrypted backup (Import & export) and keep it somewhere safe."],
+    ["What if I forget my master password?", "Nobody can recover it, not even the person who made the app. If you saved the recovery key when you created the profile, it can unlock the vault; otherwise restore from an encrypted backup. Keep both somewhere safe."],
+    ["Can I use it offline, even air-gapped?", "Yes, and that is what it was built for. Download the offline copy (one file), keep it on a USB drive and open it on a computer with no internet. Turn off all browser extensions while you use it."],
+    ["Does it work on a phone?", "Yes. Open the site in the phone\u2019s browser and add it to the home screen. Phones and tablets lock the vault as soon as the app is hidden."],
+    ["What leaves my device?", "Nothing, unless you turn on optional features: GitHub gist sync (encrypted before it leaves), Beam to another device, or the contact-admin note. Watch your browser\u2019s Network tab to see for yourself."],
+    ["Is it audited?", "No. It has been tested heavily and its code is public so anyone can read it, but it has not had an independent security audit. Read \u201CHow secure is this, honestly?\u201D above for what that means."]
+  ];
   function trustDialog() {
     modal({ title: "How secure is this, honestly?", sub: "What protects you, and what does not", wide: true, body: trustBody(), actions: [{ label: "Close", primary: true }] });
   }
@@ -9840,6 +9857,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
           h("button", { class: "btn", on: { click: () => selfTest() } }, "{{check}} Run crypto self-test")
         )
       ),
+      panel2("FAQ", h("details", { class: "faq" }, h("summary", { text: "How secure is this, honestly?" }), trustBody()), ...FAQ.map(([q2, a]) => h("details", { class: "faq" }, h("summary", { text: q2 }), h("p", { class: "hint", text: a })))),
       panel2("Version history", CHANGELOG.map((r, i) => h("div", { class: "rel" }, h("div", { class: "row wrap" }, h("b", { class: "mono", text: "v" + r.v }), h("span", { class: "chip" + (i === 0 ? " accent" : ""), text: i === 0 ? "current" : r.date }), i === 0 ? h("span", { class: "hint", text: r.date }) : null), h("ul", null, r.notes.map((n) => h("li", { text: n })))))),
       contactPanel(ctx2),
       panel2("Data formats", h("div", { class: "kv" }, FORMATS.map(([k, v]) => [h("span", { text: k }), h("b", { text: v })]))),
@@ -11271,12 +11289,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     };
   }
   function trustChips() {
-    return h(
-      "div",
-      { class: "trust" },
-      ["Zero-knowledge", "End-to-end encrypted", "AES-256-GCM", "Works offline", "No account \xB7 no server"].map((t) => h("span", { class: "chip accent", text: "{{check}} " + t })),
-      h("button", { type: "button", class: "linkbtn trustlink", on: { click: trustDialog } }, "{{shield}} How secure is this? The honest answer")
-    );
+    return h("div", { class: "trust" }, ["Zero-knowledge", "End-to-end encrypted", "AES-256-GCM", "Works offline", "No account \xB7 no server"].map((t) => h("span", { class: "chip accent", text: "{{check}} " + t })));
   }
   var brand2 = (sub) => h("div", { class: "brand" }, h("img", { src: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImciIHgxPSIwIiB5MT0iMCIgeDI9IjEiIHkyPSIxIj48c3RvcCBvZmZzZXQ9IjAiIHN0b3AtY29sb3I9IiMyZmU2ZDAiLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiM1OWI0ZmYiLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz48cmVjdCB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgcng9IjExMiIgZmlsbD0iIzA1MDgwZCIvPjxyZWN0IHg9IjQwIiB5PSI0MCIgd2lkdGg9IjQzMiIgaGVpZ2h0PSI0MzIiIHJ4PSI4NCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMTUyNTM0IiBzdHJva2Utd2lkdGg9IjYiLz48cGF0aCBkPSJNMjU2IDk2bDEzMiA0OHYxMDJjMCA4OC01NiAxNDQtMTMyIDE3MC03Ni0yNi0xMzItODItMTMyLTE3MFYxNDR6IiBmaWxsPSJub25lIiBzdHJva2U9InVybCgjZykiIHN0cm9rZS13aWR0aD0iMjIiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz48Y2lyY2xlIGN4PSIyNTYiIGN5PSIyMzIiIHI9IjM4IiBmaWxsPSJ1cmwoI2cpIi8+PHBhdGggZD0iTTI1NiAyNjJ2NzQiIHN0cm9rZT0idXJsKCNnKSIgc3Ryb2tlLXdpZHRoPSIyNiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+PC9zdmc+Cg==", alt: "", width: "44", height: "44" }), h("div", null, h("h1", null, "Vault", h("span", { text: "Manager" }), h("small", { class: "ver", text: " v" + APP_VERSION })), h("p", { text: sub })));
   function pwInput(id, label, auto) {

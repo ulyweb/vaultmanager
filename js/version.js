@@ -1,6 +1,6 @@
 /* Application version, data-format versions and changelog (shown in Settings → About). */
 
-export const APP_VERSION = '0.38.1';
+export const APP_VERSION = '0.38.2';
 export const APP_NAME = 'VaultManager';
 export const REPO_URL = 'https://github.com/ulyweb/vaultmanager';
 
@@ -16,6 +16,9 @@ export const FORMATS = [
 ];
 
 export const CHANGELOG = [
+  { v: '0.38.2', date: '2026-11-18', notes: [
+    'The “How secure is this? The honest answer” link is gone from the sign-in and create screens. The explanation now lives in Settings → About → FAQ (together with short answers on where your data is stored, forgetting the master password, offline / air-gapped use, phones, what leaves your device, and the audit), and is still in the system menu and the guided tour.',
+  ] },
   { v: '0.38.1', date: '2026-11-18', notes: [
     'The “How secure is this, honestly?” text now says plainly that browser extensions can read an unlocked vault, so we recommend turning off all extensions while you use it, and that the tool was built for offline, air-gapped use (the single offline file on a USB drive, on a computer with no internet) as the most secure way to run it. The same wording is in the guided tour and on the 3D tour page.',
   ] },
