@@ -1087,3 +1087,9 @@ body[data-modal] :is(.widget, .gate-card, .modal-sheet, .ico, .ico svg, .newico,
 
 /* secret fields: dots without being a password-type input (see secretInput in js/dom.js) */
 .pwmask { -webkit-text-security: disc; text-security: disc; }
+
+/* Settings → About → FAQ */
+.faq { border-bottom: 1px solid var(--line); padding: 8px 2px; }
+.faq summary { cursor: pointer; font-weight: 700; padding: 4px 0; }
+.faq[open] > summary { color: var(--accent); }
+.faq p { margin: 6px 0 4px; }

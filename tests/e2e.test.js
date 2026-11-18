@@ -2132,16 +2132,19 @@ test('v0.36.3: while a dialog is open nothing behind it blurs or animates (no fl
   assert.deepEqual(problems.filter((p) => !/Failed to load resource/.test(p)), []); await ctx.close();
 });
 
-test('v0.37.0: the honest "How secure is this?" explanation is on the create screen, in the system menu and in the tour, and never claims a guarantee or an audit', async () => {
+test('v0.37.0: the honest "How secure is this?" explanation lives in Settings → About → FAQ (and the system menu and tour), not on the create screen, and never claims a guarantee or an audit', async () => {
   const { ctx, page, problems } = await newPage();
   await page.goto(base); await page.waitForSelector('#pw1');
-  await page.getByRole('button', { name: /How secure is this/ }).click(); await page.waitForSelector('.trustdoc');
-  const txt = await page.textContent('.trustdoc');
+  assert.equal(await page.getByRole('button', { name: /How secure is this/ }).count(), 0, 'nothing about it on the create screen');
+  await createVault(page);
+  await settingsTab(page, /About/);
+  await page.waitForSelector('.faq'); assert.ok((await page.locator('.faq').count()) >= 7);
+  await page.locator('.faq summary', { hasText: 'How secure is this, honestly?' }).click();
+  const txt = await page.textContent('.faq .trustdoc');
   for (const must of ['turning off all browser extensions', 'air-gapped', 'offline', 'AES-256-GCM', 'PBKDF2', '600,000', 'WebCrypto', 'Rust', 'has not been audited by an independent security firm', 'Check it yourself', 'Network tab']) assert.ok(txt.includes(must), 'missing: ' + must);
   assert.ok(!/is guaranteed|100% secure|unhackable|military[- ]grade|audited by/i.test(txt.replace('has not been audited by an independent security firm', '').replace(/Nobody can honestly guarantee[^.]*\./, '')), 'no overclaiming');
-  await page.keyboard.press('Escape');
-  await createVault(page);
-  await page.locator('.topbar').getByText('VaultManager').first().click(); await page.getByText('How secure is this?', { exact: false }).first().click(); await page.waitForSelector('.trustdoc'); await page.keyboard.press('Escape');
+  await page.locator('.faq summary', { hasText: 'forget my master password' }).click(); assert.match(await page.textContent('.faq:has-text("forget my master password")'), /recovery key/);
+  await page.locator('.topbar').getByText('VaultManager').first().click(); await page.locator('.sysmenu').getByText('How secure is this?').click(); await page.waitForSelector('.modal-sheet .trustdoc'); await page.keyboard.press('Escape');
   assert.deepEqual(problems.filter((p) => !/Failed to load resource/.test(p)), []); await ctx.close();
 });
 

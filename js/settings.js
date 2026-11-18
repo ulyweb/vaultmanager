@@ -2,6 +2,7 @@
 
 import { h, clear, setLabel, modal, toast, confirmDialog, askPassword, download, readFileText } from './dom.js';
 import { generatePassphrase, generateStrongPassphrase } from './generator.js';
+import { trustBody, FAQ } from './trust.js';
 import { estimate } from './strength.js';
 import { meter, fmtSize } from './views.js';
 import { page, field, sel, persist, selfTest, backupGuide } from './tools.js';
@@ -297,6 +298,7 @@ function about(ctx) {
       h('div', { class: 'row wrap' }, h('a', { class: 'btn', href: REPO_URL, target: '_blank', rel: 'noopener noreferrer' }, '⌥ Source code'), h('a', { class: 'btn', href: REPO_URL + '/blob/main/SECURITY.md', target: '_blank', rel: 'noopener noreferrer' }, '{{shield}} Security & threat model'),
         h('button', { class: 'btn', on: { click: () => ctx.tour.start() } }, '{{compass}} Guided tour'), h('button', { class: 'btn', on: { click: () => ctx.tour.welcome() } }, '{{wave}} Welcome screen'),
         h('button', { class: 'btn', on: { click: () => selfTest() } }, '{{check}} Run crypto self-test'))),
+    panel('FAQ', h('details', { class: 'faq' }, h('summary', { text: 'How secure is this, honestly?' }), trustBody()), ...FAQ.map(([q, a]) => h('details', { class: 'faq' }, h('summary', { text: q }), h('p', { class: 'hint', text: a })))),
     panel('Version history', CHANGELOG.map((r, i) => h('div', { class: 'rel' }, h('div', { class: 'row wrap' }, h('b', { class: 'mono', text: 'v' + r.v }), h('span', { class: 'chip' + (i === 0 ? ' accent' : ''), text: i === 0 ? 'current' : r.date }), i === 0 ? h('span', { class: 'hint', text: r.date }) : null), h('ul', null, r.notes.map((n) => h('li', { text: n })))))),
     contactPanel(ctx),
     panel('Data formats', h('div', { class: 'kv' }, FORMATS.map(([k, v]) => [h('span', { text: k }), h('b', { text: v })]))),

@@ -258,8 +258,7 @@ function armSync() {
 
 /* ---------- gate (create / unlock) ---------- */
 function trustChips() {
-  return h('div', { class: 'trust' }, ['Zero-knowledge', 'End-to-end encrypted', 'AES-256-GCM', 'Works offline', 'No account · no server'].map((t) => h('span', { class: 'chip accent', text: '{{check}} ' + t })),
-    h('button', { type: 'button', class: 'linkbtn trustlink', on: { click: trustDialog } }, '{{shield}} How secure is this? The honest answer'));
+  return h('div', { class: 'trust' }, ['Zero-knowledge', 'End-to-end encrypted', 'AES-256-GCM', 'Works offline', 'No account · no server'].map((t) => h('span', { class: 'chip accent', text: '{{check}} ' + t })))
 }
 const brand = (sub) => h('div', { class: 'brand' }, h('img', { src: 'icons/icon.svg', alt: '', width: '44', height: '44' }), h('div', null, h('h1', null, 'Vault', h('span', { text: 'Manager' }), h('small', { class: 'ver', text: ' v' + APP_VERSION })), h('p', { text: sub })));
 
