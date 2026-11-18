@@ -1,6 +1,6 @@
 /* Application version, data-format versions and changelog (shown in Settings → About). */
 
-export const APP_VERSION = '0.38.0';
+export const APP_VERSION = '0.38.1';
 export const APP_NAME = 'VaultManager';
 export const REPO_URL = 'https://github.com/ulyweb/vaultmanager';
 
@@ -16,6 +16,9 @@ export const FORMATS = [
 ];
 
 export const CHANGELOG = [
+  { v: '0.38.1', date: '2026-11-18', notes: [
+    'The “How secure is this, honestly?” text now says plainly that browser extensions can read an unlocked vault, so we recommend turning off all extensions while you use it, and that the tool was built for offline, air-gapped use (the single offline file on a USB drive, on a computer with no internet) as the most secure way to run it. The same wording is in the guided tour and on the 3D tour page.',
+  ] },
   { v: '0.38.0', date: '2026-11-17', notes: [
     'Security hardening: secret fields (master password, backup, QR and sync passwords, item secrets) now show dots but are not password-type inputs, so a browser’s password manager no longer offers to save them outside the vault (Show / Hide still works; browsers that cannot mask text keep real password fields). New master passwords need an estimated 60 bits instead of 50. Phones and tablets now lock the moment the app is hidden by default (computers keep the 5-minute timer; both adjustable in Settings → Security).',
     'Added an MIT licence, and vendor/README.md with the source and SHA-256 of the two QR libraries (a unit test fails if they change).',
