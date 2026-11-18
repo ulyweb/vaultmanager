@@ -2137,7 +2137,7 @@ test('v0.37.0: the honest "How secure is this?" explanation is on the create scr
   await page.goto(base); await page.waitForSelector('#pw1');
   await page.getByRole('button', { name: /How secure is this/ }).click(); await page.waitForSelector('.trustdoc');
   const txt = await page.textContent('.trustdoc');
-  for (const must of ['AES-256-GCM', 'PBKDF2', '600,000', 'WebCrypto', 'Rust', 'has not been audited by an independent security firm', 'Check it yourself', 'Network tab']) assert.ok(txt.includes(must), 'missing: ' + must);
+  for (const must of ['turning off all browser extensions', 'air-gapped', 'offline', 'AES-256-GCM', 'PBKDF2', '600,000', 'WebCrypto', 'Rust', 'has not been audited by an independent security firm', 'Check it yourself', 'Network tab']) assert.ok(txt.includes(must), 'missing: ' + must);
   assert.ok(!/is guaranteed|100% secure|unhackable|military[- ]grade|audited by/i.test(txt.replace('has not been audited by an independent security firm', '').replace(/Nobody can honestly guarantee[^.]*\./, '')), 'no overclaiming');
   await page.keyboard.press('Escape');
   await createVault(page);

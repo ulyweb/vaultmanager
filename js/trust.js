@@ -16,13 +16,15 @@ export const TRUST = {
   compare: [
     ['Same cryptography', 'In a browser app the encryption itself is done by native code inside the browser. The JavaScript only asks for it. A Rust app normally also leans on well-tested crypto libraries rather than writing its own, so the part that matters most is comparable.'],
     ['Strong sandbox', 'Browsers keep each site in a locked box, away from your files and other sites, and this app adds a strict policy on top.'],
-    ['Honest trade-offs', 'Native apps can wipe memory more reliably, and are not exposed to browser extensions the same way. A hosted web app also receives updates from its host (GitHub), so a compromised publisher account could ship bad code; the offline file with its checksum avoids that.'],
+    ['Honest trade-offs', 'Native apps can wipe memory more reliably, and are not exposed to browser extensions the same way. A browser extension can see and change the pages you open, so an extension you do not fully trust can read an unlocked vault. That is why we recommend turning off all browser extensions (or using a clean browser profile with none installed) whenever you use this tool. A hosted web app also receives updates from its host (GitHub), so a compromised publisher account could ship bad code; the offline file with its checksum avoids that.'],
+    ['Built for offline and air-gapped use', 'This tool was created to be used completely offline: run from the single offline file on a USB drive, on a computer that is disconnected from the internet (air-gapped), with extensions off. That is the most secure way to use it, because with no network and no extensions there is nothing that can reach your vault from outside. The online site exists so friends and testers can try it remotely; the offline, air-gapped copy is the intended way to protect real secrets.']
   ],
   limits: [
     'Nobody can honestly guarantee that any software is perfectly secure, and this does not. It was built by one person with AI help, tested heavily, and has not been audited by an independent security firm.',
     'It cannot protect you from malware or a keylogger on your device, a malicious browser extension, someone watching your screen, or a weak or reused master password. Use a long passphrase.',
     'There is no password reset. If you forget the master password and lose the recovery key, the data cannot be recovered by anyone. Keep an encrypted backup.',
     'Until you trust it, start with logins you can afford to rotate, and keep your old password manager as a backup.',
+    'For the strongest protection, use the offline file on an air-gapped computer with all browser extensions turned off.',
   ],
   check: [
     'Open your browser’s developer tools, choose the Network tab and use the app: nothing is sent while you work.',
