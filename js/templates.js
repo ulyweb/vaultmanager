@@ -74,7 +74,7 @@ export const TEMPLATES = {
     { k: 'recovery', l: 'Recovery / backup codes', kind: 'multiline', secret: true },
   ] },
   crypto: { label: 'Crypto wallet', plural: 'Crypto', icon: '{{crypto}}', sub: 'wallet', tip: 'Anyone who gets a recovery seed phrase or private key controls the funds. Keep an offline copy too, never photograph it, and avoid syncing it to devices you do not fully trust.', fields: [
-    T('wallet', 'Wallet / exchange'), SEL('kind', 'Type', ['Hardware wallet', 'Software wallet', 'Exchange account', 'Paper wallet', 'Other']), DT('added', 'Added to vault (date & time)', { auto: true }), DT('created', 'Wallet created (date & time)'), T('network', 'Blockchain / network'), T('address', 'Public address', { mono: true }),
+    T('wallet', 'Wallet / exchange'), { k: 'familynote', l: 'Instructions for my family', kind: 'multiline' }, T('hwwhere', 'Where the hardware wallet / seed backup is kept'), T('walletapp', 'Wallet app to open it with'), T('helper', 'Who can help (name / phone)'), SEL('kind', 'Type', ['Hardware wallet', 'Software wallet', 'Exchange account', 'Paper wallet', 'Other']), DT('added', 'Added to vault (date & time)', { auto: true }), DT('created', 'Wallet created (date & time)'), T('network', 'Blockchain / network'), T('address', 'Public address', { mono: true }),
     { k: 'seed', l: 'Recovery seed phrase', kind: 'multiline', secret: true, words: true, lockable: true }, S('privkey', 'Private key'), S('pin', 'Wallet PIN / password', { gen: true }), S('passphrase', 'Extra passphrase (25th word)', { lockable: true }),
     U('url', 'Website'), T('username', 'Username / email'), S('password', 'Account password', { gen: true }),
     DT('backedup', 'Seed phrase backed up (date & time)'), DT('checked', 'Last balance check (date & time)'),
@@ -148,7 +148,7 @@ const ALL = { ...CORE, ...Object.fromEntries(Object.entries(TEMPLATES).map(([k, 
 export const TYPE_META = Object.fromEntries(GROUPS.flatMap(([g, keys]) => keys.map((k) => [k, { ...ALL[k], group: g }])));
 export const TYPE_KEYS = Object.keys(TYPE_META);
 /* view ids used by the app shell — a category key must never equal one of these */
-export const RESERVED_VIEWS = ['home', 'all', 'fav', 'trash', 'conflicts', 'health', 'gen', 'qr', 'beam', 'data', 'settings'];
+export const RESERVED_VIEWS = ['home', 'all', 'fav', 'trash', 'conflicts', 'health', 'gen', 'qr', 'family', 'beam', 'data', 'settings'];
 export const isSecretField = (f) => f.kind === 'secret' || f.secret === true;
 export const MAX_CUSTOM = 30;
 

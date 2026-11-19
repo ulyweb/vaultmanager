@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VaultManager v0.38.2 — single-file offline build. Verify with the .sha256 file next to it. -->
+<!-- VaultManager v0.39.0 — single-file offline build. Verify with the .sha256 file next to it. -->
 <html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
@@ -11,7 +11,7 @@
 <meta name="application-name" content="VaultManager">
 <meta name="format-detection" content="telephone=no">
 <meta name="referrer" content="no-referrer">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-tauzjAWYvkq2EEey6/r1GOXzEWNzSydbYj43JCIjd2U=' 'sha256-1hHhscyDxtrF+nnvNewnCDB0Vc0wtyM+IY0elCLP+Cs=' blob:; style-src 'sha256-1Dnk5BrxqNqf1hwT6GWEXgxmfVbhdp9VVXTF78DMEYQ='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-tauzjAWYvkq2EEey6/r1GOXzEWNzSydbYj43JCIjd2U=' 'sha256-TAYMniQVq8WmV9RNQHa28zeUHYNn+lVcIhaLKv54Vow=' blob:; style-src 'sha256-VYxRDKCdDR1NPyl4E73Ywg2Wj+W28dDfIfKkas3BQts='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
 <title>VaultManager | Zero-Knowledge Password Manager</title>
 <meta name="description" content="VaultManager: an offline-first, zero-knowledge, end-to-end encrypted password manager with a strong password generator, TOTP codes and QR-sealed sharing and backup. Runs entirely in your browser.">
 <meta name="theme-color" content="#05080d">
@@ -1111,6 +1111,17 @@ body[data-modal] :is(.widget, .gate-card, .modal-sheet, .ico, .ico svg, .newico,
 .faq summary { cursor: pointer; font-weight: 700; padding: 4px 0; }
 .faq[open] > summary { color: var(--accent); }
 .faq p { margin: 6px 0 4px; }
+
+/* Family recovery */
+.readiness { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 6px; }
+.readiness .ok b { color: var(--accent); } .readiness .todo b { color: var(--warn); }
+.guideprev { border: 1px solid var(--line); border-radius: 12px; padding: 4px 16px 12px; background: var(--raise); max-height: 420px; overflow: auto; }
+.guideprev h1 { font-size: 20px; } .guideprev h2 { font-size: 15px; margin: 14px 0 4px; color: var(--accent); } .guideprev p, .guideprev li { font-size: 13.5px; line-height: 1.5; }
+.sharegrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; margin: 12px 0; }
+.sharecard { border: 1px solid var(--line-2); border-radius: 12px; padding: 12px; background: var(--raise); display: grid; gap: 8px; justify-items: center; text-align: center; }
+.sharecard h4 { margin: 0; font: 800 13px var(--mono); }
+.sharetext { font: 11px/1.5 var(--mono); word-break: break-all; display: block; max-width: 100%; user-select: all; }
+.drill { display: grid; gap: 8px; margin: 10px 0; }
 </style>
 </head>
 <body>
@@ -1692,6 +1703,10 @@ body[data-modal] :is(.widget, .gate-card, .modal-sheet, .ico, .ico svg, .newico,
     const p = (n) => String(n).padStart(2, "0");
     return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}_${p(d.getHours())}-${p(d.getMinutes())}-${p(d.getSeconds())}`;
   };
+  var drillState = (st) => {
+    const days = st.drillAt ? Math.floor((Date.now() - st.drillAt) / 864e5) : null;
+    return { days, due: days === null || days >= (st.drillDays || 90) };
+  };
 
   // js/crypto.js
   var ITER_DEFAULT = 6e5;
@@ -2258,7 +2273,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   }
 
   // js/version.js
-  var APP_VERSION = "0.38.2";
+  var APP_VERSION = "0.39.0";
   var APP_NAME = "VaultManager";
   var REPO_URL = "https://github.com/ulyweb/vaultmanager";
   var FORMATS = [
@@ -2272,6 +2287,10 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     ["Attachments at rest", "AES-256-GCM per file, bound to vault + file id"]
   ];
   var CHANGELOG = [
+    { v: "0.39.0", date: "2026-11-19", notes: [
+      "New: Family recovery (left menu, and a Home widget). Make sure the people you trust can open the vault if you cannot help them. A printable Family guide (who to call, where the USB drive and paper copies are, the steps, your crypto items by name, never a secret). Split a password with Shamir sharing: for example 2 of 3 shares, so no single person or place can open it but any two together can, with a QR code and printable card for every share. Combine shares by typing or scanning them, with typing mistakes and mismatched sets caught. A restore drill with a checklist and a reminder (every 1, 3, 6 or 12 months) so you know recovery really works.",
+      "Crypto wallet items gain Instructions for my family, Where the hardware wallet / seed backup is kept, Wallet app to open it with and Who can help."
+    ] },
     { v: "0.38.2", date: "2026-11-18", notes: [
       "The \u201CHow secure is this? The honest answer\u201D link is gone from the sign-in and create screens. The explanation now lives in Settings \u2192 About \u2192 FAQ (together with short answers on where your data is stored, forgetting the master password, offline / air-gapped use, phones, what leaves your device, and the audit), and is still in the system menu and the guided tour."
     ] },
@@ -2659,6 +2678,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     { id: "stats", label: "Categories", icon: "{{vault}}", size: "m" },
     { id: "sync", label: "Sync status", icon: "{{sync}}", size: "s" },
     { id: "conflicts", label: "Needs review", icon: "{{alert}}", size: "s" },
+    { id: "recovery", label: "Family recovery", icon: "{{shieldlock}}", size: "s" },
     { id: "tip", label: "Security tip", icon: "{{bulb}}", size: "s" }
   ];
   var LOOK_DEFAULTS = {
@@ -3044,6 +3064,10 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     ] },
     crypto: { label: "Crypto wallet", plural: "Crypto", icon: "{{crypto}}", sub: "wallet", tip: "Anyone who gets a recovery seed phrase or private key controls the funds. Keep an offline copy too, never photograph it, and avoid syncing it to devices you do not fully trust.", fields: [
       T("wallet", "Wallet / exchange"),
+      { k: "familynote", l: "Instructions for my family", kind: "multiline" },
+      T("hwwhere", "Where the hardware wallet / seed backup is kept"),
+      T("walletapp", "Wallet app to open it with"),
+      T("helper", "Who can help (name / phone)"),
       SEL("kind", "Type", ["Hardware wallet", "Software wallet", "Exchange account", "Paper wallet", "Other"]),
       DT("added", "Added to vault (date & time)", { auto: true }),
       DT("created", "Wallet created (date & time)"),
@@ -3282,6 +3306,10 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     displayName: "",
     tourSeen: false,
     welcomeAlways: false,
+    family: { contact: "", usb: "", paper: "", holders: "", notes: "" },
+    drillAt: 0,
+    drillDays: 90,
+    // Family recovery: the family guide text and the restore drill
     gen: { mode: "password", length: 20, lower: true, upper: true, digits: true, symbols: true, noAmbiguous: false, words: 10, separator: "-", capitalize: false, number: false },
     sync: { method: "off", token: "", gistId: "", passphrase: "", auto: true, attachments: true, last: null },
     look: LOOK_DEFAULTS
@@ -3471,6 +3499,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       data.tombstones = data.tombstones && typeof data.tombstones === "object" ? data.tombstones : {};
       data.settings = { ...structuredClone(DEFAULT_SETTINGS), ...data.settings || {} };
       data.settings.gen = { ...DEFAULT_SETTINGS.gen, ...data.settings.gen || {} };
+      data.settings.family = { ...DEFAULT_SETTINGS.family, ...data.settings.family || {} };
       data.settings.sync = { ...DEFAULT_SETTINGS.sync, ...data.settings.sync || {} };
       data.settings.look = normalizeLook(data.settings.look || {});
       for (const i of data.items) {
@@ -4199,6 +4228,12 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     for (const k of ["lockOnHide", "logReveal", "tourSeen", "welcomeAlways"]) if (st[k] !== void 0) out[k] = flag(st[k], D2[k]);
     if (typeof st.displayName === "string") out.displayName = st.displayName.replace(/[\u0000-\u001f<>]/g, "").trim().slice(0, 40);
     if (st.gen && typeof st.gen === "object") out.gen = sanitizeGen(st.gen);
+    if (st.family && typeof st.family === "object") {
+      out.family = {};
+      for (const [k, max] of [["contact", 600], ["usb", 400], ["paper", 400], ["holders", 400], ["notes", 1500]]) out.family[k] = typeof st.family[k] === "string" ? st.family[k].replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f<>]/g, "").slice(0, max) : "";
+    }
+    if (st.drillAt !== void 0) out.drillAt = Number.isFinite(+st.drillAt) && +st.drillAt > 0 && +st.drillAt < 4e12 ? Math.floor(+st.drillAt) : 0;
+    if (st.drillDays !== void 0) out.drillDays = [30, 90, 180, 365].includes(+st.drillDays) ? +st.drillDays : 90;
     if (st.look && typeof st.look === "object") out.look = normalizeLook(st.look);
     if (st.sync && typeof st.sync === "object") out.sync = { auto: !!st.sync.auto, attachments: st.sync.attachments !== false };
     return out;
@@ -4386,14 +4421,14 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   }
   function exportCSV(items) {
     const head = ["folder", "favorite", "type", "name", "notes", "fields", "reprompt", "login_uri", "login_username", "login_password", "login_totp"];
-    const lines = [head.join(",")];
+    const lines2 = [head.join(",")];
     for (const i of items) {
       const tpl = TEMPLATES[i.type];
       const extra = [...tpl ? tpl.fields.map((f) => i.fields[f.k] ? f.l + ": " + i.fields[f.k] : "") : [], ...(i.custom || []).map((c) => c.label + ": " + c.value)].filter(Boolean);
       const notes = i.type === "card" ? [i.notes, "Card holder: " + i.card.holder, "Number: " + i.card.number, "Expiry: " + i.card.expiry, "CVV: " + i.card.cvv, ...extra].filter(Boolean).join("\n") : [i.notes, ...extra].filter(Boolean).join("\n");
-      lines.push([(i.tags || [])[0] || "", i.favorite ? 1 : "", i.type === "note" ? "note" : "login", i.name, notes, "", 0, i.url, i.username, i.password, i.totp].map((v, n) => csvCell(v, n !== 9 && n !== 10)).join(","));
+      lines2.push([(i.tags || [])[0] || "", i.favorite ? 1 : "", i.type === "note" ? "note" : "login", i.name, notes, "", 0, i.url, i.username, i.password, i.totp].map((v, n) => csvCell(v, n !== 9 && n !== 10)).join(","));
     }
-    return lines.join("\r\n") + "\r\n";
+    return lines2.join("\r\n") + "\r\n";
   }
   function matches(item, q2) {
     if (!q2) return true;
@@ -4781,6 +4816,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     ["Can I use it offline, even air-gapped?", "Yes, and that is what it was built for. Download the offline copy (one file), keep it on a USB drive and open it on a computer with no internet. Turn off all browser extensions while you use it."],
     ["Does it work on a phone?", "Yes. Open the site in the phone\u2019s browser and add it to the home screen. Phones and tablets lock the vault as soon as the app is hidden."],
     ["What leaves my device?", "Nothing, unless you turn on optional features: GitHub gist sync (encrypted before it leaves), Beam to another device, or the contact-admin note. Watch your browser\u2019s Network tab to see for yourself."],
+    ["How can my family get in if something happens to me?", "Open Family recovery in the left menu. It helps you write a printable guide for them, split the vault password into shares (for example any 2 of 3 people can rebuild it, but no single person can), and run a restore drill so you know it really works. Keep the sealed data and the password shares in different places."],
     ["Is it audited?", "No. It has been tested heavily and its code is public so anyone can read it, but it has not had an independent security audit. Read \u201CHow secure is this, honestly?\u201D above for what that means."]
   ];
   function trustDialog() {
@@ -7827,6 +7863,466 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     return page("Task manager", "What VaultManager is holding in memory and on disk, right now. Everything is read on this device only.", bar0, body);
   }
 
+  // js/shamir.js
+  var EXP = new Uint8Array(512);
+  var LOG = new Uint8Array(256);
+  (() => {
+    let x = 1;
+    for (let i = 0; i < 255; i++) {
+      EXP[i] = x;
+      LOG[x] = i;
+      x ^= x << 1 ^ (x & 128 ? 283 : 0);
+      x &= 255;
+    }
+    for (let i = 255; i < 512; i++) EXP[i] = EXP[i - 255];
+  })();
+  var gfMul = (a, b) => a === 0 || b === 0 ? 0 : EXP[LOG[a] + LOG[b]];
+  var gfDiv = (a, b) => {
+    if (b === 0) throw new RangeError("divide by zero");
+    return a === 0 ? 0 : EXP[(LOG[a] + 255 - LOG[b]) % 255];
+  };
+  var B323 = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+  var b32enc = (u8) => {
+    let bits = 0, val = 0, out = "";
+    for (const b of u8) {
+      val = val << 8 | b;
+      bits += 8;
+      while (bits >= 5) {
+        out += B323[val >>> bits - 5 & 31];
+        bits -= 5;
+      }
+    }
+    if (bits) out += B323[val << 5 - bits & 31];
+    return out;
+  };
+  var b32dec = (s) => {
+    let bits = 0, val = 0;
+    const out = [];
+    for (const ch of s) {
+      const i = B323.indexOf(ch);
+      if (i < 0) throw new Error("A share contains a character that is not allowed.");
+      val = val << 5 | i;
+      bits += 5;
+      if (bits >= 8) {
+        out.push(val >>> bits - 8 & 255);
+        bits -= 8;
+      }
+    }
+    return Uint8Array.from(out);
+  };
+  var CRC_T = (() => {
+    const t = new Uint32Array(256);
+    for (let n = 0; n < 256; n++) {
+      let c = n;
+      for (let k = 0; k < 8; k++) c = c & 1 ? 3988292384 ^ c >>> 1 : c >>> 1;
+      t[n] = c >>> 0;
+    }
+    return t;
+  })();
+  var crc32 = (u8) => {
+    let c = 4294967295;
+    for (const b of u8) c = CRC_T[(c ^ b) & 255] ^ c >>> 8;
+    return (c ^ 4294967295) >>> 0;
+  };
+  var MAX_SECRET_BYTES = 200;
+  var PAD = 32;
+  var enc = new TextEncoder();
+  var dec = new TextDecoder("utf-8", { fatal: true });
+  var pack = (k, n, x, id, data) => {
+    const body = new Uint8Array(10 + data.length);
+    body.set([86, 83, 1, k, n, x]);
+    body.set(id, 6);
+    body.set(data, 10);
+    const out = new Uint8Array(body.length + 4);
+    out.set(body);
+    new DataView(out.buffer).setUint32(body.length, crc32(body));
+    const t = b32enc(out);
+    return "VMS1-" + t.match(/.{1,5}/g).join("-");
+  };
+  function parseShare(text2) {
+    const t = String(text2).toUpperCase().replace(/[\s-]+/g, "");
+    if (!t.startsWith("VMS1")) throw new Error("That does not look like a VaultManager share (it should start with VMS1-).");
+    const raw = b32dec(t.slice(4));
+    if (raw.length < 15) throw new Error("That share is too short.");
+    const body = raw.slice(0, raw.length - 4), want = new DataView(raw.buffer, raw.byteOffset + raw.length - 4, 4).getUint32(0);
+    if (crc32(body) !== want) throw new Error("A share has a typing mistake (its check code does not match). Re-enter it carefully, or scan its QR code.");
+    if (body[0] !== 86 || body[1] !== 83 || body[2] !== 1) throw new Error("That share is from a different version.");
+    const k = body[3], n = body[4], x = body[5];
+    if (!(k >= 2 && k <= n && x >= 1 && x <= n)) throw new Error("That share is damaged.");
+    return { k, n, x, id: body.slice(6, 10), data: body.slice(10) };
+  }
+  function split(secret, k, n, random = (u8) => crypto.getRandomValues(u8)) {
+    if (!Number.isInteger(k) || !Number.isInteger(n) || k < 2 || n < k || n > 10) throw new RangeError("Choose 2 or more shares needed, out of at most 10.");
+    const bytes2 = enc.encode(String(secret));
+    if (!bytes2.length) throw new Error("There is nothing to split.");
+    if (bytes2.length > MAX_SECRET_BYTES) throw new Error(`That is too long to split (limit ${MAX_SECRET_BYTES} bytes).`);
+    const padded = new Uint8Array(Math.ceil((bytes2.length + 1) / PAD) * PAD);
+    padded[0] = bytes2.length;
+    padded.set(bytes2, 1);
+    const id = random(new Uint8Array(4));
+    const coef = random(new Uint8Array(padded.length * (k - 1)));
+    const shares = [];
+    for (let x = 1; x <= n; x++) {
+      const data = new Uint8Array(padded.length);
+      for (let i = 0; i < padded.length; i++) {
+        let y = 0;
+        for (let j = k - 1; j >= 1; j--) y = gfMul(y, x) ^ coef[i * (k - 1) + (j - 1)];
+        data[i] = gfMul(y, x) ^ padded[i];
+      }
+      shares.push(pack(k, n, x, id, data));
+    }
+    return shares;
+  }
+  var interpolateAt = (pts, x0) => {
+    let acc = 0;
+    for (let i = 0; i < pts.length; i++) {
+      let num2 = 1, den = 1;
+      for (let j = 0; j < pts.length; j++) if (i !== j) {
+        num2 = gfMul(num2, x0 ^ pts[j][0]);
+        den = gfMul(den, pts[i][0] ^ pts[j][0]);
+      }
+      acc ^= gfMul(pts[i][1], gfDiv(num2, den));
+    }
+    return acc;
+  };
+  function combine(texts) {
+    const list = texts.map(parseShare);
+    if (!list.length) throw new Error("Add the shares first.");
+    const { k, n, id, data } = list[0];
+    for (const s of list) {
+      if (s.k !== k || s.n !== n || s.data.length !== data.length || s.id.some((b, i) => b !== id[i])) throw new Error("These shares do not belong to the same secret.");
+    }
+    const xs = new Set(list.map((s) => s.x));
+    if (xs.size !== list.length) throw new Error("The same share was entered twice. Each person\u2019s share is different.");
+    if (list.length < k) throw new Error(`${k} shares are needed to open this, and only ${list.length} ${list.length === 1 ? "was" : "were"} entered.`);
+    const base = list.slice(0, k), out = new Uint8Array(data.length);
+    for (let i = 0; i < data.length; i++) out[i] = interpolateAt(base.map((s) => [s.x, s.data[i]]), 0);
+    for (const extra of list.slice(k)) for (let i = 0; i < data.length; i++) if (interpolateAt(base.map((s) => [s.x, s.data[i]]), extra.x) !== extra.data[i]) throw new Error("One of the shares is wrong or damaged: the shares do not agree with each other.");
+    const len = out[0];
+    if (len === 0 || len + 1 > out.length) throw new Error("These shares did not combine into a valid secret.");
+    for (let i = len + 1; i < out.length; i++) if (out[i] !== 0) throw new Error("These shares did not combine into a valid secret.");
+    try {
+      return dec.decode(out.slice(1, 1 + len));
+    } catch {
+      throw new Error("These shares did not combine into a valid secret.");
+    }
+  }
+  var shareInfo = (text2) => {
+    const s = parseShare(text2);
+    return { k: s.k, n: s.n, x: s.x, id: [...s.id].map((b) => b.toString(16).padStart(2, "0")).join("") };
+  };
+
+  // js/family.js
+  var lines = (t) => String(t || "").split(/\n+/).map((x) => x.trim()).filter(Boolean);
+  function guideNodes(ctx2) {
+    const st = ctx2.store.settings, f = st.family || {}, wallets = ctx2.store.active().filter((i) => i.type === "crypto");
+    const blank = h("i", { text: "(not filled in yet)" });
+    const para = (t) => t && t.trim() ? lines(t).map((x) => h("p", { text: x })) : h("p", null, blank);
+    return [
+      h("h1", { text: "Family recovery guide" }),
+      h("p", { text: `Prepared ${fmtDate(Date.now())}${st.displayName ? " for " + st.displayName : ""}. This sheet has no passwords or secret words on it.` }),
+      h("h2", { text: "Read this first" }),
+      h("p", { text: "This is a private, encrypted vault (VaultManager) that holds important accounts and cryptocurrency information. It was set up so that you can get into it if I cannot help you. Take your time: nothing here is urgent. Never share any of it with anyone who contacts you offering to \u201Chelp recover\u201D it. That is how scams work." }),
+      h("h2", { text: "Who to call first" }),
+      ...[].concat(para(f.contact)),
+      h("h2", { text: "Where things are" }),
+      h("p", null, h("b", { text: "The vault (USB drive or file): " }), f.usb && f.usb.trim() ? f.usb : blank),
+      h("p", null, h("b", { text: "Printed QR codes and paper copies: " }), f.paper && f.paper.trim() ? f.paper : blank),
+      h("p", null, h("b", { text: "Who holds the password shares: " }), f.holders && f.holders.trim() ? f.holders : blank),
+      h("p", { text: "The vault\u2019s password is split into pieces held by different people or places. A set number of pieces together reveal it (the pieces say how many); one piece alone is useless. Collect them from the people named above." }),
+      h("h2", { text: "Steps" }),
+      h(
+        "ol",
+        null,
+        h("li", { text: "Find the USB drive, or the file named VaultManager-offline\u2026 .html. Before you open it, turn off all browser extensions (or use a private window). Then double-click the file: it opens in your web browser. No internet is needed." }),
+        h("li", { text: "In the left menu choose \u201CFamily recovery\u201D, then \u201CCombine shares\u201D. Type each share (or scan its QR code). When enough are entered, the password appears." }),
+        h("li", { text: "Sign in with the profile name and that password. If there are sealed QR codes or backup files, use QR tools \u2192 Open QR (or Import) with the same password." }),
+        h("li", { text: "In the left menu open \u201CCrypto\u201D. Each wallet has \u201CInstructions for my family\u201D, where the hardware wallet is, and which app opens it." }),
+        h("li", { text: "Do not rush and do not move any funds until you have read the instructions and asked someone you trust. Never type a seed phrase into a website or send it to anyone." })
+      ),
+      h("h2", { text: "Crypto items in the vault" }),
+      wallets.length ? h("ul", null, wallets.map((w) => h("li", { text: w.name || "(untitled)" }))) : h("p", null, h("i", { text: "None recorded yet." })),
+      h("h2", { text: "Anything else" }),
+      ...[].concat(para(f.notes))
+    ];
+  }
+  function guideTab(ctx2) {
+    const st = ctx2.store.settings;
+    st.family = { contact: "", usb: "", paper: "", holders: "", notes: "", ...st.family || {} };
+    const wallets = ctx2.store.active().filter((i) => i.type === "crypto"), withNote = wallets.filter((w) => ((w.fields || {}).familynote || "").trim()).length, d = drillState(st);
+    const prev = h("div", { class: "guideprev" }, guideNodes(ctx2));
+    let timer = 0;
+    const save = () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => persist(ctx2), 500);
+      clear(prev).append(guideNodes(ctx2));
+    };
+    const bind = (key, rows, label, hint) => {
+      const ta = h("textarea", { class: "ta", rows: String(rows), "aria-label": label, maxlength: "1500", spellcheck: "false", on: { input: (e) => {
+        st.family[key] = e.target.value;
+        save();
+      } } }, st.family[key] || "");
+      return field2(label, ta, hint);
+    };
+    const row2 = (ok, text2) => h("li", { class: ok ? "ok" : "todo" }, h("b", { text: ok ? "\u2713 " : "\u25CB " }), text2);
+    return h(
+      "div",
+      null,
+      h(
+        "div",
+        { class: "panel pad" },
+        h("h3", { text: "Is your family ready?" }),
+        h(
+          "ul",
+          { class: "readiness" },
+          row2(wallets.length > 0, wallets.length ? `${wallets.length} crypto item${wallets.length === 1 ? "" : "s"} recorded (${withNote} with \u201CInstructions for my family\u201D)` : "No crypto items recorded yet (add one from New \u2192 Crypto wallet)"),
+          row2(!!(st.family.contact || "").trim() && !!(st.family.usb || "").trim(), "The guide below says who to call and where the USB drive is"),
+          row2(d.days !== null && !d.due, d.days === null ? "Recovery has never been tested (Restore drill tab)" : d.due ? `Last test was ${d.days} days ago, so a new one is due` : `Tested ${d.days} day${d.days === 1 ? "" : "s"} ago`)
+        ),
+        h("p", { class: "hint", text: "A good setup has three layers kept in different places: the sealed data (USB, QR codes, backup file), the password (split between people with \u201CSplit a password\u201D), and this guide so they know what to do." })
+      ),
+      h(
+        "div",
+        { class: "panel pad" },
+        h("h3", { text: "Write the guide" }),
+        bind("contact", 3, "Who to call first (names and phone numbers)"),
+        bind("usb", 2, "Where the USB drive or offline file is"),
+        bind("paper", 2, "Where the printed QR codes and paper copies are"),
+        bind("holders", 2, "Who holds the password shares (names only, never the shares themselves)"),
+        bind("notes", 4, "Anything else they should know", "Saved automatically, encrypted inside your vault."),
+        h(
+          "div",
+          { class: "row wrap" },
+          h("button", { class: "btn primary", on: { click: () => printNodes(guideNodes(ctx2)) } }, "{{print}} Print the family guide"),
+          h("button", { class: "btn", on: { click: () => {
+            ctx2.S.qrTab = "backup";
+            ctx2.go("qr");
+          } } }, "{{qr}} Make an encrypted QR backup")
+        )
+      ),
+      h("div", { class: "panel pad" }, h("h3", { text: "Preview" }), prev)
+    );
+  }
+  function splitTab(ctx2) {
+    const secret = h("textarea", { class: "ta mono", rows: "3", "aria-label": "Password to split", spellcheck: "false", autocomplete: "off", placeholder: "The password to protect, for example the one that opens your sealed QR codes or backup" });
+    const nSel = sel(3, [2, 3, 4, 5, 6, 7, 8, 9, 10].map((v) => [v, String(v)]), () => paintHolders());
+    const kSel = sel(2, [2, 3, 4, 5, 6, 7, 8, 9, 10].map((v) => [v, String(v)]), () => {
+    });
+    const holdersBox = h("div", { class: "row wrap" }), out = h("div"), err = h("p", { class: "err", role: "alert" });
+    let names = ["Spouse", "Trusted relative", "Safe / lockbox"];
+    const paintHolders = () => {
+      const n = +nSel.value;
+      clear(holdersBox);
+      for (let i = 0; i < n; i++) holdersBox.append(h("input", { class: "inp", maxlength: "40", value: names[i] || "", placeholder: "Holder " + (i + 1), "aria-label": "Holder of share " + (i + 1), on: { input: (e) => {
+        names[i] = e.target.value;
+      } } }));
+    };
+    paintHolders();
+    const make = async () => {
+      err.textContent = "";
+      clear(out);
+      const k = +kSel.value, n = +nSel.value;
+      if (k > n) {
+        err.textContent = "The number needed cannot be more than the number of shares.";
+        return;
+      }
+      if (!secret.value.trim()) {
+        err.textContent = "Enter the password to split.";
+        return;
+      }
+      try {
+        const shares = split(secret.value, k, n);
+        if (combine(shares.slice(0, k)) !== secret.value || combine(shares.slice(n - k)) !== secret.value) throw new Error("The check failed, so nothing was created. Try again.");
+        const cards = [], printables = [];
+        for (let i = 0; i < n; i++) {
+          const who = (names[i] || "").trim();
+          const mk = async () => {
+            const c = h("canvas", { role: "img", "aria-label": "QR code of share " + (i + 1) });
+            await drawQR(c, shares[i], { scale: 4 });
+            return c;
+          };
+          const canvas = await mk();
+          cards.push(h(
+            "div",
+            { class: "sharecard" },
+            h("h4", { text: `Share ${i + 1} of ${n}${who ? " \u2014 " + who : ""}` }),
+            h("div", { class: "qrbox" }, canvas),
+            h("code", { class: "sharetext", text: shares[i] }),
+            h("div", { class: "row wrap" }, h("button", { class: "btn sm", on: { click: () => copyText(shares[i], "Share copied", 60) } }, "{{copy}} Copy"), h("button", { class: "btn sm", on: { click: async () => printNodes([h("h1", { text: `VaultManager password share ${i + 1} of ${n}` }), h("p", { text: who ? "Held by: " + who : "" }), h("p", { text: `Any ${k} of the ${n} shares together open the password. One share alone is useless.` }), await mk(), h("p", { class: "mono", text: shares[i] }), h("p", { text: "Keep this paper apart from the other shares and from the vault. Anyone who gathers enough shares can open it." })]) } }, "{{print}} Print this one"))
+          ));
+          printables.push(async () => [h("h2", { text: `Share ${i + 1} of ${n}${who ? " \u2014 " + who : ""}` }), await mk(), h("p", { class: "mono", text: shares[i] })]);
+        }
+        out.append(
+          h("div", { class: "note ok", role: "status", text: `\u2713 Checked: any ${k} of these ${n} shares recover the password; fewer than ${k} reveal nothing.` }),
+          h("div", { class: "sharegrid" }, cards),
+          h("div", { class: "row wrap" }, h("button", { class: "btn primary", on: { click: async () => {
+            const all = [h("h1", { text: "VaultManager password shares" }), h("p", { text: `Any ${k} of ${n} open the password. Cut the page apart and give each share to a different person or place.` })];
+            for (const p of printables) all.push(...await p());
+            printNodes(all);
+          } } }, "{{print}} Print all shares"), purgeButton(ctx2)),
+          h("p", { class: "hint", text: "Give each share to a different person or put it in a different place. Then press Purge memory and clear this screen: the shares are not stored in the vault." })
+        );
+      } catch (e) {
+        err.textContent = e.message;
+      }
+    };
+    return h(
+      "div",
+      { class: "panel pad" },
+      h("p", { class: "note warn", text: "Splitting means no single person or place can open your vault password alone, yet your family can still open it together. Choose how many shares exist and how many are needed. 2 of 3 is a good start: one with your spouse, one with a trusted relative, one in a safe." }),
+      field2("Password to split", secret, `Up to ${MAX_SECRET_BYTES} characters. It is not saved anywhere.`),
+      h("div", { class: "row wrap" }, field2("Shares needed to open it", kSel), field2("Total shares", nSel)),
+      field2("Who holds each share (optional, printed on the card)", holdersBox),
+      h("div", { class: "row wrap" }, h("button", { class: "btn primary", on: { click: make } }, "{{shieldlock}} Create the shares")),
+      err,
+      out
+    );
+  }
+  function combineTab(ctx2) {
+    const box = h("textarea", { class: "ta mono", rows: "5", "aria-label": "Shares", spellcheck: "false", autocomplete: "off", placeholder: "Type or paste one share per line (they start with VMS1-)" });
+    const status = h("p", { class: "hint", "aria-live": "polite" }), err = h("p", { class: "err", role: "alert" }), out = h("div");
+    const video = h("video", { muted: true, playsinline: true, "aria-label": "Camera preview" }), scanBox = h("div", { class: "scanner", hidden: true }, video);
+    let stop = null;
+    const stopScan = () => {
+      if (stop) {
+        stop();
+        stop = null;
+      }
+      scanBox.hidden = true;
+    };
+    ctx2.cleanup.push(stopScan);
+    const shareLines = () => box.value.split(/\n/).map((x) => x.trim()).filter(Boolean);
+    const update = () => {
+      try {
+        const ls = shareLines();
+        if (!ls.length) {
+          status.textContent = "";
+          return;
+        }
+        const i = shareInfo(ls[0]);
+        status.textContent = `${new Set(ls).size} share${ls.length === 1 ? "" : "s"} entered. ${i.k} of ${i.n} are needed.`;
+      } catch {
+        status.textContent = "";
+      }
+    };
+    box.addEventListener("input", update);
+    const addText = (t) => {
+      if (!/VMS1/i.test(t)) {
+        err.textContent = "That QR code is not a VaultManager share.";
+        return;
+      }
+      err.textContent = "";
+      if (!shareLines().includes(t.trim())) box.value = (box.value.trim() ? box.value.trim() + "\n" : "") + t.trim();
+      update();
+    };
+    const scan = h("button", { class: "btn", on: { click: async () => {
+      err.textContent = "";
+      if (stop) {
+        stopScan();
+        return;
+      }
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        err.textContent = "The camera is not available here. Use \u201CImage file\u201D, or type the share.";
+        return;
+      }
+      try {
+        scanBox.hidden = false;
+        stop = await startScanner(video, addText);
+      } catch (e) {
+        scanBox.hidden = true;
+        err.textContent = "Could not start the camera: " + (e.message || e.name);
+      }
+    } } }, "{{camera}} Scan a QR");
+    const file = h("input", { type: "file", accept: "image/*", class: "offscreen", "aria-label": "Share QR image", on: { change: async (e) => {
+      for (const f of Array.from(e.target.files || [])) {
+        try {
+          const t = await decodeFile(f);
+          if (t) addText(t);
+          else err.textContent = "No QR code found in " + f.name + ".";
+        } catch (x) {
+          err.textContent = "Could not read that image: " + x.message;
+        }
+      }
+      e.target.value = "";
+    } } });
+    file.multiple = true;
+    const go = () => {
+      err.textContent = "";
+      clear(out);
+      try {
+        const pw = combine(shareLines());
+        const field1 = h("input", { class: "inp mono", type: "password", readOnly: true, value: pw, "aria-label": "Recovered password" });
+        const eye = h("button", { class: "btn sm", type: "button", "aria-label": "Show or hide the password", on: { click: () => {
+          field1.type = field1.type === "password" ? "text" : "password";
+        } } }, "{{eye}}");
+        out.append(h("div", { class: "note ok", role: "status", text: "\u2713 The shares fit together. This is the password:" }), h("div", { class: "row" }, h("div", { class: "grow" }, field1), eye, h("button", { class: "btn sm", on: { click: () => copyText(pw, "Password copied", 30) } }, "{{copy}} Copy")), h("p", { class: "hint", text: "Use it to sign in, or to open sealed QR codes and backups. Press Purge memory when you are done." }), purgeButton(ctx2));
+      } catch (e) {
+        err.textContent = e.message;
+      }
+    };
+    return h(
+      "div",
+      { class: "panel pad" },
+      h("p", { class: "hint", text: "Enter enough shares to get a password back. Shares are checked for typing mistakes and for belonging together." }),
+      box,
+      status,
+      h("div", { class: "row wrap" }, scan, h("button", { class: "btn", on: { click: () => file.click() } }, "{{folder}} Image file\u2026"), file, h("button", { class: "btn primary", on: { click: go } }, "{{unlock}} Combine"), purgeButton(ctx2)),
+      scanBox,
+      err,
+      out
+    );
+  }
+  var DRILL_STEPS = [
+    "On a different computer (not your usual one), I opened the offline file or the sealed QR.",
+    "Someone other than me combined the password shares and got the password back.",
+    "With that password we opened the sealed QR code or the backup and saw the items.",
+    "A family member did the steps from the printed guide, without my help.",
+    "We wrote down anything that was confusing and fixed it in the guide."
+  ];
+  function drillTab(ctx2) {
+    const st = ctx2.store.settings, d = drillState(st), boxes = DRILL_STEPS.map((t, i) => h("label", { class: "chk", for: "drill" + i }, h("input", { type: "checkbox", id: "drill" + i }), t));
+    const statusLine = d.days === null ? "You have never run a restore drill." : `Last drill: ${fmtDate(st.drillAt)} (${d.days} day${d.days === 1 ? "" : "s"} ago).`;
+    return h(
+      "div",
+      { class: "panel pad" },
+      h("p", { class: d.due ? "note warn" : "note ok", role: "status", text: statusLine + (d.due ? " A new drill is due." : " Not due yet.") }),
+      h("p", { class: "hint", text: "A recovery plan that has never been tried usually fails the first time it is needed. Do this every few months, with the person who would really have to do it." }),
+      h("div", { class: "drill" }, boxes),
+      field2("Remind me every", sel(st.drillDays || 90, [[30, "1 month"], [90, "3 months"], [180, "6 months"], [365, "12 months"]], (v) => {
+        st.drillDays = +v;
+        persist(ctx2);
+      })),
+      h("div", { class: "row wrap" }, h("button", { class: "btn primary", on: { click: async () => {
+        const done = boxes.filter((b) => b.querySelector("input").checked).length;
+        if (done < DRILL_STEPS.length) {
+          toast(`Tick all ${DRILL_STEPS.length} steps first. Anything you skip is a place where recovery could fail.`, "warn", 5e3);
+          return;
+        }
+        st.drillAt = Date.now();
+        ctx2.store.log("settings", "Family recovery drill completed");
+        await persist(ctx2);
+        toast("Recorded: recovery tested today");
+        ctx2.refresh();
+      } } }, "{{check}} We tested it today"))
+    );
+  }
+  function renderFamily(ctx2) {
+    const tabs = [["guide", "Family guide"], ["split", "Split a password"], ["combine", "Combine shares"], ["drill", "Restore drill"]];
+    const body = h("div");
+    const show = (k) => {
+      ctx2.S.famTab = k;
+      ctx2.runCleanup();
+      Array.from(bar2.children).forEach((b, i) => {
+        b.classList.toggle("on", tabs[i][0] === k);
+        b.setAttribute("aria-selected", String(tabs[i][0] === k));
+      });
+      clear(body).append(k === "guide" ? guideTab(ctx2) : k === "split" ? splitTab(ctx2) : k === "combine" ? combineTab(ctx2) : drillTab(ctx2));
+    };
+    const bar2 = h("div", { class: "tabs", role: "tablist" }, tabs.map(([k, l]) => h("button", { role: "tab", on: { click: () => show(k) } }, l)));
+    show(ctx2.S.famTab || "guide");
+    return page("Family recovery", "Make sure the people you trust can open the vault if you cannot help: a guide they can follow, a password only they can rebuild together, and a drill to prove it works.", bar2, body);
+  }
+
   // js/landscapes.js
   var W = 1600;
   var H = 900;
@@ -8346,7 +8842,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       ))
     );
   }
-  var NAV_LABELS = { fav: "Favorites", trash: "Trash", health: "Vault health", gen: "Generator", qr: "QR tools", beam: "Beam sync", data: "Import & export", tm: "Task manager", cats: "Categories (dock button)" };
+  var NAV_LABELS = { fav: "Favorites", trash: "Trash", health: "Vault health", gen: "Generator", qr: "QR tools", family: "Family recovery", beam: "Beam sync", data: "Import & export", tm: "Task manager", cats: "Categories (dock button)" };
   function visibilityPanel(ctx2) {
     const L = () => ctx2.look();
     const wrap3 = h("div");
@@ -9896,8 +10392,8 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   var MAX_CODE = 24e3;
   var MAX_BUNDLE = 150 * 1048576;
   var ATTACH_CAP = 60 * 1048576;
-  var enc = new TextEncoder();
-  var dec = new TextDecoder();
+  var enc2 = new TextEncoder();
+  var dec2 = new TextDecoder();
   var supported2 = () => !!globalThis.RTCPeerConnection;
   var b64u = (u8) => {
     let s = "";
@@ -9912,7 +10408,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   };
   var pipe = async (bytes2, Stream) => new Uint8Array(await new Response(new Blob([bytes2]).stream().pipeThrough(new Stream("deflate-raw"))).arrayBuffer());
   async function encode(type, sdp) {
-    const raw = enc.encode(JSON.stringify({ t: type, s: sdp }));
+    const raw = enc2.encode(JSON.stringify({ t: type, s: sdp }));
     if (globalThis.CompressionStream) return "BEAM1." + b64u(await pipe(raw, CompressionStream));
     return "BEAM0." + b64u(raw);
   }
@@ -9935,7 +10431,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     }
     let o;
     try {
-      o = JSON.parse(dec.decode(raw));
+      o = JSON.parse(dec2.decode(raw));
     } catch {
       throw new Error("That Beam code is damaged");
     }
@@ -9945,7 +10441,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   var fingerprints = (sdp) => [...sdp.matchAll(/a=fingerprint:sha-256 ([0-9A-Fa-f:]+)/g)].map((m) => m[1].toUpperCase());
   async function verifyCode(a, b) {
     const f = [...fingerprints(a), ...fingerprints(b)].sort().join("|");
-    const d = new Uint8Array(await crypto.subtle.digest("SHA-256", enc.encode("VaultManager-beam|" + f)));
+    const d = new Uint8Array(await crypto.subtle.digest("SHA-256", enc2.encode("VaultManager-beam|" + f)));
     const n = (d[0] << 24 | d[1] << 16 | d[2] << 8 | d[3]) >>> 0;
     const s = String(n % 1e6).padStart(6, "0");
     return s.slice(0, 3) + " " + s.slice(3);
@@ -10271,7 +10767,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       try {
         progress("Sealing your vault\u2026");
         const bundle = await store2.buildBundle({ withAttachments: cfg.attachments, maxAttachmentBytes: ATTACH_CAP });
-        const payload = enc.encode(await sealBundle(bundle, cfg.passphrase, { maxPayload: MAX_BUNDLE }));
+        const payload = enc2.encode(await sealBundle(bundle, cfg.passphrase, { maxPayload: MAX_BUNDLE }));
         link.send({ t: "bundle", bytes: payload.length });
         for (let o = 0; o < payload.length; o += CHUNK2) {
           await link.sendBin(payload.slice(o, o + CHUNK2).buffer);
@@ -10322,7 +10818,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
           o += p.length;
         }
         st.incoming = null;
-        const bundle = await openBundle(dec.decode(all), cfg.passphrase);
+        const bundle = await openBundle(dec2.decode(all), cfg.passphrase);
         const res = await store2.applyRemote(bundle);
         st.mine = res;
         store2.log("sync", `Beam sync completed \u2014 ${res.added} added, ${res.updated} updated, ${res.removed} removed, ${res.attachments} attachment(s) (code ${verify})`);
@@ -10517,6 +11013,15 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       const i = setInterval(tick, 1e3);
       ctx2.cleanup.push(() => clearInterval(i));
       return box;
+    },
+    recovery(ctx2) {
+      const st = ctx2.store.settings, d = drillState(st), crypto2 = ctx2.store.active().filter((i) => i.type === "crypto").length;
+      return h(
+        "div",
+        null,
+        h("p", { class: "hint", text: d.days === null ? "Your family recovery has never been tested." : `Last tested ${d.days} day${d.days === 1 ? "" : "s"} ago.` + (crypto2 ? ` ${crypto2} crypto item${crypto2 === 1 ? "" : "s"} covered.` : "") }),
+        h("div", { class: "row wrap", style: null }, h("span", { class: "chip " + (d.due ? "warn" : "accent"), text: d.due ? "Test due" : "Up to date" }), h("button", { class: "btn sm", on: { click: () => ctx2.go("family") } }, "Open Family recovery"))
+      );
     },
     expiring(ctx2) {
       const rep = health(ctx2.store.items).expiring.slice(0, 5);
@@ -11134,14 +11639,14 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   var syncSpace = () => space.set(!store.unlocked ? "gate" : ctx.S.view === "home" && !ctx.S.sel ? "home" : "off");
   function showBoot(L, done) {
     const iter = store.session ? store.session.iterations() : 0, n = store.active().length;
-    const lines = [["VaultManager " + APP_VERSION, ""], ["Unwrapping master key", "PBKDF2-SHA256 \xB7 " + fmtInt(iter) + " rounds \u2713"], ["Decrypting vault", "AES-256-GCM \u2713"], ["Verifying integrity tag", "{{check}}"], ["Loading " + n + " item" + (n === 1 ? "" : "s"), "{{check}}"], ["Audit trail & auto-lock", "armed \u2713"], ["Ready", ""]];
+    const lines2 = [["VaultManager " + APP_VERSION, ""], ["Unwrapping master key", "PBKDF2-SHA256 \xB7 " + fmtInt(iter) + " rounds \u2713"], ["Decrypting vault", "AES-256-GCM \u2713"], ["Verifying integrity tag", "{{check}}"], ["Loading " + n + " item" + (n === 1 ? "" : "s"), "{{check}}"], ["Audit trail & auto-lock", "armed \u2713"], ["Ready", ""]];
     const el = h("div", { id: "boot", role: "status", "aria-label": "Starting" }, h(
       "div",
       { class: "boot-box" },
       h("img", { class: "boot-logo", src: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImciIHgxPSIwIiB5MT0iMCIgeDI9IjEiIHkyPSIxIj48c3RvcCBvZmZzZXQ9IjAiIHN0b3AtY29sb3I9IiMyZmU2ZDAiLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiM1OWI0ZmYiLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz48cmVjdCB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgcng9IjExMiIgZmlsbD0iIzA1MDgwZCIvPjxyZWN0IHg9IjQwIiB5PSI0MCIgd2lkdGg9IjQzMiIgaGVpZ2h0PSI0MzIiIHJ4PSI4NCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMTUyNTM0IiBzdHJva2Utd2lkdGg9IjYiLz48cGF0aCBkPSJNMjU2IDk2bDEzMiA0OHYxMDJjMCA4OC01NiAxNDQtMTMyIDE3MC03Ni0yNi0xMzItODItMTMyLTE3MFYxNDR6IiBmaWxsPSJub25lIiBzdHJva2U9InVybCgjZykiIHN0cm9rZS13aWR0aD0iMjIiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz48Y2lyY2xlIGN4PSIyNTYiIGN5PSIyMzIiIHI9IjM4IiBmaWxsPSJ1cmwoI2cpIi8+PHBhdGggZD0iTTI1NiAyNjJ2NzQiIHN0cm9rZT0idXJsKCNnKSIgc3Ryb2tlLXdpZHRoPSIyNiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+PC9zdmc+Cg==", alt: "", width: "64", height: "64" }),
       h("div", { class: "boot-title" }, "Vault", h("span", { text: "Manager" })),
       h("div", { class: "bar" }, h("i")),
-      h("div", { class: "boot-lines" }, lines.map(([a, b], i) => {
+      h("div", { class: "boot-lines" }, lines2.map(([a, b], i) => {
         const l = h("div", { class: "l" }, "> ", h("b", { text: a }), b ? "  " + b : "");
         l.style.animationDelay = i * 0.12 / L.animSpeed + "s";
         return l;
@@ -11167,7 +11672,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       const i = el.querySelector(".bar i");
       if (i) i.style.width = "100%";
     });
-    setTimeout(finish2, (lines.length * 0.12 + 0.35) / L.animSpeed * 1e3);
+    setTimeout(finish2, (lines2.length * 0.12 + 0.35) / L.animSpeed * 1e3);
   }
   function onUnlocked(note) {
     const L = curLook();
@@ -11611,7 +12116,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   var shell = null;
   var MIN_MASTER_BITS = 60;
   var NAV = [["home", "{{home}}", "Home"], ["all", "{{vault}}", "All items"], ["fav", "{{star}}", "Favorites"], ["trash", "{{trash}}", "Trash"]];
-  var TOOLS = [["health", "{{pulse}}", "Vault health"], ["gen", "{{bolt}}", "Generator"], ["qr", "{{qr}}", "QR tools"], ["beam", "{{beam}}", "Beam sync"], ["data", "{{swap}}", "Import & export"], ["tm", "{{chip}}", "Task manager"], ["settings", "{{gear}}", "Settings"]];
+  var TOOLS = [["health", "{{pulse}}", "Vault health"], ["gen", "{{bolt}}", "Generator"], ["qr", "{{qr}}", "QR tools"], ["family", "{{shieldlock}}", "Family recovery"], ["beam", "{{beam}}", "Beam sync"], ["data", "{{swap}}", "Import & export"], ["tm", "{{chip}}", "Task manager"], ["settings", "{{gear}}", "Settings"]];
   var hid = { cat: (k) => curLook().hiddenCats.includes(k), nav: (id) => curLook().hiddenNav.includes(id) };
   var visGroups = () => GROUPS.map(([g, keys]) => [g, keys.filter((k) => !hid.cat(k))]).filter(([, keys]) => keys.length);
   var visTools = () => TOOLS.filter(([id]) => !hid.nav(id));
@@ -11697,7 +12202,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       it("more", "{{menu}}", "More", inMore && v !== "home" && v !== "gen" && v !== "all", () => moreSheet(), attention)
     );
   }
-  var viewTitle = (v) => ({ home: "Home", all: "All items", fav: "Favorites", trash: "Trash", conflicts: "Needs review", gen: "Generator", health: "Vault health", qr: "QR tools", beam: "Beam sync", data: "Import & export", tm: "Task manager", settings: "Settings" })[v] || (v in TYPE_META ? TYPE_META[v].plural : v.startsWith("tag:") ? "#" + v.slice(4) : "");
+  var viewTitle = (v) => ({ home: "Home", all: "All items", fav: "Favorites", trash: "Trash", conflicts: "Needs review", gen: "Generator", health: "Vault health", qr: "QR tools", family: "Family recovery", beam: "Beam sync", data: "Import & export", tm: "Task manager", settings: "Settings" })[v] || (v in TYPE_META ? TYPE_META[v].plural : v.startsWith("tag:") ? "#" + v.slice(4) : "");
   function drawTitle() {
     if (shell && shell.title) shell.title.textContent = viewTitle(ctx.S.view);
     document.documentElement.dataset.detail = isVaultView(ctx.S.view) && ctx.S.sel ? "1" : "0";
@@ -11900,7 +12405,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   function drawMain() {
     ctx.runCleanup();
     const v = ctx.S.view;
-    clear(shell.main).append(isVaultView(v) ? renderVaultView(ctx) : v === "gen" ? renderGenerator(ctx) : v === "health" ? renderHealth(ctx) : v === "home" ? renderHome(ctx) : v === "tm" ? renderTaskManager(ctx) : v === "qr" ? renderQR(ctx) : v === "beam" ? renderBeam(ctx) : v === "data" ? renderData(ctx) : renderSettings(ctx));
+    clear(shell.main).append(isVaultView(v) ? renderVaultView(ctx) : v === "gen" ? renderGenerator(ctx) : v === "health" ? renderHealth(ctx) : v === "home" ? renderHome(ctx) : v === "tm" ? renderTaskManager(ctx) : v === "qr" ? renderQR(ctx) : v === "family" ? renderFamily(ctx) : v === "beam" ? renderBeam(ctx) : v === "data" ? renderData(ctx) : renderSettings(ctx));
   }
   function draw() {
     syncSpace();

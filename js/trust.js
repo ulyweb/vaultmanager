@@ -49,6 +49,7 @@ export const FAQ = [
   ['Can I use it offline, even air-gapped?', 'Yes, and that is what it was built for. Download the offline copy (one file), keep it on a USB drive and open it on a computer with no internet. Turn off all browser extensions while you use it.'],
   ['Does it work on a phone?', 'Yes. Open the site in the phone’s browser and add it to the home screen. Phones and tablets lock the vault as soon as the app is hidden.'],
   ['What leaves my device?', 'Nothing, unless you turn on optional features: GitHub gist sync (encrypted before it leaves), Beam to another device, or the contact-admin note. Watch your browser’s Network tab to see for yourself.'],
+  ['How can my family get in if something happens to me?', 'Open Family recovery in the left menu. It helps you write a printable guide for them, split the vault password into shares (for example any 2 of 3 people can rebuild it, but no single person can), and run a restore drill so you know it really works. Keep the sealed data and the password shares in different places.'],
   ['Is it audited?', 'No. It has been tested heavily and its code is public so anyone can read it, but it has not had an independent security audit. Read “How secure is this, honestly?” above for what that means.'],
 ];
 

@@ -15,6 +15,7 @@ import { generateStrongPassphrase } from './generator.js';
 import { renderVaultView, newItemMenu, showRecoveryKit, meter } from './views.js';
 import { renderGenerator, renderHealth, renderQR, renderData } from './tools.js';
 import { renderTaskManager } from './taskman.js';
+import { renderFamily } from './family.js';
 import { renderSettings } from './settings.js';
 import { createBlobStore } from './blobs.js';
 import { Profiles, keysFor, newProfileId } from './profiles.js';
@@ -429,7 +430,7 @@ let shell = null;
 const MIN_MASTER_BITS = 60;   // raised from 50: a stolen copy of the vault can be guessed against offline
 
 const NAV = [['home', '{{home}}', 'Home'], ['all', '{{vault}}', 'All items'], ['fav', '{{star}}', 'Favorites'], ['trash', '{{trash}}', 'Trash']];
-const TOOLS = [['health', '{{pulse}}', 'Vault health'], ['gen', '{{bolt}}', 'Generator'], ['qr', '{{qr}}', 'QR tools'], ['beam', '{{beam}}', 'Beam sync'], ['data', '{{swap}}', 'Import & export'], ['tm', '{{chip}}', 'Task manager'], ['settings', '{{gear}}', 'Settings']];
+const TOOLS = [['health', '{{pulse}}', 'Vault health'], ['gen', '{{bolt}}', 'Generator'], ['qr', '{{qr}}', 'QR tools'], ['family', '{{shieldlock}}', 'Family recovery'], ['beam', '{{beam}}', 'Beam sync'], ['data', '{{swap}}', 'Import & export'], ['tm', '{{chip}}', 'Task manager'], ['settings', '{{gear}}', 'Settings']];
 
 /* what the user chose to hide from the side bar, dock and menu (Settings → Dock & menu bar) */
 const hid = { cat: (k) => curLook().hiddenCats.includes(k), nav: (id) => curLook().hiddenNav.includes(id) };
@@ -482,7 +483,7 @@ function drawMbar() {
     it('more', '{{menu}}', 'More', inMore && v !== 'home' && v !== 'gen' && v !== 'all', () => moreSheet(), attention));
 }
 
-const viewTitle = (v) => ({ home: 'Home', all: 'All items', fav: 'Favorites', trash: 'Trash', conflicts: 'Needs review', gen: 'Generator', health: 'Vault health', qr: 'QR tools', beam: 'Beam sync', data: 'Import & export', tm: 'Task manager', settings: 'Settings' })[v] || (v in TYPE_META ? TYPE_META[v].plural : v.startsWith('tag:') ? '#' + v.slice(4) : '');
+const viewTitle = (v) => ({ home: 'Home', all: 'All items', fav: 'Favorites', trash: 'Trash', conflicts: 'Needs review', gen: 'Generator', health: 'Vault health', qr: 'QR tools', family: 'Family recovery', beam: 'Beam sync', data: 'Import & export', tm: 'Task manager', settings: 'Settings' })[v] || (v in TYPE_META ? TYPE_META[v].plural : v.startsWith('tag:') ? '#' + v.slice(4) : '');
 function drawTitle() { if (shell && shell.title) shell.title.textContent = viewTitle(ctx.S.view); document.documentElement.dataset.detail = isVaultView(ctx.S.view) && ctx.S.sel ? '1' : '0'; }
 
 function drawDock() {
@@ -585,7 +586,7 @@ function drawSide() {
 function drawMain() {
   ctx.runCleanup();
   const v = ctx.S.view;
-  clear(shell.main).append(isVaultView(v) ? renderVaultView(ctx) : v === 'gen' ? renderGenerator(ctx) : v === 'health' ? renderHealth(ctx) : v === 'home' ? renderHome(ctx) : v === 'tm' ? renderTaskManager(ctx) : v === 'qr' ? renderQR(ctx) : v === 'beam' ? renderBeam(ctx) : v === 'data' ? renderData(ctx) : renderSettings(ctx));
+  clear(shell.main).append(isVaultView(v) ? renderVaultView(ctx) : v === 'gen' ? renderGenerator(ctx) : v === 'health' ? renderHealth(ctx) : v === 'home' ? renderHome(ctx) : v === 'tm' ? renderTaskManager(ctx) : v === 'qr' ? renderQR(ctx) : v === 'family' ? renderFamily(ctx) : v === 'beam' ? renderBeam(ctx) : v === 'data' ? renderData(ctx) : renderSettings(ctx));
 }
 
 function draw() {

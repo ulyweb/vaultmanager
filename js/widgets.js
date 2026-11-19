@@ -8,7 +8,7 @@ import { totpNow, parseTotp } from './totp.js';
 import { generatePassword } from './generator.js';
 import { TYPE_META } from './templates.js';
 import { WIDGET_DEFS, TIPS } from './look.js';
-import { fmtDate, hostOf } from './util.js';
+import { fmtDate, hostOf, drillState } from './util.js';
 
 const HUES = ['#2fe6d0', '#59b4ff', '#8b7dff', '#ff7ad9', '#ffb547', '#7dff9b', '#ff6b6b', '#ff8a4c', '#d6e2ee', '#4fd1c5', '#f6ad55'];
 const greeting = (name) => { const hr = new Date().getHours(), n = (name || '').trim(); return hr < 5 ? (n ? 'Still up, ' + n + '?' : 'Still up?') : (hr < 12 ? 'Good morning' : hr < 18 ? 'Good afternoon' : 'Good evening') + (n ? ', ' + n : ''); };
@@ -77,6 +77,12 @@ const BUILD = {
     const tick = async () => { for (const t of tiles) { try { const r = await totpNow(t.cfg); t.tile.dataset.code = r.code; t.code.textContent = r.code.slice(0, r.code.length / 2) + ' ' + r.code.slice(r.code.length / 2); t.left.textContent = r.remaining + 's'; } catch { /* ignore */ } } };
     tick(); const i = setInterval(tick, 1000); ctx.cleanup.push(() => clearInterval(i));
     return box;
+  },
+  recovery(ctx) {
+    const st = ctx.store.settings, d = drillState(st), crypto = ctx.store.active().filter((i) => i.type === 'crypto').length;
+    return h('div', null,
+      h('p', { class: 'hint', text: d.days === null ? 'Your family recovery has never been tested.' : `Last tested ${d.days} day${d.days === 1 ? '' : 's'} ago.` + (crypto ? ` ${crypto} crypto item${crypto === 1 ? '' : 's'} covered.` : '') }),
+      h('div', { class: 'row wrap', style: null }, h('span', { class: 'chip ' + (d.due ? 'warn' : 'accent'), text: d.due ? 'Test due' : 'Up to date' }), h('button', { class: 'btn sm', on: { click: () => ctx.go('family') } }, 'Open Family recovery')));
   },
   expiring(ctx) {
     const rep = health(ctx.store.items).expiring.slice(0, 5);

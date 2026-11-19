@@ -126,7 +126,7 @@ export function appearance(ctx) {
 }
 
 
-const NAV_LABELS = { fav: 'Favorites', trash: 'Trash', health: 'Vault health', gen: 'Generator', qr: 'QR tools', beam: 'Beam sync', data: 'Import & export', tm: 'Task manager', cats: 'Categories (dock button)' };
+const NAV_LABELS = { fav: 'Favorites', trash: 'Trash', health: 'Vault health', gen: 'Generator', qr: 'QR tools', family: 'Family recovery', beam: 'Beam sync', data: 'Import & export', tm: 'Task manager', cats: 'Categories (dock button)' };
 
 /* Hide tools and categories you never use from the side bar, dock and menu. Nothing is deleted: hidden categories still show in All items and search. */
 function visibilityPanel(ctx) {

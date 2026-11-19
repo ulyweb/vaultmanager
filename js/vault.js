@@ -28,6 +28,7 @@ export const LOCK_UNLOCK_MS = 10 * 60 * 1000;
 export const DEFAULT_SETTINGS = {
   autolock: 5, clipboard: 30, theme: 'auto', lockOnHide: typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches,   // phones and tablets lock the moment the app is backgrounded; computers keep the 5 minute timer
    trashDays: 30, logReveal: true, displayName: '', tourSeen: false, welcomeAlways: false,
+  family: { contact: '', usb: '', paper: '', holders: '', notes: '' }, drillAt: 0, drillDays: 90,   // Family recovery: the family guide text and the restore drill
   gen: { mode: 'password', length: 20, lower: true, upper: true, digits: true, symbols: true, noAmbiguous: false, words: 10, separator: '-', capitalize: false, number: false },
   sync: { method: 'off', token: '', gistId: '', passphrase: '', auto: true, attachments: true, last: null },
   look: LOOK_DEFAULTS,
@@ -141,6 +142,7 @@ export class VaultStore {
     data.tombstones = data.tombstones && typeof data.tombstones === 'object' ? data.tombstones : {};
     data.settings = { ...structuredClone(DEFAULT_SETTINGS), ...(data.settings || {}) };
     data.settings.gen = { ...DEFAULT_SETTINGS.gen, ...(data.settings.gen || {}) };
+    data.settings.family = { ...DEFAULT_SETTINGS.family, ...(data.settings.family || {}) };
     data.settings.sync = { ...DEFAULT_SETTINGS.sync, ...(data.settings.sync || {}) };
     data.settings.look = normalizeLook(data.settings.look || {});
     for (const i of data.items) { i.attachments = i.attachments || []; i.revisions = i.revisions || []; i.history = i.history || []; i.fields = i.fields || {}; i.custom = i.custom || []; i.ft = i.ft || {}; i.sv = i.sv || {}; i.attRemoved = i.attRemoved || {}; i.conflicts = i.conflicts || []; i.cr = i.cr || {}; }
@@ -621,6 +623,9 @@ export function portableSettings(st = {}) {
   for (const k of ['lockOnHide', 'logReveal', 'tourSeen', 'welcomeAlways']) if (st[k] !== undefined) out[k] = flag(st[k], D[k]);
   if (typeof st.displayName === 'string') out.displayName = st.displayName.replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, 40);
   if (st.gen && typeof st.gen === 'object') out.gen = sanitizeGen(st.gen);
+  if (st.family && typeof st.family === 'object') { out.family = {}; for (const [k, max] of [['contact', 600], ['usb', 400], ['paper', 400], ['holders', 400], ['notes', 1500]]) out.family[k] = typeof st.family[k] === 'string' ? st.family[k].replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f<>]/g, '').slice(0, max) : ''; }
+  if (st.drillAt !== undefined) out.drillAt = Number.isFinite(+st.drillAt) && +st.drillAt > 0 && +st.drillAt < 4e12 ? Math.floor(+st.drillAt) : 0;
+  if (st.drillDays !== undefined) out.drillDays = [30, 90, 180, 365].includes(+st.drillDays) ? +st.drillDays : 90;
   if (st.look && typeof st.look === 'object') out.look = normalizeLook(st.look);
   if (st.sync && typeof st.sync === 'object') out.sync = { auto: !!st.sync.auto, attachments: st.sync.attachments !== false };
   return out;

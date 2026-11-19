@@ -932,3 +932,31 @@ test('vendor files match their recorded checksums, and the licence is present', 
   for (const f of ['qrcode.js', 'jsQR.js']) { const sum = createHash('sha256').update(fs.readFileSync(new URL('../vendor/' + f, import.meta.url))).digest('hex'); assert.ok(readme.includes(sum), f + ' no longer matches the checksum in vendor/README.md'); }
   assert.match(fs.readFileSync(new URL('../LICENSE', import.meta.url), 'utf8'), /^MIT License/);
 });
+
+test('Shamir sharing: any k of n shares recover the secret, fewer do not, mistakes and mismatches are caught', async () => {
+  const S = await import('../js/shamir.js');
+  assert.equal(S.gfMul(0x57, 0x83), 0xc1, 'GF(256) matches the AES test vector'); assert.equal(S.gfDiv(S.gfMul(0x57, 0x83), 0x83), 0x57);
+  const secret = 'squid-rust-fade-crane-angel-plum-orbit-velvet-anchor-glacier-ember';
+  const subsets = (arr, k) => (k === 0 ? [[]] : arr.flatMap((v, i) => subsets(arr.slice(i + 1), k - 1).map((r) => [v, ...r])));
+  for (const [k, n] of [[2, 2], [2, 3], [3, 5], [2, 5], [5, 5], [4, 7]]) {
+    const sh = S.split(secret, k, n); assert.equal(sh.length, n);
+    for (const sub of subsets(sh, k)) assert.equal(S.combine(sub), secret);
+    assert.equal(S.combine(sh), secret, 'all shares together agree too');
+    if (k > 2) assert.throws(() => S.combine(sh.slice(0, k - 1)), /shares are needed/);
+    if (k === 2) assert.throws(() => S.combine(sh.slice(0, 1)), /shares are needed/);
+    assert.ok(S.shareInfo(sh[0]).k === k && S.shareInfo(sh[0]).n === n);
+  }
+  for (const s of ['x', 'héllo wörld 🔐', 'a'.repeat(200), '  spaces  ']) assert.equal(S.combine(S.split(s, 2, 3).slice(1)), s);
+  assert.throws(() => S.split('a'.repeat(201), 2, 3), /too long/); assert.throws(() => S.split('', 2, 3)); assert.throws(() => S.split('x', 1, 3)); assert.throws(() => S.split('x', 4, 3)); assert.throws(() => S.split('x', 2, 11));
+  const a = S.split(secret, 2, 3), b = S.split(secret, 2, 3);
+  assert.notEqual(a[0], b[0], 'every split uses fresh randomness');
+  assert.throws(() => S.combine([a[0], b[1]]), /same secret/, 'shares of different splits do not mix');
+  assert.throws(() => S.combine([a[0], a[0]]), /twice/);
+  const typo = a[0].replace(/-(.)/, (m, c) => '-' + (c === 'A' ? 'B' : 'A')); assert.throws(() => S.combine([typo, a[1]]), /typing mistake/);
+  assert.equal(S.combine([a[0].toLowerCase().replace(/-/g, ' '), a[2]]), secret, 'case, spaces and dashes do not matter');
+  assert.throws(() => S.combine(['hello']), /VMS1/);
+  // a tampered (but check-code-valid) share is caught when an extra share is present
+  const par = S.parseShare(a[2]); par.data[0] ^= 1; const bad = S._pack(par.k, par.n, par.x, par.id, par.data);
+  assert.throws(() => S.combine([a[0], a[1], bad]), /do not agree/);
+  assert.equal(S.combine([a[0], a[1]]), secret);
+});

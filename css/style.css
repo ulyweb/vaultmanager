@@ -1093,3 +1093,14 @@ body[data-modal] :is(.widget, .gate-card, .modal-sheet, .ico, .ico svg, .newico,
 .faq summary { cursor: pointer; font-weight: 700; padding: 4px 0; }
 .faq[open] > summary { color: var(--accent); }
 .faq p { margin: 6px 0 4px; }
+
+/* Family recovery */
+.readiness { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 6px; }
+.readiness .ok b { color: var(--accent); } .readiness .todo b { color: var(--warn); }
+.guideprev { border: 1px solid var(--line); border-radius: 12px; padding: 4px 16px 12px; background: var(--raise); max-height: 420px; overflow: auto; }
+.guideprev h1 { font-size: 20px; } .guideprev h2 { font-size: 15px; margin: 14px 0 4px; color: var(--accent); } .guideprev p, .guideprev li { font-size: 13.5px; line-height: 1.5; }
+.sharegrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; margin: 12px 0; }
+.sharecard { border: 1px solid var(--line-2); border-radius: 12px; padding: 12px; background: var(--raise); display: grid; gap: 8px; justify-items: center; text-align: center; }
+.sharecard h4 { margin: 0; font: 800 13px var(--mono); }
+.sharetext { font: 11px/1.5 var(--mono); word-break: break-all; display: block; max-width: 100%; user-select: all; }
+.drill { display: grid; gap: 8px; margin: 10px 0; }

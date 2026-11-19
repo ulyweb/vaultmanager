@@ -22,6 +22,7 @@ export const WIDGET_DEFS = [
   { id: 'stats', label: 'Categories', icon: '{{vault}}', size: 'm' },
   { id: 'sync', label: 'Sync status', icon: '{{sync}}', size: 's' },
   { id: 'conflicts', label: 'Needs review', icon: '{{alert}}', size: 's' },
+  { id: 'recovery', label: 'Family recovery', icon: '{{shieldlock}}', size: 's' },
   { id: 'tip', label: 'Security tip', icon: '{{bulb}}', size: 's' },
 ];
 
