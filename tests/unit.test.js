@@ -423,7 +423,7 @@ test('templates: well-formed, every category round-trips, secrets never indexed 
   for (const [k, t] of Object.entries(TEMPLATES)) {
     const keys = t.fields.map((f) => f.k);
     assert.equal(new Set(keys).size, keys.length, k + ': duplicate field keys');
-    for (const f of t.fields) { assert.ok(['text', 'secret', 'url', 'date', 'multiline', 'select', 'stamp'].includes(f.kind), k + '.' + f.k); if (f.kind === 'select') assert.ok(f.options.length > 1); }
+    for (const f of t.fields) { assert.ok(['text', 'secret', 'url', 'date', 'multiline', 'select', 'stamp', 'choice'].includes(f.kind), k + '.' + f.k); if (f.kind === 'select') assert.ok(f.options.length > 1); }
     assert.ok(keys.includes(t.sub), k + ': sub field exists');
     assert.ok(TYPE_META[k].icon && TYPE_META[k].plural);
   }
@@ -959,4 +959,13 @@ test('Shamir sharing: any k of n shares recover the secret, fewer do not, mistak
   const par = S.parseShare(a[2]); par.data[0] ^= 1; const bad = S._pack(par.k, par.n, par.x, par.id, par.data);
   assert.throws(() => S.combine([a[0], a[1], bad]), /do not agree/);
   assert.equal(S.combine([a[0], a[1]]), secret);
+});
+
+test('pick-list fields: every list is long enough, free of duplicates and sorted, and uses sensible keys', async () => {
+  const { TEMPLATES } = await import('../js/templates.js'); const seen = [];
+  for (const [cat, tpl] of Object.entries(TEMPLATES)) for (const f of tpl.fields) if (f.kind === 'choice') {
+    seen.push(cat + '.' + f.k); assert.ok(f.options.length >= 15, cat + '.' + f.k + ' list is short'); assert.equal(new Set(f.options).size, f.options.length, cat + '.' + f.k + ' has duplicates');
+    assert.ok(f.options.every((o) => typeof o === 'string' && o.trim() && !/[<>]/.test(o)), cat + '.' + f.k);
+  }
+  for (const k of ['bank.bank', 'crypto.wallet', 'crypto.network', 'insurance.provider', 'phone.carrier', 'internet.isp', 'travel.program', 'car.insurer', 'healthcard.provider', 'prescription.pharmacy', 'voter.region']) assert.ok(seen.includes(k), k + ' is a pick-list');
 });

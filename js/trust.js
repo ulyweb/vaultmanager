@@ -2,7 +2,7 @@
    and what nobody can promise. Every claim here is something a person can check (see "Check it yourself") or something SECURITY.md documents.
    It deliberately does NOT say "guaranteed" or "audited": no software can honestly promise the first, and this has not had the second. */
 
-import { h, modal } from './dom.js';
+import { h } from './dom.js';
 
 export const TRUST = {
   protects: [
@@ -52,7 +52,3 @@ export const FAQ = [
   ['How can my family get in if something happens to me?', 'Open Family recovery in the left menu. It helps you write a printable guide for them, split the vault password into shares (for example any 2 of 3 people can rebuild it, but no single person can), and run a restore drill so you know it really works. Keep the sealed data and the password shares in different places.'],
   ['Is it audited?', 'No. It has been tested heavily and its code is public so anyone can read it, but it has not had an independent security audit. Read “How secure is this, honestly?” above for what that means.'],
 ];
-
-export function trustDialog() {
-  modal({ title: 'How secure is this, honestly?', sub: 'What protects you, and what does not', wide: true, body: trustBody(), actions: [{ label: 'Close', primary: true }] });
-}

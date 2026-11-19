@@ -517,7 +517,14 @@ function tplInput(ctx, it, f, locks = []) {
   const id = 'tf_' + f.k;
   const full = f.kind === 'multiline' || (isSecretField(f) && f.gen);
   let control;
-  if (f.kind === 'select') control = h('select', { id, class: 'sel', on: { change: (e) => set(e.target.value) } }, h('option', { value: '', text: '— choose —' }), f.options.map((o) => h('option', { value: o, selected: o === val }, o)));
+  if (f.kind === 'choice') {
+    const OTHER = '__other__', known = f.options.includes(val);
+    const pick = h('select', { id, class: 'sel', 'aria-label': f.l }, h('option', { value: '', text: '— choose —' }), f.options.map((o) => h('option', { value: o, text: o })), h('option', { value: OTHER, text: 'Other…' }));
+    const other = h('input', { id: id + '_other', class: 'inp', maxlength: '120', placeholder: 'Type it here', 'aria-label': f.l + ' (other)', autocomplete: 'off', value: known ? '' : val, hidden: !val || known, on: { input: (e) => set(e.target.value.trim()) } });
+    pick.value = !val ? '' : known ? val : OTHER;
+    pick.addEventListener('change', () => { if (pick.value === OTHER) { other.hidden = false; set(other.value.trim()); other.focus(); } else { other.hidden = true; set(pick.value); } });
+    control = h('div', { class: 'choicewrap' }, pick, other);
+  } else if (f.kind === 'select') control = h('select', { id, class: 'sel', on: { change: (e) => set(e.target.value) } }, h('option', { value: '', text: '— choose —' }), f.options.map((o) => h('option', { value: o, selected: o === val }, o)));
   else if (f.kind === 'multiline') control = h('textarea', { id, class: 'ta', rows: '4', spellcheck: 'false', on: { input: (e) => set(e.target.value) } }, val);
   else if (isSecretField(f) && f.gen) control = pwField(val, { ctx, onInput: set }).el;
   else if (isSecretField(f)) { const i = h('input', { id, type: 'password', class: 'inp mono', value: val, autocomplete: 'off', spellcheck: 'false', on: { input: (e) => set(e.target.value) } }); control = h('div', { class: 'pwwrap' }, i, h('button', { type: 'button', class: 'icon-btn eye', 'aria-label': 'Show or hide ' + f.l, on: { click: () => { i.type = i.type === 'password' ? 'text' : 'password'; } } }, '{{eye}}')); }

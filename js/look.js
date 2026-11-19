@@ -6,6 +6,7 @@
 export const ACCENTS = [['Teal', '#2fe6d0'], ['Mint', '#7dff9b'], ['Sky', '#59b4ff'], ['Violet', '#8b7dff'], ['Pink', '#ff7ad9'], ['Amber', '#ffb547'], ['Coral', '#ff6b6b'], ['Orange', '#ff8a4c'], ['Silver', '#d6e2ee']];
 import { applyCursor } from './cursor.js';
 import { syncIcons3d } from './icons3d.js';
+import { TYPE_META } from './templates.js';
 
 export const ICON_STYLES = [['vivid', 'Colourful & animated'], ['glass', 'Glass'], ['gradient', 'Gradient tile'], ['neon', 'Neon'], ['tint', 'Tinted (accent)'], ['flat', 'Flat (grey)'], ['3d', '3D live animated']];
 export const ANIM_STYLES = [['scale', 'Scale'], ['slide', 'Slide up'], ['fade', 'Fade'], ['zoom', 'Zoom'], ['bounce', 'Bounce'], ['blur', 'Blur in'], ['flip', 'Flip']];
@@ -26,15 +27,18 @@ export const WIDGET_DEFS = [
   { id: 'tip', label: 'Security tip', icon: '{{bulb}}', size: 's' },
 ];
 
+/* the default layout of the side bar: only the Everyday categories, and only Vault health, Import & export, Task manager and Settings under Tools (everything else is one click away in Settings → Dock & menu bar) */
+export const DEFAULT_HIDDEN_CATS = Object.keys(TYPE_META).filter((k) => !['login', 'note', 'card'].includes(k));
+export const DEFAULT_HIDDEN_NAV = ['gen', 'qr', 'family', 'beam'];
 export const LOOK_DEFAULTS = {
   // appearance
-  accent: '#2fe6d0', cursor: false, cursorStyle: 'neon', cursorSize: 100, cursorColor: '', cursorRing: true, hiddenCats: [], hiddenNav: [], bg: 'default', wallpaper: 'forest', wallImage: '', wallUrl: '', bgDim: 55, iconStyle: '3d', iconSize: 'medium', avatar: 'letter',
+  accent: '#2fe6d0', cursor: false, cursorStyle: 'neon', cursorSize: 100, cursorColor: '', cursorRing: true, hiddenCats: DEFAULT_HIDDEN_CATS, hiddenNav: DEFAULT_HIDDEN_NAV, bg: 'default', wallpaper: 'forest', wallImage: '', wallUrl: '', bgDim: 55, iconStyle: '3d', iconSize: 'medium', avatar: 'letter',
   uiScale: 100, density: 'comfortable', radius: 12, widgetStyle: 'vivid',
   // effects
   animations: true, animStyle: 'scale', animSpeed: 1, bootAnim: true, fxAnim: true, tips: true, fx3d: true, fx3dThick: 14, fx3dFloat: 3, fxAurora: 65, fxTilt: 5, fxGlow: 35, fxScan: false, blur: 12, glassAlpha: 0.72,
   // layout (dock & menu bar)
   haptics: true, nav: 'sidebar', dockSize: 46, dockMagnify: true, dockLabels: false, dockAutoHide: false,
-  clock: true, clockPos: 'right', clock24: false, dateFmt: 'short', barLabels: true, startPage: 'home',
+  clock: true, clockPos: 'center', clockSize: 'large', clock24: false, dateFmt: 'short', barLabels: true, startPage: 'home',
   widgets: WIDGET_DEFS.map((w) => ({ id: w.id, on: true, size: w.size, pinned: false, cw: 0, ch: 0 })),
 };
 
@@ -44,7 +48,7 @@ const bool = (v, d) => (typeof v === 'boolean' ? v : d);
 
 const CURSOR_STYLE_IDS = ['classic', 'dot', 'cross', 'neon', 'ring', 'solid', 'target', 'system'];
 /* sections of the side bar / dock / menu the user may hide (Home, All items and Settings always stay) */
-export const HIDEABLE = ['fav', 'trash', 'health', 'gen', 'qr', 'beam', 'data', 'tm', 'cats'];
+export const HIDEABLE = ['fav', 'trash', 'health', 'gen', 'qr', 'family', 'beam', 'data', 'tm', 'cats'];
 export const landscapeIds = [];   // filled lazily by the UI (avoids loading the scenes before they are needed)
 
 export function normalizeLook(o = {}, wallIds = null) {
@@ -55,8 +59,8 @@ export function normalizeLook(o = {}, wallIds = null) {
   return {
     cursor: bool(o.cursor, D.cursor), cursorStyle: oneOf(o.cursorStyle, CURSOR_STYLE_IDS, D.cursorStyle), cursorSize: Math.round(num(o.cursorSize, 50, 300, D.cursorSize)),
     cursorColor: typeof o.cursorColor === 'string' && /^#[0-9a-fA-F]{6}$/.test(o.cursorColor) ? o.cursorColor.toLowerCase() : '', cursorRing: bool(o.cursorRing, D.cursorRing),
-    hiddenCats: Array.isArray(o.hiddenCats) ? [...new Set(o.hiddenCats.filter((k) => typeof k === 'string' && /^[a-z0-9]{2,20}$/.test(k)))].slice(0, 60) : [],
-    hiddenNav: Array.isArray(o.hiddenNav) ? [...new Set(o.hiddenNav.filter((k) => HIDEABLE.includes(k)))] : [],
+    hiddenCats: Array.isArray(o.hiddenCats) ? [...new Set(o.hiddenCats.filter((k) => typeof k === 'string' && /^[a-z0-9]{2,20}$/.test(k)))].slice(0, 60) : [...D.hiddenCats],
+    hiddenNav: Array.isArray(o.hiddenNav) ? [...new Set(o.hiddenNav.filter((k) => HIDEABLE.includes(k)))] : [...D.hiddenNav],
     accent: /^#[0-9a-fA-F]{6}$/.test(o.accent) ? o.accent.toLowerCase() : D.accent,
     bg: oneOf(o.bg, ['default', 'plain', 'wallpaper'], D.bg),
     wallpaper: typeof o.wallpaper === 'string' && /^([a-z0-9]{2,20}|(photo|grad|desk):[a-z0-9]{2,20})$/.test(o.wallpaper) && (!wallIds || wallIds.includes(o.wallpaper) || /^(photo|grad|desk|custom|remote)/.test(o.wallpaper)) ? o.wallpaper : D.wallpaper,
@@ -70,7 +74,7 @@ export function normalizeLook(o = {}, wallIds = null) {
     fxTilt: o.fx3d === undefined && !o.fxTilt ? D.fxTilt : num(o.fxTilt, 0, 12, D.fxTilt),   // a look saved before the 3D card space has tilt 0 (the old default): give it the new default; a deliberate 0 later stays 0
     fxGlow: num(o.fxGlow, 0, 100, D.fxGlow), fxScan: bool(o.fxScan, D.fxScan), blur: num(o.blur, 0, 40, D.blur), glassAlpha: num(o.glassAlpha, 0.4, 0.98, D.glassAlpha),
     haptics: bool(o.haptics, D.haptics), nav: oneOf(o.nav, NAV_MODES.map((x) => x[0]), D.nav), dockSize: num(o.dockSize, 32, 72, D.dockSize), dockMagnify: bool(o.dockMagnify, D.dockMagnify), dockLabels: bool(o.dockLabels, D.dockLabels), dockAutoHide: bool(o.dockAutoHide, D.dockAutoHide),
-    clock: bool(o.clock, D.clock), clockPos: oneOf(o.clockPos, ['left', 'center', 'right'], D.clockPos), clock24: bool(o.clock24, D.clock24), dateFmt: oneOf(o.dateFmt, ['none', 'short', 'long'], D.dateFmt), barLabels: bool(o.barLabels, D.barLabels), startPage: oneOf(o.startPage, ['all', 'home'], D.startPage),
+    clock: bool(o.clock, D.clock), clockPos: oneOf(o.clockPos, ['left', 'center', 'right'], D.clockPos), clockSize: oneOf(o.clockSize, ['normal', 'large'], D.clockSize), clock24: bool(o.clock24, D.clock24), dateFmt: oneOf(o.dateFmt, ['none', 'short', 'long'], D.dateFmt), barLabels: bool(o.barLabels, D.barLabels), startPage: oneOf(o.startPage, ['all', 'home'], D.startPage),
     widgets,
   };
 }
@@ -108,7 +112,7 @@ export function applyLook(look, theme, landscapes = null) {
   d.motion = look.animations ? 'on' : 'off'; d.fxanim = look.fxAnim && look.animations ? 'on' : 'off'; d.fx3d = look.fx3d && look.animations ? 'on' : 'off'; d.thick = look.fx3dThick > 0 ? 'on' : 'off'; d.tips = look.tips ? 'on' : 'off';
   /* the windows float only when asked to, and never for scripted browsers (automation clicks need a card that holds still) */
   d.float = look.fx3d && look.animations && look.fx3dFloat > 0 && !(typeof navigator !== 'undefined' && navigator.webdriver) ? 'on' : 'off'; d.anim = look.animStyle; d.scan = look.fxScan ? 'on' : 'off';
-  d.bg = look.bg === 'wallpaper' && landscapes ? 'wallpaper' : look.bg === 'plain' ? 'plain' : 'default'; d.wstyle = look.widgetStyle; d.nav = look.nav; d.clockpos = look.clockPos; d.dockautohide = look.dockAutoHide ? '1' : '0'; d.dockmagnify = look.dockMagnify ? '1' : '0'; d.barlabels = look.barLabels ? '1' : '0'; d.haptics = look.haptics ? '1' : '0';
+  d.bg = look.bg === 'wallpaper' && landscapes ? 'wallpaper' : look.bg === 'plain' ? 'plain' : 'default'; d.wstyle = look.widgetStyle; d.nav = look.nav; d.clockpos = look.clockPos; d.clocksize = look.clockSize; d.dockautohide = look.dockAutoHide ? '1' : '0'; d.dockmagnify = look.dockMagnify ? '1' : '0'; d.barlabels = look.barLabels ? '1' : '0'; d.haptics = look.haptics ? '1' : '0';
   if (landscapes && look.bg === 'wallpaper') { const u = landscapes.url(look.wallpaper, look) || landscapes.url('forest'); set('--wall', `url("${u}")`); } else el.style.removeProperty('--wall');
 }
 

@@ -818,7 +818,7 @@ html[data-cursorring=on] #cursor-ring { opacity: .9; } #cursor-ring.hidden { opa
 
 /* ---- clock position in the top bar ---- */
 html[data-clockpos=left] .topbar .logo { order: 0; } html[data-clockpos=left] .topbar .barclock { order: 1; text-align: left; margin-left: 6px; } html[data-clockpos=left] .topbar .search { order: 2; margin: 0 auto 0 12px; } html[data-clockpos=left] .topbar > .btn { order: 3; }
-html[data-clockpos=center] .topbar .barclock { position: absolute; left: 50%; transform: translateX(-50%); text-align: center; pointer-events: none; } html[data-clockpos=center] .topbar .search { max-width: min(520px, 28vw); }
+html[data-clockpos=center] .topbar .barclock { position: absolute; left: 50%; transform: translateX(-50%); text-align: center; pointer-events: none; } @media (min-width: 1024px) { html[data-clockpos=center] .topbar .search { max-width: min(520px, max(140px, calc(50vw - 360px))); } }
 @media (max-width: 1023px) { html[data-clockpos=center] .topbar .barclock { display: none; } }
 
 /* ---- the New button: a real, live icon ---- */
@@ -1104,3 +1104,11 @@ body[data-modal] :is(.widget, .gate-card, .modal-sheet, .ico, .ico svg, .newico,
 .sharecard h4 { margin: 0; font: 800 13px var(--mono); }
 .sharetext { font: 11px/1.5 var(--mono); word-break: break-all; display: block; max-width: 100%; user-select: all; }
 .drill { display: grid; gap: 8px; margin: 10px 0; }
+
+/* large clock in the top bar (the default) */
+html[data-clocksize=large] .barclock b { font-size: 22px; letter-spacing: .02em; line-height: 1.1; }
+html[data-clocksize=large] .barclock { font-size: 13px; }
+
+/* pick-list fields (kind: choice): the list, plus a text box when "Other…" is chosen */
+.choicewrap { display: grid; gap: 6px; }
+.choicewrap .inp[hidden] { display: none; }
