@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VaultManager v0.39.0 — single-file offline build. Verify with the .sha256 file next to it. -->
+<!-- VaultManager v0.40.0 — single-file offline build. Verify with the .sha256 file next to it. -->
 <html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
@@ -11,7 +11,7 @@
 <meta name="application-name" content="VaultManager">
 <meta name="format-detection" content="telephone=no">
 <meta name="referrer" content="no-referrer">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-tauzjAWYvkq2EEey6/r1GOXzEWNzSydbYj43JCIjd2U=' 'sha256-TAYMniQVq8WmV9RNQHa28zeUHYNn+lVcIhaLKv54Vow=' blob:; style-src 'sha256-VYxRDKCdDR1NPyl4E73Ywg2Wj+W28dDfIfKkas3BQts='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-tauzjAWYvkq2EEey6/r1GOXzEWNzSydbYj43JCIjd2U=' 'sha256-IoV5bWDMSQsSFYNL/CCHZ5xztvyMHcxkIMmXpVWMV/w=' blob:; style-src 'sha256-zbhtrl5X8z3yJZBDbs/hqtfDloYOv5OLoU2V2zaFvdg='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
 <title>VaultManager | Zero-Knowledge Password Manager</title>
 <meta name="description" content="VaultManager: an offline-first, zero-knowledge, end-to-end encrypted password manager with a strong password generator, TOTP codes and QR-sealed sharing and backup. Runs entirely in your browser.">
 <meta name="theme-color" content="#05080d">
@@ -836,7 +836,7 @@ html[data-cursorring=on] #cursor-ring { opacity: .9; } #cursor-ring.hidden { opa
 
 /* ---- clock position in the top bar ---- */
 html[data-clockpos=left] .topbar .logo { order: 0; } html[data-clockpos=left] .topbar .barclock { order: 1; text-align: left; margin-left: 6px; } html[data-clockpos=left] .topbar .search { order: 2; margin: 0 auto 0 12px; } html[data-clockpos=left] .topbar > .btn { order: 3; }
-html[data-clockpos=center] .topbar .barclock { position: absolute; left: 50%; transform: translateX(-50%); text-align: center; pointer-events: none; } html[data-clockpos=center] .topbar .search { max-width: min(520px, 28vw); }
+html[data-clockpos=center] .topbar .barclock { position: absolute; left: 50%; transform: translateX(-50%); text-align: center; pointer-events: none; } @media (min-width: 1024px) { html[data-clockpos=center] .topbar .search { max-width: min(520px, max(140px, calc(50vw - 360px))); } }
 @media (max-width: 1023px) { html[data-clockpos=center] .topbar .barclock { display: none; } }
 
 /* ---- the New button: a real, live icon ---- */
@@ -1122,6 +1122,10 @@ body[data-modal] :is(.widget, .gate-card, .modal-sheet, .ico, .ico svg, .newico,
 .sharecard h4 { margin: 0; font: 800 13px var(--mono); }
 .sharetext { font: 11px/1.5 var(--mono); word-break: break-all; display: block; max-width: 100%; user-select: all; }
 .drill { display: grid; gap: 8px; margin: 10px 0; }
+
+/* large clock in the top bar (the default) */
+html[data-clocksize=large] .barclock b { font-size: 22px; letter-spacing: .02em; line-height: 1.1; }
+html[data-clocksize=large] .barclock { font-size: 13px; }
 </style>
 </head>
 <body>
@@ -2273,7 +2277,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   }
 
   // js/version.js
-  var APP_VERSION = "0.39.0";
+  var APP_VERSION = "0.40.0";
   var APP_NAME = "VaultManager";
   var REPO_URL = "https://github.com/ulyweb/vaultmanager";
   var FORMATS = [
@@ -2287,6 +2291,9 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     ["Attachments at rest", "AES-256-GCM per file, bound to vault + file id"]
   ];
   var CHANGELOG = [
+    { v: "0.40.0", date: "2026-11-19", notes: [
+      "New default layout for new profiles: the side bar shows only the Everyday categories (Logins, Secure notes, Cards) and, under Tools, only Vault health, Import & export, Task manager and Settings; the date and time in the top bar are large and in the middle. Everything else (the other categories, Generator, QR tools, Family recovery, Beam sync) is still one click away from Settings \u2192 Dock & menu bar \u2192 Show everything, and the Family recovery widget stays on Home. Settings \u2192 Dock & menu bar has a new \u201CUse the recommended layout\u201D button, and Settings \u2192 Menu bar has a new Clock size choice."
+    ] },
     { v: "0.39.0", date: "2026-11-19", notes: [
       "New: Family recovery (left menu, and a Home widget). Make sure the people you trust can open the vault if you cannot help them. A printable Family guide (who to call, where the USB drive and paper copies are, the steps, your crypto items by name, never a secret). Split a password with Shamir sharing: for example 2 of 3 shares, so no single person or place can open it but any two together can, with a QR code and printable card for every share. Combine shares by typing or scanning them, with typing mistakes and mismatched sets caught. A restore drill with a checklist and a reminder (every 1, 3, 6 or 12 months) so you know recovery really works.",
       "Crypto wallet items gain Instructions for my family, Where the hardware wallet / seed backup is kept, Wallet app to open it with and Who can help."
@@ -2662,255 +2669,6 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     if (!document.adoptedStyleSheets.includes(sheet)) document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet];
   }
 
-  // js/look.js
-  var ACCENTS = [["Teal", "#2fe6d0"], ["Mint", "#7dff9b"], ["Sky", "#59b4ff"], ["Violet", "#8b7dff"], ["Pink", "#ff7ad9"], ["Amber", "#ffb547"], ["Coral", "#ff6b6b"], ["Orange", "#ff8a4c"], ["Silver", "#d6e2ee"]];
-  var ICON_STYLES = [["vivid", "Colourful & animated"], ["glass", "Glass"], ["gradient", "Gradient tile"], ["neon", "Neon"], ["tint", "Tinted (accent)"], ["flat", "Flat (grey)"], ["3d", "3D live animated"]];
-  var ANIM_STYLES = [["scale", "Scale"], ["slide", "Slide up"], ["fade", "Fade"], ["zoom", "Zoom"], ["bounce", "Bounce"], ["blur", "Blur in"], ["flip", "Flip"]];
-  var NAV_MODES = [["sidebar", "Side bar"], ["dock", "Dock (bottom)"]];
-  var WIDGET_DEFS = [
-    { id: "clock", label: "Clock & date", icon: "{{clock}}", size: "s" },
-    { id: "health", label: "Vault health", icon: "{{pulse}}", size: "s" },
-    { id: "totp", label: "One-time codes", icon: "{{locker}}", size: "m" },
-    { id: "expiring", label: "Expiring soon", icon: "{{hourglass}}", size: "s" },
-    { id: "favorites", label: "Favorites", icon: "{{star}}", size: "s" },
-    { id: "recent", label: "Recently changed", icon: "{{history}}", size: "s" },
-    { id: "generator", label: "Quick generator", icon: "{{bolt}}", size: "s" },
-    { id: "stats", label: "Categories", icon: "{{vault}}", size: "m" },
-    { id: "sync", label: "Sync status", icon: "{{sync}}", size: "s" },
-    { id: "conflicts", label: "Needs review", icon: "{{alert}}", size: "s" },
-    { id: "recovery", label: "Family recovery", icon: "{{shieldlock}}", size: "s" },
-    { id: "tip", label: "Security tip", icon: "{{bulb}}", size: "s" }
-  ];
-  var LOOK_DEFAULTS = {
-    // appearance
-    accent: "#2fe6d0",
-    cursor: false,
-    cursorStyle: "neon",
-    cursorSize: 100,
-    cursorColor: "",
-    cursorRing: true,
-    hiddenCats: [],
-    hiddenNav: [],
-    bg: "default",
-    wallpaper: "forest",
-    wallImage: "",
-    wallUrl: "",
-    bgDim: 55,
-    iconStyle: "3d",
-    iconSize: "medium",
-    avatar: "letter",
-    uiScale: 100,
-    density: "comfortable",
-    radius: 12,
-    widgetStyle: "vivid",
-    // effects
-    animations: true,
-    animStyle: "scale",
-    animSpeed: 1,
-    bootAnim: true,
-    fxAnim: true,
-    tips: true,
-    fx3d: true,
-    fx3dThick: 14,
-    fx3dFloat: 3,
-    fxAurora: 65,
-    fxTilt: 5,
-    fxGlow: 35,
-    fxScan: false,
-    blur: 12,
-    glassAlpha: 0.72,
-    // layout (dock & menu bar)
-    haptics: true,
-    nav: "sidebar",
-    dockSize: 46,
-    dockMagnify: true,
-    dockLabels: false,
-    dockAutoHide: false,
-    clock: true,
-    clockPos: "right",
-    clock24: false,
-    dateFmt: "short",
-    barLabels: true,
-    startPage: "home",
-    widgets: WIDGET_DEFS.map((w) => ({ id: w.id, on: true, size: w.size, pinned: false, cw: 0, ch: 0 }))
-  };
-  var num = (v, lo, hi, d) => Number.isFinite(+v) ? Math.min(hi, Math.max(lo, +v)) : d;
-  var oneOf = (v, list, d) => list.includes(v) ? v : d;
-  var bool = (v, d) => typeof v === "boolean" ? v : d;
-  var CURSOR_STYLE_IDS = ["classic", "dot", "cross", "neon", "ring", "solid", "target", "system"];
-  var HIDEABLE = ["fav", "trash", "health", "gen", "qr", "beam", "data", "tm", "cats"];
-  function normalizeLook(o = {}, wallIds = null) {
-    const D2 = LOOK_DEFAULTS;
-    const widgets = [];
-    for (const w of Array.isArray(o.widgets) ? o.widgets : []) if (w && WIDGET_DEFS.some((d) => d.id === w.id) && !widgets.some((x) => x.id === w.id)) widgets.push({ id: w.id, on: bool(w.on, true), size: oneOf(w.size, ["s", "m", "l"], WIDGET_DEFS.find((d) => d.id === w.id).size), pinned: bool(w.pinned, false), cw: Math.round(num(w.cw, 0, 4, 0)), ch: w.ch ? Math.round(num(w.ch, 100, 700, 0)) : 0 });
-    for (const d of WIDGET_DEFS) if (!widgets.some((x) => x.id === d.id)) widgets.push({ id: d.id, on: true, size: d.size, pinned: false, cw: 0, ch: 0 });
-    return {
-      cursor: bool(o.cursor, D2.cursor),
-      cursorStyle: oneOf(o.cursorStyle, CURSOR_STYLE_IDS, D2.cursorStyle),
-      cursorSize: Math.round(num(o.cursorSize, 50, 300, D2.cursorSize)),
-      cursorColor: typeof o.cursorColor === "string" && /^#[0-9a-fA-F]{6}$/.test(o.cursorColor) ? o.cursorColor.toLowerCase() : "",
-      cursorRing: bool(o.cursorRing, D2.cursorRing),
-      hiddenCats: Array.isArray(o.hiddenCats) ? [...new Set(o.hiddenCats.filter((k) => typeof k === "string" && /^[a-z0-9]{2,20}$/.test(k)))].slice(0, 60) : [],
-      hiddenNav: Array.isArray(o.hiddenNav) ? [...new Set(o.hiddenNav.filter((k) => HIDEABLE.includes(k)))] : [],
-      accent: /^#[0-9a-fA-F]{6}$/.test(o.accent) ? o.accent.toLowerCase() : D2.accent,
-      bg: oneOf(o.bg, ["default", "plain", "wallpaper"], D2.bg),
-      wallpaper: typeof o.wallpaper === "string" && /^([a-z0-9]{2,20}|(photo|grad|desk):[a-z0-9]{2,20})$/.test(o.wallpaper) && (!wallIds || wallIds.includes(o.wallpaper) || /^(photo|grad|desk|custom|remote)/.test(o.wallpaper)) ? o.wallpaper : D2.wallpaper,
-      wallImage: typeof o.wallImage === "string" && o.wallImage.length <= 8e5 && /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(o.wallImage) ? o.wallImage : "",
-      wallUrl: typeof o.wallUrl === "string" && /^https:\/\/[^\s"'()<>\\]{3,1000}$/.test(o.wallUrl) ? o.wallUrl : "",
-      bgDim: num(o.bgDim, 0, 90, D2.bgDim),
-      iconStyle: oneOf(o.iconStyle, ICON_STYLES.map((x) => x[0]), D2.iconStyle),
-      iconSize: oneOf(o.iconSize, ["small", "medium", "large"], D2.iconSize),
-      avatar: oneOf(o.avatar, ["letter", "icon"], D2.avatar),
-      uiScale: num(o.uiScale, 85, 130, D2.uiScale),
-      density: oneOf(o.density, ["comfortable", "compact"], D2.density),
-      radius: num(o.radius, 4, 24, D2.radius),
-      widgetStyle: oneOf(o.widgetStyle, ["vivid", "glass"], D2.widgetStyle),
-      animations: bool(o.animations, D2.animations),
-      animStyle: oneOf(o.animStyle, [...ANIM_STYLES.map((x) => x[0]), "random"], D2.animStyle),
-      animSpeed: num(o.animSpeed, 0.5, 2, D2.animSpeed),
-      bootAnim: bool(o.bootAnim, D2.bootAnim),
-      fxAnim: bool(o.fxAnim, D2.fxAnim),
-      tips: bool(o.tips, D2.tips),
-      fx3d: bool(o.fx3d, D2.fx3d),
-      fx3dThick: num(o.fx3dThick, 0, 28, D2.fx3dThick),
-      fx3dFloat: num(o.fx3dFloat, 0, 10, D2.fx3dFloat),
-      fxAurora: num(o.fxAurora, 0, 100, D2.fxAurora),
-      fxTilt: o.fx3d === void 0 && !o.fxTilt ? D2.fxTilt : num(o.fxTilt, 0, 12, D2.fxTilt),
-      // a look saved before the 3D card space has tilt 0 (the old default): give it the new default; a deliberate 0 later stays 0
-      fxGlow: num(o.fxGlow, 0, 100, D2.fxGlow),
-      fxScan: bool(o.fxScan, D2.fxScan),
-      blur: num(o.blur, 0, 40, D2.blur),
-      glassAlpha: num(o.glassAlpha, 0.4, 0.98, D2.glassAlpha),
-      haptics: bool(o.haptics, D2.haptics),
-      nav: oneOf(o.nav, NAV_MODES.map((x) => x[0]), D2.nav),
-      dockSize: num(o.dockSize, 32, 72, D2.dockSize),
-      dockMagnify: bool(o.dockMagnify, D2.dockMagnify),
-      dockLabels: bool(o.dockLabels, D2.dockLabels),
-      dockAutoHide: bool(o.dockAutoHide, D2.dockAutoHide),
-      clock: bool(o.clock, D2.clock),
-      clockPos: oneOf(o.clockPos, ["left", "center", "right"], D2.clockPos),
-      clock24: bool(o.clock24, D2.clock24),
-      dateFmt: oneOf(o.dateFmt, ["none", "short", "long"], D2.dateFmt),
-      barLabels: bool(o.barLabels, D2.barLabels),
-      startPage: oneOf(o.startPage, ["all", "home"], D2.startPage),
-      widgets
-    };
-  }
-  var hexToRgb = (h2) => [1, 3, 5].map((i) => parseInt(h2.slice(i, i + 2), 16));
-  var toHex = (r, g, b) => "#" + [r, g, b].map((v) => Math.round(Math.min(255, Math.max(0, v))).toString(16).padStart(2, "0")).join("");
-  var mix = (a, b, t) => {
-    const x = hexToRgb(a), y = hexToRgb(b);
-    return toHex(x[0] + (y[0] - x[0]) * t, x[1] + (y[1] - x[1]) * t, x[2] + (y[2] - x[2]) * t);
-  };
-  var luminance = (hex3) => {
-    const [r, g, b] = hexToRgb(hex3).map((v) => {
-      v /= 255;
-      return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
-    });
-    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-  };
-  function accentTokens(hex3, theme) {
-    const base = theme === "light" ? mix(hex3, "#000000", 0.32) : hex3;
-    const two = theme === "light" ? mix(base, "#000000", 0.12) : mix(hex3, "#ffffff", 0.4);
-    const [r, g, b] = hexToRgb(base);
-    return { accent: base, accent2: two, ink: luminance(base) > 0.4 ? "#06201d" : "#ffffff", rgb: r + "," + g + "," + b };
-  }
-  function resolveTheme(setting, prefersLight) {
-    return setting === "dark" ? "dark" : setting === "light" ? "light" : prefersLight ? "light" : "dark";
-  }
-  function applyLook(look, theme, landscapes2 = null) {
-    if (typeof document === "undefined") return;
-    const el = document.documentElement, set = (k, v) => el.style.setProperty(k, v);
-    const t = accentTokens(look.accent, theme);
-    set("--accent", t.accent);
-    set("--accent-2", t.accent2);
-    set("--accent-ink", t.ink);
-    set("--accent-rgb", t.rgb);
-    set("--grid", `rgba(${t.rgb},${theme === "light" ? 0.08 : 0.06})`);
-    set("--glow", `0 0 24px rgba(${t.rgb},${theme === "light" ? 0.18 : 0.25})`);
-    set("--r", look.radius + "px");
-    set("--blur", look.blur + "px");
-    set("--glass", theme === "light" ? `rgba(255,255,255,${look.glassAlpha})` : `rgba(12,22,34,${look.glassAlpha})`);
-    set("--fx-aurora", String(look.fxAurora));
-    set("--fx-glow", String(look.fxGlow));
-    set("--speed", String(look.animSpeed));
-    set("--ui-scale", String(look.uiScale / 100));
-    set("--tilt", look.fxTilt + "deg");
-    set("--fx3d-thick", String(look.fx3dThick));
-    set("--fx3d-float", String(look.fx3dFloat));
-    set("--dock", look.dockSize + "px");
-    set("--wall-dim", String(look.bgDim / 100));
-    set("--wall-dim-rgb", theme === "light" ? "238,242,246" : "2,6,12");
-    applyCursor(look, el);
-    const d = el.dataset;
-    d.theme = theme;
-    d.icons = look.iconStyle;
-    syncIcons3d(look.iconStyle === "3d");
-    d.iconsize = look.iconSize;
-    d.density = look.density;
-    d.avatar = look.avatar;
-    d.motion = look.animations ? "on" : "off";
-    d.fxanim = look.fxAnim && look.animations ? "on" : "off";
-    d.fx3d = look.fx3d && look.animations ? "on" : "off";
-    d.thick = look.fx3dThick > 0 ? "on" : "off";
-    d.tips = look.tips ? "on" : "off";
-    d.float = look.fx3d && look.animations && look.fx3dFloat > 0 && !(typeof navigator !== "undefined" && navigator.webdriver) ? "on" : "off";
-    d.anim = look.animStyle;
-    d.scan = look.fxScan ? "on" : "off";
-    d.bg = look.bg === "wallpaper" && landscapes2 ? "wallpaper" : look.bg === "plain" ? "plain" : "default";
-    d.wstyle = look.widgetStyle;
-    d.nav = look.nav;
-    d.clockpos = look.clockPos;
-    d.dockautohide = look.dockAutoHide ? "1" : "0";
-    d.dockmagnify = look.dockMagnify ? "1" : "0";
-    d.barlabels = look.barLabels ? "1" : "0";
-    d.haptics = look.haptics ? "1" : "0";
-    if (landscapes2 && look.bg === "wallpaper") {
-      const u = landscapes2.url(look.wallpaper, look) || landscapes2.url("forest");
-      set("--wall", `url("${u}")`);
-    } else el.style.removeProperty("--wall");
-  }
-  var KEY = "vaultmanager.look";
-  function loadCosmetic(storage2, key = KEY) {
-    try {
-      const j = JSON.parse(storage2.getItem(key));
-      return j && typeof j === "object" ? j : null;
-    } catch {
-      return null;
-    }
-  }
-  function saveCosmetic(storage2, theme, look, key = KEY) {
-    try {
-      const { wallImage, ...rest } = look;
-      storage2.setItem(key, JSON.stringify({ theme, look: wallImage ? { ...rest, bg: "default" } : look }));
-    } catch {
-    }
-  }
-  function randomLook(prev, wallIds = []) {
-    const pick = (a) => a[Math.floor(Math.random() * a.length)];
-    const hue2 = Math.floor(Math.random() * 360), c = (h2, s, l) => {
-      const a = s * Math.min(l, 1 - l);
-      const f = (n) => {
-        const k = (n + h2 / 30) % 12;
-        return l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1));
-      };
-      return toHex(f(0) * 255, f(8) * 255, f(4) * 255);
-    };
-    return normalizeLook({ ...prev, accent: c(hue2, 0.78, 0.62), iconStyle: pick(ICON_STYLES)[0], animStyle: pick(ANIM_STYLES)[0], bg: wallIds.length ? "wallpaper" : prev.bg, wallpaper: wallIds.length ? pick(wallIds) : prev.wallpaper });
-  }
-  var TIPS = [
-    "Use a unique password for every account \u2014 a breach at one site then cannot open the others.",
-    "A passphrase of 5+ random words beats a short \u201Ccomplex\u201D password and is easier to type.",
-    "Turn on one-time codes (2FA) for email, banking and your password manager\u2019s own accounts.",
-    "Keep an encrypted backup somewhere other than this device \u2014 and test restoring it once.",
-    "Print the recovery key and store it with your important papers, not on this computer.",
-    "Be suspicious of urgent messages asking you to log in: type the address yourself or use the saved link.",
-    "Lock your vault when you step away; set auto-lock to 5 minutes or less on shared computers.",
-    "Review \u201CVault health\u201D once a month: fix weak and reused passwords first.",
-    "Check expiry dates: passports, licences and insurance renewals are easy to miss.",
-    "Sync only through a passphrase you have written down \u2014 without it, synced data cannot be opened."
-  ];
-
   // js/templates.js
   var CORE = {
     login: { label: "Login", icon: "{{login}}", plural: "Logins" },
@@ -3278,6 +3036,260 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     const t = Date.parse(date + "T00:00:00");
     return Number.isFinite(t) ? Math.ceil((t - now) / 864e5) : null;
   }
+
+  // js/look.js
+  var ACCENTS = [["Teal", "#2fe6d0"], ["Mint", "#7dff9b"], ["Sky", "#59b4ff"], ["Violet", "#8b7dff"], ["Pink", "#ff7ad9"], ["Amber", "#ffb547"], ["Coral", "#ff6b6b"], ["Orange", "#ff8a4c"], ["Silver", "#d6e2ee"]];
+  var ICON_STYLES = [["vivid", "Colourful & animated"], ["glass", "Glass"], ["gradient", "Gradient tile"], ["neon", "Neon"], ["tint", "Tinted (accent)"], ["flat", "Flat (grey)"], ["3d", "3D live animated"]];
+  var ANIM_STYLES = [["scale", "Scale"], ["slide", "Slide up"], ["fade", "Fade"], ["zoom", "Zoom"], ["bounce", "Bounce"], ["blur", "Blur in"], ["flip", "Flip"]];
+  var NAV_MODES = [["sidebar", "Side bar"], ["dock", "Dock (bottom)"]];
+  var WIDGET_DEFS = [
+    { id: "clock", label: "Clock & date", icon: "{{clock}}", size: "s" },
+    { id: "health", label: "Vault health", icon: "{{pulse}}", size: "s" },
+    { id: "totp", label: "One-time codes", icon: "{{locker}}", size: "m" },
+    { id: "expiring", label: "Expiring soon", icon: "{{hourglass}}", size: "s" },
+    { id: "favorites", label: "Favorites", icon: "{{star}}", size: "s" },
+    { id: "recent", label: "Recently changed", icon: "{{history}}", size: "s" },
+    { id: "generator", label: "Quick generator", icon: "{{bolt}}", size: "s" },
+    { id: "stats", label: "Categories", icon: "{{vault}}", size: "m" },
+    { id: "sync", label: "Sync status", icon: "{{sync}}", size: "s" },
+    { id: "conflicts", label: "Needs review", icon: "{{alert}}", size: "s" },
+    { id: "recovery", label: "Family recovery", icon: "{{shieldlock}}", size: "s" },
+    { id: "tip", label: "Security tip", icon: "{{bulb}}", size: "s" }
+  ];
+  var DEFAULT_HIDDEN_CATS = Object.keys(TYPE_META).filter((k) => !["login", "note", "card"].includes(k));
+  var DEFAULT_HIDDEN_NAV = ["gen", "qr", "family", "beam"];
+  var LOOK_DEFAULTS = {
+    // appearance
+    accent: "#2fe6d0",
+    cursor: false,
+    cursorStyle: "neon",
+    cursorSize: 100,
+    cursorColor: "",
+    cursorRing: true,
+    hiddenCats: DEFAULT_HIDDEN_CATS,
+    hiddenNav: DEFAULT_HIDDEN_NAV,
+    bg: "default",
+    wallpaper: "forest",
+    wallImage: "",
+    wallUrl: "",
+    bgDim: 55,
+    iconStyle: "3d",
+    iconSize: "medium",
+    avatar: "letter",
+    uiScale: 100,
+    density: "comfortable",
+    radius: 12,
+    widgetStyle: "vivid",
+    // effects
+    animations: true,
+    animStyle: "scale",
+    animSpeed: 1,
+    bootAnim: true,
+    fxAnim: true,
+    tips: true,
+    fx3d: true,
+    fx3dThick: 14,
+    fx3dFloat: 3,
+    fxAurora: 65,
+    fxTilt: 5,
+    fxGlow: 35,
+    fxScan: false,
+    blur: 12,
+    glassAlpha: 0.72,
+    // layout (dock & menu bar)
+    haptics: true,
+    nav: "sidebar",
+    dockSize: 46,
+    dockMagnify: true,
+    dockLabels: false,
+    dockAutoHide: false,
+    clock: true,
+    clockPos: "center",
+    clockSize: "large",
+    clock24: false,
+    dateFmt: "short",
+    barLabels: true,
+    startPage: "home",
+    widgets: WIDGET_DEFS.map((w) => ({ id: w.id, on: true, size: w.size, pinned: false, cw: 0, ch: 0 }))
+  };
+  var num = (v, lo, hi, d) => Number.isFinite(+v) ? Math.min(hi, Math.max(lo, +v)) : d;
+  var oneOf = (v, list, d) => list.includes(v) ? v : d;
+  var bool = (v, d) => typeof v === "boolean" ? v : d;
+  var CURSOR_STYLE_IDS = ["classic", "dot", "cross", "neon", "ring", "solid", "target", "system"];
+  var HIDEABLE = ["fav", "trash", "health", "gen", "qr", "family", "beam", "data", "tm", "cats"];
+  function normalizeLook(o = {}, wallIds = null) {
+    const D2 = LOOK_DEFAULTS;
+    const widgets = [];
+    for (const w of Array.isArray(o.widgets) ? o.widgets : []) if (w && WIDGET_DEFS.some((d) => d.id === w.id) && !widgets.some((x) => x.id === w.id)) widgets.push({ id: w.id, on: bool(w.on, true), size: oneOf(w.size, ["s", "m", "l"], WIDGET_DEFS.find((d) => d.id === w.id).size), pinned: bool(w.pinned, false), cw: Math.round(num(w.cw, 0, 4, 0)), ch: w.ch ? Math.round(num(w.ch, 100, 700, 0)) : 0 });
+    for (const d of WIDGET_DEFS) if (!widgets.some((x) => x.id === d.id)) widgets.push({ id: d.id, on: true, size: d.size, pinned: false, cw: 0, ch: 0 });
+    return {
+      cursor: bool(o.cursor, D2.cursor),
+      cursorStyle: oneOf(o.cursorStyle, CURSOR_STYLE_IDS, D2.cursorStyle),
+      cursorSize: Math.round(num(o.cursorSize, 50, 300, D2.cursorSize)),
+      cursorColor: typeof o.cursorColor === "string" && /^#[0-9a-fA-F]{6}$/.test(o.cursorColor) ? o.cursorColor.toLowerCase() : "",
+      cursorRing: bool(o.cursorRing, D2.cursorRing),
+      hiddenCats: Array.isArray(o.hiddenCats) ? [...new Set(o.hiddenCats.filter((k) => typeof k === "string" && /^[a-z0-9]{2,20}$/.test(k)))].slice(0, 60) : [...D2.hiddenCats],
+      hiddenNav: Array.isArray(o.hiddenNav) ? [...new Set(o.hiddenNav.filter((k) => HIDEABLE.includes(k)))] : [...D2.hiddenNav],
+      accent: /^#[0-9a-fA-F]{6}$/.test(o.accent) ? o.accent.toLowerCase() : D2.accent,
+      bg: oneOf(o.bg, ["default", "plain", "wallpaper"], D2.bg),
+      wallpaper: typeof o.wallpaper === "string" && /^([a-z0-9]{2,20}|(photo|grad|desk):[a-z0-9]{2,20})$/.test(o.wallpaper) && (!wallIds || wallIds.includes(o.wallpaper) || /^(photo|grad|desk|custom|remote)/.test(o.wallpaper)) ? o.wallpaper : D2.wallpaper,
+      wallImage: typeof o.wallImage === "string" && o.wallImage.length <= 8e5 && /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(o.wallImage) ? o.wallImage : "",
+      wallUrl: typeof o.wallUrl === "string" && /^https:\/\/[^\s"'()<>\\]{3,1000}$/.test(o.wallUrl) ? o.wallUrl : "",
+      bgDim: num(o.bgDim, 0, 90, D2.bgDim),
+      iconStyle: oneOf(o.iconStyle, ICON_STYLES.map((x) => x[0]), D2.iconStyle),
+      iconSize: oneOf(o.iconSize, ["small", "medium", "large"], D2.iconSize),
+      avatar: oneOf(o.avatar, ["letter", "icon"], D2.avatar),
+      uiScale: num(o.uiScale, 85, 130, D2.uiScale),
+      density: oneOf(o.density, ["comfortable", "compact"], D2.density),
+      radius: num(o.radius, 4, 24, D2.radius),
+      widgetStyle: oneOf(o.widgetStyle, ["vivid", "glass"], D2.widgetStyle),
+      animations: bool(o.animations, D2.animations),
+      animStyle: oneOf(o.animStyle, [...ANIM_STYLES.map((x) => x[0]), "random"], D2.animStyle),
+      animSpeed: num(o.animSpeed, 0.5, 2, D2.animSpeed),
+      bootAnim: bool(o.bootAnim, D2.bootAnim),
+      fxAnim: bool(o.fxAnim, D2.fxAnim),
+      tips: bool(o.tips, D2.tips),
+      fx3d: bool(o.fx3d, D2.fx3d),
+      fx3dThick: num(o.fx3dThick, 0, 28, D2.fx3dThick),
+      fx3dFloat: num(o.fx3dFloat, 0, 10, D2.fx3dFloat),
+      fxAurora: num(o.fxAurora, 0, 100, D2.fxAurora),
+      fxTilt: o.fx3d === void 0 && !o.fxTilt ? D2.fxTilt : num(o.fxTilt, 0, 12, D2.fxTilt),
+      // a look saved before the 3D card space has tilt 0 (the old default): give it the new default; a deliberate 0 later stays 0
+      fxGlow: num(o.fxGlow, 0, 100, D2.fxGlow),
+      fxScan: bool(o.fxScan, D2.fxScan),
+      blur: num(o.blur, 0, 40, D2.blur),
+      glassAlpha: num(o.glassAlpha, 0.4, 0.98, D2.glassAlpha),
+      haptics: bool(o.haptics, D2.haptics),
+      nav: oneOf(o.nav, NAV_MODES.map((x) => x[0]), D2.nav),
+      dockSize: num(o.dockSize, 32, 72, D2.dockSize),
+      dockMagnify: bool(o.dockMagnify, D2.dockMagnify),
+      dockLabels: bool(o.dockLabels, D2.dockLabels),
+      dockAutoHide: bool(o.dockAutoHide, D2.dockAutoHide),
+      clock: bool(o.clock, D2.clock),
+      clockPos: oneOf(o.clockPos, ["left", "center", "right"], D2.clockPos),
+      clockSize: oneOf(o.clockSize, ["normal", "large"], D2.clockSize),
+      clock24: bool(o.clock24, D2.clock24),
+      dateFmt: oneOf(o.dateFmt, ["none", "short", "long"], D2.dateFmt),
+      barLabels: bool(o.barLabels, D2.barLabels),
+      startPage: oneOf(o.startPage, ["all", "home"], D2.startPage),
+      widgets
+    };
+  }
+  var hexToRgb = (h2) => [1, 3, 5].map((i) => parseInt(h2.slice(i, i + 2), 16));
+  var toHex = (r, g, b) => "#" + [r, g, b].map((v) => Math.round(Math.min(255, Math.max(0, v))).toString(16).padStart(2, "0")).join("");
+  var mix = (a, b, t) => {
+    const x = hexToRgb(a), y = hexToRgb(b);
+    return toHex(x[0] + (y[0] - x[0]) * t, x[1] + (y[1] - x[1]) * t, x[2] + (y[2] - x[2]) * t);
+  };
+  var luminance = (hex3) => {
+    const [r, g, b] = hexToRgb(hex3).map((v) => {
+      v /= 255;
+      return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+    });
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  };
+  function accentTokens(hex3, theme) {
+    const base = theme === "light" ? mix(hex3, "#000000", 0.32) : hex3;
+    const two = theme === "light" ? mix(base, "#000000", 0.12) : mix(hex3, "#ffffff", 0.4);
+    const [r, g, b] = hexToRgb(base);
+    return { accent: base, accent2: two, ink: luminance(base) > 0.4 ? "#06201d" : "#ffffff", rgb: r + "," + g + "," + b };
+  }
+  function resolveTheme(setting, prefersLight) {
+    return setting === "dark" ? "dark" : setting === "light" ? "light" : prefersLight ? "light" : "dark";
+  }
+  function applyLook(look, theme, landscapes2 = null) {
+    if (typeof document === "undefined") return;
+    const el = document.documentElement, set = (k, v) => el.style.setProperty(k, v);
+    const t = accentTokens(look.accent, theme);
+    set("--accent", t.accent);
+    set("--accent-2", t.accent2);
+    set("--accent-ink", t.ink);
+    set("--accent-rgb", t.rgb);
+    set("--grid", `rgba(${t.rgb},${theme === "light" ? 0.08 : 0.06})`);
+    set("--glow", `0 0 24px rgba(${t.rgb},${theme === "light" ? 0.18 : 0.25})`);
+    set("--r", look.radius + "px");
+    set("--blur", look.blur + "px");
+    set("--glass", theme === "light" ? `rgba(255,255,255,${look.glassAlpha})` : `rgba(12,22,34,${look.glassAlpha})`);
+    set("--fx-aurora", String(look.fxAurora));
+    set("--fx-glow", String(look.fxGlow));
+    set("--speed", String(look.animSpeed));
+    set("--ui-scale", String(look.uiScale / 100));
+    set("--tilt", look.fxTilt + "deg");
+    set("--fx3d-thick", String(look.fx3dThick));
+    set("--fx3d-float", String(look.fx3dFloat));
+    set("--dock", look.dockSize + "px");
+    set("--wall-dim", String(look.bgDim / 100));
+    set("--wall-dim-rgb", theme === "light" ? "238,242,246" : "2,6,12");
+    applyCursor(look, el);
+    const d = el.dataset;
+    d.theme = theme;
+    d.icons = look.iconStyle;
+    syncIcons3d(look.iconStyle === "3d");
+    d.iconsize = look.iconSize;
+    d.density = look.density;
+    d.avatar = look.avatar;
+    d.motion = look.animations ? "on" : "off";
+    d.fxanim = look.fxAnim && look.animations ? "on" : "off";
+    d.fx3d = look.fx3d && look.animations ? "on" : "off";
+    d.thick = look.fx3dThick > 0 ? "on" : "off";
+    d.tips = look.tips ? "on" : "off";
+    d.float = look.fx3d && look.animations && look.fx3dFloat > 0 && !(typeof navigator !== "undefined" && navigator.webdriver) ? "on" : "off";
+    d.anim = look.animStyle;
+    d.scan = look.fxScan ? "on" : "off";
+    d.bg = look.bg === "wallpaper" && landscapes2 ? "wallpaper" : look.bg === "plain" ? "plain" : "default";
+    d.wstyle = look.widgetStyle;
+    d.nav = look.nav;
+    d.clockpos = look.clockPos;
+    d.clocksize = look.clockSize;
+    d.dockautohide = look.dockAutoHide ? "1" : "0";
+    d.dockmagnify = look.dockMagnify ? "1" : "0";
+    d.barlabels = look.barLabels ? "1" : "0";
+    d.haptics = look.haptics ? "1" : "0";
+    if (landscapes2 && look.bg === "wallpaper") {
+      const u = landscapes2.url(look.wallpaper, look) || landscapes2.url("forest");
+      set("--wall", `url("${u}")`);
+    } else el.style.removeProperty("--wall");
+  }
+  var KEY = "vaultmanager.look";
+  function loadCosmetic(storage2, key = KEY) {
+    try {
+      const j = JSON.parse(storage2.getItem(key));
+      return j && typeof j === "object" ? j : null;
+    } catch {
+      return null;
+    }
+  }
+  function saveCosmetic(storage2, theme, look, key = KEY) {
+    try {
+      const { wallImage, ...rest } = look;
+      storage2.setItem(key, JSON.stringify({ theme, look: wallImage ? { ...rest, bg: "default" } : look }));
+    } catch {
+    }
+  }
+  function randomLook(prev, wallIds = []) {
+    const pick = (a) => a[Math.floor(Math.random() * a.length)];
+    const hue2 = Math.floor(Math.random() * 360), c = (h2, s, l) => {
+      const a = s * Math.min(l, 1 - l);
+      const f = (n) => {
+        const k = (n + h2 / 30) % 12;
+        return l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1));
+      };
+      return toHex(f(0) * 255, f(8) * 255, f(4) * 255);
+    };
+    return normalizeLook({ ...prev, accent: c(hue2, 0.78, 0.62), iconStyle: pick(ICON_STYLES)[0], animStyle: pick(ANIM_STYLES)[0], bg: wallIds.length ? "wallpaper" : prev.bg, wallpaper: wallIds.length ? pick(wallIds) : prev.wallpaper });
+  }
+  var TIPS = [
+    "Use a unique password for every account \u2014 a breach at one site then cannot open the others.",
+    "A passphrase of 5+ random words beats a short \u201Ccomplex\u201D password and is easier to type.",
+    "Turn on one-time codes (2FA) for email, banking and your password manager\u2019s own accounts.",
+    "Keep an encrypted backup somewhere other than this device \u2014 and test restoring it once.",
+    "Print the recovery key and store it with your important papers, not on this computer.",
+    "Be suspicious of urgent messages asking you to log in: type the address yourself or use the saved link.",
+    "Lock your vault when you step away; set auto-lock to 5 minutes or less on shared computers.",
+    "Review \u201CVault health\u201D once a month: fix weak and reused passwords first.",
+    "Check expiry dates: passports, licences and insurance renewals are easy to miss.",
+    "Sync only through a passphrase you have written down \u2014 without it, synced data cannot be opened."
+  ];
 
   // js/vault.js
   var TYPES = Object.fromEntries(Object.entries(TYPE_META).map(([k, m]) => [k, m.label]));
@@ -8870,6 +8882,11 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
             toast("Everything is visible again");
           } } }, "Show everything"),
           h("button", { class: "btn sm", on: { click: () => {
+            ctx2.setLook({ hiddenCats: [...DEFAULT_HIDDEN_CATS], hiddenNav: [...DEFAULT_HIDDEN_NAV], clockPos: "center", clockSize: "large" }, { nav: true, shell: true });
+            paint();
+            toast("Recommended layout restored");
+          } } }, "Use the recommended layout"),
+          h("button", { class: "btn sm", on: { click: () => {
             const empty2 = Object.keys(TYPE_META).filter((k) => !cnt(k));
             ctx2.setLook({ hiddenCats: empty2 }, { nav: true });
             paint();
@@ -9001,6 +9018,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
         "Menu bar (top bar)",
         row("Show clock", "Time and date in the top bar", sw("clock", { shell: true })),
         row("Clock position", "Left, centre or right of the top bar", seg("clockPos", [["left", "Left"], ["center", "Middle"], ["right", "Right"]])),
+        row("Clock size", "Normal, or large and easy to read", seg("clockSize", [["normal", "Normal"], ["large", "Large"]])),
         row("24-hour time", null, sw("clock24", { shell: true })),
         row("Date", "Format shown next to the time", select("dateFmt", [["none", "Hidden"], ["short", "Short (Mon 9 Nov)"], ["long", "Long (Monday 9 November 2026)"]], { shell: true })),
         row("Button labels", "Show the words next to \u201CNew\u201D and \u201CLock\u201D (off = icons only)", sw("barLabels"))

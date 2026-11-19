@@ -2,7 +2,7 @@
 
 import { h, clear, modal, toast, confirmDialog } from './dom.js';
 import { page, sel } from './tools.js';
-import { HIDEABLE, ACCENTS, ICON_STYLES, ANIM_STYLES, NAV_MODES, WIDGET_DEFS, LOOK_DEFAULTS, normalizeLook, randomLook } from './look.js';
+import { HIDEABLE, DEFAULT_HIDDEN_CATS, DEFAULT_HIDDEN_NAV, ACCENTS, ICON_STYLES, ANIM_STYLES, NAV_MODES, WIDGET_DEFS, LOOK_DEFAULTS, normalizeLook, randomLook } from './look.js';
 import { landscapes } from './landscapes.js';
 import { CURSOR_STYLES, cursorImages } from './cursor.js';
 import { TYPE_META, GROUPS } from './templates.js';
@@ -143,6 +143,7 @@ function visibilityPanel(ctx) {
     clear(wrap).append(
       h('div', { class: 'row wrap' },
         h('button', { class: 'btn sm', on: { click: () => { ctx.setLook({ hiddenCats: [], hiddenNav: [] }, { nav: true }); paint(); toast('Everything is visible again'); } } }, 'Show everything'),
+        h('button', { class: 'btn sm', on: { click: () => { ctx.setLook({ hiddenCats: [...DEFAULT_HIDDEN_CATS], hiddenNav: [...DEFAULT_HIDDEN_NAV], clockPos: 'center', clockSize: 'large' }, { nav: true, shell: true }); paint(); toast('Recommended layout restored'); } } }, 'Use the recommended layout'),
         h('button', { class: 'btn sm', on: { click: () => { const empty = Object.keys(TYPE_META).filter((k) => !cnt(k)); ctx.setLook({ hiddenCats: empty }, { nav: true }); paint(); toast(empty.length + ' empty categories hidden'); } } }, 'Hide empty categories')),
       h('h4', { text: 'Tools & shortcuts' }), HIDEABLE.map((id) => tog('hiddenNav', id, NAV_LABELS[id])),
       h('p', { class: 'hint', text: 'Home, All items and Settings always stay. On a phone the bottom bar keeps Home, Items, New, Generator and More; hiding applies to the menu behind More.' }),
@@ -224,6 +225,7 @@ export function layout(ctx) {
     panel('Menu bar (top bar)',
       row('Show clock', 'Time and date in the top bar', sw('clock', { shell: true })),
       row('Clock position', 'Left, centre or right of the top bar', seg('clockPos', [['left', 'Left'], ['center', 'Middle'], ['right', 'Right']])),
+      row('Clock size', 'Normal, or large and easy to read', seg('clockSize', [['normal', 'Normal'], ['large', 'Large']])),
       row('24-hour time', null, sw('clock24', { shell: true })),
       row('Date', 'Format shown next to the time', select('dateFmt', [['none', 'Hidden'], ['short', 'Short (Mon 9 Nov)'], ['long', 'Long (Monday 9 November 2026)']], { shell: true })),
       row('Button labels', 'Show the words next to “New” and “Lock” (off = icons only)', sw('barLabels'))));

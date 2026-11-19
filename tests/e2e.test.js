@@ -74,7 +74,7 @@ test('full journey: create → add → lock → unlock → tools → QR round tr
   assert.match(await page.textContent('.err:not(.photo-err)'), /do not match/);
   await page.fill('#pw2', MASTER);
   await page.click('button[type=submit]');
-  await page.getByRole('button', { name: 'Skip for now' }).click(); await dismissWelcome(page);
+  await page.getByRole('button', { name: 'Skip for now' }).click(); await dismissWelcome(page); await showEverything(page);
   await page.waitForSelector('.topbar');
 
   // add a login with a generated password
@@ -227,7 +227,7 @@ async function phoneFlow(name) {
   await page.fill('#pw1', MASTER); await page.fill('#pw2', MASTER); await page.check('#ack'); await page.click('button[type=submit]');
   await page.getByRole('button', { name: 'Skip for now' }).click();
   await page.waitForSelector('.welcome.in'); await fits('welcome');
-  assert.ok(await page.locator('.welcome-go').isVisible()); await page.keyboard.press('Escape'); await page.waitForSelector('.welcome', { state: 'detached' });
+  assert.ok(await page.locator('.welcome-go').isVisible()); await page.keyboard.press('Escape'); await page.waitForSelector('.welcome', { state: 'detached' }); await showEverything(page);
 
   // shell: bottom bar, two-row top bar with a full-width search, no desktop side bar / dock
   await page.waitForSelector('.mbar-item'); await fits('home');
@@ -287,7 +287,7 @@ async function tabletFlow(name) {
   const fits = async (label) => { const o = await page.evaluate(() => ({ sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth })); assert.ok(o.sw <= o.cw + 1, `${name} · ${label}: horizontal overflow ${o.sw}>${o.cw}`); };
   await page.goto(base); await page.waitForSelector('#pw1');
   await page.fill('#pw1', MASTER); await page.fill('#pw2', MASTER); await page.check('#ack'); await page.click('button[type=submit]');
-  await page.getByRole('button', { name: 'Skip for now' }).click(); await dismissWelcome(page); await page.waitForSelector('.widgets'); await fits('home');
+  await page.getByRole('button', { name: 'Skip for now' }).click(); await dismissWelcome(page); await showEverything(page); await page.waitForSelector('.widgets'); await fits('home');
   // tablets keep a persistent side menu (no phone bottom bar); it is the app-style sidebar with grouped categories
   assert.ok(await page.locator('.side').isVisible(), `${name}: side menu visible`); assert.ok(await page.locator('.mbar').isHidden(), `${name}: no phone bottom bar`);
   const side = await page.locator('.side').boundingBox(); assert.ok(side.width >= 180 && side.width <= 260, `${name}: side menu width ${side.width}`);
@@ -341,7 +341,7 @@ test('app style: grouped lists, large titles, sheet handle, install panel, PWA m
 test('icons are identical on desktop and phone (one SVG set, no emoji)', async () => {
   const grab = async (opts) => {
     const { ctx, page } = await newPage(opts); await page.goto(base); await page.waitForSelector('#pw1');
-    await page.fill('#pw1', MASTER); await page.fill('#pw2', MASTER); await page.check('#ack'); await page.click('button[type=submit]'); await page.getByRole('button', { name: 'Skip for now' }).click(); await dismissWelcome(page);
+    await page.fill('#pw1', MASTER); await page.fill('#pw2', MASTER); await page.check('#ack'); await page.click('button[type=submit]'); await page.getByRole('button', { name: 'Skip for now' }).click(); await dismissWelcome(page); await showEverything(page);
     await page.getByRole('button', { name: /New/ }).first().click().catch(async () => page.getByRole('button', { name: 'New item' }).click());
     await page.waitForSelector('.modal-sheet .cats'); const out = await page.$$eval('.modal-sheet .cats .btn', (bs) => Object.fromEntries(bs.map((b) => [b.textContent.trim(), b.querySelector('svg').outerHTML]))); await ctx.close(); return out;
   };
@@ -365,7 +365,14 @@ async function createVault(page, pw = MASTER) {
   await page.goto(base); await page.waitForSelector('#pw1');
   await page.fill('#pw1', pw); await page.fill('#pw2', pw); await page.check('#ack'); await page.click('button[type=submit]');
   await page.getByRole('button', { name: 'Skip for now' }).click(); await dismissWelcome(page); await page.waitForSelector('.topbar');
+  await showEverything(page);   // the default side bar shows only a few categories and tools; most tests want them all
   await page.evaluate(() => document.querySelectorAll('.ngroup[aria-expanded=false]').forEach((b) => b.click()));   // category groups start collapsed (except Everyday)
+}
+async function showEverything(page) {
+  const direct = page.locator('.side .nav:has-text("Settings"), .dock-item[aria-label="Settings"]').first();
+  if (await direct.count() && await direct.isVisible()) await direct.click(); else { await page.getByRole('button', { name: 'More' }).click(); await page.waitForSelector('.msheet'); await page.locator('.msheet-item', { hasText: 'Settings' }).first().click(); }
+  await page.getByRole('tab', { name: /Dock & menu bar/ }).click(); await page.getByRole('button', { name: 'Show everything' }).click();
+  await page.locator('.side .nav:has-text("Home"), .dock-item[aria-label="Home"], .mbar-item:has-text("Home")').filter({ visible: true }).first().click(); await page.evaluate(() => document.querySelectorAll('.toast').forEach((t) => t.remove())); await page.waitForTimeout(200);
 }
 async function addLogin(page, name, extra = async () => {}) {
   await page.getByRole('button', { name: '＋ New' }).click(); await page.waitForSelector('.modal-sheet');
@@ -956,7 +963,7 @@ test('offline web app: after the first visit it loads, unlocks, creates items an
   await ctx.setOffline(true);                                                                              // ✈ no network from here on
   await page.reload(); await page.waitForSelector('#pw1');
   await page.fill('#pw1', MASTER); await page.fill('#pw2', MASTER); await page.check('#ack'); await page.click('button[type=submit]');
-  await page.getByRole('button', { name: 'Skip for now' }).click(); await dismissWelcome(page);
+  await page.getByRole('button', { name: 'Skip for now' }).click(); await dismissWelcome(page); await showEverything(page);
   await addLogin(page, 'OfflineSite');
   await page.locator('.side .nav', { hasText: 'QR tools' }).click();                                       // QR library comes from the cache
   await page.fill('textarea[aria-label="Text to seal"]', 'sealed while offline'); await page.fill('input[aria-label="QR password"]', 'offline-qr-pass'); await page.fill('input[aria-label="Confirm QR password"]', 'offline-qr-pass');
@@ -981,7 +988,7 @@ test('single-file offline build: offline/VaultManager-offline.html runs straight
   assert.match(await page.textContent('.gate-ver'), /v\d+\.\d+\.\d+ · offline copy/);
   assert.equal(await page.evaluate(() => window.isSecureContext), true, 'file:// is a secure context, so WebCrypto works');
   await page.fill('#pw1', MASTER); await page.fill('#pw2', MASTER); await page.check('#ack'); await page.click('button[type=submit]');
-  await page.getByRole('button', { name: 'Skip for now' }).click(); await dismissWelcome(page);
+  await page.getByRole('button', { name: 'Skip for now' }).click(); await dismissWelcome(page); await showEverything(page);
   await addLogin(page, 'FromAFile');
   await page.locator('.side .nav', { hasText: 'QR tools' }).click();                                       // QR libraries are embedded in the file
   await page.fill('textarea[aria-label="Text to seal"]', 'hello from a single file'); await page.fill('input[aria-label="QR password"]', 'single-file-pass'); await page.fill('input[aria-label="Confirm QR password"]', 'single-file-pass');
@@ -1252,7 +1259,7 @@ for (const dev of ['iPhone 13', 'iPhone SE']) test('v0.15 on a phone (' + dev + 
   const { ctx, page, problems } = await newPage({ ...d, colorScheme: 'dark', reducedMotion: 'reduce' });
   const fits = async (what) => { const o = await page.evaluate(() => ({ sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth })); assert.ok(o.sw <= o.cw + 1, `${dev} · ${what}: overflow ${o.sw}>${o.cw}`); };
   await page.goto(base); await page.waitForSelector('#pw1'); await page.fill('#pw1', MASTER); await page.fill('#pw2', MASTER); await page.check('#ack'); await page.click('button[type=submit]');
-  await page.getByRole('button', { name: 'Skip for now' }).click(); await page.waitForSelector('.welcome.in').catch(() => {}); await page.keyboard.press('Escape'); await page.waitForTimeout(250);
+  await page.getByRole('button', { name: 'Skip for now' }).click(); await page.waitForSelector('.welcome.in').catch(() => {}); await page.keyboard.press('Escape'); await page.waitForTimeout(250); await showEverything(page);
   const more = async (label) => { await page.getByRole('button', { name: 'More' }).click(); await page.waitForSelector('.msheet'); await page.locator('.msheet-item', { hasText: label }).first().click(); };
   await more('Task manager'); await page.waitForSelector('.tmtable'); await fits('task manager processes');
   for (const t of ['Performance', 'Storage', 'This device']) { await page.getByRole('tab', { name: t }).click(); await page.waitForTimeout(150); await fits('task manager ' + t); }
@@ -1352,7 +1359,7 @@ test('v0.18 on iPhone SE: QR tool tabs, the Seal-as-QR dialog and cursor setting
   const { ctx, page, problems } = await newPage({ ...d, colorScheme: 'dark', reducedMotion: 'reduce' });
   const fits = async (what) => { const o = await page.evaluate(() => ({ sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth })); assert.ok(o.sw <= o.cw + 1, `${what}: overflow ${o.sw}>${o.cw}`); };
   await page.goto(base); await page.waitForSelector('#pw1'); await page.fill('#pw1', MASTER); await page.fill('#pw2', MASTER); await page.check('#ack'); await page.click('button[type=submit]');
-  await page.getByRole('button', { name: 'Skip for now' }).click(); await page.waitForSelector('.welcome.in').catch(() => {}); await page.keyboard.press('Escape'); await page.waitForTimeout(250);
+  await page.getByRole('button', { name: 'Skip for now' }).click(); await page.waitForSelector('.welcome.in').catch(() => {}); await page.keyboard.press('Escape'); await page.waitForTimeout(250); await showEverything(page);
   const more = async (label) => { await page.getByRole('button', { name: 'More' }).click(); await page.waitForSelector('.msheet'); await page.locator('.msheet-item', { hasText: label }).first().click(); };
   await page.getByRole('button', { name: 'New item' }).click(); await page.locator('.modal-sheet .cats .btn', { hasText: 'Crypto wallet' }).click();
   await page.fill('#f_name', 'Phone wallet'); await page.fill('#tf_seed', 'one two three four'); await page.getByRole('button', { name: 'Save' }).click(); await page.waitForSelector('.detail h2');
@@ -1368,7 +1375,7 @@ test('v0.19: version on the sign-in screens; every saved file name carries date 
   await page.goto(base); await page.waitForSelector('#pw1');
   assert.match(await page.textContent('.gate'), /VaultManager v\d+\.\d+\.\d+/, 'version on the create screen');
   await page.fill('#pw1', MASTER); await page.fill('#pw2', MASTER); await page.check('#ack'); await page.click('button[type=submit]');
-  await page.getByRole('button', { name: 'Skip for now' }).click(); await dismissWelcome(page); await page.waitForSelector('.topbar');
+  await page.getByRole('button', { name: 'Skip for now' }).click(); await dismissWelcome(page); await page.waitForSelector('.topbar'); await showEverything(page);
   const STAMP = /\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}/;
   // whole profile
   await settingsTab(page, 'General'); await page.getByRole('button', { name: /Export whole profile/ }).first().click();
@@ -1416,7 +1423,7 @@ for (const [label, o] of [['single file · desktop', { offline: true }], ['singl
   await page.goto(o.offline ? 'file://' + path.join(ROOT, 'offline/VaultManager-offline.html') : base); await page.waitForSelector('#pw1');
   assert.match(await page.textContent('.gate'), /VaultManager v\d+\.\d+\.\d+/); await fits('create screen');
   await page.fill('#pw1', MASTER); await page.fill('#pw2', MASTER); await page.check('#ack'); await page.click('button[type=submit]');
-  await page.getByRole('button', { name: 'Skip for now' }).click(); await page.waitForSelector('.welcome.in').catch(() => {}); await page.keyboard.press('Escape'); await page.waitForTimeout(250);
+  await page.getByRole('button', { name: 'Skip for now' }).click(); await page.waitForSelector('.welcome.in').catch(() => {}); await page.keyboard.press('Escape'); await page.waitForTimeout(250); await showEverything(page);
   if (phone) { await page.getByRole('button', { name: 'More' }).click(); await page.locator('.msheet-item', { hasText: 'QR tools' }).first().click(); } else await page.locator('.side .nav', { hasText: 'QR tools' }).click();
   await page.fill('textarea[aria-label="Text to seal"]', 'hello'); await page.fill('input[aria-label="QR password"]', 'qr-test-password'); await page.fill('input[aria-label="Confirm QR password"]', 'qr-test-password');
   await page.getByRole('button', { name: /Seal into QR/ }).click(); await page.waitForSelector('.payloadbox textarea', { timeout: 30000 }); await fits('seal result');
@@ -1484,7 +1491,7 @@ test('v0.21: centred unlock screen, side-bar auto-hide, clock position, live New
   assert.ok(Math.abs(b.x + b.width / 2 - vw / 2) < 4, 'boot content is centred: ' + (b.x + b.width / 2)); await page.keyboard.press('Escape'); await page.waitForSelector('#boot', { state: 'detached' });
   // clock position
   const cx = async () => { const r = await page.locator('.barclock').boundingBox(); return r.x + r.width / 2; };
-  const right = await cx(); assert.ok(right > 900);
+  assert.equal(await page.evaluate(() => document.documentElement.dataset.clockpos), 'center', 'the clock is in the middle by default'); assert.equal(await page.evaluate(() => document.documentElement.dataset.clocksize), 'large'); assert.ok(Math.abs((await cx()) - 640) < 40, 'the default clock sits in the middle');
   await settingsTab(page, 'Dock & menu bar'); await page.getByRole('button', { name: 'Left', exact: true }).click(); assert.equal(await page.evaluate(() => document.documentElement.dataset.clockpos), 'left'); assert.ok(await cx() < 500, 'clock moved left');
   await page.getByRole('button', { name: 'Middle', exact: true }).click(); const mid = await cx(); assert.ok(Math.abs(mid - 640) < 40, 'clock in the middle: ' + mid);
   await page.getByRole('button', { name: 'Right', exact: true }).click();
@@ -2198,5 +2205,24 @@ test('v0.39.0: Family recovery — guide, split a password into shares, combine 
   await page.getByRole('button', { name: /We tested it today/ }).click(); await page.waitForFunction(() => /Last drill: .*0 days ago/.test(document.querySelector('.note')?.textContent || ''));
   await page.locator('.side .nav:has-text("Home")').click(); await page.waitForSelector('.widget');
   assert.match(await page.textContent('.widgets'), /Family recovery[\s\S]*Last tested 0 days ago[\s\S]*Up to date/);
+  assert.deepEqual(problems.filter((p) => !/Failed to load resource/.test(p)), []); await ctx.close();
+});
+
+test('v0.40.0: the default layout — side bar shows only the Everyday categories and Vault health / Import & export / Task manager / Settings, and the clock is large and in the middle', async () => {
+  const { ctx, page, problems } = await newPage();
+  await page.goto(base); await page.waitForSelector('#pw1'); await page.fill('#pw1', MASTER); await page.fill('#pw2', MASTER); await page.check('#ack'); await page.click('button[type=submit]');
+  await page.getByRole('button', { name: 'Skip for now' }).click(); await dismissWelcome(page); await page.waitForSelector('.topbar');
+  assert.equal(await page.locator('.side .ngroup').count(), 1, 'one category group');
+  assert.match(await page.textContent('.side .ngroup'), /Everyday/i);
+  const cats = await page.locator('.side .nav .ico.cat').evaluateAll((els) => els.map((e) => e.dataset.n)); assert.deepEqual(cats, ['login', 'note', 'card']);
+  const tools = await page.locator('.side .nav').evaluateAll((els) => els.map((e) => e.textContent.replace(/\d+$/, '').trim())); 
+  for (const t of ['Vault health', 'Import & export', 'Task manager', 'Settings']) assert.ok(tools.some((x) => x.includes(t)), t + ' is in the side bar');
+  for (const t of ['Generator', 'QR tools', 'Beam sync', 'Family recovery']) assert.ok(!tools.some((x) => x.includes(t)), t + ' is tucked away by default');
+  assert.equal(await page.evaluate(() => document.documentElement.dataset.clockpos), 'center'); assert.equal(await page.evaluate(() => document.documentElement.dataset.clocksize), 'large');
+  const r = await page.locator('.barclock').boundingBox(); assert.ok(Math.abs(r.x + r.width / 2 - 640) < 40, 'clock in the middle'); assert.ok((await page.locator('.barclock b').evaluate((e) => parseFloat(getComputedStyle(e).fontSize))) >= 20, 'large');
+  const sb = await page.locator('.topbar .search').boundingBox(); assert.ok(sb.x + sb.width < r.x - 8, 'the search box does not run under the clock');
+  // everything is still one click away
+  await settingsTab(page, /Dock & menu bar/); await page.getByRole('button', { name: 'Show everything' }).click(); assert.ok(await page.locator('.side .nav', { hasText: 'QR tools' }).count());
+  await page.getByRole('button', { name: 'Use the recommended layout' }).click(); assert.equal(await page.locator('.side .nav', { hasText: 'QR tools' }).count(), 0, 'the recommended layout hides them again');
   assert.deepEqual(problems.filter((p) => !/Failed to load resource/.test(p)), []); await ctx.close();
 });
