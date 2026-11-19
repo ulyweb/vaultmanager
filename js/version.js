@@ -1,6 +1,6 @@
 /* Application version, data-format versions and changelog (shown in Settings → About). */
 
-export const APP_VERSION = '0.38.2';
+export const APP_VERSION = '0.39.0';
 export const APP_NAME = 'VaultManager';
 export const REPO_URL = 'https://github.com/ulyweb/vaultmanager';
 
@@ -16,6 +16,10 @@ export const FORMATS = [
 ];
 
 export const CHANGELOG = [
+  { v: '0.39.0', date: '2026-11-19', notes: [
+    'New: Family recovery (left menu, and a Home widget). Make sure the people you trust can open the vault if you cannot help them. A printable Family guide (who to call, where the USB drive and paper copies are, the steps, your crypto items by name, never a secret). Split a password with Shamir sharing: for example 2 of 3 shares, so no single person or place can open it but any two together can, with a QR code and printable card for every share. Combine shares by typing or scanning them, with typing mistakes and mismatched sets caught. A restore drill with a checklist and a reminder (every 1, 3, 6 or 12 months) so you know recovery really works.',
+    'Crypto wallet items gain Instructions for my family, Where the hardware wallet / seed backup is kept, Wallet app to open it with and Who can help.',
+  ] },
   { v: '0.38.2', date: '2026-11-18', notes: [
     'The “How secure is this? The honest answer” link is gone from the sign-in and create screens. The explanation now lives in Settings → About → FAQ (together with short answers on where your data is stored, forgetting the master password, offline / air-gapped use, phones, what leaves your device, and the audit), and is still in the system menu and the guided tour.',
   ] },

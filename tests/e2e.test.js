@@ -2164,3 +2164,39 @@ test('v0.38.0: secret fields are masked text (no browser password-manager prompt
   assert.match(await page.locator('.gate-card .err:not(:empty), .err:not(:empty)').first().textContent(), /too easy to guess|Use at least/);
   assert.deepEqual(problems.filter((p) => !/Failed to load resource/.test(p)), []); await ctx.close();
 });
+
+test('v0.39.0: Family recovery — guide, split a password into shares, combine them again, restore drill and the Home widget', async () => {
+  const { ctx, page, problems } = await newPage({ reducedMotion: 'reduce' }); await createVault(page);
+  // a crypto item with instructions for the family
+  await page.getByRole('button', { name: '＋ New' }).click(); await page.waitForSelector('.modal-sheet'); if (await page.locator('.c3-stage').count()) await page.locator('.pickseg button').nth(1).click();
+  await page.locator('.modal-sheet .cats .btn', { hasText: 'Crypto wallet' }).click(); await page.waitForSelector('#f_name'); await page.fill('#f_name', 'Ledger Nano');
+  await page.fill('#tf_familynote', 'Plug it in and use the 24 words in the safe.'); await page.fill('#tf_hwwhere', 'Fire safe, hall cupboard'); await page.getByRole('button', { name: 'Save' }).click(); await page.waitForSelector('.detail h2:has-text("Ledger Nano")');
+  await page.locator('.side .nav:has-text("Family recovery")').click(); await page.waitForSelector('.tabs');
+  // guide
+  assert.match(await page.textContent('.readiness'), /1 crypto item recorded \(1 with/);
+  await page.fill('textarea[aria-label="Who to call first (names and phone numbers)"]', 'Sam 555-0101'); await page.fill('textarea[aria-label="Where the USB drive or offline file is"]', 'Blue USB in the fire safe');
+  assert.match(await page.textContent('.guideprev'), /Sam 555-0101/); await page.waitForTimeout(700);
+  const prev = await page.textContent('.guideprev'); assert.match(prev, /Ledger Nano/); assert.ok(!/24 words|Plug it in/.test(prev), 'the guide lists wallet names only, never their contents');
+  assert.match(prev, /no passwords or secret words/);
+  // split 2 of 3
+  await page.getByRole('tab', { name: 'Split a password' }).click();
+  const secret = 'plum-orbit-velvet-anchor-glacier-ember-quartz-lunar';
+  await page.fill('textarea[aria-label="Password to split"]', secret); await page.getByRole('button', { name: /Create the shares/ }).click(); await page.waitForSelector('.sharecard');
+  assert.equal(await page.locator('.sharecard').count(), 3); assert.match(await page.textContent('.note.ok'), /any 2 of these 3/);
+  const shares = await page.locator('.sharetext').allTextContents(); assert.ok(shares.every((s) => s.startsWith('VMS1-')));
+  assert.ok(!(await page.textContent('.page')).includes(secret), 'the password itself is never shown');
+  // combine: one share is not enough, two are, a typo is caught
+  await page.getByRole('tab', { name: 'Combine shares' }).click();
+  await page.fill('textarea[aria-label="Shares"]', shares[0]); await page.getByRole('button', { name: /Combine/ }).click(); assert.match(await page.locator('.err:not(:empty)').first().textContent(), /2 shares are needed/);
+  await page.fill('textarea[aria-label="Shares"]', shares[0] + '\n' + shares[2]); await page.getByRole('button', { name: /Combine/ }).click(); await page.waitForSelector('input[aria-label="Recovered password"]');
+  assert.equal(await page.inputValue('input[aria-label="Recovered password"]'), secret);
+  const bad = shares[1].replace(/-(.)/, (m, c) => '-' + (c === 'A' ? 'B' : 'A')); await page.fill('textarea[aria-label="Shares"]', shares[0] + '\n' + bad); await page.getByRole('button', { name: /Combine/ }).click(); assert.match(await page.locator('.err:not(:empty)').first().textContent(), /typing mistake/);
+  // drill + widget
+  await page.getByRole('tab', { name: 'Restore drill' }).click(); assert.match(await page.textContent('.note'), /never run a restore drill/);
+  await page.getByRole('button', { name: /We tested it today/ }).click(); await page.getByText(/Tick all 5 steps first/).waitFor();
+  for (const b of await page.locator('.drill input[type=checkbox]').all()) await b.check();
+  await page.getByRole('button', { name: /We tested it today/ }).click(); await page.waitForFunction(() => /Last drill: .*0 days ago/.test(document.querySelector('.note')?.textContent || ''));
+  await page.locator('.side .nav:has-text("Home")').click(); await page.waitForSelector('.widget');
+  assert.match(await page.textContent('.widgets'), /Family recovery[\s\S]*Last tested 0 days ago[\s\S]*Up to date/);
+  assert.deepEqual(problems.filter((p) => !/Failed to load resource/.test(p)), []); await ctx.close();
+});

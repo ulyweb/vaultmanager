@@ -73,3 +73,12 @@ A review of all scripts (crypto, vault, sync, Beam, import / export, profiles, i
 ## Third-party code and licence
 
 The app is MIT licensed (`LICENSE`). The only third-party code it runs is the two QR libraries in `vendor/`; their provenance and SHA-256 checksums are in `vendor/README.md` and a unit test fails if they change. Phones and tablets lock the vault as soon as the app is hidden by default; computers keep the inactivity timer (both are adjustable in Settings → Security).
+
+## Family recovery (v0.39.0)
+
+Family recovery adds three things for people who need to hand access to someone they trust: a printable guide that lists names, places and steps (never a secret), Shamir secret sharing for splitting a password into shares (any K of N rebuild it), and a restore drill reminder.
+
+- **Sharing scheme.** Textbook Shamir over GF(256) (AES polynomial), a fresh random polynomial per byte from `crypto.getRandomValues`, evaluated at x = 1..N. Fewer than K shares give no information about the secret. Each share has a CRC32 to catch typing mistakes and the shares are cross-checked for the same set, distinct positions and agreement. Share text starts `VMS1-`. It is VaultManager's own format and is **not** SLIP-39 or compatible with other tools.
+- **Not in a share:** a hash of the secret (that would allow offline guessing). Whether the recovered password is right is shown only by using it.
+- **Limits.** Shares are not authenticated against a malicious holder who alters one: an extra share exposes a mismatch, but exactly K shares with one altered will combine into a wrong password (which then simply fails to unlock). The secret length is bounded (200 bytes) and padded to hide it. The code is unit-tested (every K-subset recovers, K-1 does not, typos and mixed sets are rejected) but, like the rest of the app, has not had an independent review. For large holdings, prefer an established standard such as SLIP-39 on a hardware wallet in addition.
+- **Where things live.** The guide text and drill date are stored inside the encrypted vault settings. Shares are shown once and not stored anywhere.
