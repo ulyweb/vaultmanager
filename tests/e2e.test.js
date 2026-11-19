@@ -603,7 +603,7 @@ test('categories: every template is creatable; Wi-Fi QR, custom fields, expiry, 
   await createVault(page);
   const cats = [['📦 App / software', 'Photoshop', 'tf_license'], ['📶 Wi-Fi / network', 'Home Wi-Fi', 'tf_ssid'], ['💻 Computer account', 'Work laptop', 'tf_host'], ['🛒 Shopping / store', 'Amazon', 'tf_url'],
     ['🛡️ Insurance', 'Car insurance', 'tf_policy'], ['🔢 Locker / combination', 'Gym locker', 'tf_location'], ['✈️ Travel', 'Passport', 'tf_holder'], ['🪪 ID / identity', 'Licence', 'tf_fullname'],
-    ['🏦 Bank account', 'Checking', 'tf_bank'], ['🖥️ Server / API key', 'Prod API', 'tf_host']];
+    ['🏦 Bank account', 'Checking', 'tf_holder'], ['🖥️ Server / API key', 'Prod API', 'tf_username']];
   for (const [label, name, firstField] of cats) {
     await page.getByRole('button', { name: '＋ New' }).click();
     await page.getByRole('button', { name: label, exact: true }).click();
@@ -1314,7 +1314,7 @@ test('v0.18: a QR holds the WHOLE item and Open QR shows the full card; Backup t
   await createVault(page);
   // a crypto wallet with several fields, notes and a custom field
   await page.getByRole('button', { name: '＋ New' }).click(); await page.locator('.modal-sheet .cats .btn', { hasText: 'Crypto wallet' }).click();
-  await page.fill('#f_name', 'Ledger Nano X'); await page.fill('#tf_wallet', 'Ledger'); await page.fill('#tf_seed', 'zoo zebra zone zero zest zinc zip zigzag'); await page.fill('#tf_privkey', 'key-4821');
+  await page.fill('#f_name', 'Ledger Nano X'); await page.selectOption('#tf_wallet', 'Ledger'); await page.fill('#tf_seed', 'zoo zebra zone zero zest zinc zip zigzag'); await page.fill('#tf_privkey', 'key-4821');
   await page.fill('#f_notes', 'Stored in the safe');
   await page.getByRole('button', { name: 'Save' }).click(); await page.waitForSelector('.detail h2:has-text("Ledger Nano X")');
   await page.getByRole('button', { name: /^.*Seal as QR$/ }).first().click();
@@ -2139,7 +2139,7 @@ test('v0.36.3: while a dialog is open nothing behind it blurs or animates (no fl
   assert.deepEqual(problems.filter((p) => !/Failed to load resource/.test(p)), []); await ctx.close();
 });
 
-test('v0.37.0: the honest "How secure is this?" explanation lives in Settings → About → FAQ (and the system menu and tour), not on the create screen, and never claims a guarantee or an audit', async () => {
+test('v0.37.0: the honest "How secure is this?" explanation lives in Settings → About → FAQ (and the tour), not on the create screen, and never claims a guarantee or an audit', async () => {
   const { ctx, page, problems } = await newPage();
   await page.goto(base); await page.waitForSelector('#pw1');
   assert.equal(await page.getByRole('button', { name: /How secure is this/ }).count(), 0, 'nothing about it on the create screen');
@@ -2151,7 +2151,7 @@ test('v0.37.0: the honest "How secure is this?" explanation lives in Settings �
   for (const must of ['turning off all browser extensions', 'air-gapped', 'offline', 'AES-256-GCM', 'PBKDF2', '600,000', 'WebCrypto', 'Rust', 'has not been audited by an independent security firm', 'Check it yourself', 'Network tab']) assert.ok(txt.includes(must), 'missing: ' + must);
   assert.ok(!/is guaranteed|100% secure|unhackable|military[- ]grade|audited by/i.test(txt.replace('has not been audited by an independent security firm', '').replace(/Nobody can honestly guarantee[^.]*\./, '')), 'no overclaiming');
   await page.locator('.faq summary', { hasText: 'forget my master password' }).click(); assert.match(await page.textContent('.faq:has-text("forget my master password")'), /recovery key/);
-  await page.locator('.topbar').getByText('VaultManager').first().click(); await page.locator('.sysmenu').getByText('How secure is this?').click(); await page.waitForSelector('.modal-sheet .trustdoc'); await page.keyboard.press('Escape');
+  await page.locator('.topbar').getByText('VaultManager').first().click(); await page.waitForSelector('.sysmenu'); assert.equal(await page.locator('.sysmenu').getByText('How secure is this?').count(), 0, 'it is in Settings → About → FAQ, not in the system menu'); await page.keyboard.press('Escape');
   assert.deepEqual(problems.filter((p) => !/Failed to load resource/.test(p)), []); await ctx.close();
 });
 
@@ -2224,5 +2224,24 @@ test('v0.40.0: the default layout — side bar shows only the Everyday categorie
   // everything is still one click away
   await settingsTab(page, /Dock & menu bar/); await page.getByRole('button', { name: 'Show everything' }).click(); assert.ok(await page.locator('.side .nav', { hasText: 'QR tools' }).count());
   await page.getByRole('button', { name: 'Use the recommended layout' }).click(); assert.equal(await page.locator('.side .nav', { hasText: 'QR tools' }).count(), 0, 'the recommended layout hides them again');
+  assert.deepEqual(problems.filter((p) => !/Failed to load resource/.test(p)), []); await ctx.close();
+});
+
+test('v0.41.0: pick-lists with an Other… box (banks, wallets / exchanges, networks, carriers, insurers …), stored as plain text and shown normally', async () => {
+  const { ctx, page, problems } = await newPage(); await createVault(page);
+  const open = async (label) => { await page.getByRole('button', { name: '＋ New' }).click(); await page.waitForSelector('.modal-sheet'); if (await page.locator('.c3-stage').count()) await page.locator('.pickseg button').nth(1).click(); await page.getByRole('button', { name: label, exact: true }).click(); await page.waitForSelector('#f_name'); };
+  // a listed bank
+  await open('🏦 Bank account'); await page.fill('#f_name', 'Main checking');
+  const opts = await page.locator('#tf_bank option').allTextContents(); for (const b of ['Chase', 'Bank of America', 'Wells Fargo', 'Capital One', 'Navy Federal Credit Union', 'HSBC']) assert.ok(opts.includes(b), b + ' is in the bank list'); assert.equal(opts[opts.length - 1], 'Other…');
+  await page.selectOption('#tf_bank', 'Chase'); assert.equal(await page.locator('#tf_bank_other').isVisible(), false);
+  await page.getByRole('button', { name: 'Save' }).click(); await page.waitForSelector('.detail h2:has-text("Main checking")'); assert.match(await page.textContent('.detail'), /Chase/);
+  // a bank that is not in the list
+  await open('🏦 Bank account'); await page.fill('#f_name', 'Local account'); await page.selectOption('#tf_bank', '__other__'); await page.waitForSelector('#tf_bank_other'); await page.fill('#tf_bank_other', 'Maple Valley Credit Union');
+  await page.getByRole('button', { name: 'Save' }).click(); await page.waitForSelector('.detail h2:has-text("Local account")'); assert.match(await page.textContent('.detail'), /Maple Valley Credit Union/);
+  await page.locator('.detail .act-edit').click(); await page.waitForSelector('#tf_bank'); assert.equal(await page.inputValue('#tf_bank'), '__other__'); assert.equal(await page.inputValue('#tf_bank_other'), 'Maple Valley Credit Union'); await page.keyboard.press('Escape');
+  // crypto wallet / exchange and network
+  await open('🪙 Crypto wallet'); await page.fill('#f_name', 'Cold storage');
+  for (const w of ['Ledger', 'Trezor', 'MetaMask', 'Coinbase', 'Binance', 'Kraken']) assert.ok((await page.locator('#tf_wallet option').allTextContents()).includes(w), w);
+  await page.selectOption('#tf_wallet', 'Trezor'); await page.selectOption('#tf_network', 'Bitcoin'); await page.getByRole('button', { name: 'Save' }).click(); await page.waitForSelector('.detail h2:has-text("Cold storage")'); assert.match(await page.textContent('.detail'), /Trezor[\s\S]*Bitcoin/);
   assert.deepEqual(problems.filter((p) => !/Failed to load resource/.test(p)), []); await ctx.close();
 });

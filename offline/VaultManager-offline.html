@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VaultManager v0.40.0 — single-file offline build. Verify with the .sha256 file next to it. -->
+<!-- VaultManager v0.41.0 — single-file offline build. Verify with the .sha256 file next to it. -->
 <html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
@@ -11,7 +11,7 @@
 <meta name="application-name" content="VaultManager">
 <meta name="format-detection" content="telephone=no">
 <meta name="referrer" content="no-referrer">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-tauzjAWYvkq2EEey6/r1GOXzEWNzSydbYj43JCIjd2U=' 'sha256-IoV5bWDMSQsSFYNL/CCHZ5xztvyMHcxkIMmXpVWMV/w=' blob:; style-src 'sha256-zbhtrl5X8z3yJZBDbs/hqtfDloYOv5OLoU2V2zaFvdg='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-tauzjAWYvkq2EEey6/r1GOXzEWNzSydbYj43JCIjd2U=' 'sha256-TraYoGQrbN+ZdoTBd8E0fU5D0HYtBi66mhCS67wGcpo=' blob:; style-src 'sha256-U6v9SUhNuGy94zsMYqXX9Q9ongWzzTgRNUfBDQh3lzI='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
 <title>VaultManager | Zero-Knowledge Password Manager</title>
 <meta name="description" content="VaultManager: an offline-first, zero-knowledge, end-to-end encrypted password manager with a strong password generator, TOTP codes and QR-sealed sharing and backup. Runs entirely in your browser.">
 <meta name="theme-color" content="#05080d">
@@ -1126,6 +1126,10 @@ body[data-modal] :is(.widget, .gate-card, .modal-sheet, .ico, .ico svg, .newico,
 /* large clock in the top bar (the default) */
 html[data-clocksize=large] .barclock b { font-size: 22px; letter-spacing: .02em; line-height: 1.1; }
 html[data-clocksize=large] .barclock { font-size: 13px; }
+
+/* pick-list fields (kind: choice): the list, plus a text box when "Other…" is chosen */
+.choicewrap { display: grid; gap: 6px; }
+.choicewrap .inp[hidden] { display: none; }
 </style>
 </head>
 <body>
@@ -2277,7 +2281,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   }
 
   // js/version.js
-  var APP_VERSION = "0.40.0";
+  var APP_VERSION = "0.41.0";
   var APP_NAME = "VaultManager";
   var REPO_URL = "https://github.com/ulyweb/vaultmanager";
   var FORMATS = [
@@ -2291,6 +2295,10 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     ["Attachments at rest", "AES-256-GCM per file, bound to vault + file id"]
   ];
   var CHANGELOG = [
+    { v: "0.41.0", date: "2026-11-19", notes: [
+      "Pick-lists in the item editor. Fields where you used to type a name now offer a list with an \u201COther\u2026\u201D box for anything that is not on it: Bank (major US and international banks and credit unions), Crypto wallet / exchange (hardware and software wallets and the big exchanges), Blockchain / network, Insurance provider and Car insurer, Health plan, Phone carrier, Internet provider, Airline / hotel / travel program, Server host and Technical service, Membership, Voter state, Pharmacy, Product brand, Store and Lens brand. What you already saved keeps working: a name that is not on a list shows under Other\u2026",
+      "\u201CHow secure is this?\u201D is removed from the system menu; it lives in Settings \u2192 About \u2192 FAQ."
+    ] },
     { v: "0.40.0", date: "2026-11-19", notes: [
       "New default layout for new profiles: the side bar shows only the Everyday categories (Logins, Secure notes, Cards) and, under Tools, only Vault health, Import & export, Task manager and Settings; the date and time in the top bar are large and in the middle. Everything else (the other categories, Generator, QR tools, Family recovery, Beam sync) is still one click away from Settings \u2192 Dock & menu bar \u2192 Show everything, and the Family recovery widget stays on Home. Settings \u2192 Dock & menu bar has a new \u201CUse the recommended layout\u201D button, and Settings \u2192 Menu bar has a new Clock size choice."
     ] },
@@ -2669,6 +2677,211 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     if (!document.adoptedStyleSheets.includes(sheet)) document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet];
   }
 
+  // js/lists.js
+  var sorted = (a) => [...new Set(a)].sort((x, y) => x.localeCompare(y, void 0, { sensitivity: "base" }));
+  var BANKS = sorted([
+    "Ally Bank",
+    "American Express National Bank",
+    "Bank of America",
+    "Bank of the West",
+    "BMO",
+    "Capital One",
+    "Charles Schwab Bank",
+    "Chase",
+    "Chime",
+    "Citibank",
+    "Citizens Bank",
+    "Comerica Bank",
+    "Discover Bank",
+    "Fifth Third Bank",
+    "First Citizens BancShares",
+    "First Horizon",
+    "Goldman Sachs (Marcus)",
+    "Huntington National Bank",
+    "KeyBank",
+    "M&T Bank",
+    "Navy Federal Credit Union",
+    "PNC Bank",
+    "Regions Bank",
+    "Santander Bank",
+    "SoFi",
+    "SchoolsFirst FCU",
+    "State Employees\u2019 Credit Union",
+    "Synchrony Bank",
+    "TD Bank",
+    "Truist",
+    "U.S. Bank",
+    "USAA",
+    "Wells Fargo",
+    "Varo Bank",
+    "Axos Bank",
+    "Merrill Edge",
+    "Fidelity (Cash Management)",
+    "Vanguard",
+    "ANZ",
+    "Barclays",
+    "BNP Paribas",
+    "Commonwealth Bank",
+    "CIBC",
+    "Deutsche Bank",
+    "DBS Bank",
+    "HSBC",
+    "ING",
+    "Lloyds Bank",
+    "NatWest",
+    "NAB",
+    "RBC Royal Bank",
+    "Scotiabank",
+    "Standard Chartered",
+    "TD Canada Trust",
+    "UBS",
+    "Westpac",
+    "Monzo",
+    "Revolut",
+    "Wise",
+    "Credit union (local)"
+  ]);
+  var WALLETS = sorted([
+    "BitBox",
+    "Coldcard",
+    "Ellipal",
+    "GridPlus Lattice",
+    "Keystone",
+    "Ledger",
+    "SafePal",
+    "Tangem",
+    "Trezor",
+    "Argent",
+    "Atomic Wallet",
+    "BlueWallet",
+    "Coinbase Wallet",
+    "Electrum",
+    "Exodus",
+    "MetaMask",
+    "Phantom",
+    "Rabby",
+    "Rainbow",
+    "Sparrow",
+    "Trust Wallet",
+    "Zerion",
+    "Wasabi",
+    "Muun",
+    "Phoenix",
+    "Edge",
+    "Guarda",
+    "Brave Wallet",
+    "Backpack",
+    "Binance",
+    "Binance.US",
+    "Bitfinex",
+    "Bitget",
+    "Bitpanda",
+    "Bitstamp",
+    "Bybit",
+    "Cash App",
+    "Coinbase",
+    "Crypto.com",
+    "eToro",
+    "Fold",
+    "Gate.io",
+    "Gemini",
+    "HTX",
+    "KuCoin",
+    "Kraken",
+    "MEXC",
+    "OKX",
+    "PayPal / Venmo",
+    "River",
+    "Robinhood",
+    "Strike",
+    "Swan Bitcoin",
+    "Uphold",
+    "Upbit",
+    "Paper wallet"
+  ]);
+  var CHAINS = sorted(["Bitcoin", "Ethereum", "Solana", "Litecoin", "XRP Ledger", "Cardano", "Polkadot", "Cosmos", "Avalanche", "Polygon", "BNB Chain", "Tron", "Dogecoin", "Bitcoin Cash", "Monero", "Arbitrum", "Optimism", "Base", "Stellar", "Algorand", "NEAR", "TON", "Sui", "Aptos", "Multiple networks"]);
+  var INSURERS = sorted(["Aetna", "Allianz", "Allstate", "American Family", "Amica", "Anthem", "AXA", "Aviva", "Blue Cross Blue Shield", "Chubb", "Cigna", "Delta Dental", "Erie Insurance", "Farmers", "GEICO", "Humana", "Kaiser Permanente", "Lemonade", "Liberty Mutual", "MetLife", "Mutual of Omaha", "Nationwide", "New York Life", "Northwestern Mutual", "Progressive", "Prudential", "State Farm", "The Hartford", "Travelers", "UnitedHealthcare", "USAA", "Zurich", "Medicare", "Medicaid", "Tricare", "VSP", "EyeMed", "Pets Best", "Trupanion", "Hippo", "Root", "Esurance"]);
+  var HEALTH_PLANS = sorted(["Aetna", "Ambetter", "Anthem", "Blue Cross Blue Shield", "Cigna", "Delta Dental", "EyeMed", "Health Net", "Humana", "Kaiser Permanente", "Medicaid", "Medicare", "Molina Healthcare", "Oscar Health", "Tricare", "UnitedHealthcare", "VA Health Care", "VSP", "Guardian", "MetLife"]);
+  var CARRIERS = sorted([
+    "AT&T",
+    "Boost Mobile",
+    "Consumer Cellular",
+    "Cricket Wireless",
+    "Google Fi",
+    "Metro by T-Mobile",
+    "Mint Mobile",
+    "Red Pocket",
+    "Spectrum Mobile",
+    "Straight Talk",
+    "T-Mobile",
+    "Total Wireless",
+    "Tracfone",
+    "US Cellular",
+    "US Mobile",
+    "Verizon",
+    "Visible",
+    "Xfinity Mobile",
+    "Ultra Mobile",
+    "Lycamobile",
+    "Bell",
+    "Rogers",
+    "Telus",
+    "Vodafone",
+    "EE",
+    "O2",
+    "Three",
+    "Orange",
+    "Telstra",
+    "Optus",
+    "Airtel",
+    "Jio"
+  ]);
+  var ISPS = sorted(["AT&T Fiber", "Astound", "Altice / Optimum", "Cox", "CenturyLink / Lumen", "Comcast Xfinity", "Frontier", "Google Fiber", "HughesNet", "Mediacom", "Starlink", "Spectrum", "T-Mobile Home Internet", "Verizon Fios", "Verizon 5G Home", "Viasat", "Windstream / Kinetic", "WOW!", "Ziply Fiber", "BT", "Virgin Media", "Sky", "Rogers", "Bell", "Telus", "Telstra", "Optus"]);
+  var TRAVEL_PROGRAMS = sorted([
+    "Air Canada Aeroplan",
+    "Air France-KLM Flying Blue",
+    "Alaska Mileage Plan",
+    "American Airlines AAdvantage",
+    "British Airways Executive Club",
+    "Delta SkyMiles",
+    "Emirates Skywards",
+    "Frontier Miles",
+    "JetBlue TrueBlue",
+    "Lufthansa Miles & More",
+    "Qatar Privilege Club",
+    "Singapore KrisFlyer",
+    "Southwest Rapid Rewards",
+    "Spirit Free Spirit",
+    "United MileagePlus",
+    "Virgin Atlantic Flying Club",
+    "Hilton Honors",
+    "IHG One Rewards",
+    "Marriott Bonvoy",
+    "World of Hyatt",
+    "Wyndham Rewards",
+    "Choice Privileges",
+    "Best Western Rewards",
+    "Radisson Rewards",
+    "Accor ALL",
+    "Airbnb",
+    "Booking.com",
+    "Expedia",
+    "Hertz Gold",
+    "Avis Preferred",
+    "National Emerald Club",
+    "Amtrak Guest Rewards",
+    "Carnival",
+    "Royal Caribbean"
+  ]);
+  var CLOUD_HOSTS = sorted(["Akamai / Linode", "Amazon Web Services", "Cloudflare", "DigitalOcean", "Fly.io", "GitHub", "GitLab", "Google Cloud", "Heroku", "Hetzner", "IBM Cloud", "Microsoft Azure", "Netlify", "Oracle Cloud", "OVHcloud", "Render", "Self-hosted", "Vercel", "Vultr", "Supabase", "Firebase"]);
+  var TECH_SERVICES = sorted([...CLOUD_HOSTS, "GoDaddy", "Namecheap", "Squarespace Domains", "Porkbun", "Google Workspace", "Microsoft 365", "Atlassian", "Docker Hub", "npm", "PyPI", "Bitbucket", "Twilio", "SendGrid", "Mailgun", "Stripe", "PayPal Developer", "Datadog", "Sentry", "MongoDB Atlas", "NordVPN", "ProtonVPN", "Tailscale", "1Password", "Okta"]);
+  var MEMBERSHIPS = sorted(["24 Hour Fitness", "AAA", "AARP", "Amazon Prime", "Anytime Fitness", "BJ\u2019s Wholesale", "Costco", "Disney+", "Equinox", "Hulu", "LA Fitness", "Netflix", "Orangetheory", "Peloton", "Planet Fitness", "REI Co-op", "Sam\u2019s Club", "Spotify", "Target Circle", "Walmart+", "YMCA", "YouTube Premium", "Apple One", "Audible", "Kroger Plus", "Safeway Club", "Starbucks Rewards", "Sephora Beauty Insider", "Ulta Ultamate", "Marriott Bonvoy", "Hilton Honors", "Rotary", "Library"]);
+  var US_STATES = ["Alabama", "Alaska", "Arizona", "Arkansas", "California", "Colorado", "Connecticut", "Delaware", "District of Columbia", "Florida", "Georgia", "Hawaii", "Idaho", "Illinois", "Indiana", "Iowa", "Kansas", "Kentucky", "Louisiana", "Maine", "Maryland", "Massachusetts", "Michigan", "Minnesota", "Mississippi", "Missouri", "Montana", "Nebraska", "Nevada", "New Hampshire", "New Jersey", "New Mexico", "New York", "North Carolina", "North Dakota", "Ohio", "Oklahoma", "Oregon", "Pennsylvania", "Rhode Island", "South Carolina", "South Dakota", "Tennessee", "Texas", "Utah", "Vermont", "Virginia", "Washington", "West Virginia", "Wisconsin", "Wyoming", "Puerto Rico"];
+  var PHARMACIES = sorted(["Albertsons", "Amazon Pharmacy", "Costco Pharmacy", "CVS Pharmacy", "Express Scripts", "Optum Rx", "Kroger Pharmacy", "Publix Pharmacy", "Rite Aid", "Safeway Pharmacy", "Sam\u2019s Club Pharmacy", "Target (CVS)", "Walgreens", "Walmart Pharmacy", "HEB Pharmacy", "Hy-Vee Pharmacy", "Meijer Pharmacy", "GoodRx", "Capsule", "Alto", "Hospital pharmacy", "Independent pharmacy"]);
+  var BRANDS = sorted(["Acer", "Amazon", "Apple", "ASUS", "Bose", "Canon", "Dell", "Dyson", "Fitbit", "Garmin", "Google", "GoPro", "HP", "Huawei", "Lenovo", "LG", "Microsoft", "Nikon", "Nintendo", "OnePlus", "Panasonic", "Philips", "Samsung", "Sennheiser", "Sonos", "Sony", "Whirlpool", "Xiaomi", "Bosch", "GE", "Honeywell", "Ring", "Nest"]);
+  var STORES = sorted(["Amazon", "Apple Store", "Best Buy", "Costco", "Dell", "eBay", "Etsy", "Home Depot", "IKEA", "Lowe\u2019s", "Micro Center", "Newegg", "Target", "Walmart", "B&H Photo", "Wayfair", "Samsung", "Staples", "Adorama", "Direct from the maker"]);
+  var LENS_BRANDS = sorted(["Acuvue", "Air Optix", "Alcon Dailies", "Bausch + Lomb", "Biofinity", "Biotrue", "Clariti", "CooperVision", "Dailies Total1", "FreshLook", "Proclear", "Precision1", "Ultra", "Essilor", "Zeiss", "Hoya", "Transitions"]);
+
   // js/templates.js
   var CORE = {
     login: { label: "Login", icon: "{{login}}", plural: "Logins" },
@@ -2681,6 +2894,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   var U = (k, l, o = {}) => ({ k, l, kind: "url", ...o });
   var DT = (k, l, o = {}) => ({ k, l, kind: "stamp", ...o });
   var SEL = (k, l, options) => ({ k, l, kind: "select", options });
+  var CH = (k, l, options, o = {}) => ({ k, l, kind: "choice", options, ...o });
   var TEMPLATES = {
     app: { label: "App / software", plural: "Apps", icon: "{{app}}", sub: "version", fields: [
       T("version", "Version"),
@@ -2720,7 +2934,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       { k: "address", l: "Shipping address", kind: "multiline" }
     ] },
     insurance: { label: "Insurance", plural: "Insurance", icon: "{{insurance}}", sub: "provider", fields: [
-      T("provider", "Provider"),
+      CH("provider", "Provider", INSURERS),
       SEL("kind", "Type", ["Auto", "Home / renters", "Health", "Life", "Travel", "Pet", "Umbrella", "Other"]),
       T("policy", "Policy number", { mono: true }),
       T("group", "Group number", { mono: true }),
@@ -2744,7 +2958,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       SEL("kind", "Type", ["Passport", "Visa", "Frequent flyer", "Booking / reservation", "Known traveller (TSA / Global Entry)", "Travel insurance", "Other"]),
       T("holder", "Name on document"),
       S("number", "Number / confirmation code"),
-      T("program", "Airline / hotel / program"),
+      CH("program", "Airline / hotel / program", TRAVEL_PROGRAMS),
       D("issued", "Issue date"),
       D("expires", "Expiry date", { expiry: true }),
       D("start", "Travel start"),
@@ -2763,7 +2977,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       D("expires", "Expiry date", { expiry: true })
     ] },
     bank: { label: "Bank account", plural: "Bank", icon: "{{bank}}", sub: "bank", fields: [
-      T("bank", "Bank"),
+      CH("bank", "Bank", BANKS),
       T("holder", "Account holder"),
       S("accno", "Account number"),
       T("routing", "Routing / sort code / IBAN", { mono: true }),
@@ -2774,7 +2988,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       S("password", "Password", { gen: true })
     ] },
     server: { label: "Server / API key", plural: "Servers", icon: "{{server}}", sub: "host", fields: [
-      T("host", "Host / service"),
+      CH("host", "Host / service", CLOUD_HOSTS),
       U("url", "Endpoint / console URL"),
       T("username", "Username"),
       S("apikey", "API key / token", { gen: true }),
@@ -2795,7 +3009,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     phone: { label: "Phone / SIM", plural: "Phones", icon: "{{phone}}", sub: "number", fields: [
       T("number", "Phone number", { mono: true }),
       SEL("kind", "Type", ["Mobile", "Landline", "VoIP", "eSIM"]),
-      T("carrier", "Carrier"),
+      CH("carrier", "Carrier", CARRIERS),
       T("plan", "Plan"),
       T("accountno", "Account number", { mono: true }),
       T("imei", "IMEI", { mono: true }),
@@ -2810,7 +3024,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       S("password", "Password", { gen: true })
     ] },
     technical: { label: "Technical account", plural: "Technical", icon: "{{technical}}", sub: "service", fields: [
-      T("service", "Service / platform"),
+      CH("service", "Service / platform", TECH_SERVICES),
       SEL("kind", "Type", ["Cloud console", "Database", "Email / SMTP", "Domain registrar", "CI / CD", "Git / code host", "VPN", "Monitoring", "Other"]),
       U("url", "Console / login URL"),
       T("accountid", "Account / project ID", { mono: true }),
@@ -2821,7 +3035,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       { k: "recovery", l: "Recovery / backup codes", kind: "multiline", secret: true }
     ] },
     crypto: { label: "Crypto wallet", plural: "Crypto", icon: "{{crypto}}", sub: "wallet", tip: "Anyone who gets a recovery seed phrase or private key controls the funds. Keep an offline copy too, never photograph it, and avoid syncing it to devices you do not fully trust.", fields: [
-      T("wallet", "Wallet / exchange"),
+      CH("wallet", "Wallet / exchange", WALLETS),
       { k: "familynote", l: "Instructions for my family", kind: "multiline" },
       T("hwwhere", "Where the hardware wallet / seed backup is kept"),
       T("walletapp", "Wallet app to open it with"),
@@ -2829,7 +3043,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       SEL("kind", "Type", ["Hardware wallet", "Software wallet", "Exchange account", "Paper wallet", "Other"]),
       DT("added", "Added to vault (date & time)", { auto: true }),
       DT("created", "Wallet created (date & time)"),
-      T("network", "Blockchain / network"),
+      CH("network", "Blockchain / network", CHAINS),
       T("address", "Public address", { mono: true }),
       { k: "seed", l: "Recovery seed phrase", kind: "multiline", secret: true, words: true, lockable: true },
       S("privkey", "Private key"),
@@ -2882,12 +3096,12 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       T("os_axis", "Left eye (OS) \u2014 axis", { mono: true }),
       T("os_add", "Left eye (OS) \u2014 add", { mono: true }),
       T("pd", "Pupillary distance (PD)", { mono: true }),
-      T("brand", "Lens brand / type"),
+      CH("brand", "Lens brand / type", LENS_BRANDS),
       T("bc", "Base curve (contacts)", { mono: true }),
       T("dia", "Diameter (contacts)", { mono: true })
     ] },
     membership: { label: "Membership", plural: "Memberships", icon: "{{membership}}", sub: "org", fields: [
-      T("org", "Organisation / club"),
+      CH("org", "Organisation / club", MEMBERSHIPS),
       SEL("kind", "Type", ["Gym", "Club", "Loyalty / rewards", "Professional body", "Warehouse club", "Airline / hotel status", "Subscription", "Other"]),
       T("number", "Member number", { mono: true }),
       T("level", "Tier / level"),
@@ -2899,7 +3113,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       S("password", "Password", { gen: true })
     ] },
     internet: { label: "Internet settings", plural: "Internet", icon: "{{internet}}", sub: "isp", fields: [
-      T("isp", "Provider (ISP)"),
+      CH("isp", "Provider (ISP)", ISPS),
       SEL("kind", "Connection", ["Fibre", "Cable", "DSL", "Mobile / 5G", "Satellite", "Other"]),
       T("plan", "Plan / speed"),
       T("accountno", "Account number", { mono: true }),
@@ -2923,7 +3137,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       T("purpose", "What it is for"),
       T("rx", "Rx number", { mono: true }),
       T("prescriber", "Prescriber"),
-      T("pharmacy", "Pharmacy"),
+      CH("pharmacy", "Pharmacy", PHARMACIES),
       T("pharmacyphone", "Pharmacy phone", { mono: true }),
       D("filled", "Last filled"),
       T("refills", "Refills left"),
@@ -2932,12 +3146,12 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     ] },
     serial: { label: "Serial number", plural: "Serials", icon: "{{serial}}", sub: "product", tip: "Tip: attach a photo of the receipt and the label on the product \u2014 handy for warranty claims and insurance.", fields: [
       T("product", "Product"),
-      T("brand", "Brand"),
+      CH("brand", "Brand", BRANDS),
       T("model", "Model", { mono: true }),
       T("serial", "Serial number", { mono: true }),
       S("license", "Licence / activation key"),
       D("purchased", "Purchased"),
-      T("store", "Store"),
+      CH("store", "Store", STORES),
       T("price", "Price"),
       T("order", "Order / receipt number", { mono: true }),
       D("warranty", "Warranty ends", { expiry: true }),
@@ -2948,7 +3162,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       S("voterid", "Voter ID number"),
       T("district", "District / precinct"),
       T("polling", "Polling place"),
-      T("region", "State / region"),
+      CH("region", "State / region", US_STATES),
       D("dob", "Date of birth"),
       D("registered", "Registered on"),
       D("expires", "Valid until", { expiry: true })
@@ -2976,7 +3190,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     healthcard: { label: "Health numbers", plural: "Health", icon: "{{healthcard}}", sub: "provider", tip: "Tip: attach a photo of your insurance card (front and back) for quick access at the clinic.", fields: [
       T("holder", "Name"),
       SEL("kind", "Type", ["Health insurance", "Medicare / national health", "Dental", "Vision", "Medical record", "Other"]),
-      T("provider", "Provider / plan"),
+      CH("provider", "Provider / plan", HEALTH_PLANS),
       T("memberid", "Member / policy ID", { mono: true }),
       T("group", "Group number", { mono: true }),
       S("national", "National health number"),
@@ -2984,7 +3198,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       SEL("blood", "Blood type", ["A+", "A\u2212", "B+", "B\u2212", "AB+", "AB\u2212", "O+", "O\u2212", "Unknown"]),
       T("doctor", "Primary doctor"),
       T("doctorphone", "Doctor phone", { mono: true }),
-      T("pharmacy", "Pharmacy"),
+      CH("pharmacy", "Pharmacy", PHARMACIES),
       D("expires", "Coverage ends", { expiry: true }),
       { k: "allergies", l: "Allergies", kind: "multiline" },
       { k: "conditions", l: "Conditions / notes for responders", kind: "multiline" },
@@ -3000,7 +3214,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       T("plate", "Licence plate", { mono: true }),
       T("vin", "VIN", { mono: true }),
       D("regexp", "Registration expires", { expiry: true }),
-      T("insurer", "Insurer"),
+      CH("insurer", "Insurer", INSURERS),
       T("policy", "Policy number", { mono: true }),
       D("insexp", "Insurance expires", { expiry: true }),
       T("roadside", "Roadside assistance", { mono: true }),
@@ -4780,61 +4994,6 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     window.addEventListener("scroll", hide, true);
   }
 
-  // js/trust.js
-  var TRUST = {
-    protects: [
-      ["Real, standard encryption", "Everything is sealed with AES-256-GCM, the same standard banks and governments use. It is done by your browser\u2019s built-in crypto engine (WebCrypto, the same code that protects HTTPS), not by home-made maths."],
-      ["A slowed-down password", "Your master password is stretched with PBKDF2-SHA256 (600,000 rounds) before it can unlock anything, and it is never stored or sent anywhere."],
-      ["No server, no account, no tracking", "There is nothing to hack on our side because there is no \u201Cour side\u201D. The page\u2019s security policy blocks every network connection except two optional ones: GitHub backup sync and the contact-admin note."],
-      ["Plain, readable code", "The source is public on GitHub, so anyone can read it. The app never builds web pages out of your data and refuses to run inside someone else\u2019s page."],
-      ["Tested on every change", "Automated tests (the maths itself, plus real browsers: Chrome, Firefox and Safari engines) run on every change, and the code has been reviewed for known web-app mistakes."],
-      ["One file you can lock in place", "The offline copy is a single file with a SHA-256 checksum, so you can confirm it is exactly the file that was published. It cannot change under you."]
-    ],
-    compare: [
-      ["Same cryptography", "In a browser app the encryption itself is done by native code inside the browser. The JavaScript only asks for it. A Rust app normally also leans on well-tested crypto libraries rather than writing its own, so the part that matters most is comparable."],
-      ["Strong sandbox", "Browsers keep each site in a locked box, away from your files and other sites, and this app adds a strict policy on top."],
-      ["Honest trade-offs", "Native apps can wipe memory more reliably, and are not exposed to browser extensions the same way. A browser extension can see and change the pages you open, so an extension you do not fully trust can read an unlocked vault. That is why we recommend turning off all browser extensions (or using a clean browser profile with none installed) whenever you use this tool. A hosted web app also receives updates from its host (GitHub), so a compromised publisher account could ship bad code; the offline file with its checksum avoids that."],
-      ["Built for offline and air-gapped use", "This tool was created to be used completely offline: run from the single offline file on a USB drive, on a computer that is disconnected from the internet (air-gapped), with extensions off. That is the most secure way to use it, because with no network and no extensions there is nothing that can reach your vault from outside. The online site exists so friends and testers can try it remotely; the offline, air-gapped copy is the intended way to protect real secrets."]
-    ],
-    limits: [
-      "Nobody can honestly guarantee that any software is perfectly secure, and this does not. It was built by one person with AI help, tested heavily, and has not been audited by an independent security firm.",
-      "It cannot protect you from malware or a keylogger on your device, a malicious browser extension, someone watching your screen, or a weak or reused master password. Use a long passphrase.",
-      "There is no password reset. If you forget the master password and lose the recovery key, the data cannot be recovered by anyone. Keep an encrypted backup.",
-      "Until you trust it, start with logins you can afford to rotate, and keep your old password manager as a backup.",
-      "For the strongest protection, use the offline file on an air-gapped computer with all browser extensions turned off."
-    ],
-    check: [
-      "Open your browser\u2019s developer tools, choose the Network tab and use the app: nothing is sent while you work.",
-      "Use \u201CView page source\u201D, or read the code on GitHub: it is ordinary, unobfuscated JavaScript.",
-      "Download the offline copy and compare its SHA-256 checksum with the .sha256 file next to it.",
-      "Turn off your internet connection and keep using it: everything still works."
-    ]
-  };
-  function trustBody() {
-    const sec = (title, items, ordered) => h("div", { class: "trustsec" }, h("h3", { text: title }), h(ordered ? "ol" : "ul", { class: "trustlist" }, items.map((it) => Array.isArray(it) ? h("li", null, h("b", { text: it[0] + ". " }), it[1]) : h("li", { text: it }))));
-    return h(
-      "div",
-      { class: "trustdoc" },
-      h("p", { class: "hint", text: "Short answer: it is built on standard, well-tested encryption and keeps everything on your device. But \u201Cguaranteed\u201D is not a word any honest security person uses, so here is exactly what it does, what it does not, and how you can check for yourself." }),
-      sec("What protects your data", TRUST.protects),
-      sec("Is a browser app as serious as a native (Rust) app?", TRUST.compare),
-      sec("What nobody can promise", TRUST.limits),
-      sec("Check it yourself", TRUST.check, true)
-    );
-  }
-  var FAQ = [
-    ["Where is my data stored?", "Only on this device, inside your browser\u2019s storage, encrypted. There is no server and no account. Clearing the browser\u2019s site data deletes the vault, so export an encrypted backup (Import & export) and keep it somewhere safe."],
-    ["What if I forget my master password?", "Nobody can recover it, not even the person who made the app. If you saved the recovery key when you created the profile, it can unlock the vault; otherwise restore from an encrypted backup. Keep both somewhere safe."],
-    ["Can I use it offline, even air-gapped?", "Yes, and that is what it was built for. Download the offline copy (one file), keep it on a USB drive and open it on a computer with no internet. Turn off all browser extensions while you use it."],
-    ["Does it work on a phone?", "Yes. Open the site in the phone\u2019s browser and add it to the home screen. Phones and tablets lock the vault as soon as the app is hidden."],
-    ["What leaves my device?", "Nothing, unless you turn on optional features: GitHub gist sync (encrypted before it leaves), Beam to another device, or the contact-admin note. Watch your browser\u2019s Network tab to see for yourself."],
-    ["How can my family get in if something happens to me?", "Open Family recovery in the left menu. It helps you write a printable guide for them, split the vault password into shares (for example any 2 of 3 people can rebuild it, but no single person can), and run a restore drill so you know it really works. Keep the sealed data and the password shares in different places."],
-    ["Is it audited?", "No. It has been tested heavily and its code is public so anyone can read it, but it has not had an independent security audit. Read \u201CHow secure is this, honestly?\u201D above for what that means."]
-  ];
-  function trustDialog() {
-    modal({ title: "How secure is this, honestly?", sub: "What protects you, and what does not", wide: true, body: trustBody(), actions: [{ label: "Close", primary: true }] });
-  }
-
   // js/generator.js
   var SETS = {
     lower: "abcdefghijklmnopqrstuvwxyz",
@@ -6467,7 +6626,23 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     const id = "tf_" + f.k;
     const full = f.kind === "multiline" || isSecretField(f) && f.gen;
     let control;
-    if (f.kind === "select") control = h("select", { id, class: "sel", on: { change: (e) => set(e.target.value) } }, h("option", { value: "", text: "\u2014 choose \u2014" }), f.options.map((o) => h("option", { value: o, selected: o === val }, o)));
+    if (f.kind === "choice") {
+      const OTHER = "__other__", known = f.options.includes(val);
+      const pick = h("select", { id, class: "sel", "aria-label": f.l }, h("option", { value: "", text: "\u2014 choose \u2014" }), f.options.map((o) => h("option", { value: o, text: o })), h("option", { value: OTHER, text: "Other\u2026" }));
+      const other = h("input", { id: id + "_other", class: "inp", maxlength: "120", placeholder: "Type it here", "aria-label": f.l + " (other)", autocomplete: "off", value: known ? "" : val, hidden: !val || known, on: { input: (e) => set(e.target.value.trim()) } });
+      pick.value = !val ? "" : known ? val : OTHER;
+      pick.addEventListener("change", () => {
+        if (pick.value === OTHER) {
+          other.hidden = false;
+          set(other.value.trim());
+          other.focus();
+        } else {
+          other.hidden = true;
+          set(pick.value);
+        }
+      });
+      control = h("div", { class: "choicewrap" }, pick, other);
+    } else if (f.kind === "select") control = h("select", { id, class: "sel", on: { change: (e) => set(e.target.value) } }, h("option", { value: "", text: "\u2014 choose \u2014" }), f.options.map((o) => h("option", { value: o, selected: o === val }, o)));
     else if (f.kind === "multiline") control = h("textarea", { id, class: "ta", rows: "4", spellcheck: "false", on: { input: (e) => set(e.target.value) } }, val);
     else if (isSecretField(f) && f.gen) control = pwField(val, { ctx: ctx2, onInput: set }).el;
     else if (isSecretField(f)) {
@@ -8334,6 +8509,58 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     show(ctx2.S.famTab || "guide");
     return page("Family recovery", "Make sure the people you trust can open the vault if you cannot help: a guide they can follow, a password only they can rebuild together, and a drill to prove it works.", bar2, body);
   }
+
+  // js/trust.js
+  var TRUST = {
+    protects: [
+      ["Real, standard encryption", "Everything is sealed with AES-256-GCM, the same standard banks and governments use. It is done by your browser\u2019s built-in crypto engine (WebCrypto, the same code that protects HTTPS), not by home-made maths."],
+      ["A slowed-down password", "Your master password is stretched with PBKDF2-SHA256 (600,000 rounds) before it can unlock anything, and it is never stored or sent anywhere."],
+      ["No server, no account, no tracking", "There is nothing to hack on our side because there is no \u201Cour side\u201D. The page\u2019s security policy blocks every network connection except two optional ones: GitHub backup sync and the contact-admin note."],
+      ["Plain, readable code", "The source is public on GitHub, so anyone can read it. The app never builds web pages out of your data and refuses to run inside someone else\u2019s page."],
+      ["Tested on every change", "Automated tests (the maths itself, plus real browsers: Chrome, Firefox and Safari engines) run on every change, and the code has been reviewed for known web-app mistakes."],
+      ["One file you can lock in place", "The offline copy is a single file with a SHA-256 checksum, so you can confirm it is exactly the file that was published. It cannot change under you."]
+    ],
+    compare: [
+      ["Same cryptography", "In a browser app the encryption itself is done by native code inside the browser. The JavaScript only asks for it. A Rust app normally also leans on well-tested crypto libraries rather than writing its own, so the part that matters most is comparable."],
+      ["Strong sandbox", "Browsers keep each site in a locked box, away from your files and other sites, and this app adds a strict policy on top."],
+      ["Honest trade-offs", "Native apps can wipe memory more reliably, and are not exposed to browser extensions the same way. A browser extension can see and change the pages you open, so an extension you do not fully trust can read an unlocked vault. That is why we recommend turning off all browser extensions (or using a clean browser profile with none installed) whenever you use this tool. A hosted web app also receives updates from its host (GitHub), so a compromised publisher account could ship bad code; the offline file with its checksum avoids that."],
+      ["Built for offline and air-gapped use", "This tool was created to be used completely offline: run from the single offline file on a USB drive, on a computer that is disconnected from the internet (air-gapped), with extensions off. That is the most secure way to use it, because with no network and no extensions there is nothing that can reach your vault from outside. The online site exists so friends and testers can try it remotely; the offline, air-gapped copy is the intended way to protect real secrets."]
+    ],
+    limits: [
+      "Nobody can honestly guarantee that any software is perfectly secure, and this does not. It was built by one person with AI help, tested heavily, and has not been audited by an independent security firm.",
+      "It cannot protect you from malware or a keylogger on your device, a malicious browser extension, someone watching your screen, or a weak or reused master password. Use a long passphrase.",
+      "There is no password reset. If you forget the master password and lose the recovery key, the data cannot be recovered by anyone. Keep an encrypted backup.",
+      "Until you trust it, start with logins you can afford to rotate, and keep your old password manager as a backup.",
+      "For the strongest protection, use the offline file on an air-gapped computer with all browser extensions turned off."
+    ],
+    check: [
+      "Open your browser\u2019s developer tools, choose the Network tab and use the app: nothing is sent while you work.",
+      "Use \u201CView page source\u201D, or read the code on GitHub: it is ordinary, unobfuscated JavaScript.",
+      "Download the offline copy and compare its SHA-256 checksum with the .sha256 file next to it.",
+      "Turn off your internet connection and keep using it: everything still works."
+    ]
+  };
+  function trustBody() {
+    const sec = (title, items, ordered) => h("div", { class: "trustsec" }, h("h3", { text: title }), h(ordered ? "ol" : "ul", { class: "trustlist" }, items.map((it) => Array.isArray(it) ? h("li", null, h("b", { text: it[0] + ". " }), it[1]) : h("li", { text: it }))));
+    return h(
+      "div",
+      { class: "trustdoc" },
+      h("p", { class: "hint", text: "Short answer: it is built on standard, well-tested encryption and keeps everything on your device. But \u201Cguaranteed\u201D is not a word any honest security person uses, so here is exactly what it does, what it does not, and how you can check for yourself." }),
+      sec("What protects your data", TRUST.protects),
+      sec("Is a browser app as serious as a native (Rust) app?", TRUST.compare),
+      sec("What nobody can promise", TRUST.limits),
+      sec("Check it yourself", TRUST.check, true)
+    );
+  }
+  var FAQ = [
+    ["Where is my data stored?", "Only on this device, inside your browser\u2019s storage, encrypted. There is no server and no account. Clearing the browser\u2019s site data deletes the vault, so export an encrypted backup (Import & export) and keep it somewhere safe."],
+    ["What if I forget my master password?", "Nobody can recover it, not even the person who made the app. If you saved the recovery key when you created the profile, it can unlock the vault; otherwise restore from an encrypted backup. Keep both somewhere safe."],
+    ["Can I use it offline, even air-gapped?", "Yes, and that is what it was built for. Download the offline copy (one file), keep it on a USB drive and open it on a computer with no internet. Turn off all browser extensions while you use it."],
+    ["Does it work on a phone?", "Yes. Open the site in the phone\u2019s browser and add it to the home screen. Phones and tablets lock the vault as soon as the app is hidden."],
+    ["What leaves my device?", "Nothing, unless you turn on optional features: GitHub gist sync (encrypted before it leaves), Beam to another device, or the contact-admin note. Watch your browser\u2019s Network tab to see for yourself."],
+    ["How can my family get in if something happens to me?", "Open Family recovery in the left menu. It helps you write a printable guide for them, split the vault password into shares (for example any 2 of 3 people can rebuild it, but no single person can), and run a restore drill so you know it really works. Keep the sealed data and the password shares in different places."],
+    ["Is it audited?", "No. It has been tested heavily and its code is public so anyone can read it, but it has not had an independent security audit. Read \u201CHow secure is this, honestly?\u201D above for what that means."]
+  ];
 
   // js/landscapes.js
   var W = 1600;
@@ -11149,7 +11376,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     const STEPS = () => [
       { icon: "{{shieldlock}}", title: "Welcome to VaultManager", text: "A password manager that lives entirely in your browser. Your logins, notes, cards, documents and more sit behind one master password and are encrypted on this device \u2014 there is no account to create and no server that holds your data." },
       { icon: "{{shield}}", title: "Zero-knowledge, end-to-end encrypted", text: "Everything is sealed with AES-256-GCM under a random key that only your master password (or a passkey, or your recovery key) can unlock. Nothing is sent anywhere unless you choose to sync, and then only encrypted data leaves. We could not read your vault even if we wanted to." },
-      { icon: "{{shieldlock}}", title: "How much can you trust it?", text: "Standard AES-256 encryption done by your browser\u2019s own crypto engine, a slowed-down master password, no server or account, public source code, and automated tests on every change. What nobody can honestly promise: it has not had an independent audit, and it cannot protect you from malware on your device or a weak master password. It was built to be used offline: run the single offline file from a USB drive on an air-gapped computer, with all browser extensions turned off, for the strongest protection. Open System menu \u2192 How secure is this? for the full, checkable explanation." },
+      { icon: "{{shieldlock}}", title: "How much can you trust it?", text: "Standard AES-256 encryption done by your browser\u2019s own crypto engine, a slowed-down master password, no server or account, public source code, and automated tests on every change. What nobody can honestly promise: it has not had an independent audit, and it cannot protect you from malware on your device or a weak master password. It was built to be used offline: run the single offline file from a USB drive on an air-gapped computer, with all browser extensions turned off, for the strongest protection. Open Settings \u2192 About \u2192 FAQ for the full, checkable explanation." },
       { icon: "{{compass}}", target: () => q(".side") || q(".dock") || q(".mbar"), before: go("home"), title: "Find your way around", text: "Home, All items, Favorites and Trash, then " + Object.keys(TYPE_META).length + " categories grouped by purpose \u2014 Everyday, Accounts & access, Home & devices, Money, IDs & documents, Health, Travel & vehicles, People & emergency (contacts, phones, lens and medical info, car, crypto, memberships and more) \u2014 and the tools. Click a group name to fold it. Switch between a side bar and a dock in Settings \u2192 Dock & menu bar." },
       { icon: "{{home}}", target: () => q(".widgets"), before: go("home"), title: "Your Home dashboard", text: "Vault health, live one-time codes, what expires soon, favorites, recent changes, a quick password generator and sync status. Choose, resize and reorder widgets in Settings \u2192 Widgets." },
       { icon: "{{search}}", target: () => q(".topbar .search"), title: "Search everything", text: "Type to search names, usernames, websites, tags and every non-secret field. Press / anywhere to jump here. Secret values are never searchable." },
@@ -12290,7 +12517,6 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       }),
       item("{{keyboard}}", "Keyboard shortcuts\u2026", () => tour.help(), { hint: "F1" }),
       item("{{compass}}", "Guided tour", () => tour.start()),
-      item("{{shield}}", "How secure is this?", trustDialog),
       sep(),
       item("{{gear}}", "Settings\u2026", () => ctx.go("settings")),
       item("{{chip}}", "Task manager", () => ctx.go("tm")),

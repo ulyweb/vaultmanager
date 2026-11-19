@@ -1108,3 +1108,7 @@ body[data-modal] :is(.widget, .gate-card, .modal-sheet, .ico, .ico svg, .newico,
 /* large clock in the top bar (the default) */
 html[data-clocksize=large] .barclock b { font-size: 22px; letter-spacing: .02em; line-height: 1.1; }
 html[data-clocksize=large] .barclock { font-size: 13px; }
+
+/* pick-list fields (kind: choice): the list, plus a text box when "Other…" is chosen */
+.choicewrap { display: grid; gap: 6px; }
+.choicewrap .inp[hidden] { display: none; }

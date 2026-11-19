@@ -1,6 +1,6 @@
 /* Application version, data-format versions and changelog (shown in Settings → About). */
 
-export const APP_VERSION = '0.40.0';
+export const APP_VERSION = '0.41.0';
 export const APP_NAME = 'VaultManager';
 export const REPO_URL = 'https://github.com/ulyweb/vaultmanager';
 
@@ -16,6 +16,10 @@ export const FORMATS = [
 ];
 
 export const CHANGELOG = [
+  { v: '0.41.0', date: '2026-11-19', notes: [
+    'Pick-lists in the item editor. Fields where you used to type a name now offer a list with an “Other…” box for anything that is not on it: Bank (major US and international banks and credit unions), Crypto wallet / exchange (hardware and software wallets and the big exchanges), Blockchain / network, Insurance provider and Car insurer, Health plan, Phone carrier, Internet provider, Airline / hotel / travel program, Server host and Technical service, Membership, Voter state, Pharmacy, Product brand, Store and Lens brand. What you already saved keeps working: a name that is not on a list shows under Other…',
+    '“How secure is this?” is removed from the system menu; it lives in Settings → About → FAQ.',
+  ] },
   { v: '0.40.0', date: '2026-11-19', notes: [
     'New default layout for new profiles: the side bar shows only the Everyday categories (Logins, Secure notes, Cards) and, under Tools, only Vault health, Import & export, Task manager and Settings; the date and time in the top bar are large and in the middle. Everything else (the other categories, Generator, QR tools, Family recovery, Beam sync) is still one click away from Settings → Dock & menu bar → Show everything, and the Family recovery widget stays on Home. Settings → Dock & menu bar has a new “Use the recommended layout” button, and Settings → Menu bar has a new Clock size choice.',
   ] },
