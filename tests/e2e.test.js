@@ -2245,3 +2245,36 @@ test('v0.41.0: pick-lists with an Other… box (banks, wallets / exchanges, netw
   await page.selectOption('#tf_wallet', 'Trezor'); await page.selectOption('#tf_network', 'Bitcoin'); await page.getByRole('button', { name: 'Save' }).click(); await page.waitForSelector('.detail h2:has-text("Cold storage")'); assert.match(await page.textContent('.detail'), /Trezor[\s\S]*Bitcoin/);
   assert.deepEqual(problems.filter((p) => !/Failed to load resource/.test(p)), []); await ctx.close();
 });
+
+test('v0.42.0: Contacts import / export — the page states what works and what does not; vCard and CSV import with preview and duplicate skipping; export to .vcf, Google and Outlook CSV', async () => {
+  const { ctx, page, problems } = await newPage(); await createVault(page);
+  await page.locator('.side .nav:has-text("Contacts")').click(); await page.waitForSelector('.contactsio');
+  const txt = await page.textContent('.contactsio');
+  for (const must of ['What it can do', 'What it cannot do', 'vCard', 'Outlook', 'Google Contacts', 'iCloud', 'No live sync', 'NOT encrypted', 'Photos', 'never changes or deletes', 'offline']) assert.ok(txt.includes(must), 'the panel must say: ' + must);
+  const vcf = 'BEGIN:VCARD\nVERSION:3.0\nFN:Alex Rivera\nORG:Acme\nTEL;TYPE=CELL:555-0102\nEMAIL:alex@example.com\nPHOTO;ENCODING=b;TYPE=JPEG:AAAA\nEND:VCARD\nBEGIN:VCARD\nVERSION:3.0\nFN:Pat Kim\nTEL;TYPE=WORK:555-0199\nEND:VCARD\n';
+  await page.setInputFiles('input[aria-label="Contacts file"]', { name: 'contacts.vcf', mimeType: 'text/vcard', buffer: Buffer.from(vcf) });
+  await page.waitForSelector('.modal-sheet .ctable'); const prev = await page.textContent('.modal-sheet'); assert.match(prev, /Found 2 contacts in this vCard file/); assert.match(prev, /Left out: 1 photo/);
+  await page.getByRole('button', { name: 'Import', exact: true }).click(); await page.waitForSelector('.modal-sheet', { state: 'detached' });
+  await page.waitForSelector('.items .item:has-text("Alex Rivera")'); assert.ok(await page.locator('.items .item:has-text("Pat Kim")').count());
+  await page.locator('.items .item:has-text("Alex Rivera")').click(); const d = await page.textContent('.detail'); assert.ok(d.includes('Acme') && d.includes('555-0102') && d.includes('alex@example.com'));
+  // the same file again: both are recognised as duplicates and skipped
+  await page.setInputFiles('input[aria-label="Contacts file"]', { name: 'contacts.vcf', mimeType: 'text/vcard', buffer: Buffer.from(vcf) }); await page.waitForSelector('.modal-sheet .ctable');
+  assert.match(await page.textContent('.modal-sheet'), /2 look like people you already have/); await page.getByRole('button', { name: 'Import', exact: true }).click(); await page.getByText('Nothing new to import').waitFor(); await page.waitForSelector('.modal-sheet', { state: 'detached' });
+  assert.equal(await page.locator('.items .item').count(), 2);
+  // Google CSV
+  const csv = 'First Name,Last Name,Organization Name,E-mail 1 - Value,Phone 1 - Label,Phone 1 - Value\nAda,Lovelace,Analytical Co,ada@example.com,Mobile,555-1111\n';
+  await page.setInputFiles('input[aria-label="Contacts file"]', { name: 'google.csv', mimeType: 'text/csv', buffer: Buffer.from(csv) }); await page.waitForSelector('.modal-sheet .ctable'); assert.match(await page.textContent('.modal-sheet'), /Google CSV file/);
+  await page.getByRole('button', { name: 'Import', exact: true }).click(); await page.waitForSelector('.items .item:has-text("Ada Lovelace")');
+  // not a contacts file
+  await page.setInputFiles('input[aria-label="Contacts file"]', { name: 'x.csv', mimeType: 'text/csv', buffer: Buffer.from('nothing,useful\n') }); await page.getByText(/No contacts found/).waitFor();
+  // export: a confirmation warns the file is not encrypted, then the file is a valid vCard with all three people
+  const [dl] = await Promise.all([page.waitForEvent('download'), (async () => { await page.getByRole('button', { name: /Export all as \.vcf/ }).click(); await page.getByText(/NOT encrypted: anyone who finds it/).waitFor(); await page.getByRole('button', { name: 'Export', exact: true }).click(); })()]);
+  assert.match(dl.suggestedFilename(), /^vaultmanager-contacts-.*\.vcf$/); const out = fs.readFileSync(await dl.path(), 'utf8'); assert.equal((out.match(/BEGIN:VCARD/g) || []).length, 3); assert.ok(out.includes('FN:Ada Lovelace') && out.includes('EMAIL;TYPE=INTERNET:alex@example.com'));
+  const [dl2] = await Promise.all([page.waitForEvent('download'), (async () => { await page.getByRole('button', { name: 'Outlook CSV' }).click(); await page.getByRole('button', { name: 'Export', exact: true }).click(); })()]);
+  assert.match(fs.readFileSync(await dl2.path(), 'utf8'), /First Name,Middle Name,Last Name,Company/);
+  // one contact from its own page
+  await page.locator('.items .item:has-text("Pat Kim")').click(); const [dl3] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: /Export \(\.vcf\)/ }).click()]); assert.match(fs.readFileSync(await dl3.path(), 'utf8'), /FN:Pat Kim/);
+  // the same panel is on Import & export
+  await page.locator('.side .nav:has-text("Import & export")').click(); await page.waitForSelector('.contactsio');
+  assert.deepEqual(problems.filter((p) => !/Failed to load resource/.test(p)), []); await ctx.close();
+});

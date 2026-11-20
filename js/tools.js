@@ -10,6 +10,7 @@ import { drawQR, decodeFile, startScanner, chunkPayload, ChunkAssembler, parseCh
 import { runSelfTest } from './selftest.js';
 import { meter, liveMeter, passwordRow, itemCard, describeContents, payloadBox, purgeButton, avatar, printNodes, showRecoveryKit } from './views.js';
 import { fmtDate, fmtInt, hostOf, stamp } from './util.js';
+import { contactsPanel } from './contacts-ui.js';
 
 export const page = (title, sub, ...kids) => h('div', { class: 'page' }, h('h2', { text: title }), sub ? h('p', { class: 'sub', text: sub }) : null, ...kids);
 export const field = (label, control, hint) => h('div', { class: 'field' }, h('label', { text: label }), control, hint ? h('p', { class: 'hint', text: hint }) : null);
@@ -305,7 +306,7 @@ export function renderData(ctx) {
   const rFile = h('input', { type: 'file', accept: '.vmvault,.txt', class: 'offscreen', 'aria-label': 'Backup file', on: { change: async (e) => { const f = e.target.files[0]; if (f) { restoreText = (await readFileText(f)).trim(); rLabel.textContent = f.name; } e.target.value = ''; } } });
   const rLabel = h('span', { class: 'hint', text: 'No file chosen' });
 
-  return page('Import & export', 'Move data in and out. Encrypted backups are the safe way; plaintext files are for migrating only.',
+  return page('Import & export', 'Move data in and out. Encrypted backups are the safe way; plaintext files are for migrating only.', contactsPanel(ctx),
     h('div', { class: 'panel pad' }, h('h3', { text: 'Which one do I need?' }),
       h('p', { class: 'hint', text: 'Settings → General and this page offer different things. In short: the WHOLE PROFILE is the complete copy (profile + passwords + settings); the DATABASE BACKUP is just the passwords.' }), backupGuide()),
     h('div', { class: 'panel pad' }, h('h3', { text: 'Whole profile (profile + passwords + settings)' }),
