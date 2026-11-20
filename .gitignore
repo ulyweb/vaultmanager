@@ -7,3 +7,4 @@ dist/
 native/node_modules/
 native/src-tauri/target/
 native/src-tauri/gen/
+node_modules
