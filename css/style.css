@@ -48,7 +48,7 @@ a { color: var(--link); }
 #app { position: relative; z-index: 1; min-height: 100vh; }
 
 /* ---------- buttons / inputs ---------- */
-.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 36px; padding: 0 14px; border-radius: 9px; border: 1px solid var(--line-2); background: var(--panel); color: var(--ink); font-family: var(--mono); font-size: 12px; font-weight: 700; letter-spacing: .03em; transition: .15s; white-space: nowrap; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 36px; padding: 0 14px; border-radius: 9px; border: 1px solid var(--line-2); background: var(--panel); color: var(--ink); font-family: var(--mono); font-size: 12px; font-weight: 700; letter-spacing: .03em; transition: .15s; transition-property: background-color, border-color, color, box-shadow, filter, opacity, transform; white-space: nowrap; }
 .btn:hover { border-color: var(--accent); background: var(--raise); }
 .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: transparent; box-shadow: 0 2px 12px rgba(var(--accent-rgb),.25); }
 .btn.primary:hover { filter: brightness(1.08); box-shadow: var(--glow); }

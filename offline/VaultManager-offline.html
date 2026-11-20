@@ -11,7 +11,7 @@
 <meta name="application-name" content="VaultManager">
 <meta name="format-detection" content="telephone=no">
 <meta name="referrer" content="no-referrer">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-tauzjAWYvkq2EEey6/r1GOXzEWNzSydbYj43JCIjd2U=' 'sha256-xs0otCQFTRrtMc4HaXUika9oJ8os4U8vJIgAj23x+5A=' blob:; style-src 'sha256-ySP1UZIlR9P08Gz4KrBSHdcMUeAe0ZX5jPP4OerPG+c='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-tauzjAWYvkq2EEey6/r1GOXzEWNzSydbYj43JCIjd2U=' 'sha256-xs0otCQFTRrtMc4HaXUika9oJ8os4U8vJIgAj23x+5A=' blob:; style-src 'sha256-9SLOh2IKv/iEHafZl7lw9qrSUpaUtaMgb8qcxxsxFjA='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
 <title>VaultManager | Zero-Knowledge Password Manager</title>
 <meta name="description" content="VaultManager: an offline-first, zero-knowledge, end-to-end encrypted password manager with a strong password generator, TOTP codes and QR-sealed sharing and backup. Runs entirely in your browser.">
 <meta name="theme-color" content="#05080d">
@@ -66,7 +66,7 @@ a { color: var(--link); }
 #app { position: relative; z-index: 1; min-height: 100vh; }
 
 /* ---------- buttons / inputs ---------- */
-.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 36px; padding: 0 14px; border-radius: 9px; border: 1px solid var(--line-2); background: var(--panel); color: var(--ink); font-family: var(--mono); font-size: 12px; font-weight: 700; letter-spacing: .03em; transition: .15s; white-space: nowrap; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 36px; padding: 0 14px; border-radius: 9px; border: 1px solid var(--line-2); background: var(--panel); color: var(--ink); font-family: var(--mono); font-size: 12px; font-weight: 700; letter-spacing: .03em; transition: .15s; transition-property: background-color, border-color, color, box-shadow, filter, opacity, transform; white-space: nowrap; }
 .btn:hover { border-color: var(--accent); background: var(--raise); }
 .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: transparent; box-shadow: 0 2px 12px rgba(var(--accent-rgb),.25); }
 .btn.primary:hover { filter: brightness(1.08); box-shadow: var(--glow); }
