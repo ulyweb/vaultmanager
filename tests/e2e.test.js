@@ -1492,7 +1492,7 @@ test('v0.21: centred unlock screen, side-bar auto-hide, clock position, live New
   // clock position
   const cx = async () => { const r = await page.locator('.barclock').boundingBox(); return r.x + r.width / 2; };
   assert.equal(await page.evaluate(() => document.documentElement.dataset.clockpos), 'center', 'the clock is in the middle by default'); assert.equal(await page.evaluate(() => document.documentElement.dataset.clocksize), 'large'); assert.ok(Math.abs((await cx()) - 640) < 40, 'the default clock sits in the middle');
-  await settingsTab(page, 'Dock & menu bar'); await page.getByRole('button', { name: 'Left', exact: true }).click(); assert.equal(await page.evaluate(() => document.documentElement.dataset.clockpos), 'left'); assert.ok(await cx() < 500, 'clock moved left');
+  await settingsTab(page, 'Dock & menu bar'); await page.getByRole('button', { name: 'Left', exact: true }).click(); assert.equal(await page.evaluate(() => document.documentElement.dataset.clockpos), 'left'); const leftX = await cx(); assert.ok(leftX < 500, 'clock moved left: ' + leftX + ' ' + JSON.stringify(await page.evaluate(() => [...document.querySelector('.topbar').children].map((e) => { const b = e.getBoundingClientRect(), cs = getComputedStyle(e); return [e.className, Math.round(b.x), Math.round(b.width), cs.order, cs.position, cs.display]; }))));
   await page.getByRole('button', { name: 'Middle', exact: true }).click(); const mid = await cx(); assert.ok(Math.abs(mid - 640) < 40, 'clock in the middle: ' + mid);
   await page.getByRole('button', { name: 'Right', exact: true }).click();
   // auto-hide the side bar
