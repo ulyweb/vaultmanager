@@ -9,12 +9,27 @@ import { totpNow, parseTotp } from './totp.js';
 import { sealText, openText } from './crypto.js';
 import { drawQR } from './qr.js';
 import { contactsPanel, exportContactVcf } from './contacts-ui.js';
+import { POPULAR_SITES } from './lists.js';
 import { fmtDate, fmtDateTime, localDay, hostOf, safeHref, stamp, stampText } from './util.js';
 import { isFieldLocked, fieldValue } from './fieldlock.js';
 import { lockableField, lockedFieldRow, relockButton, seedView } from './secure-fields.js';
 import { categoryCarousel } from './carousel3d.js';
 
 export const TYPE_ICON = Object.fromEntries(Object.entries(TYPE_META).map(([k, m]) => [k, m.icon]));
+
+/* contact photos: an encrypted attachment, decrypted on demand and cached as an object URL until the vault locks */
+const photoCache = new Map();
+export function clearPhotoCache() { for (const u of photoCache.values()) Promise.resolve(u).then((x) => { if (x) URL.revokeObjectURL(x); }); photoCache.clear(); }
+export function photoUrl(ctx, it) {
+  const id = (it.fields || {}).photo;
+  if (!id || it.lock || !(it.attachments || []).some((a) => a.id === id)) return Promise.resolve('');
+  if (!photoCache.has(id)) photoCache.set(id, ctx.store.readAttachment(it.id, id).then(({ meta, bytes }) => URL.createObjectURL(new Blob([bytes], { type: meta.type || 'image/jpeg' }))).catch(() => ''));
+  return photoCache.get(id);
+}
+function withPhoto(ctx, it, el) {
+  if ((it.fields || {}).photo) photoUrl(ctx, it).then((u) => { if (u) { el.style.setProperty('--photo', `url("${u}")`); el.classList.add('has-photo'); el.textContent = ''; } });
+  return el;
+}
 
 export function avatar(name, type) {
   const n = (name || '?').trim() || '?';
@@ -153,9 +168,9 @@ function emptyState(ctx, items) {
 }
 
 function itemRow(ctx, it) {
-  const sub = it.type === 'login' ? (it.username || hostOf(it.url)) : it.type === 'card' ? '•••• ' + (it.card.number || '').replace(/\D/g, '').slice(-4) : TEMPLATES[it.type] ? ((it.fields || {})[TEMPLATES[it.type].sub] || (it.description || it.notes || '').split('\n')[0].slice(0, 60)) : (it.description || it.notes || '').split('\n')[0].slice(0, 60);
+  const sub = it.type === 'login' ? (it.username || hostOf(it.url)) : it.type === 'card' ? '•••• ' + (it.card.number || '').replace(/\D/g, '').slice(-4) : TEMPLATES[it.type] ? ((it.fields || {})[TEMPLATES[it.type].sub] || (it.type === 'contact' ? (it.fields || {}).phone || (it.fields || {}).email : '') || (it.description || it.notes || '').split('\n')[0].slice(0, 60)) : (it.description || it.notes || '').split('\n')[0].slice(0, 60);
   return h('button', { class: 'item' + (ctx.S.sel === it.id ? ' on' : ''), role: 'option', 'aria-selected': String(ctx.S.sel === it.id), on: { click: () => { ctx.S.sel = it.id; ctx.refresh(); } } },
-    avatar(it.name, it.type), h('div', { class: 't' }, h('b', { text: it.name || '(untitled)' }), h('small', { text: it.lock ? '🔒 Locked — passcode required' : sub })), (it.attachments || []).length ? h('span', { class: 'clip', text: '{{clip}}', title: it.attachments.length + ' attachment(s)' }) : null, it.favorite ? h('span', { class: 'star', text: '{{star}}', 'aria-label': 'Favorite' }) : null, h('span', { class: 'disc', 'aria-hidden': 'true', text: '{{chevright}}' }));
+    withPhoto(ctx, it, avatar(it.name, it.type)), h('div', { class: 't' }, h('b', { text: it.name || '(untitled)' }), h('small', { text: it.lock ? '🔒 Locked — passcode required' : sub })), (it.attachments || []).length ? h('span', { class: 'clip', text: '{{clip}}', title: it.attachments.length + ' attachment(s)' }) : null, it.favorite ? h('span', { class: 'star', text: '{{star}}', 'aria-label': 'Favorite' }) : null, h('span', { class: 'disc', 'aria-hidden': 'true', text: '{{chevright}}' }));
 }
 
 /* ---------- detail ---------- */
@@ -212,7 +227,7 @@ export function itemCard(ctx, it) {
   if (it.type === 'note') rows.push(field('Created', fmtDateTime(it.created), { ctx }), field('Last modified', fmtDateTime(it.updated), { ctx }));
   for (const c of it.custom || []) rows.push(field(c.label || 'Custom field', c.value, { secret: c.secret, copy: true, ctx, pre: true }));
   if ((it.tags || []).length) rows.push(h('div', { class: 'f' }, h('div', { class: 'k', text: 'Tags' }), h('div', { class: 'v' }, h('div', { class: 'tags' }, it.tags.map((t) => h('span', { class: 'chip', text: '#' + t }))))));
-  return h('div', { class: 'itemcard' }, h('div', { class: 'detail-head' }, avatar(it.name, it.type), h('div', null, h('h2', { text: it.name || '(untitled)' }), h('span', { class: 'chip' }, h('span', { class: 'icn', text: TYPE_ICON[it.type] || '' }), ' ' + (TYPES[it.type] || it.type)))), h('div', { class: 'fields' }, rows));
+  return h('div', { class: 'itemcard' }, h('div', { class: 'detail-head' }, withPhoto(ctx, it, avatar(it.name, it.type)), h('div', null, h('h2', { text: it.name || '(untitled)' }), h('span', { class: 'chip' }, h('span', { class: 'icn', text: TYPE_ICON[it.type] || '' }), ' ' + (TYPES[it.type] || it.type)))), h('div', { class: 'fields' }, rows));
 }
 
 /* Plain-language list of what an item QR holds (and what it cannot). */
@@ -304,7 +319,7 @@ function detailPanel(ctx, it0) {
   }
   rows.push(h('div', { class: 'f' }, h('div', { class: 'k', text: 'Updated' }), h('div', { class: 'v hint', text: `${fmtDate(it.updated)} · created ${fmtDate(it.created)}${it.type === 'login' && it.password ? ' · password changed ' + fmtDate(it.pwChanged) : ''}` })));
 
-  const out = h('div', null, navbar, h('div', { class: 'detail-head' }, avatar(it.name, it.type), h('div', null, h('h2', { text: it.name || '(untitled)' }), h('span', { class: 'chip' }, h('span', { class: 'icn', text: TYPE_ICON[it.type] }), ' ' + TYPES[it.type]))), actions, h('div', { class: 'fgroup' }, rows));
+  const out = h('div', null, navbar, h('div', { class: 'detail-head' }, withPhoto(ctx, it, avatar(it.name, it.type)), h('div', null, h('h2', { text: it.name || '(untitled)' }), h('span', { class: 'chip' }, h('span', { class: 'icn', text: TYPE_ICON[it.type] }), ' ' + TYPES[it.type]))), actions, h('div', { class: 'fgroup' }, rows));
   currentItem = null;
   return out;
 }
@@ -335,7 +350,7 @@ export function conflictModal(ctx, it0) {
 
 function templateRow(ctx, it, f) {
   const value = (it.fields || {})[f.k];
-  if (!value) return null;
+  if (!value || f.kind === 'photo') return null;   // the photo is the picture at the top
   if (isFieldLocked(value)) {   // a field with a passcode of its own: hidden until it is unlocked, readable for a few minutes after
     const plain = fieldValue(value);
     if (plain === null) return lockedFieldRow(ctx, it, f.l, value);
@@ -418,7 +433,7 @@ function historyModal(ctx, it) {
 }
 
 /* ---------- editor ---------- */
-export function editItem(ctx, item, type = 'login') {
+export function editItem(ctx, item, type = 'login', { fromPicker = false } = {}) {
   const { store } = ctx;
   if (item && item.lock && !store.isOpen(item)) { unlockItemDialog(ctx, item); return; }
   if (item) item = store.reveal(item);
@@ -440,6 +455,13 @@ export function editItem(ctx, item, type = 'login') {
   const tagsField = inp('tags', 'Tags (comma separated)', { get: () => (it.tags || []).join(', '), set: (v) => { it.tags = v.split(',').map((t) => t.trim().replace(/^#/, '')).filter(Boolean).slice(0, 30); }, ph: 'work, finance' });
   if (isNote) body.push(contentField, datesHint, tagsField);
   if (it.type === 'login') {
+    const siteSel = h('select', { id: 'f_site', class: 'sel', 'aria-label': 'Popular site', on: { change: () => {
+      const hit = POPULAR_SITES.find(([n]) => n === siteSel.value); if (!hit) return;
+      it.url = hit[1]; const u = document.getElementById('f_url'); if (u) u.value = hit[1];
+      const t = document.getElementById('f_name'); if (t && !t.value.trim()) { t.value = hit[0]; it.name = hit[0]; t.dispatchEvent(new Event('input')); }
+    } } }, h('option', { value: '', text: '— choose a popular site (fills the website) —' }), POPULAR_SITES.map(([n, u]) => h('option', { value: n, text: `${n}  (${u.replace(/^https?:\/\//, '')})` })));
+    const known = POPULAR_SITES.find(([, u]) => u === it.url); if (known) siteSel.value = known[0];
+    body.push(h('div', { class: 'field' }, h('label', { for: 'f_site', text: 'Popular site (optional)' }), siteSel, h('p', { class: 'hint', text: 'Pick a well-known service to fill in its sign-in address, or type any address in Website below.' })));
     body.push(h('div', { class: 'grid2' }, inp('username', 'Username / email'), inp('url', 'Website', { ph: 'https://' })));
     const pf = pwField(it.password, { ctx, onInput: (v) => { it.password = v; } });
     body.push(h('div', { class: 'field' }, h('label', { for: 'f_pw', text: 'Password' }), pf.el));
@@ -524,6 +546,7 @@ export function editItem(ctx, item, type = 'login') {
     it.custom = (it.custom || []).filter((c) => c.label.trim() || c.value).map((c) => ({ label: c.label.trim(), value: c.value, secret: !!c.secret }));
     if (locks.some((c) => c.el.querySelector('input[type=checkbox]:checked'))) toast('Sealing with the passcode…', 'ok', 2500);   // 600,000 rounds take a moment
     try { for (const c of locks) { const v = await c.resolve(); if (v) (it.fields = it.fields || {})[c.key] = v; else delete (it.fields || {})[c.key]; } } catch (e) { err.textContent = e.message; return false; }
+    const photoChange = it.__photo; delete it.__photo; const oldPhoto = (it.fields || {}).photo;
     for (const k of Object.keys(it.fields || {})) if (!it.fields[k]) delete it.fields[k];
     if (isNew) { it.created = it.updated = it.pwChanged = Date.now(); it.attachments = []; await store.add(it); }
     else if (it.lock) { const meta = { name: it.name, tags: it.tags, favorite: it.favorite, favName: it.favName }; await store.saveLocked(it.id, meta, it); }
@@ -531,14 +554,21 @@ export function editItem(ctx, item, type = 'login') {
     try {
       for (const id of removed) await store.removeAttachment(it.id, id);
       for (const a of staged) await store.addAttachment(it.id, a);
+      if (photoChange) {
+        if (oldPhoto && (store.get(it.id).attachments || []).some((a) => a.id === oldPhoto)) await store.removeAttachment(it.id, oldPhoto);
+        const fields = { ...(store.get(it.id).fields || {}) }; delete fields.photo;
+        if (photoChange !== 'remove') fields.photo = (await store.addAttachment(it.id, photoChange)).id;
+        await store.update(it.id, { fields });
+      }
     } catch (e) { toast(e.message, 'err', 7000); }
     if (isNew && lockOn.checked) { try { await store.lockItem(it.id, lp1.value); } catch (e) { toast(e.message, 'err', 7000); } }   // after the files are attached, so they are sealed too
     ctx.showItem(it.id); toast(isNew ? 'Saved to your vault' : 'Changes saved');
   };
-  modal({ title: (isNew ? 'New ' : 'Edit ') + TYPES[it.type].toLowerCase(), body: h('div', null, body), actions: [{ label: 'Cancel' }, { label: 'Save', kind: 'primary', onClick: save }], wide: false });
+  modal({ title: (isNew ? 'New ' : 'Edit ') + TYPES[it.type].toLowerCase(), body: h('div', null, body), actions: [fromPicker ? { label: 'Cancel', onClick: () => newItemMenu(ctx, { start: it.type }) } : { label: 'Cancel' }, { label: 'Save', kind: 'primary', onClick: save }], wide: false });
 }
 
 function tplInput(ctx, it, f, locks = []) {
+  if (f.kind === 'photo') return photoInput(ctx, it, f);
   if (f.lockable) { const c = lockableField(ctx, it, f); locks.push(c); return c.el; }   // seed phrase / 25th word: optional passcode of their own
   const set = (v) => { if (v) it.fields[f.k] = v; else delete it.fields[f.k]; };
   const val = (it.fields || {})[f.k] || '';
@@ -560,6 +590,28 @@ function tplInput(ctx, it, f, locks = []) {
   return h('div', { class: 'field' + (full ? ' full' : '') }, h('label', { for: id, text: f.l }), control, f.hint ? h('p', { class: 'hint', text: f.hint }) : null);
 }
 
+/* a contact photo: picked or taken, shrunk to 512 px JPEG, stored as an encrypted attachment on Save (it.__photo holds the change until then) */
+async function shrinkPhoto(file) {
+  if (!/^image\//.test(file.type)) throw new Error('That file is not a picture.');
+  if (file.size > 25 * 1048576) throw new Error('That picture is over 25 MB.');
+  const bmp = await createImageBitmap(file).catch(() => { throw new Error('This picture format cannot be read here (try JPEG or PNG).'); });
+  const k = Math.min(1, 512 / Math.max(bmp.width, bmp.height)), c = document.createElement('canvas'); c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
+  c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height); if (bmp.close) bmp.close();
+  const blob = await new Promise((res) => c.toBlob(res, 'image/jpeg', 0.85));
+  return { name: 'contact-photo.jpg', type: 'image/jpeg', bytes: new Uint8Array(await blob.arrayBuffer()) };
+}
+function photoInput(ctx, it, f) {
+  const pic = h('div', { class: 'avatar photo-prev', 'aria-hidden': 'true' }), err = h('p', { class: 'err', role: 'alert' });
+  const show = (url) => { if (url) pic.style.setProperty('--photo', `url("${url}")`); else pic.style.removeProperty('--photo'); pic.classList.toggle('has-photo', !!url); rm.hidden = !url; };
+  const take = async (file) => { err.textContent = ''; try { const p = await shrinkPhoto(file); it.__photo = p; show(URL.createObjectURL(new Blob([p.bytes], { type: p.type }))); } catch (e) { err.textContent = e.message; } };
+  const pickIn = h('input', { type: 'file', accept: 'image/*', class: 'offscreen', 'aria-label': 'Choose a photo', on: { change: (e) => { const fl = e.target.files && e.target.files[0]; e.target.value = ''; if (fl) take(fl); } } });
+  const camIn = h('input', { type: 'file', accept: 'image/*', capture: 'user', class: 'offscreen', 'aria-label': 'Take a photo', on: { change: (e) => { const fl = e.target.files && e.target.files[0]; e.target.value = ''; if (fl) take(fl); } } });
+  const rm = h('button', { type: 'button', class: 'btn sm', on: { click: () => { it.__photo = 'remove'; show(''); } } }, '{{trash}} Remove photo');
+  show(''); if ((it.fields || {}).photo) photoUrl(ctx, it).then((u) => { if (u && it.__photo === undefined) show(u); });
+  return h('div', { class: 'field full' }, h('label', { text: f.l }), h('div', { class: 'photo-row' }, pic, h('div', { class: 'row wrap' }, h('button', { type: 'button', class: 'btn sm', on: { click: () => pickIn.click() } }, '{{folder}} Choose a photo…'), h('button', { type: 'button', class: 'btn sm', on: { click: () => camIn.click() } }, '{{camera}} Take a photo'), rm, pickIn, camIn)),
+    h('p', { class: 'hint', text: 'Shown as the contact’s picture. It is shrunk to 512 px and stored encrypted, like any attachment.' }), err);
+}
+
 /* ---------- the "Choose a category" picker: a 3D carousel, or the plain grouped list ---------- */
 const CORE_FIELD_LABELS = { login: ['Username / email', 'Website', 'Password', 'One-time code'], note: ['Title', 'Content', 'Category', 'Expiration date', 'Access permissions'], card: ['Cardholder', 'Card number', 'Expiry', 'CVV', 'PIN'] };
 const PICKER_KEY = 'vaultmanager.picker';
@@ -569,8 +621,8 @@ const reducedMotion = () => !!(window.matchMedia && window.matchMedia('(prefers-
 /* 3D unless the person chose the list, or has animations off / asks for reduced motion and never chose 3D */
 const carouselWanted = () => { const p = pickerPref(); return p === '3d' || (p !== 'list' && document.documentElement.dataset.fxanim === 'on' && !reducedMotion()); };
 
-export function newItemMenu(ctx) {
-  const pick = (k) => h('button', { class: 'btn', on: { click: () => { ctx.closeModals(); editItem(ctx, null, k); } } }, h('span', { class: 'icn', text: TYPE_ICON[k] }), ' ' + TYPES[k]);
+export function newItemMenu(ctx, opts = {}) {
+  const pick = (k) => h('button', { class: 'btn', on: { click: () => { ctx.closeModals(); editItem(ctx, null, k, { fromPicker: true }); } } }, h('span', { class: 'icn', text: TYPE_ICON[k] }), ' ' + TYPES[k]);
   const grid = () => h('div', null, GROUPS.map(([g, keys]) => h('div', { class: 'catgroup' }, h('p', { class: 'lbl', text: g }), h('div', { class: 'checks cats' }, keys.map(pick)))));
   const cards = GROUPS.flatMap(([g, keys]) => keys.map((k) => { const fields = CORE_FIELD_LABELS[k] || ((TEMPLATES[k] || {}).fields || []).map((f) => f.l); return { key: k, label: TYPES[k], icon: TYPE_ICON[k], group: g, fields, count: fields.length }; }));
   const body = h('div', { class: 'picker' });
@@ -581,7 +633,7 @@ export function newItemMenu(ctx) {
     if (car) { car.destroy(); car = null; }
     mode = m; clear(body);
     if (m === '3d') {
-      car = categoryCarousel({ cards, groups: GROUPS, still: reducedMotion(), onPick: (k) => { ctx.closeModals(); editItem(ctx, null, k); } });
+      car = categoryCarousel({ cards, groups: GROUPS, still: reducedMotion(), onPick: (k) => { ctx.closeModals(); editItem(ctx, null, k, { fromPicker: true }); }, start: Math.max(0, cards.findIndex((c) => c.key === opts.start)) });
       body.append(toggle(m), car.el);
     } else body.append(toggle(m), grid());
   };

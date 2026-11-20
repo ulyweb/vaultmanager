@@ -2306,3 +2306,39 @@ test('v0.43.0: secure notes — title, content, the five fixed categories, tags,
   await page.locator('.side .nav:has-text("Family recovery")').click(); await page.waitForSelector('.guideprev'); assert.match(await page.textContent('.guideprev'), /Notes meant for you[\s\S]*Rack plan \(Homelab and Network Architecture\), for: Family/); assert.ok(!(await page.textContent('.guideprev')).includes('Cold storage map'), 'private notes are not listed');
   assert.deepEqual(problems.filter((p) => !/Failed to load resource/.test(p)), []); await ctx.close();
 });
+
+test('v0.44.0: contact photos (pick, show as avatar, import from .vcf, export), Outlook/Exchange email fix, popular sites for logins, Cancel goes back to the category picker', async () => {
+  const { ctx, page, problems } = await newPage(); await createVault(page);
+  const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+  const pickCat = async (label) => { await page.getByRole('button', { name: '＋ New' }).click(); await page.waitForSelector('.modal-sheet'); if (await page.locator('.c3-stage').count()) await page.locator('.pickseg button').nth(1).click(); await page.locator('.modal-sheet .cats .btn', { hasText: label }).click(); await page.waitForSelector('#f_name'); };
+  // Cancel in a new item goes back to "Choose a category", not to the page behind
+  await pickCat('Contact'); await page.getByRole('button', { name: 'Cancel' }).click(); await page.waitForSelector('.modal-sheet:has-text("Choose a category")');
+  await page.locator('.modal-sheet .cats .btn', { hasText: 'Contact' }).click(); await page.waitForSelector('#f_name');
+  // a contact with a photo and the new fields
+  await page.fill('#f_name', 'Jake Rullan'); await page.setInputFiles('input[aria-label="Choose a photo"]', { name: 'me.png', mimeType: 'image/png', buffer: png }); await page.waitForSelector('.photo-prev.has-photo');
+  for (const id of ['tf_nickname', 'tf_department', 'tf_homephone', 'tf_email2', 'tf_anniversary', 'tf_workaddress']) assert.ok(await page.locator('#' + id).count(), id + ' exists');
+  await page.fill('#tf_mobile', '+1 (202) 710-7557'); await page.fill('#tf_email', 'jake@example.com'); await page.fill('#tf_department', 'Operations');
+  await page.getByRole('button', { name: 'Save' }).click(); await page.waitForSelector('.detail h2:has-text("Jake Rullan")');
+  await page.waitForSelector('.detail .avatar.has-photo'); await page.waitForSelector('.items .item:has-text("Jake Rullan") .avatar.has-photo');
+  assert.match(await page.locator('.detail .avatar').evaluate((e) => getComputedStyle(e).backgroundImage), /^url\("blob:/);
+  // export carries the photo
+  const [dl] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: /Export \(\.vcf\)/ }).click()]); const vcf = fs.readFileSync(await dl.path(), 'utf8'); assert.ok(vcf.includes('PHOTO;ENCODING=b;TYPE=JPEG:') && vcf.includes('ORG:;Operations'.replace(';Operations', '') + '') && vcf.includes('TEL;TYPE=CELL:+1 (202) 710-7557'));
+  // remove the photo
+  await page.locator('.detail .act-edit').click(); await page.waitForSelector('.photo-prev.has-photo'); await page.getByRole('button', { name: /Remove photo/ }).click(); await page.getByRole('button', { name: 'Save' }).click(); await page.waitForSelector('.detail h2:has-text("Jake Rullan")'); await page.waitForTimeout(300);
+  assert.equal(await page.locator('.detail .avatar.has-photo').count(), 0);
+  // import: a .vcf photo and an Outlook CSV with an Exchange address
+  await page.locator('.side .nav:has-text("Contacts")').click(); await page.waitForSelector('.contactsio');
+  const vc = 'BEGIN:VCARD\nVERSION:3.0\nFN:Pat Kim\nTEL;TYPE=CELL:555-0102\nPHOTO;ENCODING=b;TYPE=PNG:' + png.toString('base64') + '\nEND:VCARD\n';
+  await page.setInputFiles('input[aria-label="Contacts file"]', { name: 'c.vcf', mimeType: 'text/vcard', buffer: Buffer.from(vc) }); await page.waitForSelector('.modal-sheet .ctable'); assert.match(await page.textContent('.modal-sheet'), /1 with a photo/);
+  await page.getByRole('button', { name: 'Import', exact: true }).click(); await page.getByText(/with 1 photo/).waitFor(); await page.waitForSelector('.items .item:has-text("Pat Kim") .avatar.has-photo');
+  const dn = '/o=ExchangeLabs/ou=Exchange Administrative Group (FYDIBOHF23SPDLT)/cn=Recipients/cn=34f3-Lidia Bernardo';
+  await page.setInputFiles('input[aria-label="Contacts file"]', { name: 'outlook.csv', mimeType: 'text/csv', buffer: Buffer.from(`First Name,Last Name,Mobile Phone,E-mail Address,E-mail Type,E-mail Display Name\nLidia,Bernardo,555-0303,"${dn}",EX,Lidia Bernardo (lidia@example.com)\n`) });
+  await page.waitForSelector('.modal-sheet .ctable'); await page.getByRole('button', { name: 'Import', exact: true }).click(); await page.waitForSelector('.items .item:has-text("Lidia Bernardo")');
+  await page.locator('.items .item:has-text("Lidia Bernardo")').click(); const d = await page.textContent('.detail'); assert.ok(d.includes('lidia@example.com'), 'the real email'); assert.match(d, /Notes[\s\S]*Exchange \/ other address/);
+  // popular sites for a new login
+  await pickCat('Login'); const sites = await page.locator('#f_site option').allTextContents(); for (const n of ['Google', 'iCloud', 'Microsoft account', 'Facebook', 'GitHub', 'Amazon', 'Netflix']) assert.ok(sites.some((t) => t.startsWith(n + ' ')), n);
+  await page.selectOption('#f_site', 'GitHub'); assert.equal(await page.inputValue('#f_url'), 'https://github.com/login'); assert.equal(await page.inputValue('#f_name'), 'GitHub', 'an empty title takes the site name');
+  await page.fill('#f_name', 'Work GitHub'); await page.selectOption('#f_site', 'Google'); assert.equal(await page.inputValue('#f_name'), 'Work GitHub', 'a title you typed is kept'); assert.equal(await page.inputValue('#f_url'), 'https://accounts.google.com');
+  await page.getByRole('button', { name: 'Save' }).click(); await page.waitForSelector('.detail h2:has-text("Work GitHub")');
+  assert.deepEqual(problems.filter((p) => !/Failed to load resource/.test(p)), []); await ctx.close();
+});

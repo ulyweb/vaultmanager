@@ -1127,3 +1127,10 @@ html[data-clocksize=large] .barclock { font-size: 13px; }
 .ctable th { text-align: left; font: 700 11px var(--mono); color: var(--muted); padding: 4px 8px; } .ctable td { padding: 5px 8px; border-top: 1px solid var(--line); }
 
 .charcount { display: block; font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+/* contact photos (an encrypted attachment shown as the avatar) */
+html[data-avatar] .avatar.has-photo, .avatar.has-photo { background: var(--photo) center / cover no-repeat !important; color: transparent; text-shadow: none; }
+.avatar.has-photo > * { display: none !important; }
+.photo-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.photo-prev { width: 72px !important; height: 72px !important; border-radius: 50% !important; background: var(--raise); border: 1px dashed var(--line-2); }
+.photo-prev.has-photo { border-style: solid; }

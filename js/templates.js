@@ -7,6 +7,7 @@
      gen       offers the password generator in the editor
      words     recovery phrase: numbered boxes, one per word, each hidden on its own
      lockable  can be locked with a passcode of its own (see fieldlock.js)
+     photo     a picture shown as the item's avatar; the value is the id of an (encrypted) attachment of the item
      stamp     a date AND time (YYYY-MM-DDTHH:MM, your local time); with auto: true it is filled in the moment a new item is created
      expiry    a date that feeds the "expiring soon" report in Vault health */
 
@@ -72,9 +73,12 @@ export const TEMPLATES = {
     CH('host', 'Host / service', CLOUD_HOSTS), U('url', 'Endpoint / console URL'), T('username', 'Username'), S('apikey', 'API key / token', { gen: true }), { k: 'ssh', l: 'SSH private key', kind: 'multiline', secret: true }, S('passphrase', 'Key passphrase'),
   ] },
 
-  contact: { label: 'Contact', plural: 'Contacts', icon: '{{contact}}', sub: 'phone', fields: [
-    T('company', 'Company / organisation'), T('jobtitle', 'Job title'), T('phone', 'Phone', { mono: true }), T('mobile', 'Mobile', { mono: true }), T('email', 'Email'),
-    SEL('relation', 'Relationship', ['Family', 'Friend', 'Colleague', 'Doctor', 'Lawyer', 'Landlord', 'Neighbour', 'Other']), D('birthday', 'Birthday'), U('url', 'Website'), { k: 'address', l: 'Address', kind: 'multiline' },
+  contact: { label: 'Contact', plural: 'Contacts', icon: '{{contact}}', sub: 'mobile', fields: [
+    { k: 'photo', l: 'Photo', kind: 'photo' },
+    T('nickname', 'Nickname'), T('company', 'Company / organisation'), T('department', 'Department'), T('jobtitle', 'Job title'),
+    T('mobile', 'Mobile', { mono: true }), T('phone', 'Work phone', { mono: true }), T('homephone', 'Home phone', { mono: true }), T('email', 'Email'), T('email2', 'Other email'),
+    SEL('relation', 'Relationship', ['Family', 'Friend', 'Colleague', 'Doctor', 'Lawyer', 'Landlord', 'Neighbour', 'Other']), D('birthday', 'Birthday'), D('anniversary', 'Anniversary'), U('url', 'Website'),
+    { k: 'address', l: 'Home address', kind: 'multiline' }, { k: 'workaddress', l: 'Work address', kind: 'multiline' },
   ] },
   phone: { label: 'Phone / SIM', plural: 'Phones', icon: '{{phone}}', sub: 'number', fields: [
     T('number', 'Phone number', { mono: true }), SEL('kind', 'Type', ['Mobile', 'Landline', 'VoIP', 'eSIM']), CH('carrier', 'Carrier', CARRIERS), T('plan', 'Plan'), T('accountno', 'Account number', { mono: true }),

@@ -423,7 +423,7 @@ test('templates: well-formed, every category round-trips, secrets never indexed 
   for (const [k, t] of Object.entries(TEMPLATES)) {
     const keys = t.fields.map((f) => f.k);
     assert.equal(new Set(keys).size, keys.length, k + ': duplicate field keys');
-    for (const f of t.fields) { assert.ok(['text', 'secret', 'url', 'date', 'multiline', 'select', 'stamp', 'choice'].includes(f.kind), k + '.' + f.k); if (f.kind === 'select') assert.ok(f.options.length > 1); }
+    for (const f of t.fields) { assert.ok(['text', 'secret', 'url', 'date', 'multiline', 'select', 'stamp', 'choice', 'photo'].includes(f.kind), k + '.' + f.k); if (f.kind === 'select') assert.ok(f.options.length > 1); }
     assert.ok(keys.includes(t.sub), k + ': sub field exists');
     assert.ok(TYPE_META[k].icon && TYPE_META[k].plural);
   }
@@ -974,11 +974,11 @@ test('contacts: vCard (2.1 / 3.0 / 4.0), Google and Outlook CSV import; vCard / 
   const C = await import('../js/contacts.js');
   // vCard 3.0 with folding, escapes, several phones / emails, address, birthday, notes, photo
   const v3 = ['BEGIN:VCARD', 'VERSION:3.0', 'N:Rivera;Alex;Q;Dr.;', 'FN:Dr. Alex Rivera', 'ORG:Acme\\, Inc.;Sales', 'TITLE:Director', 'TEL;TYPE=CELL:+1 (555) 010-2000', 'TEL;TYPE=WORK,VOICE:555-0100', 'TEL;TYPE=HOME:555-0199', 'EMAIL;TYPE=INTERNET:alex@example.com', 'EMAIL;TYPE=HOME:alex.home@example.com',
-    'ADR;TYPE=WORK:;;1 Main St\\nSuite 4;Springfield;IL;62701;USA', 'BDAY:1985-03-09', 'URL:https://example.com', 'NOTE:Met at the\\nconference; says hi', 'PHOTO;ENCODING=b;TYPE=JPEG:AAAA', 'X-CUSTOM:1', 'END:VCARD'].join('\r\n') + '\r\n';
+    'ADR;TYPE=WORK:;;1 Main St\\nSuite 4;Springfield;IL;62701;USA', 'BDAY:1985-03-09', 'URL:https://example.com', 'NOTE:Met at the\\nconference; says hi', 'PHOTO;ENCODING=b;TYPE=JPEG:AAAAAAAAAAAAAAAA', 'NICKNAME:Al', 'X-ANNIVERSARY:2010-06-12', 'X-CUSTOM:1', 'END:VCARD'].join('\r\n') + '\r\n';
   const a = C.parseVCard(v3); assert.equal(a.contacts.length, 1); const c = a.contacts[0];
-  assert.equal(c.name, 'Dr. Alex Rivera'); assert.equal(c.company, 'Acme, Inc. – Sales'); assert.equal(c.jobtitle, 'Director'); assert.equal(c.mobile, '+1 (555) 010-2000'); assert.equal(c.phone, '555-0100'); assert.equal(c.email, 'alex@example.com');
-  assert.match(c.address, /1 Main St\nSuite 4\nSpringfield, IL 62701\nUSA/); assert.equal(c.birthday, '1985-03-09'); assert.equal(c.url, 'https://example.com');
-  assert.match(c.notes, /Met at the\nconference; says hi/); assert.match(c.notes, /Other phone: 555-0199/); assert.match(c.notes, /Other email: alex\.home@example\.com/); assert.equal(a.left.photos, 1);
+  assert.equal(c.name, 'Dr. Alex Rivera'); assert.equal(c.company, 'Acme, Inc.'); assert.equal(c.department, 'Sales'); assert.equal(c.homephone, '555-0199'); assert.equal(c.email2, 'alex.home@example.com'); assert.equal(c.jobtitle, 'Director'); assert.equal(c.mobile, '+1 (555) 010-2000'); assert.equal(c.phone, '555-0100'); assert.equal(c.email, 'alex@example.com');
+  assert.match(c.workaddress, /1 Main St\nSuite 4\nSpringfield, IL 62701\nUSA/); assert.equal(c.birthday, '1985-03-09'); assert.equal(c.url, 'https://example.com');
+  assert.match(c.notes, /Met at the\nconference; says hi/); assert.ok(c.photo && c.photo.type === 'image/jpeg' && c.photo.b64 === 'AAAAAAAAAAAAAAAA', 'the embedded photo is kept'); assert.equal(a.left.photos, 0);
   // 2.1 quoted-printable, folding, no FN
   const v21 = 'BEGIN:VCARD\nVERSION:2.1\nN;CHARSET=UTF-8;ENCODING=QUOTED-PRINTABLE:M=C3=BCller;J=C3=B6rg;;;\nTEL;CELL:0171 555 0000\nEMAIL;INTERNET:j@example.de\nNOTE;ENCODING=QUOTED-PRINTABLE:line one=0Aline=\ntwo\nEND:VCARD\n';
   const b = C.parseVCard(v21).contacts[0]; assert.equal(b.name, 'Jörg Müller'); assert.equal(b.mobile, '0171 555 0000'); assert.equal(b.notes, 'line one\nlinetwo');
@@ -986,9 +986,9 @@ test('contacts: vCard (2.1 / 3.0 / 4.0), Google and Outlook CSV import; vCard / 
   const many = C.parseVCard('BEGIN:VCARD\nVERSION:4.0\nFN:Pat\nTEL;VALUE=uri;TYPE="cell,voice":tel:+15550001\nEND:VCARD\nBEGIN:VCARD\nVERSION:4.0\nEND:VCARD\nBEGIN:VCARD\nVERSION:4.0\nFN:Sam\nEND:VCARD\n'); assert.equal(many.contacts.length, 2); assert.equal(many.left.empty, 1); assert.equal(many.contacts[0].mobile, '+15550001');
   // Google CSV (new layout with ::: multi values) and Outlook CSV
   const g = C.parseContactsFile('First Name,Middle Name,Last Name,Organization Name,Organization Title,E-mail 1 - Value,Phone 1 - Label,Phone 1 - Value,Phone 2 - Label,Phone 2 - Value,Address 1 - Formatted,Birthday,Website 1 - Value,Notes,Labels\nAda,,Lovelace,Analytical Co,Engineer,ada@example.com ::: ada2@example.com,Mobile,555-1111,Work,555-2222,"1 Lane\nTown",1815-12-10,https://ada.example,"Hello, world",* myContacts ::: Family\n');
-  assert.equal(g.format, 'Google CSV'); const ga = g.contacts[0]; assert.equal(ga.name, 'Ada Lovelace'); assert.equal(ga.email, 'ada@example.com'); assert.equal(ga.mobile, '555-1111'); assert.equal(ga.phone, '555-2222'); assert.match(ga.address, /1 Lane\nTown/); assert.equal(ga.birthday, '1815-12-10'); assert.match(ga.notes, /Hello, world/); assert.match(ga.notes, /Other email: ada2@example\.com/); assert.match(ga.notes, /Group:/);
+  assert.equal(g.format, 'Google CSV'); const ga = g.contacts[0]; assert.equal(ga.name, 'Ada Lovelace'); assert.equal(ga.email, 'ada@example.com'); assert.equal(ga.mobile, '555-1111'); assert.equal(ga.phone, '555-2222'); assert.match(ga.address, /1 Lane\nTown/); assert.equal(ga.birthday, '1815-12-10'); assert.match(ga.notes, /Hello, world/); assert.equal(ga.email2, 'ada2@example.com'); assert.match(ga.notes, /Group:/);
   const o = C.parseContactsFile('First Name,Last Name,Company,Job Title,Business Phone,Mobile Phone,Home Phone,E-mail Address,Home Street,Home City,Home State,Home Postal Code,Birthday,Notes\nGrace,Hopper,Navy,Admiral,555-0001,555-0002,555-0003,grace@example.com,2 Bay Rd,Arlington,VA,22201,12/9/1906,Cobol\n');
-  assert.equal(o.format, 'Outlook CSV'); const oa = o.contacts[0]; assert.equal(oa.name, 'Grace Hopper'); assert.equal(oa.phone, '555-0001'); assert.equal(oa.mobile, '555-0002'); assert.match(oa.notes, /Other phone: 555-0003/); assert.equal(oa.birthday, '1906-12-09'); assert.match(oa.address, /2 Bay Rd\nArlington, VA 22201/);
+  assert.equal(o.format, 'Outlook CSV'); const oa = o.contacts[0]; assert.equal(oa.name, 'Grace Hopper'); assert.equal(oa.phone, '555-0001'); assert.equal(oa.mobile, '555-0002'); assert.equal(oa.homephone, '555-0003'); assert.equal(oa.birthday, '1906-12-09'); assert.match(oa.address, /2 Bay Rd\nArlington, VA 22201/);
   assert.equal(C.normDate('0/0/00'), ''); assert.equal(C.normDate('--0517'), ''); assert.equal(C.normDate('19900517'), '1990-05-17'); assert.equal(C.normDate('31/12/1999'), '1999-12-31');
   // export round trips through our own reader
   const list = [{ name: 'Dr. Alex Rivera', company: 'Acme, Inc.', jobtitle: 'Director', phone: '555-0100', mobile: '+1 555 0102', email: 'alex@example.com', address: '1 Main St\nSpringfield, IL', url: 'https://example.com', birthday: '1985-03-09', notes: 'Line one\nLine; two, three', relation: 'Colleague' }, { name: 'Maria López', company: '', jobtitle: '', phone: '', mobile: '', email: '', address: '', url: '', birthday: '', notes: '', relation: '' }];
@@ -1017,4 +1017,30 @@ test('secure notes: five fixed categories, access labels with a default, strict 
   assert.ok(T.TEMPLATES.note.fields.find((f) => f.k === 'expires').expiry, 'the expiration date feeds the expiring-soon report');
   const soon = new Date(Date.now() + 5 * 86400000).toISOString().slice(0, 10), n = V.sanitiseItem({ type: 'note', name: 'Cert', fields: { expires: soon } });
   assert.ok(V.health([n]).expiring.some((x) => x.item.name === 'Cert'), 'the note shows up as expiring soon');
+});
+
+test('contacts: Outlook / Exchange export puts an internal address where the email should be — the real email is found, nothing bogus is stored', async () => {
+  const C = await import('../js/contacts.js');
+  const dn = '/o=ExchangeLabs/ou=Exchange Administrative Group (FYDIBOHF23SPDLT)/cn=Recipients/cn=34f34407b1a7487c81fd622984c7989b-Jake Rullan';
+  const csv = 'First Name,Last Name,Company,Department,Job Title,Business Phone,Mobile Phone,E-mail Address,E-mail Type,E-mail Display Name,E-mail 2 Address,Business Street,Business City,Business State,Business Postal Code,Business Country/Region,Home Street,Anniversary,Nickname,Categories\n'
+    + `Jake,Rullan,Sunnyvale OPS,Operations,Manager,+1 (408) 523-5393,+1 (202) 710-7557,"${dn}",EX,"Jake Rullan (jake.rullan@example.com)",,1151 Sonora Court,Sunnyvale,CA,94086,US,,2015-07-04,JR,Manager\n`
+    + `Pat,Lee,,,,,,"${dn.replace('Jake Rullan', 'Pat Lee')}",EX,Pat Lee,pat@example.com,,,,,,9 Elm St,,,\n`
+    + `Sam,Roe,,,,,555-0001,"${dn.replace('Jake Rullan', 'Sam Roe')}",EX,Sam Roe,,,,,,,,,,\n`;
+  const r = C.parseContactsFile(csv); assert.equal(r.format, 'Outlook CSV');
+  const [j, p, sm] = r.contacts;
+  assert.equal(j.email, 'jake.rullan@example.com', 'the real address comes from the display name'); assert.ok(!j.email.startsWith('/o='));
+  assert.match(j.notes, /Exchange \/ other address: \/o=ExchangeLabs/); assert.equal(j.department, 'Operations'); assert.equal(j.nickname, 'JR'); assert.equal(j.anniversary, '2015-07-04');
+  assert.match(j.workaddress, /1151 Sonora Court\nSunnyvale, CA 94086\nUS/); assert.equal(j.phone, '+1 (408) 523-5393'); assert.equal(j.mobile, '+1 (202) 710-7557');
+  assert.equal(p.email, 'pat@example.com', 'or from the second email column'); assert.match(p.address, /9 Elm St/);
+  assert.equal(sm.email, '', 'no real email: the field stays empty'); assert.match(sm.notes, /Exchange \/ other address/);
+  // a vCard with an X.500 address is cleaned the same way
+  const v = C.parseVCard(`BEGIN:VCARD\nVERSION:3.0\nFN:Jake Rullan\nEMAIL;TYPE=INTERNET:${dn}\nEND:VCARD\n`).contacts[0]; assert.equal(v.email, ''); assert.match(v.notes, /ExchangeLabs/);
+  // repairing contacts imported before this fix
+  const fix = C.repairExchange({ fields: { email: dn, mobile: '1' }, notes: 'hi' }); assert.equal(fix.fields.email, undefined); assert.match(fix.notes, /hi\nExchange \/ other address: \/o=/); assert.equal(C.repairExchange({ fields: { email: 'a@b.co' } }), null);
+  // export carries the new fields and the photo
+  const list = [{ ...C.blank(), name: 'Jake Rullan', nickname: 'JR', company: 'Sunnyvale OPS', department: 'Operations', homephone: '555-0003', email: 'j@example.com', email2: 'j2@example.com', workaddress: '1 Work Rd', anniversary: '2015-07-04', photo: { type: 'image/png', b64: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==' } }];
+  const vc = C.toVCard(list); assert.ok(vc.includes('NICKNAME:JR') && vc.includes('ORG:Sunnyvale OPS;Operations') && vc.includes('TEL;TYPE=HOME,VOICE:555-0003') && vc.includes('X-ANNIVERSARY:2015-07-04') && vc.includes('PHOTO;ENCODING=b;TYPE=PNG:'));
+  const back = C.parseVCard(vc).contacts[0]; for (const k of ['nickname', 'company', 'department', 'homephone', 'email2', 'workaddress', 'anniversary']) assert.equal(back[k], list[0][k], k); assert.equal(back.photo.type, 'image/png'); assert.equal(back.photo.b64, list[0].photo.b64);
+  for (const fn of [C.toGoogleCSV, C.toOutlookCSV]) { const r2 = C.parseContactsFile(fn(list)).contacts[0]; for (const k of ['nickname', 'department', 'homephone', 'email2', 'workaddress', 'anniversary']) assert.equal(r2[k], list[0][k], fn.name + ' ' + k); }
+  assert.equal(C.parseVCard('BEGIN:VCARD\nFN:x\nPHOTO;VALUE=uri:https://example.com/a.jpg\nEND:VCARD\n').contacts[0].photo, null, 'a photo that is only a web link is not fetched');
 });
