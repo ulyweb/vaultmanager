@@ -9,6 +9,8 @@ import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { TEMPLATES, GROUPS, TYPE_KEYS } from '../js/templates.js';
 import { execFileSync } from 'node:child_process';
+/* words in a generated passphrase: the EFF list has one hyphenated word, "yo-yo", so a plain split('-') miscounts it */
+const wordCount = (s) => String(s).replace(/(^|-)yo-yo(?=-|$)/g, '$1yoyo').split('-').length;
 
 const require = createRequire(import.meta.url);
 let pw, devices;
@@ -128,7 +130,7 @@ test('full journey: create → add → lock → unlock → tools → QR round tr
   const g1 = await page.textContent('.genout'); await page.getByRole('button', { name: /Regenerate/ }).click();
   assert.notEqual(g1, await page.textContent('.genout'));
   await page.getByRole('tab', { name: 'Passphrase' }).click();
-  assert.equal((await page.textContent('.genout')).split('-').length, 10);
+  assert.equal(wordCount(await page.textContent('.genout')), 10);
 
   // health
   await page.getByRole('button', { name: /Vault health/ }).click(); await page.waitForSelector('.ring');
@@ -1492,7 +1494,7 @@ test('v0.21: centred unlock screen, side-bar auto-hide, clock position, live New
   // clock position
   const cx = async () => { const r = await page.locator('.barclock').boundingBox(); return r.x + r.width / 2; };
   assert.equal(await page.evaluate(() => document.documentElement.dataset.clockpos), 'center', 'the clock is in the middle by default'); assert.equal(await page.evaluate(() => document.documentElement.dataset.clocksize), 'large'); assert.ok(Math.abs((await cx()) - 640) < 40, 'the default clock sits in the middle');
-  await settingsTab(page, 'Dock & menu bar'); await page.getByRole('button', { name: 'Left', exact: true }).click(); assert.equal(await page.evaluate(() => document.documentElement.dataset.clockpos), 'left'); assert.ok(await cx() < 500, 'clock moved left');
+  await settingsTab(page, 'Dock & menu bar'); await page.getByRole('button', { name: 'Left', exact: true }).click(); assert.equal(await page.evaluate(() => document.documentElement.dataset.clockpos), 'left'); const leftX = await cx(); assert.ok(leftX < 500, 'clock moved left: ' + leftX);
   await page.getByRole('button', { name: 'Middle', exact: true }).click(); const mid = await cx(); assert.ok(Math.abs(mid - 640) < 40, 'clock in the middle: ' + mid);
   await page.getByRole('button', { name: 'Right', exact: true }).click();
   // auto-hide the side bar
@@ -1786,7 +1788,7 @@ test('v0.29.0: the create-profile screen has an Appearance picker (kept by the n
   assert.ok(await page.locator('button.btn.cta[type=submit]').isVisible(), 'the Create button carries the animated style');
   await page.getByRole('button', { name: /Suggest a passphrase/ }).click();   // 10 random words: at least 100 bits
   const bits = Number(/~(\d+) bits/.exec(await page.locator('.gate-card .meter-label').textContent())[1]); assert.ok(bits >= 100, 'suggested passphrase is ' + bits + ' bits');
-  assert.equal((await page.inputValue('#pw1')).split('-').length, 10);
+  assert.equal(wordCount(await page.inputValue('#pw1')), 10);
   await page.fill('#pw1', MASTER); await page.fill('#pw2', MASTER); await page.check('#ack'); await page.click('button[type=submit]');
   await page.getByRole('button', { name: 'Skip for now' }).click(); await dismissWelcome(page); await page.waitForSelector('.topbar');
   assert.equal(await theme(), 'light', 'the new vault opens in the chosen theme');
@@ -1848,7 +1850,7 @@ test('v0.30.0: the 3D tour page loads (with or without WebGL), its chapters, col
     // the app's real passphrase generator
     await page.evaluate(() => window.scrollTo(0, document.querySelector('#c-tools').offsetTop)); await page.waitForFunction(() => window.__vm3d.chapter() === 'tools');
     await page.click('#suggest'); const bits = Number(/~(\d+) bits/.exec(await page.textContent('#bits'))[1]); assert.ok(bits >= 100, label + ': ' + bits + ' bits');
-    assert.equal((await page.textContent('#phrase')).split('-').length, 10);
+    assert.equal(wordCount(await page.textContent('#phrase')), 10);
     assert.deepEqual(problems.filter(quiet), [], label);
     await ctx.close();
   }
@@ -1990,7 +1992,7 @@ test('v0.33.2: every generate-a-password button makes 100+ bits (export, whole-p
   await A.page.locator('.modal-sheet button[aria-label="Generate a passphrase"]').click();
   const b = await bits(A.page);
   assert.ok(b >= 100, 'the export dialog generator gave only ' + b + ' bits');
-  assert.equal((await A.page.inputValue('input[aria-label="Backup password"]')).split('-').length, 10);
+  assert.equal(wordCount(await A.page.inputValue('input[aria-label="Backup password"]')), 10);
   assert.deepEqual(A.problems.filter((p) => !/Failed to load resource/.test(p)), []); await A.ctx.close();
 });
 
@@ -2271,7 +2273,7 @@ test('v0.42.0: Contacts import / export — the page states what works and what 
   const [dl] = await Promise.all([page.waitForEvent('download'), (async () => { await page.getByRole('button', { name: /Export all as \.vcf/ }).click(); await page.getByText(/NOT encrypted: anyone who finds it/).waitFor(); await page.getByRole('button', { name: 'Export', exact: true }).click(); })()]);
   assert.match(dl.suggestedFilename(), /^vaultmanager-contacts-.*\.vcf$/); const out = fs.readFileSync(await dl.path(), 'utf8'); assert.equal((out.match(/BEGIN:VCARD/g) || []).length, 3); assert.ok(out.includes('FN:Ada Lovelace') && out.includes('EMAIL;TYPE=INTERNET:alex@example.com'));
   const [dl2] = await Promise.all([page.waitForEvent('download'), (async () => { await page.getByRole('button', { name: 'Outlook CSV' }).click(); await page.getByRole('button', { name: 'Export', exact: true }).click(); })()]);
-  assert.match(fs.readFileSync(await dl2.path(), 'utf8'), /First Name,Middle Name,Last Name,Company/);
+  assert.match(fs.readFileSync(await dl2.path(), 'utf8'), /First Name,Middle Name,Last Name,Nickname,Company,Department/);
   // one contact from its own page
   await page.locator('.items .item:has-text("Pat Kim")').click(); const [dl3] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: /Export \(\.vcf\)/ }).click()]); assert.match(fs.readFileSync(await dl3.path(), 'utf8'), /FN:Pat Kim/);
   // the same panel is on Import & export
@@ -2340,5 +2342,78 @@ test('v0.44.0: contact photos (pick, show as avatar, import from .vcf, export), 
   await page.selectOption('#f_site', 'GitHub'); assert.equal(await page.inputValue('#f_url'), 'https://github.com/login'); assert.equal(await page.inputValue('#f_name'), 'GitHub', 'an empty title takes the site name');
   await page.fill('#f_name', 'Work GitHub'); await page.selectOption('#f_site', 'Google'); assert.equal(await page.inputValue('#f_name'), 'Work GitHub', 'a title you typed is kept'); assert.equal(await page.inputValue('#f_url'), 'https://accounts.google.com');
   await page.getByRole('button', { name: 'Save' }).click(); await page.waitForSelector('.detail h2:has-text("Work GitHub")');
+  assert.deepEqual(problems.filter((p) => !/Failed to load resource/.test(p)), []); await ctx.close();
+});
+
+test('v0.45.0: encrypt a photo into a .vmenc file and open it again with the password (and a wrong password is refused)', async () => {
+  const { ctx, page, problems } = await newPage(); await createVault(page);
+  await page.locator('.side .nav:has-text("Import & export")').click(); await page.waitForSelector('.filecrypt');
+  const txt = await page.textContent('.filecrypt'); for (const must of ['What it can do', 'What it cannot do', 'no password reset', 'not changed or deleted', 'never uploaded']) assert.ok(txt.includes(must), must);
+  const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+  await page.setInputFiles('input[aria-label="Photo or file to encrypt"]', { name: 'family.png', mimeType: 'image/png', buffer: png }); await page.waitForSelector('.filecrypt .fileprev img');
+  await page.fill('input[aria-label="File password"]', 'short'); await page.fill('input[aria-label="Confirm File password"]', 'short'); await page.getByRole('button', { name: 'Encrypt and save' }).click(); assert.match(await page.locator('.filecrypt .err:not(:empty)').first().textContent(), /stronger password/);
+  const pw = 'plum-orbit-velvet-anchor-glacier-ember'; await page.fill('input[aria-label="File password"]', pw); await page.fill('input[aria-label="Confirm File password"]', pw);
+  const [dl] = await Promise.all([page.waitForEvent('download', { timeout: 60000 }), page.getByRole('button', { name: 'Encrypt and save' }).click()]);
+  assert.equal(dl.suggestedFilename(), 'family.png.vmenc'); const sealed = fs.readFileSync(await dl.path()); assert.equal(sealed.slice(0, 4).toString(), 'VMF1'); assert.ok(!sealed.includes(png.slice(8, 30)), 'the picture is not readable in the file');
+  await page.getByText(/Checked: it opens again with this password/).waitFor();
+  await page.setInputFiles('input[aria-label="Encrypted file to open"]', { name: 'family.png.vmenc', mimeType: 'application/octet-stream', buffer: sealed });
+  await page.fill('input[aria-label="Password of the encrypted file"]', 'not the password'); await page.getByRole('button', { name: 'Open', exact: true }).click(); await page.getByText(/Wrong password, or the file was changed/).waitFor();
+  await page.fill('input[aria-label="Password of the encrypted file"]', pw); await page.getByRole('button', { name: 'Open', exact: true }).click(); await page.getByText(/Opened: family\.png/).waitFor(); await page.waitForSelector('.filecrypt .fileprev img[alt="family.png"]');
+  const [dl2] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: /Save the original/ }).click()]); assert.equal(dl2.suggestedFilename(), 'family.png'); assert.ok(Buffer.compare(fs.readFileSync(await dl2.path()), png) === 0, 'byte-for-byte the original');
+  await page.setInputFiles('input[aria-label="Encrypted file to open"]', { name: 'x.txt', mimeType: 'text/plain', buffer: Buffer.from('hello there, this is not encrypted at all') }); await page.getByText(/not a VaultManager encrypted file/).waitFor();
+  assert.deepEqual(problems.filter((p) => !/Failed to load resource/.test(p)), []); await ctx.close();
+});
+
+test('profiles: a profile photo travels with "Export whole profile" and comes back on import', async () => {
+  const A = await newPage(); await createVault(A.page);
+  await A.page.getByRole('button', { name: 'VaultManager menu' }).click();
+  await A.page.locator('.sysmenu .sm-who').click(); await A.page.waitForSelector('.avpick');
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'vm-avx-')); const png = path.join(tmp, 'me.png'); fs.writeFileSync(png, PNG);
+  await A.page.setInputFiles('input[aria-label="Profile photo"]', png);
+  await A.page.waitForSelector('.toast:has-text("Profile picture saved")');
+  await A.page.keyboard.press('Escape');
+  await settingsTab(A.page, 'General');
+  await A.page.getByRole('button', { name: /Export whole profile/ }).click();
+  await A.page.fill('input[aria-label="Backup password"]', 'backup-pass-phrase-1'); await A.page.fill('input[aria-label="Confirm Backup password"]', 'backup-pass-phrase-1');
+  const [dl] = await Promise.all([A.page.waitForEvent('download'), A.page.getByRole('button', { name: 'Download backup' }).click()]);
+  const text = fs.readFileSync(await dl.path(), 'utf8'); assert.ok(text.startsWith('VMP1:'));
+  assert.ok(!text.includes('data:image'), 'the photo is inside the encrypted body');
+  await A.ctx.close();
+
+  const B = await newPage(); await B.page.goto(base); await B.page.waitForSelector('#pw1');
+  await B.page.getByRole('button', { name: /Import a profile backup/ }).click();
+  await B.page.fill('textarea[aria-label="Backup text"]', text);
+  await B.page.fill('input[aria-label="Backup password"]', 'backup-pass-phrase-1');
+  await B.page.getByRole('button', { name: 'Open backup' }).click();
+  await B.page.waitForSelector('.modal-sheet .avpick .avprev .pav img', { timeout: 90000 });
+  await B.page.fill('input[aria-label="New master password"]', 'a-new-master-pass-123'); await B.page.fill('input[aria-label="Repeat new master password"]', 'a-new-master-pass-123');
+  await B.page.locator('.modal-sheet input[type=checkbox]').last().check();
+  await B.page.getByRole('button', { name: 'Create profile' }).click();
+  await B.page.waitForSelector('.topbar', { timeout: 90000 });
+  await dismissWelcome(B.page).catch(() => {});
+  await B.page.getByRole('button', { name: 'VaultManager menu' }).click();
+  assert.equal(await B.page.locator('.sysmenu .sm-who .pav img').count(), 1, 'the imported profile shows the photo');
+  await B.ctx.close();
+});
+
+test('contacts: a contact photo survives export to .vcf, delete, and import back into VaultManager', async () => {
+  const { ctx, page, problems } = await newPage(); await createVault(page);
+  const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+  await page.getByRole('button', { name: '＋ New' }).click(); await page.waitForSelector('.modal-sheet'); if (await page.locator('.c3-stage').count()) await page.locator('.pickseg button').nth(1).click();
+  await page.locator('.modal-sheet .cats .btn', { hasText: 'Contact' }).click(); await page.waitForSelector('#f_name');
+  await page.fill('#f_name', 'Rae Photo'); await page.setInputFiles('input[aria-label="Choose a photo"]', { name: 'me.png', mimeType: 'image/png', buffer: png }); await page.waitForSelector('.photo-prev.has-photo');
+  await page.fill('#tf_mobile', '555-0199');
+  await page.getByRole('button', { name: 'Save' }).click(); await page.waitForSelector('.detail .avatar.has-photo');
+  const [dl] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: /Export \(\.vcf\)/ }).click()]);
+  const vcf = fs.readFileSync(await dl.path(), 'utf8'); assert.match(vcf, /PHOTO;ENCODING=b;TYPE=JPEG:/, 'the export carries the photo');
+  await page.locator('.detail button:has-text("Delete")').first().click(); await page.waitForSelector('.modal-sheet:has-text("Move to trash?")');
+  await page.locator('.modal-sheet .btn.danger, .modal-sheet .btn.primary').last().click(); await page.waitForSelector('.modal-sheet', { state: 'detached' });
+  await page.locator('.side .nav:has-text("Contacts")').click(); await page.waitForSelector('.contactsio');
+  assert.equal(await page.locator('.items .item:has-text("Rae Photo")').count(), 0, 'deleted');
+  await page.setInputFiles('input[aria-label="Contacts file"]', { name: 'rae.vcf', mimeType: 'text/vcard', buffer: Buffer.from(vcf) });
+  await page.waitForSelector('.modal-sheet .ctable'); assert.match(await page.textContent('.modal-sheet'), /1 with a photo/);
+  await page.getByRole('button', { name: 'Import', exact: true }).click(); await page.getByText(/with 1 photo/).waitFor();
+  await page.waitForSelector('.items .item:has-text("Rae Photo") .avatar.has-photo');
+  await page.locator('.items .item:has-text("Rae Photo")').click(); await page.waitForSelector('.detail .avatar.has-photo');
   assert.deepEqual(problems.filter((p) => !/Failed to load resource/.test(p)), []); await ctx.close();
 });

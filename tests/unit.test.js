@@ -14,6 +14,8 @@ import { sealText, openText, inspectSeal } from '../js/crypto.js';
 import { Profiles, keysFor, sanitizeAvatar, createProfileFromImport } from '../js/profiles.js';
 import { decryptProfile } from '../js/vault.js';
 
+/* words in a generated passphrase: the EFF list has one hyphenated word, "yo-yo", so a plain split('-') miscounts it */
+const wordCount = (s) => String(s).replace(/(^|-)yo-yo(?=-|$)/g, '$1yoyo').split('-').length;
 class MemStorage { constructor() { this.m = new Map(); } getItem(k) { return this.m.has(k) ? this.m.get(k) : null; } setItem(k, v) { this.m.set(k, String(v)); } removeItem(k) { this.m.delete(k); } }
 const FAST = { iterations: 100000 };
 
@@ -871,7 +873,7 @@ test('master-password suggestion is at least 100 bits (10 words), well above the
   const { generateStrongPassphrase, STRONG_WORDS, passphraseEntropy } = await import('../js/generator.js');
   assert.ok(passphraseEntropy({ words: STRONG_WORDS }) >= 100, 'formula: ' + passphraseEntropy({ words: STRONG_WORDS }));
   assert.ok(passphraseEntropy({ words: 6 }) < 70);
-  const p = generateStrongPassphrase(); assert.equal(p.split('-').length, 10);
+  const p = generateStrongPassphrase(); assert.equal(wordCount(p), 10);
   assert.ok(estimate(p).bits >= 100, 'estimator agrees: ' + estimate(p).bits); assert.notEqual(p, generateStrongPassphrase());
 });
 
@@ -888,8 +890,8 @@ test('every generated passphrase defaults to 100+ bits of entropy', async () => 
   const g = await import('../js/generator.js');
   assert.ok(g.passphraseEntropy() >= 100);
   assert.ok(g.passphraseEntropy({ words: g.STRONG_WORDS }) >= 100);
-  assert.equal(g.generatePassphrase().split('-').length, 10);
-  assert.equal(g.generateStrongPassphrase().split('-').length, 10);
+  assert.equal(wordCount(g.generatePassphrase()), 10);
+  assert.equal(wordCount(g.generateStrongPassphrase()), 10);
 });
 
 test('social network category exists, and a new crypto wallet gets its date & time stamped automatically', async () => {
@@ -1043,4 +1045,19 @@ test('contacts: Outlook / Exchange export puts an internal address where the ema
   const back = C.parseVCard(vc).contacts[0]; for (const k of ['nickname', 'company', 'department', 'homephone', 'email2', 'workaddress', 'anniversary']) assert.equal(back[k], list[0][k], k); assert.equal(back.photo.type, 'image/png'); assert.equal(back.photo.b64, list[0].photo.b64);
   for (const fn of [C.toGoogleCSV, C.toOutlookCSV]) { const r2 = C.parseContactsFile(fn(list)).contacts[0]; for (const k of ['nickname', 'department', 'homephone', 'email2', 'workaddress', 'anniversary']) assert.equal(r2[k], list[0][k], fn.name + ' ' + k); }
   assert.equal(C.parseVCard('BEGIN:VCARD\nFN:x\nPHOTO;VALUE=uri:https://example.com/a.jpg\nEND:VCARD\n').contacts[0].photo, null, 'a photo that is only a web link is not fetched');
+});
+
+test('encrypted files (VMF1): any bytes round-trip with name and type; wrong password, tampering and other files are refused', async () => {
+  const C = await import('../js/crypto.js');
+  const bytes = new Uint8Array(70000).map((_, i) => (i * 31 + 7) & 255);
+  const s = await C.sealFile(bytes, { name: 'beach.jpg', type: 'image/jpeg' }, 'correct horse battery staple', { iterations: 100000 });
+  assert.ok(C.isSealedFile(s)); assert.equal(new TextDecoder().decode(s.slice(0, 4)), 'VMF1');
+  assert.ok(!Buffer.from(s).includes(Buffer.from('beach.jpg')), 'the file name is encrypted too');
+  const o = await C.openFile(s, 'correct horse battery staple'); assert.equal(o.name, 'beach.jpg'); assert.equal(o.type, 'image/jpeg'); assert.deepEqual([...o.bytes], [...bytes]);
+  await assert.rejects(C.openFile(s, 'wrong password'), /Wrong password/);
+  const t = s.slice(); t[t.length - 5] ^= 1; await assert.rejects(C.openFile(t, 'correct horse battery staple'), /changed or damaged/);
+  const hd = s.slice(); hd[6] ^= 1; await assert.rejects(C.openFile(hd, 'correct horse battery staple'));   // the header (iterations) is authenticated
+  await assert.rejects(C.openFile(new TextEncoder().encode('just some text that is long enough to look like a file'), 'x'), /not a VaultManager encrypted file/);
+  const s2 = await C.sealFile(bytes, { name: 'beach.jpg', type: 'image/jpeg' }, 'correct horse battery staple', { iterations: 100000 }); assert.ok(Buffer.compare(Buffer.from(s), Buffer.from(s2)) !== 0, 'fresh salt and IV every time');
+  const evil = await C.sealFile(new Uint8Array(3), { name: '../../etc/passwd', type: 'text/plain' }, 'pw-pw-pw-pw', { iterations: 100000 }); assert.ok(!(await C.openFile(evil, 'pw-pw-pw-pw')).name.includes('/'), 'a path in the name is defused');
 });

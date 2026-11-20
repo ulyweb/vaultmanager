@@ -245,3 +245,34 @@ export async function openVault(record, secret) {
   catch { wipe(mk); throw new Error('The vault failed its integrity check (damaged or tampered).'); }
   return { session: new Session(record.id, mk, dataKey, record.wraps), data };
 }
+
+/* ---------- encrypted files (VMF1): any photo or file sealed with a password, opened only with that password ----------
+   file = "VMF1" | version 1 | iterations (uint32) | salt 16 | iv 12 | AES-256-GCM ciphertext; the first 25 bytes are authenticated (AAD).
+   inside: uint32 length of a JSON header {name, type, size} | that JSON | the original bytes, so the name and type come back too. */
+const FILE_MAGIC = [0x56, 0x4d, 0x46, 0x31];   // "VMF1"
+export const MAX_SEAL_FILE = 100 * 1024 * 1024;
+export async function sealFile(bytes, meta, password, opt = {}) {
+  if (!password) throw new Error('A password is required.');
+  if (bytes.length > MAX_SEAL_FILE) throw new Error(`That file is larger than ${MAX_SEAL_FILE / 1048576} MB.`);
+  const iterations = opt.iterations || ITER_DEFAULT, salt = rand(SALT), iv = rand(IV);
+  const hdr = new Uint8Array(9 + SALT); hdr.set(FILE_MAGIC); hdr[4] = 1; new DataView(hdr.buffer).setUint32(5, iterations, false); hdr.set(salt, 9);
+  const m = te.encode(JSON.stringify({ name: String(meta.name || 'file').slice(0, 200), type: String(meta.type || 'application/octet-stream').slice(0, 100), size: bytes.length }));
+  const plain = new Uint8Array(4 + m.length + bytes.length); new DataView(plain.buffer).setUint32(0, m.length, false); plain.set(m, 4); plain.set(bytes, 4 + m.length);
+  const key = await passwordKey(password, salt, iterations, ['encrypt']);
+  const ct = new Uint8Array(await subtle().encrypt({ name: 'AES-GCM', iv, additionalData: hdr, tagLength: 128 }, key, plain));
+  plain.fill(0);
+  return concat(hdr, iv, ct);
+}
+export const isSealedFile = (u8) => u8 && u8.length > 9 + SALT + IV + 16 && FILE_MAGIC.every((b, i) => u8[i] === b);
+export async function openFile(u8, password) {
+  if (!isSealedFile(u8)) throw new Error('This is not a VaultManager encrypted file (.vmenc).');
+  if (u8[4] !== 1) throw new Error('This encrypted file is from a newer version of VaultManager.');
+  const iterations = new DataView(u8.buffer, u8.byteOffset + 5, 4).getUint32(0, false);
+  if (iterations < ITER_MIN || iterations > ITER_MAX) throw new Error('This file is damaged (iteration count out of range).');
+  const hdr = u8.slice(0, 9 + SALT), salt = hdr.slice(9), iv = u8.slice(9 + SALT, 9 + SALT + IV), ct = u8.slice(9 + SALT + IV);
+  const key = await passwordKey(password, salt, iterations, ['decrypt']);
+  let plain; try { plain = new Uint8Array(await subtle().decrypt({ name: 'AES-GCM', iv, additionalData: hdr, tagLength: 128 }, key, ct)); } catch { throw new Error('Wrong password, or the file was changed or damaged.'); }
+  const n = new DataView(plain.buffer, plain.byteOffset, 4).getUint32(0, false);
+  let meta; try { meta = JSON.parse(new TextDecoder().decode(plain.slice(4, 4 + n))); } catch { throw new Error('This file is damaged.'); }
+  return { name: String(meta.name || 'file').replace(/[\\/\u0000-\u001f]/g, '_').slice(0, 200), type: String(meta.type || 'application/octet-stream').slice(0, 100), bytes: plain.slice(4 + n), iterations };
+}

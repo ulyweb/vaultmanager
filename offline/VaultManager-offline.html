@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VaultManager v0.44.0 — single-file offline build. Verify with the .sha256 file next to it. -->
+<!-- VaultManager v0.45.0 — single-file offline build. Verify with the .sha256 file next to it. -->
 <html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
@@ -11,7 +11,7 @@
 <meta name="application-name" content="VaultManager">
 <meta name="format-detection" content="telephone=no">
 <meta name="referrer" content="no-referrer">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-tauzjAWYvkq2EEey6/r1GOXzEWNzSydbYj43JCIjd2U=' 'sha256-swtnG89v0kG33k+uuUDqcQ9wM+E2gIRpzD3b7lsFTT8=' blob:; style-src 'sha256-uUGcMOAfBH9lvIJfvtrsQ3ghRBuCH8pDhzkF3KXzY6s='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-tauzjAWYvkq2EEey6/r1GOXzEWNzSydbYj43JCIjd2U=' 'sha256-xs0otCQFTRrtMc4HaXUika9oJ8os4U8vJIgAj23x+5A=' blob:; style-src 'sha256-9SLOh2IKv/iEHafZl7lw9qrSUpaUtaMgb8qcxxsxFjA='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
 <title>VaultManager | Zero-Knowledge Password Manager</title>
 <meta name="description" content="VaultManager: an offline-first, zero-knowledge, end-to-end encrypted password manager with a strong password generator, TOTP codes and QR-sealed sharing and backup. Runs entirely in your browser.">
 <meta name="theme-color" content="#05080d">
@@ -66,7 +66,7 @@ a { color: var(--link); }
 #app { position: relative; z-index: 1; min-height: 100vh; }
 
 /* ---------- buttons / inputs ---------- */
-.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 36px; padding: 0 14px; border-radius: 9px; border: 1px solid var(--line-2); background: var(--panel); color: var(--ink); font-family: var(--mono); font-size: 12px; font-weight: 700; letter-spacing: .03em; transition: .15s; white-space: nowrap; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 36px; padding: 0 14px; border-radius: 9px; border: 1px solid var(--line-2); background: var(--panel); color: var(--ink); font-family: var(--mono); font-size: 12px; font-weight: 700; letter-spacing: .03em; transition: .15s; transition-property: background-color, border-color, color, box-shadow, filter, opacity, transform; white-space: nowrap; }
 .btn:hover { border-color: var(--accent); background: var(--raise); }
 .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: transparent; box-shadow: 0 2px 12px rgba(var(--accent-rgb),.25); }
 .btn.primary:hover { filter: brightness(1.08); box-shadow: var(--glow); }
@@ -120,7 +120,7 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 .meter { height: 6px; border-radius: 99px; background: var(--raise); overflow: hidden; margin: 8px 0 4px; border: 1px solid var(--line); }
 .meter i { display: block; height: 100%; width: 0; transition: width .25s, background .25s; background: var(--danger); }
 .meter i.s1 { background: var(--warn); } .meter i.s2 { background: #d6d04a; } .meter i.s3 { background: var(--accent-2); } .meter i.s4 { background: var(--accent); }
-.meter-label { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 11px; color: var(--muted); }
+.meter-label { display: flex; flex-wrap: wrap; gap: 2px 12px; justify-content: space-between; font-family: var(--mono); font-size: 11px; color: var(--muted); }
 .trust { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 18px; }
 .chip { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 99px; border: 1px solid var(--line-2); font-family: var(--mono); font-size: 10.5px; color: var(--ink-dim); background: var(--panel-2); }
 .chip.accent { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 40%, transparent); }
@@ -1152,6 +1152,10 @@ html[data-avatar] .avatar.has-photo, .avatar.has-photo { background: var(--photo
 .photo-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
 .photo-prev { width: 72px !important; height: 72px !important; border-radius: 50% !important; background: var(--raise); border: 1px dashed var(--line-2); }
 .photo-prev.has-photo { border-style: solid; }
+
+/* Encrypt a photo or file */
+.filecrypt .ccols h4 { margin: 0 0 8px; }
+.fileprev img { display: block; max-width: 100%; max-height: 220px; border-radius: 10px; margin: 8px 0; border: 1px solid var(--line); }
 </style>
 </head>
 <body>
@@ -2005,6 +2009,50 @@ html[data-avatar] .avatar.has-photo, .avatar.has-photo { background: var(--photo
     }
     return { session: new Session(record2.id, mk, dataKey, record2.wraps), data };
   }
+  var FILE_MAGIC = [86, 77, 70, 49];
+  var MAX_SEAL_FILE = 100 * 1024 * 1024;
+  async function sealFile(bytes2, meta, password, opt = {}) {
+    if (!password) throw new Error("A password is required.");
+    if (bytes2.length > MAX_SEAL_FILE) throw new Error(`That file is larger than ${MAX_SEAL_FILE / 1048576} MB.`);
+    const iterations = opt.iterations || ITER_DEFAULT, salt = rand(SALT), iv = rand(IV);
+    const hdr = new Uint8Array(9 + SALT);
+    hdr.set(FILE_MAGIC);
+    hdr[4] = 1;
+    new DataView(hdr.buffer).setUint32(5, iterations, false);
+    hdr.set(salt, 9);
+    const m = te.encode(JSON.stringify({ name: String(meta.name || "file").slice(0, 200), type: String(meta.type || "application/octet-stream").slice(0, 100), size: bytes2.length }));
+    const plain = new Uint8Array(4 + m.length + bytes2.length);
+    new DataView(plain.buffer).setUint32(0, m.length, false);
+    plain.set(m, 4);
+    plain.set(bytes2, 4 + m.length);
+    const key = await passwordKey(password, salt, iterations, ["encrypt"]);
+    const ct = new Uint8Array(await subtle().encrypt({ name: "AES-GCM", iv, additionalData: hdr, tagLength: 128 }, key, plain));
+    plain.fill(0);
+    return concat(hdr, iv, ct);
+  }
+  var isSealedFile = (u8) => u8 && u8.length > 9 + SALT + IV + 16 && FILE_MAGIC.every((b, i) => u8[i] === b);
+  async function openFile(u8, password) {
+    if (!isSealedFile(u8)) throw new Error("This is not a VaultManager encrypted file (.vmenc).");
+    if (u8[4] !== 1) throw new Error("This encrypted file is from a newer version of VaultManager.");
+    const iterations = new DataView(u8.buffer, u8.byteOffset + 5, 4).getUint32(0, false);
+    if (iterations < ITER_MIN || iterations > ITER_MAX) throw new Error("This file is damaged (iteration count out of range).");
+    const hdr = u8.slice(0, 9 + SALT), salt = hdr.slice(9), iv = u8.slice(9 + SALT, 9 + SALT + IV), ct = u8.slice(9 + SALT + IV);
+    const key = await passwordKey(password, salt, iterations, ["decrypt"]);
+    let plain;
+    try {
+      plain = new Uint8Array(await subtle().decrypt({ name: "AES-GCM", iv, additionalData: hdr, tagLength: 128 }, key, ct));
+    } catch {
+      throw new Error("Wrong password, or the file was changed or damaged.");
+    }
+    const n = new DataView(plain.buffer, plain.byteOffset, 4).getUint32(0, false);
+    let meta;
+    try {
+      meta = JSON.parse(new TextDecoder().decode(plain.slice(4, 4 + n)));
+    } catch {
+      throw new Error("This file is damaged.");
+    }
+    return { name: String(meta.name || "file").replace(/[\\/\u0000-\u001f]/g, "_").slice(0, 200), type: String(meta.type || "application/octet-stream").slice(0, 100), bytes: plain.slice(4 + n), iterations };
+  }
 
   // js/fieldlock.js
   var FIELD_PREFIX = "VMFL1:";
@@ -2312,7 +2360,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   }
 
   // js/version.js
-  var APP_VERSION = "0.44.0";
+  var APP_VERSION = "0.45.0";
   var APP_NAME = "VaultManager";
   var REPO_URL = "https://github.com/ulyweb/vaultmanager";
   var FORMATS = [
@@ -2323,9 +2371,14 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     ["Sync bundle", "VMS1 (.vmsync / gist / Beam) \u2014 items, tombstones, optional attachments"],
     ["Beam pairing code", "BEAM1 \u2014 compressed WebRTC offer / answer, DTLS peer to peer"],
     ["Passkey wrap", "WebAuthn PRF \u2192 HKDF-SHA256 \u2192 AES-256-GCM, bound to credential id"],
+    ["Encrypted photo / file", "VMF1 (.vmenc) \u2014 PBKDF2-SHA256 \u2192 AES-256-GCM, name and type inside"],
     ["Attachments at rest", "AES-256-GCM per file, bound to vault + file id"]
   ];
   var CHANGELOG = [
+    { v: "0.45.0", date: "2026-11-20", notes: [
+      "New tool on Import & export: \u201CEncrypt a photo or file\u201D. Pick any picture or file (up to 100 MB), choose a password, and save one encrypted .vmenc file (AES-256-GCM, password stretched 600,000 times; the file name is encrypted too). Open it again on the same page, in any copy of VaultManager including the offline file, to see the picture and save the original back.",
+      "Before saving, the tool checks that the file opens again with your password. A wrong password or a changed file is refused. There is no password reset, and your original photo is not changed or deleted."
+    ] },
     { v: "0.44.0", date: "2026-11-20", notes: [
       "Contacts: a Photo (choose or take one; shrunk to 512 px and stored encrypted; shown as the contact\u2019s picture in the list and on the contact), and new fields Nickname, Department, Home phone, Other email, Anniversary and Work address (Phone is now Work phone, Address is now Home address). Imports and exports carry them, and .vcf files import and export photos.",
       "Fixed Outlook imports from Exchange / Microsoft 365: the internal Exchange address (\u201C/o=ExchangeLabs/\u2026\u201D) is no longer stored as the email. The real address is taken from the display name or another email column, and the internal one is kept in Notes. Contacts already imported that way get a \u201CFix them\u201D button on the Contacts page.",
@@ -7915,6 +7968,162 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     return results;
   }
 
+  // js/filecrypt-ui.js
+  var kb = (n) => n < 1048576 ? Math.max(1, Math.round(n / 1024)) + " KB" : (n / 1048576).toFixed(1) + " MB";
+  var FILE_CAN = [
+    "Encrypt any photo or file up to 100 MB into one .vmenc file, with AES-256-GCM and a password stretched 600,000 times.",
+    "Open it again here, in any copy of VaultManager (also the offline file, with no internet), and get the original back with its name.",
+    "Everything happens on this device: the picture is never uploaded."
+  ];
+  var FILE_CANNOT = [
+    "There is no password reset: if the password is lost, nobody can open the file. Write it down or keep it in your vault.",
+    "Your original photo is not changed or deleted. Delete it yourself if you only want to keep the encrypted copy.",
+    "Other apps cannot open a .vmenc file (that is the point); share the password separately from the file."
+  ];
+  function fileCryptPanel(ctx2) {
+    const ul = (items, cls) => h("ul", { class: "cio-list " + cls }, items.map((t) => h("li", { text: t })));
+    let picked = null, prevUrl = "";
+    const encOut = h("div"), encErr = h("p", { class: "err", role: "alert" }), info = h("p", { class: "hint", "aria-live": "polite" }), prev = h("div", { class: "fileprev" });
+    const pw = h("input", { class: "inp mono", type: "text", value: generateStrongPassphrase(), autocomplete: "off", spellcheck: "false", "aria-label": "File password" });
+    const pwRow = passwordRow("Password", pw);
+    const showPrev = (el, file) => {
+      if (prevUrl) URL.revokeObjectURL(prevUrl);
+      prevUrl = "";
+      clear(el);
+      if (file && /^image\//.test(file.type)) {
+        prevUrl = URL.createObjectURL(file);
+        el.append(h("img", { src: prevUrl, alt: "Preview of " + file.name }));
+      }
+    };
+    ctx2.cleanup.push(() => {
+      if (prevUrl) URL.revokeObjectURL(prevUrl);
+    });
+    const fileIn = h("input", { type: "file", class: "offscreen", "aria-label": "Photo or file to encrypt", on: { change: (e) => {
+      const f = e.target.files && e.target.files[0];
+      e.target.value = "";
+      encErr.textContent = "";
+      clear(encOut);
+      if (!f) return;
+      if (f.size > MAX_SEAL_FILE) {
+        encErr.textContent = `That file is larger than ${MAX_SEAL_FILE / 1048576} MB.`;
+        return;
+      }
+      picked = f;
+      info.textContent = `${f.name} \xB7 ${kb(f.size)}`;
+      showPrev(prev, f);
+    } } });
+    const encBtn = h("button", { class: "btn primary", on: { click: async () => {
+      encErr.textContent = "";
+      clear(encOut);
+      if (!picked) {
+        encErr.textContent = "Choose a photo or file first.";
+        return;
+      }
+      if (!pwRow.match()) {
+        encErr.textContent = "The two passwords do not match.";
+        return;
+      }
+      if (pw.value.length < 10 || estimate(pw.value).bits < 50) {
+        encErr.textContent = "Use a stronger password: at least 10 characters (a passphrase of 6+ random words is best, or press the lightning button).";
+        return;
+      }
+      encBtn.disabled = true;
+      encBtn.textContent = "Encrypting\u2026";
+      try {
+        const bytes2 = new Uint8Array(await picked.arrayBuffer());
+        const sealed = await sealFile(bytes2, { name: picked.name, type: picked.type }, pw.value);
+        const back = await openFile(sealed, pw.value);
+        if (back.bytes.length !== bytes2.length || back.bytes.some((b, i) => b !== bytes2[i])) throw new Error("The check failed, so nothing was saved. Try again.");
+        const name = picked.name + ".vmenc";
+        download(name, sealed, "application/octet-stream");
+        ctx2.store.log("export", `Encrypted a file (${kb(bytes2.length)}) to ${name}`);
+        ctx2.store.save().catch(() => {
+        });
+        encOut.append(h("div", { class: "note ok", role: "status", text: `\u2713 Saved ${name} (${kb(sealed.length)}). Checked: it opens again with this password. Keep the password safe: without it nobody can open the file.` }));
+      } catch (e) {
+        encErr.textContent = e.message;
+      }
+      encBtn.disabled = false;
+      encBtn.textContent = "Encrypt and save";
+    } } }, "Encrypt and save");
+    let sealedPicked = null, outUrl = "";
+    const decOut = h("div"), decErr = h("p", { class: "err", role: "alert" }), decInfo = h("p", { class: "hint", "aria-live": "polite" });
+    const dpw = h("input", { class: "inp mono", type: "password", autocomplete: "off", spellcheck: "false", "aria-label": "Password of the encrypted file" });
+    ctx2.cleanup.push(() => {
+      if (outUrl) URL.revokeObjectURL(outUrl);
+    });
+    const decIn = h("input", { type: "file", accept: ".vmenc,application/octet-stream", class: "offscreen", "aria-label": "Encrypted file to open", on: { change: async (e) => {
+      const f = e.target.files && e.target.files[0];
+      e.target.value = "";
+      decErr.textContent = "";
+      clear(decOut);
+      if (!f) return;
+      const u8 = new Uint8Array(await f.arrayBuffer());
+      if (!isSealedFile(u8)) {
+        decErr.textContent = "That is not a VaultManager encrypted file (.vmenc).";
+        sealedPicked = null;
+        decInfo.textContent = "";
+        return;
+      }
+      sealedPicked = u8;
+      decInfo.textContent = `${f.name} \xB7 ${kb(f.size)}`;
+    } } });
+    const decBtn = h("button", { class: "btn primary", on: { click: async () => {
+      decErr.textContent = "";
+      clear(decOut);
+      if (outUrl) {
+        URL.revokeObjectURL(outUrl);
+        outUrl = "";
+      }
+      if (!sealedPicked) {
+        decErr.textContent = "Choose a .vmenc file first.";
+        return;
+      }
+      if (!dpw.value) {
+        decErr.textContent = "Enter the password.";
+        return;
+      }
+      decBtn.disabled = true;
+      decBtn.textContent = "Opening\u2026";
+      try {
+        const r = await openFile(sealedPicked, dpw.value);
+        outUrl = URL.createObjectURL(new Blob([r.bytes], { type: r.type }));
+        decOut.append(
+          h("div", { class: "note ok", role: "status", text: `\u2713 Opened: ${r.name} (${kb(r.bytes.length)}).` }),
+          /^image\/(png|jpe?g|gif|webp|bmp|avif)$/i.test(r.type) ? h("div", { class: "fileprev" }, h("img", { src: outUrl, alt: r.name })) : null,
+          h("div", { class: "row wrap" }, h("button", { class: "btn", on: { click: () => download(r.name, r.bytes, r.type) } }, "{{download}} Save the original"), purgeButton(ctx2)),
+          h("p", { class: "hint", text: "The opened copy is only in memory until you save it. Press Purge memory when you are done." })
+        );
+      } catch (e) {
+        decErr.textContent = e.message;
+      }
+      decBtn.disabled = false;
+      decBtn.textContent = "Open";
+    } } }, "Open");
+    return h(
+      "div",
+      { class: "panel pad filecrypt" },
+      h("h3", { text: "Encrypt a photo or file" }),
+      h("div", { class: "ccols" }, h("div", { class: "ccan" }, h("h4", { text: "\u2713 What it can do" }), ul(FILE_CAN, "can")), h("div", { class: "ccant" }, h("h4", { text: "\u2717 What it cannot do" }), ul(FILE_CANNOT, "cannot"))),
+      h(
+        "div",
+        { class: "ccols" },
+        h("div", null, h("h4", { text: "Encrypt" }), h("div", { class: "row wrap" }, h("button", { class: "btn", on: { click: () => fileIn.click() } }, "{{camera}} Choose a photo or file\u2026"), fileIn), info, prev, pwRow, h("div", { class: "row wrap" }, encBtn), encErr, encOut),
+        h(
+          "div",
+          null,
+          h("h4", { text: "Open an encrypted file" }),
+          h("div", { class: "row wrap" }, h("button", { class: "btn", on: { click: () => decIn.click() } }, "{{folder}} Choose a .vmenc file\u2026"), decIn),
+          decInfo,
+          h("div", { class: "field" }, h("label", { text: "Password" }), dpw),
+          h("div", { class: "row wrap" }, decBtn),
+          decErr,
+          decOut
+        )
+      )
+    );
+  }
+
   // js/tools.js
   var page = (title, sub, ...kids) => h("div", { class: "page" }, h("h2", { text: title }), sub ? h("p", { class: "sub", text: sub }) : null, ...kids);
   var field2 = (label, control, hint) => h("div", { class: "field" }, h("label", { text: label }), control, hint ? h("p", { class: "hint", text: hint }) : null);
@@ -8472,6 +8681,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     return page(
       "Import & export",
       "Move data in and out. Encrypted backups are the safe way; plaintext files are for migrating only.",
+      fileCryptPanel(ctx2),
       contactsPanel(ctx2),
       h(
         "div",
@@ -10718,7 +10928,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
         }
         e.target.disabled = true;
         try {
-          const text2 = await store2.exportProfile(pw.value, { profile: { name: prof && prof.name, avatar: prof && prof.avatar && prof.avatar.type === "photo" ? null : prof && prof.avatar }, attachments: att.checked });
+          const text2 = await store2.exportProfile(pw.value, { profile: { name: prof && prof.name, avatar: prof && prof.avatar }, attachments: att.checked });
           download(`vaultmanager-profile-${slug(prof && prof.name)}-${stamp()}.vmprofile`, text2, "text/plain");
           toast("Profile backup saved \u2014 keep the password safe!", "ok", 6e3);
           m.close();

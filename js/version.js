@@ -1,6 +1,6 @@
 /* Application version, data-format versions and changelog (shown in Settings → About). */
 
-export const APP_VERSION = '0.44.0';
+export const APP_VERSION = '0.45.0';
 export const APP_NAME = 'VaultManager';
 export const REPO_URL = 'https://github.com/ulyweb/vaultmanager';
 
@@ -12,10 +12,15 @@ export const FORMATS = [
   ['Sync bundle', 'VMS1 (.vmsync / gist / Beam) — items, tombstones, optional attachments'],
   ['Beam pairing code', 'BEAM1 — compressed WebRTC offer / answer, DTLS peer to peer'],
   ['Passkey wrap', 'WebAuthn PRF → HKDF-SHA256 → AES-256-GCM, bound to credential id'],
+  ['Encrypted photo / file', 'VMF1 (.vmenc) — PBKDF2-SHA256 → AES-256-GCM, name and type inside'],
   ['Attachments at rest', 'AES-256-GCM per file, bound to vault + file id'],
 ];
 
 export const CHANGELOG = [
+  { v: '0.45.0', date: '2026-11-20', notes: [
+    'New tool on Import & export: “Encrypt a photo or file”. Pick any picture or file (up to 100 MB), choose a password, and save one encrypted .vmenc file (AES-256-GCM, password stretched 600,000 times; the file name is encrypted too). Open it again on the same page, in any copy of VaultManager including the offline file, to see the picture and save the original back.',
+    'Before saving, the tool checks that the file opens again with your password. A wrong password or a changed file is refused. There is no password reset, and your original photo is not changed or deleted.',
+  ] },
   { v: '0.44.0', date: '2026-11-20', notes: [
     'Contacts: a Photo (choose or take one; shrunk to 512 px and stored encrypted; shown as the contact’s picture in the list and on the contact), and new fields Nickname, Department, Home phone, Other email, Anniversary and Work address (Phone is now Work phone, Address is now Home address). Imports and exports carry them, and .vcf files import and export photos.',
     'Fixed Outlook imports from Exchange / Microsoft 365: the internal Exchange address (“/o=ExchangeLabs/…”) is no longer stored as the email. The real address is taken from the display name or another email column, and the internal one is kept in Notes. Contacts already imported that way get a “Fix them” button on the Contacts page.',
