@@ -14,6 +14,8 @@ import { sealText, openText, inspectSeal } from '../js/crypto.js';
 import { Profiles, keysFor, sanitizeAvatar, createProfileFromImport } from '../js/profiles.js';
 import { decryptProfile } from '../js/vault.js';
 
+/* words in a generated passphrase: the EFF list has one hyphenated word, "yo-yo", so a plain split('-') miscounts it */
+const wordCount = (s) => String(s).replace(/(^|-)yo-yo(?=-|$)/g, '$1yoyo').split('-').length;
 class MemStorage { constructor() { this.m = new Map(); } getItem(k) { return this.m.has(k) ? this.m.get(k) : null; } setItem(k, v) { this.m.set(k, String(v)); } removeItem(k) { this.m.delete(k); } }
 const FAST = { iterations: 100000 };
 
@@ -871,7 +873,7 @@ test('master-password suggestion is at least 100 bits (10 words), well above the
   const { generateStrongPassphrase, STRONG_WORDS, passphraseEntropy } = await import('../js/generator.js');
   assert.ok(passphraseEntropy({ words: STRONG_WORDS }) >= 100, 'formula: ' + passphraseEntropy({ words: STRONG_WORDS }));
   assert.ok(passphraseEntropy({ words: 6 }) < 70);
-  const p = generateStrongPassphrase(); assert.equal(p.split('-').length, 10);
+  const p = generateStrongPassphrase(); assert.equal(wordCount(p), 10);
   assert.ok(estimate(p).bits >= 100, 'estimator agrees: ' + estimate(p).bits); assert.notEqual(p, generateStrongPassphrase());
 });
 
@@ -888,8 +890,8 @@ test('every generated passphrase defaults to 100+ bits of entropy', async () => 
   const g = await import('../js/generator.js');
   assert.ok(g.passphraseEntropy() >= 100);
   assert.ok(g.passphraseEntropy({ words: g.STRONG_WORDS }) >= 100);
-  assert.equal(g.generatePassphrase().split('-').length, 10);
-  assert.equal(g.generateStrongPassphrase().split('-').length, 10);
+  assert.equal(wordCount(g.generatePassphrase()), 10);
+  assert.equal(wordCount(g.generateStrongPassphrase()), 10);
 });
 
 test('social network category exists, and a new crypto wallet gets its date & time stamped automatically', async () => {

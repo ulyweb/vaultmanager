@@ -9,6 +9,8 @@ import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { TEMPLATES, GROUPS, TYPE_KEYS } from '../js/templates.js';
 import { execFileSync } from 'node:child_process';
+/* words in a generated passphrase: the EFF list has one hyphenated word, "yo-yo", so a plain split('-') miscounts it */
+const wordCount = (s) => String(s).replace(/(^|-)yo-yo(?=-|$)/g, '$1yoyo').split('-').length;
 
 const require = createRequire(import.meta.url);
 let pw, devices;
@@ -128,7 +130,7 @@ test('full journey: create → add → lock → unlock → tools → QR round tr
   const g1 = await page.textContent('.genout'); await page.getByRole('button', { name: /Regenerate/ }).click();
   assert.notEqual(g1, await page.textContent('.genout'));
   await page.getByRole('tab', { name: 'Passphrase' }).click();
-  assert.equal((await page.textContent('.genout')).split('-').length, 10);
+  assert.equal(wordCount(await page.textContent('.genout')), 10);
 
   // health
   await page.getByRole('button', { name: /Vault health/ }).click(); await page.waitForSelector('.ring');
@@ -1492,7 +1494,7 @@ test('v0.21: centred unlock screen, side-bar auto-hide, clock position, live New
   // clock position
   const cx = async () => { const r = await page.locator('.barclock').boundingBox(); return r.x + r.width / 2; };
   assert.equal(await page.evaluate(() => document.documentElement.dataset.clockpos), 'center', 'the clock is in the middle by default'); assert.equal(await page.evaluate(() => document.documentElement.dataset.clocksize), 'large'); assert.ok(Math.abs((await cx()) - 640) < 40, 'the default clock sits in the middle');
-  await settingsTab(page, 'Dock & menu bar'); await page.getByRole('button', { name: 'Left', exact: true }).click(); assert.equal(await page.evaluate(() => document.documentElement.dataset.clockpos), 'left'); const leftX = await cx(); assert.ok(leftX < 500, 'clock moved left: ' + leftX + ' ' + JSON.stringify(await page.evaluate(() => [...document.querySelector('.topbar').children].map((e) => { const b = e.getBoundingClientRect(), cs = getComputedStyle(e); return [e.className, Math.round(b.x), Math.round(b.width), cs.order, cs.position, cs.display]; }))));
+  await settingsTab(page, 'Dock & menu bar'); await page.getByRole('button', { name: 'Left', exact: true }).click(); assert.equal(await page.evaluate(() => document.documentElement.dataset.clockpos), 'left'); const leftX = await cx(); assert.ok(leftX < 500, 'clock moved left: ' + leftX);
   await page.getByRole('button', { name: 'Middle', exact: true }).click(); const mid = await cx(); assert.ok(Math.abs(mid - 640) < 40, 'clock in the middle: ' + mid);
   await page.getByRole('button', { name: 'Right', exact: true }).click();
   // auto-hide the side bar
@@ -1786,7 +1788,7 @@ test('v0.29.0: the create-profile screen has an Appearance picker (kept by the n
   assert.ok(await page.locator('button.btn.cta[type=submit]').isVisible(), 'the Create button carries the animated style');
   await page.getByRole('button', { name: /Suggest a passphrase/ }).click();   // 10 random words: at least 100 bits
   const bits = Number(/~(\d+) bits/.exec(await page.locator('.gate-card .meter-label').textContent())[1]); assert.ok(bits >= 100, 'suggested passphrase is ' + bits + ' bits');
-  assert.equal((await page.inputValue('#pw1')).split('-').length, 10);
+  assert.equal(wordCount(await page.inputValue('#pw1')), 10);
   await page.fill('#pw1', MASTER); await page.fill('#pw2', MASTER); await page.check('#ack'); await page.click('button[type=submit]');
   await page.getByRole('button', { name: 'Skip for now' }).click(); await dismissWelcome(page); await page.waitForSelector('.topbar');
   assert.equal(await theme(), 'light', 'the new vault opens in the chosen theme');
@@ -1848,7 +1850,7 @@ test('v0.30.0: the 3D tour page loads (with or without WebGL), its chapters, col
     // the app's real passphrase generator
     await page.evaluate(() => window.scrollTo(0, document.querySelector('#c-tools').offsetTop)); await page.waitForFunction(() => window.__vm3d.chapter() === 'tools');
     await page.click('#suggest'); const bits = Number(/~(\d+) bits/.exec(await page.textContent('#bits'))[1]); assert.ok(bits >= 100, label + ': ' + bits + ' bits');
-    assert.equal((await page.textContent('#phrase')).split('-').length, 10);
+    assert.equal(wordCount(await page.textContent('#phrase')), 10);
     assert.deepEqual(problems.filter(quiet), [], label);
     await ctx.close();
   }
@@ -1990,7 +1992,7 @@ test('v0.33.2: every generate-a-password button makes 100+ bits (export, whole-p
   await A.page.locator('.modal-sheet button[aria-label="Generate a passphrase"]').click();
   const b = await bits(A.page);
   assert.ok(b >= 100, 'the export dialog generator gave only ' + b + ' bits');
-  assert.equal((await A.page.inputValue('input[aria-label="Backup password"]')).split('-').length, 10);
+  assert.equal(wordCount(await A.page.inputValue('input[aria-label="Backup password"]')), 10);
   assert.deepEqual(A.problems.filter((p) => !/Failed to load resource/.test(p)), []); await A.ctx.close();
 });
 
