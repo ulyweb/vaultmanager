@@ -27,7 +27,16 @@ const SEL = (k, l, options) => ({ k, l, kind: 'select', options });
 /* a pick-list that also accepts anything else: the editor shows the list plus "Other…" (kind 'choice'; see js/lists.js) */
 const CH = (k, l, options, o = {}) => ({ k, l, kind: 'choice', options, ...o });
 
+/* Secure notes: the five categories a note can be filed under, and who a note is meant for. Both are fixed lists (strict: anything else is dropped on import). */
+export const NOTE_CATEGORIES = ['Homelab and Network Architecture', 'Crypto and Asset Vault', 'Project Specs', 'Personal Identification', 'Vaultwarden Backups'];
+export const NOTE_ACCESS = ['Private (only me)', 'Family', 'Trusted contacts', 'Emergency / heirs'];
+
 export const TEMPLATES = {
+  note: { label: 'Secure note', plural: 'Secure notes', icon: '{{note}}', sub: 'category', fields: [
+    { k: 'category', l: 'Category', kind: 'select', options: NOTE_CATEGORIES, strict: true, wide: true },
+    D('expires', 'Expiration date', { expiry: true, hint: 'Optional. The note shows up in Vault health → Expiring soon as the date approaches. It cannot be before the day the note was created.' }),
+    { k: 'access', l: 'Access permissions', kind: 'select', options: NOTE_ACCESS, strict: true, def: NOTE_ACCESS[0], wide: true, hint: 'Who this note is meant for. It is a label for your records and for the Family guide: it does not lock anything by itself. To really restrict a note, protect it with a passcode.' },
+  ] },
   app: { label: 'App / software', plural: 'Apps', icon: '{{app}}', sub: 'version', fields: [
     T('version', 'Version'), S('license', 'License key'), T('email', 'Registered email'), U('url', 'Download / support page'), D('purchased', 'Purchase date'), D('expires', 'Renewal / expiry date', { expiry: true }), T('seats', 'Seats / devices'),
   ] },

@@ -437,7 +437,7 @@ test('templates: well-formed, every category round-trips, secrets never indexed 
   }
   assert.equal(v.active().length, Object.keys(TEMPLATES).length);
   for (const it of v.active()) {
-    assert.ok(matches(it, 'plain-' + it.type), 'plain fields are searchable');
+    if (TEMPLATES[it.type].fields.some((f) => !['select', 'date', 'secret', 'stamp'].includes(f.kind) && !f.secret)) assert.ok(matches(it, 'plain-' + it.type), 'plain fields are searchable');
     assert.ok(matches(it, 'custom-plain'));
     assert.ok(!matches(it, 'SECRET-'), 'secret fields are not searchable');
     assert.ok(!matches(it, 'CUSTOM-SECRET'));
@@ -1002,4 +1002,19 @@ test('contacts: vCard (2.1 / 3.0 / 4.0), Google and Outlook CSV import; vCard / 
   assert.ok(C.isDuplicate({ name: 'A. Rivera', email: 'alex@example.com' }, have)); assert.ok(C.isDuplicate({ name: 'Patrick', phone: '555-000-1234' }, have)); assert.ok(C.isDuplicate({ name: 'sam' }, have)); assert.ok(!C.isDuplicate({ name: 'Sam', email: 'new@example.com' }, have)); assert.ok(!C.isDuplicate({ name: 'Zed', email: 'z@example.com' }, have));
   assert.throws(() => C.parseContactsFile(Array.from({ length: 5001 }, () => 'BEGIN:VCARD\nFN:x\nEND:VCARD').join('\n')), /limit/);
   assert.deepEqual(C.toItemData({ name: 'X', company: '', phone: '1', notes: 'n' }), { type: 'contact', name: 'X', notes: 'n', fields: { phone: '1' } });
+});
+
+test('secure notes: five fixed categories, access labels with a default, strict on import, expiry feeds the report', async () => {
+  const T = await import('../js/templates.js'); const V = await import('../js/vault.js');
+  assert.deepEqual(T.NOTE_CATEGORIES, ['Homelab and Network Architecture', 'Crypto and Asset Vault', 'Project Specs', 'Personal Identification', 'Vaultwarden Backups']);
+  assert.deepEqual(T.NOTE_ACCESS, ['Private (only me)', 'Family', 'Trusted contacts', 'Emergency / heirs']);
+  assert.deepEqual(T.TEMPLATES.note.fields.map((f) => f.k), ['category', 'expires', 'access']);
+  assert.equal(V.newItem('note').fields.access, 'Private (only me)', 'new notes are private by default'); assert.deepEqual(V.newItem('login').fields, {});
+  const ok = V.sanitiseItem({ type: 'note', name: 'Rack plan', notes: 'x'.repeat(60000), tags: ['lab', 'net'], fields: { category: 'Project Specs', access: 'Family', expires: '2031-05-06' } });
+  assert.equal(ok.fields.category, 'Project Specs'); assert.equal(ok.fields.access, 'Family'); assert.equal(ok.fields.expires, '2031-05-06'); assert.equal(ok.notes.length, 50000, 'the body is capped at 50,000 characters');
+  const bad = V.sanitiseItem({ type: 'note', name: 'x', fields: { category: 'Whatever', access: 'Everyone', expires: '2031-05-06' } });
+  assert.ok(!('category' in bad.fields), 'an unknown category is dropped'); assert.ok(!('access' in bad.fields) || bad.fields.access === 'Private (only me)', 'an unknown access label is dropped');
+  assert.ok(T.TEMPLATES.note.fields.find((f) => f.k === 'expires').expiry, 'the expiration date feeds the expiring-soon report');
+  const soon = new Date(Date.now() + 5 * 86400000).toISOString().slice(0, 10), n = V.sanitiseItem({ type: 'note', name: 'Cert', fields: { expires: soon } });
+  assert.ok(V.health([n]).expiring.some((x) => x.item.name === 'Cert'), 'the note shows up as expiring soon');
 });

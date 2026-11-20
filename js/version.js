@@ -1,6 +1,6 @@
 /* Application version, data-format versions and changelog (shown in Settings → About). */
 
-export const APP_VERSION = '0.42.0';
+export const APP_VERSION = '0.43.0';
 export const APP_NAME = 'VaultManager';
 export const REPO_URL = 'https://github.com/ulyweb/vaultmanager';
 
@@ -16,6 +16,11 @@ export const FORMATS = [
 ];
 
 export const CHANGELOG = [
+  { v: '0.43.0', date: '2026-11-20', notes: [
+    'Secure notes now have structured fields: Title, Content (up to 50,000 characters, with a counter), Category, Tags, Creation date and Last modified (set automatically and shown on the note), Expiration date, Attachments and Access permissions. Category is one of five fixed choices: Homelab and Network Architecture, Crypto and Asset Vault, Project Specs, Personal Identification, Vaultwarden Backups. The Secure notes page has a filter for each category.',
+    'Validation: a title is required, the category and access must be one of the listed choices (anything else is dropped on import), and the expiration date must be a real date that is not before the day the note was created. Notes with an expiration date appear in Vault health → Expiring soon.',
+    'Access permissions (Private, Family, Trusted contacts, Emergency / heirs) are a label for your records, private by default. Notes marked Family, Trusted contacts or Emergency / heirs are listed by name in the Family guide. The label does not lock anything; use the item passcode for real protection.',
+  ] },
   { v: '0.42.0', date: '2026-11-20', notes: [
     'Contacts can now be imported and exported. On the Contacts page (and on Import & export) a panel says plainly what it can and cannot do. Import vCard (.vcf) files from Outlook, Google Contacts, iCloud / Apple Contacts, Android and most phones, and Google or Outlook CSV files, with a preview and duplicate skipping. Export all contacts, or one, as .vcf, Google CSV or Outlook CSV. It works offline and never uploads anything.',
     'What it cannot do, stated on the page: no live sync or sign-in with Outlook, Google or iCloud; photos, groups and custom fields are not imported; only one phone, mobile, email and address are kept per contact (extras go into Notes); exported files are not encrypted; importing never changes existing contacts.',

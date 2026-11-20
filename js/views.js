@@ -2,14 +2,14 @@
 
 import { h, clear, focusSoon, secretInput, modal, toast, confirmDialog, copyText, download } from './dom.js';
 import { newItem, sanitiseItem, SENSITIVE, TYPES, matches, totpValid, MAX_ATTACHMENT, MAX_ATTACHMENTS_PER_ITEM, keyLabel, keyIsSecret, describeValue, currentValue } from './vault.js';
-import { TYPE_META, TEMPLATES, GROUPS, isSecretField, MAX_CUSTOM, daysUntil, wifiQRString } from './templates.js';
+import { TYPE_META, TEMPLATES, GROUPS, NOTE_CATEGORIES, isSecretField, MAX_CUSTOM, daysUntil, wifiQRString } from './templates.js';
 import { estimate, crackTime } from './strength.js';
 import { generatePassword, generatePassphrase, generateStrongPassphrase } from './generator.js';
 import { totpNow, parseTotp } from './totp.js';
 import { sealText, openText } from './crypto.js';
 import { drawQR } from './qr.js';
 import { contactsPanel, exportContactVcf } from './contacts-ui.js';
-import { fmtDate, hostOf, safeHref, stamp, stampText } from './util.js';
+import { fmtDate, fmtDateTime, localDay, hostOf, safeHref, stamp, stampText } from './util.js';
 import { isFieldLocked, fieldValue } from './fieldlock.js';
 import { lockableField, lockedFieldRow, relockButton, seedView } from './secure-fields.js';
 import { categoryCarousel } from './carousel3d.js';
@@ -99,7 +99,7 @@ export function filterItems(ctx) {
   const v = S.view;
   if (v === 'fav') { items = items.filter((i) => i.favorite); if (S.favName) items = items.filter((i) => i.favName === S.favName); }
   else if (v === 'conflicts') items = items.filter((i) => (i.conflicts || []).length);
-  else if (v in TYPE_META) items = items.filter((i) => i.type === v);
+  else if (v in TYPE_META) { items = items.filter((i) => i.type === v); if (v === 'note' && S.noteCat) items = items.filter((i) => (S.noteCat === '(none)' ? !(i.fields || {}).category : (i.fields || {}).category === S.noteCat)); }
   else if (v.startsWith('tag:')) items = items.filter((i) => (i.tags || []).includes(v.slice(4)));
   if (S.q) items = items.filter((i) => matches(i, S.q));
   return items.sort((a, b) => (b.favorite - a.favorite) || a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
@@ -116,11 +116,21 @@ export function renderVaultView(ctx) {
   const list = h('div', { class: 'panel list' },
     h('div', { class: 'list-head' }, h('span', { text: S.view.startsWith('tag:') ? '#' + S.view.slice(4) : TITLES[S.view] || 'Items' }), h('span', { text: String(items.length), style: null }),
       S.view === 'trash' && items.length ? h('button', { class: 'btn sm danger', style: null, on: { click: async () => { if (await confirmDialog({ title: 'Empty trash?', text: 'These items will be permanently deleted.', okLabel: 'Delete forever', danger: true })) { await store.emptyTrash(); ctx.refresh(); } } } }, 'Empty') : null),
-    S.view === 'fav' ? favChips(ctx) : null,
+    S.view === 'fav' ? favChips(ctx) : S.view === 'note' ? noteChips(ctx) : null,
     h('div', { class: 'items', role: 'listbox', 'aria-label': 'Items' }, items.length ? items.map((it) => itemRow(ctx, it)) : emptyState(ctx, items)));
   const detail = h('div', { class: 'panel detail', 'aria-live': 'polite' }, sel ? detailPanel(ctx, sel) : h('div', { class: 'empty' }, h('div', { class: 'big', text: '{{shieldlock}}' }), h('p', { text: 'Select an item to view it.' })));
   const split = h('div', { class: 'split' + (sel ? ' has-sel' : '') }, list, detail);
   return S.view === 'contact' ? h('div', { class: 'contactswrap' }, contactsPanel(ctx), split) : split;
+}
+
+/* the Secure notes page: filter by the five note categories (All · Homelab and Network Architecture · …) */
+function noteChips(ctx) {
+  const { S, store } = ctx, notes = store.active().filter((i) => i.type === 'note');
+  if (!notes.length) return null;
+  const count = (c) => notes.filter((i) => ((i.fields || {}).category || '') === c).length, none = notes.filter((i) => !(i.fields || {}).category).length;
+  const cur = S.noteCat || '';
+  const chip = (label, value, n) => h('button', { type: 'button', class: 'chip favchip' + (cur === value ? ' on' : ''), 'aria-pressed': String(cur === value), on: { click: () => { S.noteCat = value; ctx.refresh(); } } }, `${label} · ${n}`);
+  return h('div', { class: 'favchips', role: 'group', 'aria-label': 'Note categories' }, chip('All', '', notes.length), NOTE_CATEGORIES.map((c) => chip(c, c, count(c))), none ? chip('Uncategorised', '(none)', none) : null);
 }
 
 /* the Favorites page: your own favorite names as filter chips (All · Work · Family …) */
@@ -198,7 +208,8 @@ export function itemCard(ctx, it) {
     for (const f of TEMPLATES[it.type].fields) rows.push(templateRow(ctx, it, f));
   }
   rows.unshift(field('Description', it.description, { pre: true, ctx }));
-  rows.push(field('Notes', it.notes, { pre: true, copy: it.type === 'note', ctx, stats: STATS_TYPES.has(it.type) }));
+  rows.push(field(it.type === 'note' ? 'Content' : 'Notes', it.notes, { pre: true, copy: it.type === 'note', ctx, stats: STATS_TYPES.has(it.type) }));
+  if (it.type === 'note') rows.push(field('Created', fmtDateTime(it.created), { ctx }), field('Last modified', fmtDateTime(it.updated), { ctx }));
   for (const c of it.custom || []) rows.push(field(c.label || 'Custom field', c.value, { secret: c.secret, copy: true, ctx, pre: true }));
   if ((it.tags || []).length) rows.push(h('div', { class: 'f' }, h('div', { class: 'k', text: 'Tags' }), h('div', { class: 'v' }, h('div', { class: 'tags' }, it.tags.map((t) => h('span', { class: 'chip', text: '#' + t }))))));
   return h('div', { class: 'itemcard' }, h('div', { class: 'detail-head' }, avatar(it.name, it.type), h('div', null, h('h2', { text: it.name || '(untitled)' }), h('span', { class: 'chip' }, h('span', { class: 'icn', text: TYPE_ICON[it.type] || '' }), ' ' + (TYPES[it.type] || it.type)))), h('div', { class: 'fields' }, rows));
@@ -275,7 +286,8 @@ function detailPanel(ctx, it0) {
     for (const f of TEMPLATES[it.type].fields) rows.push(templateRow(ctx, it, f));
   }
   rows.unshift(field('Description', it.description, { pre: true, ctx }));
-  rows.push(field('Notes', it.notes, { pre: true, copy: it.type === 'note', ctx, stats: STATS_TYPES.has(it.type) }));
+  rows.push(field(it.type === 'note' ? 'Content' : 'Notes', it.notes, { pre: true, copy: it.type === 'note', ctx, stats: STATS_TYPES.has(it.type) }));
+  if (it.type === 'note') rows.push(field('Created', fmtDateTime(it.created), { ctx }), field('Last modified', fmtDateTime(it.updated), { ctx }));
   for (const c of it.custom || []) rows.push(field(c.label || 'Custom field', c.value, { secret: c.secret, copy: true, ctx, pre: true }));
   rows.push(attachmentsField(ctx, it));
   if ((it.tags || []).length) rows.push(h('div', { class: 'f' }, h('div', { class: 'k', text: 'Tags' }), h('div', { class: 'v' }, h('div', { class: 'tags' }, it.tags.map((t) => h('button', { class: 'chip', on: { click: () => ctx.go('tag:' + t) } }, '#' + t))))));
@@ -420,6 +432,13 @@ export function editItem(ctx, item, type = 'login') {
   const body = [];
   body.push(h('div', { class: 'field' }, h('label', { for: 'f_name', text: 'Title' }), h('input', { id: 'f_name', class: 'inp', value: it.name, autofocus: true, autocomplete: 'off', placeholder: ({ card: 'e.g. Visa ending 4242', note: 'e.g. Safe-deposit notes', network: 'e.g. Home Wi-Fi', app: 'e.g. Adobe Creative Cloud', computer: 'e.g. Work laptop', shopping: 'e.g. Amazon', insurance: 'e.g. Car insurance', locker: 'e.g. Gym locker', travel: 'e.g. Passport — Alex', identity: 'e.g. Driver licence', bank: 'e.g. Checking account', server: 'e.g. Production API', contact: 'e.g. Dr. Rivera', phone: 'e.g. My mobile', technical: 'e.g. AWS production', crypto: 'e.g. Ledger Nano', emergency: 'e.g. ICE — Sam', lens: 'e.g. Glasses 2026', membership: 'e.g. City Gym', internet: 'e.g. Home fibre', prescription: 'e.g. Amoxicillin', serial: 'e.g. MacBook Pro', voter: 'e.g. Voter card', photoid: 'e.g. Student ID', library: 'e.g. Central Library', health: 'e.g. Health insurance', car: 'e.g. Honda Civic' })[it.type] || 'e.g. GitHub', on: { input: (e) => { it.name = e.target.value; } } })));
   body.push(h('div', { class: 'field' }, h('label', { for: 'f_description', text: 'Description (optional)' }), h('textarea', { id: 'f_description', class: 'ta', rows: '2', maxlength: '2000', placeholder: 'A short summary: what this is for, which account, who it belongs to…', on: { input: (e) => { it.description = e.target.value; } } }, it.description || '')));
+  const isNote = it.type === 'note', count = h('span', { class: 'charcount', 'aria-live': 'polite' });
+  const paintCount = () => { count.textContent = isNote ? `${[...(it.notes || '')].length.toLocaleString()} / 50,000 characters` : ''; };
+  const contentField = h('div', { class: 'field' }, h('label', { for: 'f_notes', text: isNote ? 'Content' : 'Notes' }), h('textarea', { id: 'f_notes', class: 'ta', rows: isNote ? '10' : '4', maxlength: isNote ? '50000' : null, on: { input: (e) => { it.notes = e.target.value; paintCount(); } } }, it.notes), count);
+  paintCount();
+  const datesHint = isNote ? h('p', { class: 'hint', text: isNew ? 'The creation date is set when you save; the modification date updates every time you save.' : `Created ${fmtDateTime(it.created)} · Last modified ${fmtDateTime(it.updated)} (set automatically)` }) : null;
+  const tagsField = inp('tags', 'Tags (comma separated)', { get: () => (it.tags || []).join(', '), set: (v) => { it.tags = v.split(',').map((t) => t.trim().replace(/^#/, '')).filter(Boolean).slice(0, 30); }, ph: 'work, finance' });
+  if (isNote) body.push(contentField, datesHint, tagsField);
   if (it.type === 'login') {
     body.push(h('div', { class: 'grid2' }, inp('username', 'Username / email'), inp('url', 'Website', { ph: 'https://' })));
     const pf = pwField(it.password, { ctx, onInput: (v) => { it.password = v; } });
@@ -476,8 +495,7 @@ export function editItem(ctx, item, type = 'login') {
   drawAtt();
   body.push(h('div', { class: 'field' }, h('label', { text: 'Attachments (images, documents — encrypted, up to ' + fmtSize(MAX_ATTACHMENT) + ' each)' }), attList,
     h('div', { class: 'row wrap' }, h('button', { type: 'button', class: 'btn sm', on: { click: () => fileIn.click() } }, '{{clip}} Add files'), h('button', { type: 'button', class: 'btn sm', on: { click: () => camIn.click() } }, '{{camera}} Take photo'), fileIn, camIn), attErr));
-  body.push(h('div', { class: 'field' }, h('label', { for: 'f_notes', text: it.type === 'note' ? 'Note' : 'Notes' }), h('textarea', { id: 'f_notes', class: 'ta', rows: it.type === 'note' ? '10' : '4', on: { input: (e) => { it.notes = e.target.value; } } }, it.notes)));
-  body.push(inp('tags', 'Tags (comma separated)', { get: () => (it.tags || []).join(', '), set: (v) => { it.tags = v.split(',').map((t) => t.trim().replace(/^#/, '')).filter(Boolean).slice(0, 30); }, ph: 'work, finance' }));
+  if (!isNote) body.push(contentField, tagsField);
   const favBox = h('input', { type: 'checkbox', checked: it.favorite, on: { change: (e) => { it.favorite = e.target.checked; } } });
   const favNameIn = h('input', { id: 'f_favname', class: 'inp', list: 'f_favnames', maxlength: '40', value: it.favName || '', placeholder: 'Favorites', autocomplete: 'off', 'aria-label': 'Favorite name', on: { input: (e) => { it.favName = e.target.value.trim().slice(0, 40); if (it.favName) { it.favorite = true; favBox.checked = true; } } } });
   body.push(h('label', { class: 'chk' }, favBox, 'Favorite'),
@@ -492,6 +510,13 @@ export function editItem(ctx, item, type = 'login') {
 
   const save = async () => {
     if (!it.name.trim()) { err.textContent = 'Please give this item a title.'; document.getElementById('f_name').focus(); return false; }
+    if (it.type === 'note') {
+      const exp = (it.fields || {}).expires, made = isNew ? localDay() : localDay(it.created);
+      if (exp && (!/^\d{4}-\d{2}-\d{2}$/.test(exp) || Number.isNaN(Date.parse(exp)))) { err.textContent = 'The expiration date is not a valid date.'; return false; }
+      if (exp && exp < made) { err.textContent = `The expiration date cannot be before the day the note was created (${made}).`; return false; }
+      const cat = (it.fields || {}).category; if (cat && !NOTE_CATEGORIES.includes(cat)) { err.textContent = 'Choose one of the listed categories.'; return false; }
+      if ((it.notes || '').length > 50000) { err.textContent = 'The content is longer than 50,000 characters.'; return false; }
+    }
     if (it.type === 'login' && it.totp.trim() && !totpValid(it.totp.trim())) { err.textContent = 'That one-time code secret is not valid (expected base32 or an otpauth://totp link).'; return false; }
     if (isNew && lockOn.checked) { if (lp1.value !== lp2.value) { err.textContent = 'The two item passcodes do not match.'; return false; } if (lp1.value.length < 6) { err.textContent = 'Use at least 6 characters for the item passcode.'; return false; } }
     for (const c of locks) { const e = c.check(); if (e) { err.textContent = e; return false; } }
@@ -518,7 +543,7 @@ function tplInput(ctx, it, f, locks = []) {
   const set = (v) => { if (v) it.fields[f.k] = v; else delete it.fields[f.k]; };
   const val = (it.fields || {})[f.k] || '';
   const id = 'tf_' + f.k;
-  const full = f.kind === 'multiline' || (isSecretField(f) && f.gen);
+  const full = f.kind === 'multiline' || f.wide || (isSecretField(f) && f.gen);
   let control;
   if (f.kind === 'choice') {
     const OTHER = '__other__', known = f.options.includes(val);
@@ -532,11 +557,11 @@ function tplInput(ctx, it, f, locks = []) {
   else if (isSecretField(f) && f.gen) control = pwField(val, { ctx, onInput: set }).el;
   else if (isSecretField(f)) { const i = h('input', { id, type: 'password', class: 'inp mono', value: val, autocomplete: 'off', spellcheck: 'false', on: { input: (e) => set(e.target.value) } }); control = h('div', { class: 'pwwrap' }, i, h('button', { type: 'button', class: 'icon-btn eye', 'aria-label': 'Show or hide ' + f.l, on: { click: () => { i.type = i.type === 'password' ? 'text' : 'password'; } } }, '{{eye}}')); }
   else control = h('input', { id, class: 'inp' + (f.mono ? ' mono' : ''), type: f.kind === 'date' ? 'date' : f.kind === 'stamp' ? 'datetime-local' : 'text', value: val, autocomplete: 'off', spellcheck: 'false', placeholder: f.kind === 'url' ? 'https://' : null, on: { input: (e) => set(e.target.value) } });
-  return h('div', { class: 'field' + (full ? ' full' : '') }, h('label', { for: id, text: f.l }), control);
+  return h('div', { class: 'field' + (full ? ' full' : '') }, h('label', { for: id, text: f.l }), control, f.hint ? h('p', { class: 'hint', text: f.hint }) : null);
 }
 
 /* ---------- the "Choose a category" picker: a 3D carousel, or the plain grouped list ---------- */
-const CORE_FIELD_LABELS = { login: ['Username / email', 'Website', 'Password', 'One-time code'], note: ['Note'], card: ['Cardholder', 'Card number', 'Expiry', 'CVV', 'PIN'] };
+const CORE_FIELD_LABELS = { login: ['Username / email', 'Website', 'Password', 'One-time code'], note: ['Title', 'Content', 'Category', 'Expiration date', 'Access permissions'], card: ['Cardholder', 'Card number', 'Expiry', 'CVV', 'PIN'] };
 const PICKER_KEY = 'vaultmanager.picker';
 const pickerPref = () => { try { return localStorage.getItem(PICKER_KEY) || ''; } catch { return ''; } };
 const savePickerPref = (v) => { try { localStorage.setItem(PICKER_KEY, v); } catch { /* private window: just not remembered */ } };
