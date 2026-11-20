@@ -2361,3 +2361,35 @@ test('v0.45.0: encrypt a photo into a .vmenc file and open it again with the pas
   await page.setInputFiles('input[aria-label="Encrypted file to open"]', { name: 'x.txt', mimeType: 'text/plain', buffer: Buffer.from('hello there, this is not encrypted at all') }); await page.getByText(/not a VaultManager encrypted file/).waitFor();
   assert.deepEqual(problems.filter((p) => !/Failed to load resource/.test(p)), []); await ctx.close();
 });
+
+test('profiles: a profile photo travels with "Export whole profile" and comes back on import', async () => {
+  const A = await newPage(); await createVault(A.page);
+  await A.page.getByRole('button', { name: 'VaultManager menu' }).click();
+  await A.page.locator('.sysmenu .sm-who').click(); await A.page.waitForSelector('.avpick');
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'vm-avx-')); const png = path.join(tmp, 'me.png'); fs.writeFileSync(png, PNG);
+  await A.page.setInputFiles('input[aria-label="Profile photo"]', png);
+  await A.page.waitForSelector('.toast:has-text("Profile picture saved")');
+  await A.page.keyboard.press('Escape');
+  await settingsTab(A.page, 'General');
+  await A.page.getByRole('button', { name: /Export whole profile/ }).click();
+  await A.page.fill('input[aria-label="Backup password"]', 'backup-pass-phrase-1'); await A.page.fill('input[aria-label="Confirm Backup password"]', 'backup-pass-phrase-1');
+  const [dl] = await Promise.all([A.page.waitForEvent('download'), A.page.getByRole('button', { name: 'Download backup' }).click()]);
+  const text = fs.readFileSync(await dl.path(), 'utf8'); assert.ok(text.startsWith('VMP1:'));
+  assert.ok(!text.includes('data:image'), 'the photo is inside the encrypted body');
+  await A.ctx.close();
+
+  const B = await newPage(); await B.page.goto(base); await B.page.waitForSelector('#pw1');
+  await B.page.getByRole('button', { name: /Import a profile backup/ }).click();
+  await B.page.fill('textarea[aria-label="Backup text"]', text);
+  await B.page.fill('input[aria-label="Backup password"]', 'backup-pass-phrase-1');
+  await B.page.getByRole('button', { name: 'Open backup' }).click();
+  await B.page.waitForSelector('.modal-sheet .avpick .avprev .pav img', { timeout: 90000 });
+  await B.page.fill('input[aria-label="New master password"]', 'a-new-master-pass-123'); await B.page.fill('input[aria-label="Repeat new master password"]', 'a-new-master-pass-123');
+  await B.page.locator('.modal-sheet input[type=checkbox]').last().check();
+  await B.page.getByRole('button', { name: 'Create profile' }).click();
+  await B.page.waitForSelector('.topbar', { timeout: 90000 });
+  await dismissWelcome(B.page).catch(() => {});
+  await B.page.getByRole('button', { name: 'VaultManager menu' }).click();
+  assert.equal(await B.page.locator('.sysmenu .sm-who .pav img').count(), 1, 'the imported profile shows the photo');
+  await B.ctx.close();
+});
