@@ -102,7 +102,7 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 .meter { height: 6px; border-radius: 99px; background: var(--raise); overflow: hidden; margin: 8px 0 4px; border: 1px solid var(--line); }
 .meter i { display: block; height: 100%; width: 0; transition: width .25s, background .25s; background: var(--danger); }
 .meter i.s1 { background: var(--warn); } .meter i.s2 { background: #d6d04a; } .meter i.s3 { background: var(--accent-2); } .meter i.s4 { background: var(--accent); }
-.meter-label { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 11px; color: var(--muted); }
+.meter-label { display: flex; flex-wrap: wrap; gap: 2px 12px; justify-content: space-between; font-family: var(--mono); font-size: 11px; color: var(--muted); }
 .trust { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 18px; }
 .chip { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 99px; border: 1px solid var(--line-2); font-family: var(--mono); font-size: 10.5px; color: var(--ink-dim); background: var(--panel-2); }
 .chip.accent { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 40%, transparent); }
@@ -1134,3 +1134,7 @@ html[data-avatar] .avatar.has-photo, .avatar.has-photo { background: var(--photo
 .photo-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
 .photo-prev { width: 72px !important; height: 72px !important; border-radius: 50% !important; background: var(--raise); border: 1px dashed var(--line-2); }
 .photo-prev.has-photo { border-style: solid; }
+
+/* Encrypt a photo or file */
+.filecrypt .ccols h4 { margin: 0 0 8px; }
+.fileprev img { display: block; max-width: 100%; max-height: 220px; border-radius: 10px; margin: 8px 0; border: 1px solid var(--line); }

@@ -2342,3 +2342,22 @@ test('v0.44.0: contact photos (pick, show as avatar, import from .vcf, export), 
   await page.getByRole('button', { name: 'Save' }).click(); await page.waitForSelector('.detail h2:has-text("Work GitHub")');
   assert.deepEqual(problems.filter((p) => !/Failed to load resource/.test(p)), []); await ctx.close();
 });
+
+test('v0.45.0: encrypt a photo into a .vmenc file and open it again with the password (and a wrong password is refused)', async () => {
+  const { ctx, page, problems } = await newPage(); await createVault(page);
+  await page.locator('.side .nav:has-text("Import & export")').click(); await page.waitForSelector('.filecrypt');
+  const txt = await page.textContent('.filecrypt'); for (const must of ['What it can do', 'What it cannot do', 'no password reset', 'not changed or deleted', 'never uploaded']) assert.ok(txt.includes(must), must);
+  const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+  await page.setInputFiles('input[aria-label="Photo or file to encrypt"]', { name: 'family.png', mimeType: 'image/png', buffer: png }); await page.waitForSelector('.filecrypt .fileprev img');
+  await page.fill('input[aria-label="File password"]', 'short'); await page.fill('input[aria-label="Confirm File password"]', 'short'); await page.getByRole('button', { name: 'Encrypt and save' }).click(); assert.match(await page.locator('.filecrypt .err:not(:empty)').first().textContent(), /stronger password/);
+  const pw = 'plum-orbit-velvet-anchor-glacier-ember'; await page.fill('input[aria-label="File password"]', pw); await page.fill('input[aria-label="Confirm File password"]', pw);
+  const [dl] = await Promise.all([page.waitForEvent('download', { timeout: 60000 }), page.getByRole('button', { name: 'Encrypt and save' }).click()]);
+  assert.equal(dl.suggestedFilename(), 'family.png.vmenc'); const sealed = fs.readFileSync(await dl.path()); assert.equal(sealed.slice(0, 4).toString(), 'VMF1'); assert.ok(!sealed.includes(png.slice(8, 30)), 'the picture is not readable in the file');
+  await page.getByText(/Checked: it opens again with this password/).waitFor();
+  await page.setInputFiles('input[aria-label="Encrypted file to open"]', { name: 'family.png.vmenc', mimeType: 'application/octet-stream', buffer: sealed });
+  await page.fill('input[aria-label="Password of the encrypted file"]', 'not the password'); await page.getByRole('button', { name: 'Open', exact: true }).click(); await page.getByText(/Wrong password, or the file was changed/).waitFor();
+  await page.fill('input[aria-label="Password of the encrypted file"]', pw); await page.getByRole('button', { name: 'Open', exact: true }).click(); await page.getByText(/Opened: family\.png/).waitFor(); await page.waitForSelector('.filecrypt .fileprev img[alt="family.png"]');
+  const [dl2] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: /Save the original/ }).click()]); assert.equal(dl2.suggestedFilename(), 'family.png'); assert.ok(Buffer.compare(fs.readFileSync(await dl2.path()), png) === 0, 'byte-for-byte the original');
+  await page.setInputFiles('input[aria-label="Encrypted file to open"]', { name: 'x.txt', mimeType: 'text/plain', buffer: Buffer.from('hello there, this is not encrypted at all') }); await page.getByText(/not a VaultManager encrypted file/).waitFor();
+  assert.deepEqual(problems.filter((p) => !/Failed to load resource/.test(p)), []); await ctx.close();
+});

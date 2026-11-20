@@ -1044,3 +1044,18 @@ test('contacts: Outlook / Exchange export puts an internal address where the ema
   for (const fn of [C.toGoogleCSV, C.toOutlookCSV]) { const r2 = C.parseContactsFile(fn(list)).contacts[0]; for (const k of ['nickname', 'department', 'homephone', 'email2', 'workaddress', 'anniversary']) assert.equal(r2[k], list[0][k], fn.name + ' ' + k); }
   assert.equal(C.parseVCard('BEGIN:VCARD\nFN:x\nPHOTO;VALUE=uri:https://example.com/a.jpg\nEND:VCARD\n').contacts[0].photo, null, 'a photo that is only a web link is not fetched');
 });
+
+test('encrypted files (VMF1): any bytes round-trip with name and type; wrong password, tampering and other files are refused', async () => {
+  const C = await import('../js/crypto.js');
+  const bytes = new Uint8Array(70000).map((_, i) => (i * 31 + 7) & 255);
+  const s = await C.sealFile(bytes, { name: 'beach.jpg', type: 'image/jpeg' }, 'correct horse battery staple', { iterations: 100000 });
+  assert.ok(C.isSealedFile(s)); assert.equal(new TextDecoder().decode(s.slice(0, 4)), 'VMF1');
+  assert.ok(!Buffer.from(s).includes(Buffer.from('beach.jpg')), 'the file name is encrypted too');
+  const o = await C.openFile(s, 'correct horse battery staple'); assert.equal(o.name, 'beach.jpg'); assert.equal(o.type, 'image/jpeg'); assert.deepEqual([...o.bytes], [...bytes]);
+  await assert.rejects(C.openFile(s, 'wrong password'), /Wrong password/);
+  const t = s.slice(); t[t.length - 5] ^= 1; await assert.rejects(C.openFile(t, 'correct horse battery staple'), /changed or damaged/);
+  const hd = s.slice(); hd[6] ^= 1; await assert.rejects(C.openFile(hd, 'correct horse battery staple'));   // the header (iterations) is authenticated
+  await assert.rejects(C.openFile(new TextEncoder().encode('just some text that is long enough to look like a file'), 'x'), /not a VaultManager encrypted file/);
+  const s2 = await C.sealFile(bytes, { name: 'beach.jpg', type: 'image/jpeg' }, 'correct horse battery staple', { iterations: 100000 }); assert.ok(Buffer.compare(Buffer.from(s), Buffer.from(s2)) !== 0, 'fresh salt and IV every time');
+  const evil = await C.sealFile(new Uint8Array(3), { name: '../../etc/passwd', type: 'text/plain' }, 'pw-pw-pw-pw', { iterations: 100000 }); assert.ok(!(await C.openFile(evil, 'pw-pw-pw-pw')).name.includes('/'), 'a path in the name is defused');
+});
