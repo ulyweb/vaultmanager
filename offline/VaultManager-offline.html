@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VaultManager v0.43.0 — single-file offline build. Verify with the .sha256 file next to it. -->
+<!-- VaultManager v0.44.0 — single-file offline build. Verify with the .sha256 file next to it. -->
 <html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
@@ -11,7 +11,7 @@
 <meta name="application-name" content="VaultManager">
 <meta name="format-detection" content="telephone=no">
 <meta name="referrer" content="no-referrer">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-tauzjAWYvkq2EEey6/r1GOXzEWNzSydbYj43JCIjd2U=' 'sha256-T50w6ajqG3I733/gJLWT9OJp6Jy1AdWAhoDkbjtyQcg=' blob:; style-src 'sha256-acsankcIBrK08wSiYH5rolOtLhc9Aaq7L6QIYJ0R0YA='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-tauzjAWYvkq2EEey6/r1GOXzEWNzSydbYj43JCIjd2U=' 'sha256-swtnG89v0kG33k+uuUDqcQ9wM+E2gIRpzD3b7lsFTT8=' blob:; style-src 'sha256-uUGcMOAfBH9lvIJfvtrsQ3ghRBuCH8pDhzkF3KXzY6s='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
 <title>VaultManager | Zero-Knowledge Password Manager</title>
 <meta name="description" content="VaultManager: an offline-first, zero-knowledge, end-to-end encrypted password manager with a strong password generator, TOTP codes and QR-sealed sharing and backup. Runs entirely in your browser.">
 <meta name="theme-color" content="#05080d">
@@ -1145,6 +1145,13 @@ html[data-clocksize=large] .barclock { font-size: 13px; }
 .ctable th { text-align: left; font: 700 11px var(--mono); color: var(--muted); padding: 4px 8px; } .ctable td { padding: 5px 8px; border-top: 1px solid var(--line); }
 
 .charcount { display: block; font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+/* contact photos (an encrypted attachment shown as the avatar) */
+html[data-avatar] .avatar.has-photo, .avatar.has-photo { background: var(--photo) center / cover no-repeat !important; color: transparent; text-shadow: none; }
+.avatar.has-photo > * { display: none !important; }
+.photo-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.photo-prev { width: 72px !important; height: 72px !important; border-radius: 50% !important; background: var(--raise); border: 1px dashed var(--line-2); }
+.photo-prev.has-photo { border-style: solid; }
 </style>
 </head>
 <body>
@@ -2305,7 +2312,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   }
 
   // js/version.js
-  var APP_VERSION = "0.43.0";
+  var APP_VERSION = "0.44.0";
   var APP_NAME = "VaultManager";
   var REPO_URL = "https://github.com/ulyweb/vaultmanager";
   var FORMATS = [
@@ -2319,6 +2326,12 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     ["Attachments at rest", "AES-256-GCM per file, bound to vault + file id"]
   ];
   var CHANGELOG = [
+    { v: "0.44.0", date: "2026-11-20", notes: [
+      "Contacts: a Photo (choose or take one; shrunk to 512 px and stored encrypted; shown as the contact\u2019s picture in the list and on the contact), and new fields Nickname, Department, Home phone, Other email, Anniversary and Work address (Phone is now Work phone, Address is now Home address). Imports and exports carry them, and .vcf files import and export photos.",
+      "Fixed Outlook imports from Exchange / Microsoft 365: the internal Exchange address (\u201C/o=ExchangeLabs/\u2026\u201D) is no longer stored as the email. The real address is taken from the display name or another email column, and the internal one is kept in Notes. Contacts already imported that way get a \u201CFix them\u201D button on the Contacts page.",
+      "New login: pick a popular site (Google, iCloud, Microsoft, Facebook, GitHub, Amazon, Netflix and about 80 more) to fill in its sign-in address; an empty title takes the site\u2019s name.",
+      "Cancel in a new item now goes back to \u201CChoose a category\u201D instead of closing everything. A saved item is shown even when the page you were on would not list it."
+    ] },
     { v: "0.43.0", date: "2026-11-20", notes: [
       "Secure notes now have structured fields: Title, Content (up to 50,000 characters, with a counter), Category, Tags, Creation date and Last modified (set automatically and shown on the note), Expiration date, Attachments and Access permissions. Category is one of five fixed choices: Homelab and Network Architecture, Crypto and Asset Vault, Project Specs, Personal Identification, Vaultwarden Backups. The Secure notes page has a filter for each category.",
       "Validation: a title is required, the category and access must be one of the listed choices (anything else is dropped on import), and the expiration date must be a real date that is not before the day the note was created. Notes with an expiration date appear in Vault health \u2192 Expiring soon.",
@@ -2914,6 +2927,88 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   var BRANDS = sorted(["Acer", "Amazon", "Apple", "ASUS", "Bose", "Canon", "Dell", "Dyson", "Fitbit", "Garmin", "Google", "GoPro", "HP", "Huawei", "Lenovo", "LG", "Microsoft", "Nikon", "Nintendo", "OnePlus", "Panasonic", "Philips", "Samsung", "Sennheiser", "Sonos", "Sony", "Whirlpool", "Xiaomi", "Bosch", "GE", "Honeywell", "Ring", "Nest"]);
   var STORES = sorted(["Amazon", "Apple Store", "Best Buy", "Costco", "Dell", "eBay", "Etsy", "Home Depot", "IKEA", "Lowe\u2019s", "Micro Center", "Newegg", "Target", "Walmart", "B&H Photo", "Wayfair", "Samsung", "Staples", "Adorama", "Direct from the maker"]);
   var LENS_BRANDS = sorted(["Acuvue", "Air Optix", "Alcon Dailies", "Bausch + Lomb", "Biofinity", "Biotrue", "Clariti", "CooperVision", "Dailies Total1", "FreshLook", "Proclear", "Precision1", "Ultra", "Essilor", "Zeiss", "Hoya", "Transitions"]);
+  var POPULAR_SITES = [
+    ["Google", "https://accounts.google.com"],
+    ["Gmail", "https://mail.google.com"],
+    ["YouTube", "https://www.youtube.com"],
+    ["Apple ID", "https://account.apple.com"],
+    ["iCloud", "https://www.icloud.com"],
+    ["Microsoft account", "https://account.microsoft.com"],
+    ["Outlook.com", "https://outlook.live.com"],
+    ["Microsoft 365", "https://www.office.com"],
+    ["Xbox", "https://www.xbox.com"],
+    ["Facebook", "https://www.facebook.com"],
+    ["Instagram", "https://www.instagram.com"],
+    ["WhatsApp", "https://web.whatsapp.com"],
+    ["Threads", "https://www.threads.net"],
+    ["X (Twitter)", "https://x.com"],
+    ["LinkedIn", "https://www.linkedin.com"],
+    ["TikTok", "https://www.tiktok.com"],
+    ["Snapchat", "https://accounts.snapchat.com"],
+    ["Pinterest", "https://www.pinterest.com"],
+    ["Reddit", "https://www.reddit.com"],
+    ["Discord", "https://discord.com/login"],
+    ["GitHub", "https://github.com/login"],
+    ["GitLab", "https://gitlab.com/users/sign_in"],
+    ["Bitbucket", "https://bitbucket.org"],
+    ["Docker Hub", "https://hub.docker.com"],
+    ["Cloudflare", "https://dash.cloudflare.com"],
+    ["AWS", "https://console.aws.amazon.com"],
+    ["Google Cloud", "https://console.cloud.google.com"],
+    ["Azure portal", "https://portal.azure.com"],
+    ["DigitalOcean", "https://cloud.digitalocean.com"],
+    ["Amazon", "https://www.amazon.com"],
+    ["eBay", "https://www.ebay.com"],
+    ["Walmart", "https://www.walmart.com"],
+    ["Target", "https://www.target.com"],
+    ["Costco", "https://www.costco.com"],
+    ["Best Buy", "https://www.bestbuy.com"],
+    ["Etsy", "https://www.etsy.com"],
+    ["PayPal", "https://www.paypal.com"],
+    ["Venmo", "https://venmo.com"],
+    ["Cash App", "https://cash.app"],
+    ["Zelle", "https://www.zellepay.com"],
+    ["Coinbase", "https://www.coinbase.com"],
+    ["Kraken", "https://www.kraken.com"],
+    ["Binance", "https://www.binance.com"],
+    ["Netflix", "https://www.netflix.com"],
+    ["Disney+", "https://www.disneyplus.com"],
+    ["Hulu", "https://www.hulu.com"],
+    ["Max", "https://www.max.com"],
+    ["Prime Video", "https://www.primevideo.com"],
+    ["Spotify", "https://accounts.spotify.com"],
+    ["Apple Music", "https://music.apple.com"],
+    ["Twitch", "https://www.twitch.tv"],
+    ["Steam", "https://store.steampowered.com/login"],
+    ["Epic Games", "https://www.epicgames.com"],
+    ["PlayStation", "https://www.playstation.com"],
+    ["Nintendo", "https://accounts.nintendo.com"],
+    ["Dropbox", "https://www.dropbox.com/login"],
+    ["Google Drive", "https://drive.google.com"],
+    ["OneDrive", "https://onedrive.live.com"],
+    ["Box", "https://account.box.com/login"],
+    ["Adobe", "https://account.adobe.com"],
+    ["Canva", "https://www.canva.com"],
+    ["Zoom", "https://zoom.us/signin"],
+    ["Slack", "https://slack.com/signin"],
+    ["Microsoft Teams", "https://teams.microsoft.com"],
+    ["Notion", "https://www.notion.so/login"],
+    ["Trello", "https://trello.com/login"],
+    ["Atlassian", "https://id.atlassian.com"],
+    ["Yahoo", "https://login.yahoo.com"],
+    ["Proton", "https://account.proton.me"],
+    ["ChatGPT / OpenAI", "https://chatgpt.com"],
+    ["Claude", "https://claude.ai"],
+    ["Uber", "https://auth.uber.com"],
+    ["Lyft", "https://www.lyft.com"],
+    ["DoorDash", "https://www.doordash.com"],
+    ["Airbnb", "https://www.airbnb.com"],
+    ["Booking.com", "https://account.booking.com"],
+    ["Vaultwarden / Bitwarden", "https://vault.bitwarden.com"],
+    ["Synology", "https://account.synology.com"],
+    ["Ubiquiti UniFi", "https://account.ui.com"],
+    ["Router admin (local)", "http://192.168.1.1"]
+  ].sort((a, b) => a[0].localeCompare(b[0], void 0, { sensitivity: "base" }));
 
   // js/templates.js
   var CORE = {
@@ -3035,16 +3130,23 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       { k: "ssh", l: "SSH private key", kind: "multiline", secret: true },
       S("passphrase", "Key passphrase")
     ] },
-    contact: { label: "Contact", plural: "Contacts", icon: "{{contact}}", sub: "phone", fields: [
+    contact: { label: "Contact", plural: "Contacts", icon: "{{contact}}", sub: "mobile", fields: [
+      { k: "photo", l: "Photo", kind: "photo" },
+      T("nickname", "Nickname"),
       T("company", "Company / organisation"),
+      T("department", "Department"),
       T("jobtitle", "Job title"),
-      T("phone", "Phone", { mono: true }),
       T("mobile", "Mobile", { mono: true }),
+      T("phone", "Work phone", { mono: true }),
+      T("homephone", "Home phone", { mono: true }),
       T("email", "Email"),
+      T("email2", "Other email"),
       SEL("relation", "Relationship", ["Family", "Friend", "Colleague", "Doctor", "Lawyer", "Landlord", "Neighbour", "Other"]),
       D("birthday", "Birthday"),
+      D("anniversary", "Anniversary"),
       U("url", "Website"),
-      { k: "address", l: "Address", kind: "multiline" }
+      { k: "address", l: "Home address", kind: "multiline" },
+      { k: "workaddress", l: "Work address", kind: "multiline" }
     ] },
     phone: { label: "Phone / SIM", plural: "Phones", icon: "{{phone}}", sub: "number", fields: [
       T("number", "Phone number", { mono: true }),
@@ -4691,7 +4793,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     const lines2 = [head.join(",")];
     for (const i of items) {
       const tpl = TEMPLATES[i.type];
-      const extra = [...tpl ? tpl.fields.map((f) => i.fields[f.k] ? f.l + ": " + i.fields[f.k] : "") : [], ...(i.custom || []).map((c) => c.label + ": " + c.value)].filter(Boolean);
+      const extra = [...tpl ? tpl.fields.filter((f) => f.kind !== "photo").map((f) => i.fields[f.k] ? f.l + ": " + i.fields[f.k] : "") : [], ...(i.custom || []).map((c) => c.label + ": " + c.value)].filter(Boolean);
       const notes = i.type === "card" ? [i.notes, "Card holder: " + i.card.holder, "Number: " + i.card.number, "Expiry: " + i.card.expiry, "CVV: " + i.card.cvv, ...extra].filter(Boolean).join("\n") : [i.notes, ...extra].filter(Boolean).join("\n");
       lines2.push([(i.tags || [])[0] || "", i.favorite ? 1 : "", i.type === "note" ? "note" : "login", i.name, notes, "", 0, i.url, i.username, i.password, i.totp].map((v, n) => csvCell(v, n !== 9 && n !== 10)).join(","));
     }
@@ -4700,7 +4802,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   function matches(item, q2) {
     if (!q2) return true;
     const tpl = TEMPLATES[item.type];
-    const fieldText = tpl ? tpl.fields.filter((f) => !isSecretField(f)).map((f) => (item.fields || {})[f.k] || "") : [];
+    const fieldText = tpl ? tpl.fields.filter((f) => !isSecretField(f) && f.kind !== "photo").map((f) => (item.fields || {})[f.k] || "") : [];
     const customText = (item.custom || []).filter((c) => !c.secret).map((c) => c.label + " " + c.value);
     const hay = [item.name, item.description, item.username, item.url, item.notes, (item.tags || []).join(" "), ...fieldText, ...customText].join("\n").toLowerCase();
     return q2.toLowerCase().split(/\s+/).filter(Boolean).every((w) => hay.includes(w));
@@ -5275,6 +5377,13 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     if (y < 1e3 || y > 2100 || mo < 1 || mo > 12 || d < 1 || d > 31) return "";
     return `${m[1]}-${String(mo).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
   }
+  var blank = () => ({ name: "", nickname: "", company: "", department: "", jobtitle: "", phone: "", mobile: "", homephone: "", email: "", email2: "", address: "", workaddress: "", url: "", birthday: "", anniversary: "", notes: "", relation: "", photo: null });
+  var isExchangeDN = (v) => /^\/o=/i.test(String(v || "").trim()) || /^EX:/i.test(String(v || "").trim());
+  var isEmail = (v) => /^[^\s@<>()]+@[^\s@<>()]+\.[^\s@<>()]+$/.test(String(v || "").trim());
+  var emailIn = (s) => {
+    const m = /([^\s@<>()"']+@[^\s@<>()"']+\.[^\s@<>()"']+)/.exec(String(s || ""));
+    return m ? m[1] : "";
+  };
   var unesc = (s) => String(s).replace(/\\([nN,;\\])/g, (m, c) => c === "n" || c === "N" ? "\n" : c);
   var splitUnesc = (v, sep) => {
     const out = [];
@@ -5322,6 +5431,24 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     }
     return out;
   }
+  var MAX_PHOTO_BYTES = 3 * 1024 * 1024;
+  function readPhoto(value, types, meta) {
+    let v = String(value || "").trim(), mime = "";
+    const m = /^data:(image\/[a-z0-9.+-]+);base64,(.*)$/is.exec(v);
+    if (m) {
+      mime = m[1].toLowerCase();
+      v = m[2];
+    } else if (/^(https?|ftp):/i.test(v)) return null;
+    else if (!/^(b|base64)$/i.test(meta.ENCODING || "") && !/BASE64/i.test([...types].join(","))) return null;
+    if (!mime) {
+      const t = [...types].find((x) => /JPE?G|PNG|GIF|WEBP|HEIC|BMP/.test(x)) || (meta.TYPE || "");
+      mime = /PNG/i.test(t) ? "image/png" : /GIF/i.test(t) ? "image/gif" : /WEBP/i.test(t) ? "image/webp" : "image/jpeg";
+    }
+    const b642 = v.replace(/\s+/g, "");
+    if (!/^[A-Za-z0-9+/=]+$/.test(b642) || b642.length < 16) return null;
+    if (b642.length * 0.75 > MAX_PHOTO_BYTES) return null;
+    return { type: mime, b64: b642 };
+  }
   function parseVCard(text2) {
     const lines2 = unfold(text2), cards = [];
     let cur = null, photos = 0;
@@ -5347,47 +5474,67 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       }
       let value = raw.slice(colon + 1);
       if (/QUOTED-PRINTABLE/i.test(meta.ENCODING || "")) value = qpDecode(value);
-      cur.push({ name, types, value });
+      cur.push({ name, types, value, meta });
     }
     const contacts = [];
     let empty2 = 0, extras = 0;
     for (const props of cards) {
-      const c = { name: "", company: "", jobtitle: "", phone: "", mobile: "", email: "", address: "", url: "", birthday: "", notes: "", relation: "" }, other = [];
+      const c = blank(), other = [];
       let fn = "", given = "", family = "";
-      for (const { name, types, value } of props) {
+      for (const { name, types, value, meta } of props) {
         if (name === "FN") fn = clean(unesc(value), 200);
         else if (name === "N") {
           const p = splitUnesc(value, ";").map(unesc);
           family = clean(p[0], 100);
-          given = clean([p[3], p[1], p[2]].filter(Boolean).join(" ") && [p[1], p[2]].filter(Boolean).join(" "), 100);
-        } else if (name === "ORG") c.company = c.company || clean(splitUnesc(value, ";").map(unesc).filter(Boolean).join(" \u2013 "), 200);
-        else if (name === "TITLE") c.jobtitle = c.jobtitle || clean(unesc(value), 200);
+          given = clean([p[1], p[2]].filter(Boolean).join(" "), 100);
+        } else if (name === "NICKNAME") c.nickname = c.nickname || clean(unesc(value), 100);
+        else if (name === "ORG") {
+          const p = splitUnesc(value, ";").map((x) => clean(unesc(x), 200)).filter(Boolean);
+          c.company = c.company || p[0] || "";
+          c.department = c.department || p.slice(1).join(", ");
+        } else if (name === "TITLE") c.jobtitle = c.jobtitle || clean(unesc(value), 200);
         else if (name === "TEL") {
           const v = clean(unesc(value).replace(/^tel:/i, ""), 60);
           if (!v) continue;
-          const cell2 = types.has("CELL") || types.has("MOBILE") || types.has("IPHONE");
-          if (cell2 && !c.mobile) c.mobile = v;
-          else if (!cell2 && !c.phone) c.phone = v;
+          const slot = types.has("CELL") || types.has("MOBILE") || types.has("IPHONE") ? "mobile" : types.has("HOME") && !types.has("WORK") ? "homephone" : "phone";
+          if (!c[slot]) c[slot] = v;
+          else if (slot === "phone" && !c.homephone && !types.has("WORK")) c.homephone = v;
           else other.push("Other phone: " + v);
         } else if (name === "EMAIL") {
-          const v = clean(unesc(value), 200);
+          let v = clean(unesc(value).replace(/^mailto:/i, ""), 200);
           if (!v) continue;
+          if (!isEmail(v)) {
+            const inside = emailIn(v);
+            if (isExchangeDN(v) || !inside) {
+              other.push("Exchange / other address: " + v);
+              continue;
+            }
+            v = inside;
+          }
           if (!c.email) c.email = v;
-          else other.push("Other email: " + v);
+          else if (!c.email2 && v.toLowerCase() !== c.email.toLowerCase()) c.email2 = v;
+          else if (v.toLowerCase() !== c.email.toLowerCase()) other.push("Other email: " + v);
         } else if (name === "ADR") {
           const p = splitUnesc(value, ";").map((x) => clean(unesc(x), 200));
           const street = p[2] || "", city = [p[3], p[4]].filter(Boolean).join(", "), line2 = [city, p[5]].filter(Boolean).join(" "), a = [p[0], p[1], street, line2, p[6]].filter(Boolean).join("\n");
           if (!a) continue;
-          if (!c.address) c.address = a;
+          const slot = types.has("WORK") ? "workaddress" : "address";
+          if (!c[slot]) c[slot] = a;
+          else if (slot === "address" && !c.workaddress && !types.has("HOME")) c.workaddress = a;
           else other.push("Other address: " + a.replace(/\n/g, ", "));
         } else if (name === "URL") c.url = c.url || clean(unesc(value), 300);
         else if (name === "BDAY") c.birthday = c.birthday || normDate(unesc(value));
+        else if (name === "ANNIVERSARY" || name === "X-ANNIVERSARY" || name === "X-MS-ANNIVERSARY" || name === "X-EVOLUTION-ANNIVERSARY") c.anniversary = c.anniversary || normDate(unesc(value));
         else if (name === "NOTE") c.notes = clean(unesc(value), 4e3);
-        else if (name === "PHOTO" || name === "LOGO") photos++;
+        else if (name === "PHOTO") {
+          const ph = readPhoto(value, types, meta);
+          if (ph && !c.photo) c.photo = ph;
+          else photos++;
+        } else if (name === "LOGO") photos++;
         else if (name === "CATEGORIES") {
           const g = clean(unesc(value), 100);
           if (g) other.push("Group: " + g);
-        } else if (!["VERSION", "PRODID", "REV", "UID", "X-ABLABEL", "KIND", "X-ABUID"].includes(name) && !name.startsWith("X-")) extras++;
+        } else if (!["VERSION", "PRODID", "REV", "UID", "X-ABLABEL", "KIND", "X-ABUID", "X-ABDATE"].includes(name) && !name.startsWith("X-")) extras++;
       }
       c.name = fn || [given, family].filter(Boolean).join(" ").trim() || c.company || c.email || c.phone || c.mobile;
       if (!c.name) {
@@ -5417,43 +5564,72 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     let empty2 = 0;
     const multi = (v) => String(v || "").split(/\s*:::\s*/).map((x) => x.trim()).filter(Boolean);
     for (const r of rows.slice(1)) {
-      const c = { name: "", company: "", jobtitle: "", phone: "", mobile: "", email: "", address: "", url: "", birthday: "", notes: "", relation: "" }, other = [];
+      const c = blank(), other = [];
       const full = [at(r, "First Name", "Given Name"), at(r, "Middle Name", "Additional Name"), at(r, "Last Name", "Family Name")].filter(Boolean).join(" ");
       c.name = clean(full || at(r, "Name", "Display Name", "File As") || at(r, "Company", "Organization Name", "Organization 1 - Name"), 200);
+      c.nickname = clean(at(r, "Nickname"), 100);
       c.company = clean(at(r, "Company", "Organization Name", "Organization 1 - Name"), 200);
       c.jobtitle = clean(at(r, "Job Title", "Organization Title", "Organization 1 - Title"), 200);
+      c.department = clean(at(r, "Department", "Organization Department", "Organization 1 - Department"), 200);
       const emails = [];
       for (let n = 1; n <= 4; n++) emails.push(...multi(at(r, `E-mail ${n} - Value`, `Email ${n} - Value`)));
-      emails.push(...[at(r, "E-mail Address", "Email Address", "Email", "E-mail"), at(r, "E-mail 2 Address"), at(r, "E-mail 3 Address")].filter(Boolean));
-      [...new Set(emails)].forEach((e, i) => {
+      for (const [addr, disp] of [["E-mail Address", "E-mail Display Name"], ["E-mail 2 Address", "E-mail 2 Display Name"], ["E-mail 3 Address", "E-mail 3 Display Name"]]) {
+        const v = at(r, addr, addr.replace("E-mail", "Email"));
+        if (!v) continue;
+        if (isEmail(v)) {
+          emails.push(v);
+          continue;
+        }
+        const real = emailIn(at(r, disp, disp.replace("E-mail", "Email"))) || emailIn(v);
+        if (real) emails.push(real);
+        if (isExchangeDN(v) || !real) other.push("Exchange / other address: " + v);
+      }
+      const plain = at(r, "Email", "E-mail");
+      if (plain) emails.push(plain);
+      [...new Set(emails.map((e) => e.trim()).filter((e) => isEmail(e)))].forEach((e, i) => {
         if (i === 0) c.email = clean(e, 200);
+        else if (i === 1) c.email2 = clean(e, 200);
         else other.push("Other email: " + e);
       });
       const phones = [];
       for (let n = 1; n <= 5; n++) {
         const lab = at(r, `Phone ${n} - Label`, `Phone ${n} - Type`);
-        for (const v of multi(at(r, `Phone ${n} - Value`))) phones.push([v, /mobile|cell|iphone/i.test(lab)]);
+        for (const v of multi(at(r, `Phone ${n} - Value`))) phones.push([v, /mobile|cell|iphone/i.test(lab) ? "mobile" : /home/i.test(lab) ? "homephone" : "phone"]);
       }
-      for (const [h2, mob] of [["Mobile Phone", true], ["Primary Phone", false], ["Business Phone", false], ["Home Phone", false], ["Business Phone 2", false], ["Home Phone 2", false], ["Phone", false], ["Mobile", true]]) {
-        const v = at(r, h2);
-        if (v) phones.push([v, mob]);
+      for (const [hd, slot] of [["Mobile Phone", "mobile"], ["Business Phone", "phone"], ["Home Phone", "homephone"], ["Primary Phone", "phone"], ["Business Phone 2", "phone"], ["Home Phone 2", "homephone"], ["Company Main Phone", "phone"], ["Other Phone", "phone"], ["Phone", "phone"], ["Mobile", "mobile"]]) {
+        const v = at(r, hd);
+        if (v) phones.push([v, slot]);
       }
-      for (const [v, mob] of phones) {
-        if (mob && !c.mobile) c.mobile = clean(v, 60);
-        else if (!mob && !c.phone) c.phone = clean(v, 60);
-        else if (v !== c.phone && v !== c.mobile) other.push("Other phone: " + v);
+      for (const [v, slot] of phones) {
+        const val = clean(v, 60);
+        if ([c.phone, c.mobile, c.homephone].includes(val)) continue;
+        if (!c[slot]) c[slot] = val;
+        else if (slot === "phone" && !c.homephone) c.homephone = val;
+        else other.push("Other phone: " + v);
       }
-      const addrs = [at(r, "Address 1 - Formatted"), at(r, "Home Address"), [at(r, "Home Street"), [at(r, "Home City"), at(r, "Home State")].filter(Boolean).join(", ") + " " + at(r, "Home Postal Code"), at(r, "Home Country/Region")].map((x) => x.trim()).filter(Boolean).join("\n"), at(r, "Business Address"), [at(r, "Business Street"), [at(r, "Business City"), at(r, "Business State")].filter(Boolean).join(", ") + " " + at(r, "Business Postal Code"), at(r, "Business Country/Region")].map((x) => x.trim()).filter(Boolean).join("\n")].filter((a) => a && a.trim());
-      addrs.forEach((a, i) => {
-        if (i === 0) c.address = clean(a, 600);
-        else other.push("Other address: " + a.replace(/\n/g, ", "));
-      });
-      c.url = clean(at(r, "Website 1 - Value", "Web Page", "Website", "URL"), 300);
+      const block = (pre) => [at(r, pre + " Street"), [[at(r, pre + " City"), at(r, pre + " State")].filter(Boolean).join(", "), at(r, pre + " Postal Code")].filter(Boolean).join(" "), at(r, pre + " Country/Region", pre + " Country")].filter(Boolean).join("\n");
+      const gAddr = [];
+      for (let n = 1; n <= 3; n++) {
+        const v = at(r, `Address ${n} - Formatted`);
+        if (v) gAddr.push([v, at(r, `Address ${n} - Label`, `Address ${n} - Type`)]);
+      }
+      const home = at(r, "Home Address") || block("Home"), work = at(r, "Business Address") || block("Business"), oth = block("Other");
+      for (const [v, lab] of gAddr) {
+        if (/work|business/i.test(lab) && !c.workaddress) c.workaddress = clean(v, 600);
+        else if (!c.address) c.address = clean(v, 600);
+        else other.push("Other address: " + v.replace(/\n/g, ", "));
+      }
+      if (home && !c.address) c.address = clean(home, 600);
+      if (work && !c.workaddress) c.workaddress = clean(work, 600);
+      if (oth) other.push("Other address: " + oth.replace(/\n/g, ", "));
+      c.url = clean(at(r, "Website 1 - Value", "Web Page", "Website", "URL", "Personal Web Page"), 300);
       c.birthday = normDate(at(r, "Birthday", "Birthday 1 - Value"));
+      c.anniversary = normDate(at(r, "Anniversary"));
+      for (let n = 1; n <= 3; n++) if (!c.anniversary && /anniversary/i.test(at(r, `Event ${n} - Label`, `Event ${n} - Type`))) c.anniversary = normDate(at(r, `Event ${n} - Value`));
       c.notes = clean(at(r, "Notes", "Note"), 4e3);
       const labels = at(r, "Labels", "Categories", "Group Membership");
       if (labels) other.push("Group: " + labels.replace(/\s*:::\s*/g, ", "));
-      if (!c.name) c.name = c.email || c.phone || c.mobile;
+      if (!c.name) c.name = c.email || c.phone || c.mobile || c.homephone;
       if (!c.name) {
         empty2++;
         continue;
@@ -5469,18 +5645,22 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     if (r.contacts.length > MAX_CONTACTS) throw new Error(`That file has ${r.contacts.length} contacts. The limit is ${MAX_CONTACTS} per import: split the file and import it in parts.`);
     return r;
   }
-  var toItemData = (c) => ({ type: "contact", name: c.name, notes: c.notes || "", fields: Object.fromEntries(Object.entries({ company: c.company, jobtitle: c.jobtitle, phone: c.phone, mobile: c.mobile, email: c.email, url: c.url, birthday: c.birthday, address: c.address, relation: c.relation }).filter(([, v]) => v)) });
+  var KEYS = ["nickname", "company", "department", "jobtitle", "mobile", "phone", "homephone", "email", "email2", "relation", "birthday", "anniversary", "url", "address", "workaddress"];
+  var toItemData = (c) => ({ type: "contact", name: c.name, notes: c.notes || "", fields: Object.fromEntries(KEYS.map((k) => [k, c[k]]).filter(([, v]) => v)) });
   var fromItem = (it) => {
-    const f = it.fields || {};
-    return { name: it.name || "", company: f.company || "", jobtitle: f.jobtitle || "", phone: f.phone || "", mobile: f.mobile || "", email: f.email || "", url: f.url || "", birthday: f.birthday || "", address: f.address || "", relation: f.relation || "", notes: [it.description, it.notes].filter(Boolean).join("\n") };
+    const f = it.fields || {}, c = blank();
+    for (const k of KEYS) c[k] = f[k] || "";
+    c.name = it.name || "";
+    c.notes = [it.description, it.notes].filter(Boolean).join("\n");
+    return c;
   };
   function isDuplicate(c, existing) {
-    const e = (c.email || "").toLowerCase(), ph = [digits(c.phone), digits(c.mobile)].filter((d) => d.length >= 7), n = (c.name || "").toLowerCase();
+    const e = [c.email, c.email2].filter(isEmail).map((x) => x.toLowerCase()), ph = [digits(c.phone), digits(c.mobile), digits(c.homephone)].filter((d) => d.length >= 7), n = (c.name || "").toLowerCase();
     return existing.some((x) => {
-      const xe = (x.email || "").toLowerCase(), xp = [digits(x.phone), digits(x.mobile)].filter((d) => d.length >= 7);
-      if (e && xe && e === xe) return true;
+      const xe = [x.email, x.email2].filter(isEmail).map((y) => y.toLowerCase()), xp = [digits(x.phone), digits(x.mobile), digits(x.homephone)].filter((d) => d.length >= 7);
+      if (e.some((v) => xe.includes(v))) return true;
       if (ph.some((p) => xp.includes(p))) return true;
-      return !e && !ph.length && !xe && !xp.length && n && n === (x.name || "").toLowerCase();
+      return !e.length && !ph.length && !xe.length && !xp.length && n && n === (x.name || "").toLowerCase();
     });
   }
   var esc2 = (s) => String(s || "").replace(/\\/g, "\\\\").replace(/\r?\n/g, "\\n").replace(/,/g, "\\,").replace(/;/g, ";");
@@ -5507,16 +5687,22 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   function toVCard(list) {
     return list.map((c) => {
       const [family, given] = splitName(c.name), L = ["BEGIN:VCARD", "VERSION:3.0", `N:${esc2(family)};${esc2(given)};;;`, `FN:${esc2(c.name)}`];
-      if (c.company) L.push("ORG:" + esc2(c.company));
+      if (c.nickname) L.push("NICKNAME:" + esc2(c.nickname));
+      if (c.company || c.department) L.push("ORG:" + esc2(c.company || "") + (c.department ? ";" + esc2(c.department) : ""));
       if (c.jobtitle) L.push("TITLE:" + esc2(c.jobtitle));
-      if (c.phone) L.push("TEL;TYPE=VOICE:" + esc2(c.phone));
       if (c.mobile) L.push("TEL;TYPE=CELL:" + esc2(c.mobile));
+      if (c.phone) L.push("TEL;TYPE=WORK,VOICE:" + esc2(c.phone));
+      if (c.homephone) L.push("TEL;TYPE=HOME,VOICE:" + esc2(c.homephone));
       if (c.email) L.push("EMAIL;TYPE=INTERNET:" + esc2(c.email));
+      if (c.email2) L.push("EMAIL;TYPE=INTERNET:" + esc2(c.email2));
       if (c.address) L.push("ADR;TYPE=HOME:;;" + esc2(c.address) + ";;;;");
+      if (c.workaddress) L.push("ADR;TYPE=WORK:;;" + esc2(c.workaddress) + ";;;;");
       if (c.url) L.push("URL:" + esc2(c.url));
       if (c.birthday) L.push("BDAY:" + c.birthday);
+      if (c.anniversary) L.push("X-ANNIVERSARY:" + c.anniversary);
       if (c.relation) L.push("CATEGORIES:" + esc2(c.relation));
       if (c.notes) L.push("NOTE:" + esc2(c.notes));
+      if (c.photo && c.photo.b64) L.push(`PHOTO;ENCODING=b;TYPE=${/png/i.test(c.photo.type) ? "PNG" : /gif/i.test(c.photo.type) ? "GIF" : "JPEG"}:` + c.photo.b64);
       L.push("END:VCARD");
       return L.map(fold).join("\r\n");
     }).join("\r\n") + "\r\n";
@@ -5528,32 +5714,51 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   };
   var csv = (head, rows) => "\uFEFF" + [head, ...rows].map((r) => r.map(cell).join(",")).join("\r\n") + "\r\n";
   function toGoogleCSV(list) {
-    const head = ["First Name", "Middle Name", "Last Name", "Organization Name", "Organization Title", "E-mail 1 - Label", "E-mail 1 - Value", "Phone 1 - Label", "Phone 1 - Value", "Phone 2 - Label", "Phone 2 - Value", "Address 1 - Formatted", "Birthday", "Website 1 - Value", "Notes", "Labels"];
+    const head = ["First Name", "Middle Name", "Last Name", "Nickname", "Organization Name", "Organization Title", "Organization Department", "E-mail 1 - Label", "E-mail 1 - Value", "E-mail 2 - Label", "E-mail 2 - Value", "Phone 1 - Label", "Phone 1 - Value", "Phone 2 - Label", "Phone 2 - Value", "Phone 3 - Label", "Phone 3 - Value", "Address 1 - Label", "Address 1 - Formatted", "Address 2 - Label", "Address 2 - Formatted", "Birthday", "Event 1 - Label", "Event 1 - Value", "Website 1 - Value", "Notes", "Labels"];
     return csv(head, list.map((c) => {
       const [family, given] = splitName(c.name);
-      return [given, "", family, c.company, c.jobtitle, c.email ? "* " : "", c.email, c.mobile ? "Mobile" : "", c.mobile, c.phone ? "Work" : "", c.phone, c.address, c.birthday, c.url, c.notes, c.relation];
+      return [given, "", family, c.nickname, c.company, c.jobtitle, c.department, c.email ? "* " : "", c.email, c.email2 ? "Other" : "", c.email2, c.mobile ? "Mobile" : "", c.mobile, c.phone ? "Work" : "", c.phone, c.homephone ? "Home" : "", c.homephone, c.address ? "Home" : "", c.address, c.workaddress ? "Work" : "", c.workaddress, c.birthday, c.anniversary ? "Anniversary" : "", c.anniversary, c.url, c.notes, c.relation];
     }));
   }
   function toOutlookCSV(list) {
-    const head = ["First Name", "Middle Name", "Last Name", "Company", "Job Title", "Business Phone", "Mobile Phone", "E-mail Address", "Home Street", "Birthday", "Web Page", "Notes", "Categories"];
+    const head = ["First Name", "Middle Name", "Last Name", "Nickname", "Company", "Department", "Job Title", "Business Phone", "Home Phone", "Mobile Phone", "E-mail Address", "E-mail 2 Address", "Home Street", "Business Street", "Birthday", "Anniversary", "Web Page", "Notes", "Categories"];
     return csv(head, list.map((c) => {
       const [family, given] = splitName(c.name);
-      return [given, "", family, c.company, c.jobtitle, c.phone, c.mobile, c.email, c.address, c.birthday, c.url, c.notes, c.relation];
+      return [given, "", family, c.nickname, c.company, c.department, c.jobtitle, c.phone, c.homephone, c.mobile, c.email, c.email2, c.address, c.workaddress, c.birthday, c.anniversary, c.url, c.notes, c.relation];
     }));
+  }
+  function repairExchange(it) {
+    const f = { ...it.fields || {} };
+    let notes = it.notes || "", changed = false;
+    for (const k of ["email", "email2"]) if (f[k] && !isEmail(f[k])) {
+      const real = emailIn(f[k]);
+      notes = [notes, "Exchange / other address: " + f[k]].filter(Boolean).join("\n");
+      if (real) f[k] = real;
+      else delete f[k];
+      changed = true;
+    }
+    if (!f.email && f.email2) {
+      f.email = f.email2;
+      delete f.email2;
+    }
+    return changed ? { fields: f, notes } : null;
   }
 
   // js/contacts-ui.js
   var CAN = [
-    "Import contacts from a vCard file (.vcf). Outlook, Google Contacts, iCloud / Apple Contacts, Android and most phones export this.",
+    "Import contacts from a vCard file (.vcf), including their photos. Outlook, Google Contacts, iCloud / Apple Contacts, Android and most phones export this.",
+    "Keep a photo, nickname, company, department, job title, mobile, work and home phone, two emails, home and work address, birthday, anniversary, website and notes for each contact.",
     "Import Google Contacts CSV and Outlook CSV files.",
     "Show a preview first, and skip people you already have.",
-    "Export all your contacts, or just one, as .vcf (works in all of the above), Google CSV or Outlook CSV.",
+    "Export all your contacts, or just one, as .vcf with photos (works in all of the above), Google CSV or Outlook CSV.",
+    "Recognise the internal Exchange address Outlook puts in place of an email (\u201C/o=ExchangeLabs/\u2026\u201D) and use the real email instead, or keep the internal one in Notes.",
     "Work completely offline: files are read on this device and never uploaded anywhere."
   ];
   var CANNOT = [
     "No live sync and no sign-in with Outlook, Google or iCloud. You move files by hand (export from one, import into the other).",
-    "Photos, groups / labels and custom fields are not imported. The preview counts what is left out.",
-    "Only one phone, one mobile, one email and one address are kept per contact. Extra ones are added to Notes so nothing is lost.",
+    "CSV files (Google, Outlook) never contain photos: only a .vcf file carries them. Photos given only as a web link are not downloaded.",
+    "Groups / labels and custom fields are not imported as fields (groups go into Notes). The preview counts what is left out.",
+    "Only three phones (mobile, work, home), two emails and two addresses (home, work) are kept per contact. Extra ones are added to Notes so nothing is lost.",
     "Exported files are NOT encrypted: anyone who finds them can read them. Delete them after use.",
     "Importing never changes or deletes contacts you already have.",
     "Contacts locked with a passcode are not included in exports."
@@ -5580,11 +5785,12 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     const have = existingOf(ctx2), dup = contacts.map((c) => isDuplicate(c, have)), dupCount = dup.filter(Boolean).length;
     const withDup = h("input", { type: "checkbox", id: "cdup" });
     const rows = contacts.slice(0, 8).map((c, i) => h("tr", null, h("td", { text: c.name }), h("td", { text: c.email || c.mobile || c.phone || "" }), h("td", { text: dup[i] ? "already here" : "" })));
-    const leftLines = [left.photos ? `${left.photos} photo${left.photos === 1 ? "" : "s"}` : "", left.extras ? `${left.extras} other detail${left.extras === 1 ? "" : "s"} (custom fields, labels\u2026)` : "", left.empty ? `${left.empty} entr${left.empty === 1 ? "y" : "ies"} with no name, email or phone` : ""].filter(Boolean);
+    const withPhoto2 = contacts.filter((c) => c.photo).length;
+    const leftLines = [left.photos ? `${left.photos} photo${left.photos === 1 ? "" : "s"} that are only web links or too large` : "", left.extras ? `${left.extras} other detail${left.extras === 1 ? "" : "s"} (custom fields, labels\u2026)` : "", left.empty ? `${left.empty} entr${left.empty === 1 ? "y" : "ies"} with no name, email or phone` : ""].filter(Boolean);
     const body = h(
       "div",
       null,
-      h("p", { class: "note ok", role: "status", text: `Found ${contacts.length} contact${contacts.length === 1 ? "" : "s"} in this ${format} file. ${dupCount} look like people you already have.` }),
+      h("p", { class: "note ok", role: "status", text: `Found ${contacts.length} contact${contacts.length === 1 ? "" : "s"} in this ${format} file${withPhoto2 ? `, ${withPhoto2} with a photo` : ""}. ${dupCount} look like people you already have.` }),
       h("table", { class: "ctable" }, h("thead", null, h("tr", null, h("th", { text: "Name" }), h("th", { text: "Email / phone" }), h("th"))), h("tbody", null, rows)),
       contacts.length > 8 ? h("p", { class: "hint", text: `\u2026and ${contacts.length - 8} more.` }) : null,
       dupCount ? h("label", { class: "chk", for: "cdup" }, withDup, `Import the ${dupCount} I already have as well (creates copies)`) : null,
@@ -5596,18 +5802,51 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
         toast("Nothing new to import.");
         return;
       }
-      const items = pick.map((c) => sanitiseItem(toItemData(c)));
+      const items = pick.map((c, i) => {
+        const d = toItemData(c);
+        if (c.photo) d.fields.photo = "pending:" + i;
+        return sanitiseItem(d);
+      });
       const r = ctx2.store.mergeItems(items, {});
       await r.save;
+      let photos = 0;
+      for (const it of ctx2.store.active().filter((x) => x.type === "contact" && /^pending:\d+$/.test((x.fields || {}).photo || ""))) {
+        const c = pick[+it.fields.photo.slice(8)], fields = { ...it.fields };
+        delete fields.photo;
+        try {
+          if (c && c.photo) {
+            const att = await ctx2.store.addAttachment(it.id, { name: "contact-photo." + (/png/i.test(c.photo.type) ? "png" : "jpg"), type: c.photo.type, bytes: b64.dec(c.photo.b64) });
+            fields.photo = att.id;
+            photos++;
+          }
+        } catch {
+        }
+        await ctx2.store.update(it.id, { fields });
+      }
       ctx2.store.log("import", `Imported ${r.added} contact${r.added === 1 ? "" : "s"} from a ${format} file`);
       await ctx2.store.save().catch(() => {
       });
-      toast(`Imported ${r.added} contact${r.added === 1 ? "" : "s"}` + (r.skipped ? `, skipped ${r.skipped} identical` : ""));
+      toast(`Imported ${r.added} contact${r.added === 1 ? "" : "s"}` + (photos ? ` with ${photos} photo${photos === 1 ? "" : "s"}` : "") + (r.skipped ? `, skipped ${r.skipped} identical` : ""));
       ctx2.refresh();
     } }] });
   }
+  async function withPhotos(ctx2, items) {
+    const out = [];
+    for (const it of items) {
+      const c = fromItem(it), id = (it.fields || {}).photo;
+      if (id && (it.attachments || []).some((a) => a.id === id)) {
+        try {
+          const { meta, bytes: bytes2 } = await ctx2.store.readAttachment(it.id, id);
+          c.photo = { type: meta.type, b64: b64.enc(bytes2) };
+        } catch {
+        }
+      }
+      out.push(c);
+    }
+    return out;
+  }
   async function exportAll(ctx2, kind) {
-    const list = contactsOf(ctx2).map(fromItem);
+    const list = kind === "vcf" ? await withPhotos(ctx2, contactsOf(ctx2)) : contactsOf(ctx2).map(fromItem);
     if (!list.length) {
       toast("There are no contacts to export yet.");
       return;
@@ -5621,12 +5860,24 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     ctx2.store.save().catch(() => {
     });
   }
-  function exportContactVcf(ctx2, it) {
-    download(`${(it.name || "contact").replace(/[^\w.-]+/g, "_").slice(0, 40)}-${stamp()}.vcf`, toVCard([fromItem(it)]), "text/vcard");
+  async function exportContactVcf(ctx2, it) {
+    download(`${(it.name || "contact").replace(/[^\w.-]+/g, "_").slice(0, 40)}-${stamp()}.vcf`, toVCard(await withPhotos(ctx2, [it])), "text/vcard");
     toast("Saved as .vcf. The file is not encrypted: delete it after use.", "info", 5e3);
   }
+  async function repairAll(ctx2) {
+    let n = 0;
+    for (const it of ctx2.store.active().filter((x) => x.type === "contact" && !x.lock)) {
+      const fix = repairExchange(it);
+      if (fix) {
+        await ctx2.store.update(it.id, fix);
+        n++;
+      }
+    }
+    toast(n ? `Fixed ${n} contact${n === 1 ? "" : "s"}: the internal Exchange address was moved to Notes.` : "Nothing to fix.");
+    ctx2.refresh();
+  }
   function contactsPanel(ctx2) {
-    const n = contactsOf(ctx2).length;
+    const n = contactsOf(ctx2).length, broken = ctx2.store.active().filter((x) => x.type === "contact" && !x.lock && repairExchange(x)).length;
     const ul = (items, cls) => h("ul", { class: "cio-list " + cls }, items.map((t) => h("li", { text: t })));
     const file = h("input", { type: "file", accept: ".vcf,.csv,.txt,text/vcard,text/csv", class: "offscreen", "aria-label": "Contacts file", on: { change: async (e) => {
       const f = e.target.files && e.target.files[0];
@@ -5652,7 +5903,8 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
         h("button", { class: "btn", on: { click: () => exportAll(ctx2, "google") } }, "Google CSV"),
         h("button", { class: "btn", on: { click: () => exportAll(ctx2, "outlook") } }, "Outlook CSV"),
         h("span", { class: "hint", text: `${n} contact${n === 1 ? "" : "s"} in this vault` })
-      )
+      ),
+      broken ? h("div", { class: "note warn", role: "status" }, `${broken} contact${broken === 1 ? " has" : "s have"} an internal Exchange address (\u201C/o=ExchangeLabs/\u2026\u201D) where the email should be. `, h("button", { class: "btn sm", on: { click: () => repairAll(ctx2) } }, "Fix them")) : null
     );
   }
 
@@ -6203,6 +6455,29 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
 
   // js/views.js
   var TYPE_ICON = Object.fromEntries(Object.entries(TYPE_META).map(([k, m]) => [k, m.icon]));
+  var photoCache = /* @__PURE__ */ new Map();
+  function clearPhotoCache() {
+    for (const u of photoCache.values()) Promise.resolve(u).then((x) => {
+      if (x) URL.revokeObjectURL(x);
+    });
+    photoCache.clear();
+  }
+  function photoUrl(ctx2, it) {
+    const id = (it.fields || {}).photo;
+    if (!id || it.lock || !(it.attachments || []).some((a) => a.id === id)) return Promise.resolve("");
+    if (!photoCache.has(id)) photoCache.set(id, ctx2.store.readAttachment(it.id, id).then(({ meta, bytes: bytes2 }) => URL.createObjectURL(new Blob([bytes2], { type: meta.type || "image/jpeg" }))).catch(() => ""));
+    return photoCache.get(id);
+  }
+  function withPhoto(ctx2, it, el) {
+    if ((it.fields || {}).photo) photoUrl(ctx2, it).then((u) => {
+      if (u) {
+        el.style.setProperty("--photo", `url("${u}")`);
+        el.classList.add("has-photo");
+        el.textContent = "";
+      }
+    });
+    return el;
+  }
   function avatar(name, type) {
     const n = (name || "?").trim() || "?";
     let hash2 = 0;
@@ -6399,14 +6674,14 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     return h("div", { class: "empty" }, h("p", { text: "No items here yet." }));
   }
   function itemRow(ctx2, it) {
-    const sub = it.type === "login" ? it.username || hostOf(it.url) : it.type === "card" ? "\u2022\u2022\u2022\u2022 " + (it.card.number || "").replace(/\D/g, "").slice(-4) : TEMPLATES[it.type] ? (it.fields || {})[TEMPLATES[it.type].sub] || (it.description || it.notes || "").split("\n")[0].slice(0, 60) : (it.description || it.notes || "").split("\n")[0].slice(0, 60);
+    const sub = it.type === "login" ? it.username || hostOf(it.url) : it.type === "card" ? "\u2022\u2022\u2022\u2022 " + (it.card.number || "").replace(/\D/g, "").slice(-4) : TEMPLATES[it.type] ? (it.fields || {})[TEMPLATES[it.type].sub] || (it.type === "contact" ? (it.fields || {}).phone || (it.fields || {}).email : "") || (it.description || it.notes || "").split("\n")[0].slice(0, 60) : (it.description || it.notes || "").split("\n")[0].slice(0, 60);
     return h(
       "button",
       { class: "item" + (ctx2.S.sel === it.id ? " on" : ""), role: "option", "aria-selected": String(ctx2.S.sel === it.id), on: { click: () => {
         ctx2.S.sel = it.id;
         ctx2.refresh();
       } } },
-      avatar(it.name, it.type),
+      withPhoto(ctx2, it, avatar(it.name, it.type)),
       h("div", { class: "t" }, h("b", { text: it.name || "(untitled)" }), h("small", { text: it.lock ? "\u{1F512} Locked \u2014 passcode required" : sub })),
       (it.attachments || []).length ? h("span", { class: "clip", text: "{{clip}}", title: it.attachments.length + " attachment(s)" }) : null,
       it.favorite ? h("span", { class: "star", text: "{{star}}", "aria-label": "Favorite" }) : null,
@@ -6481,7 +6756,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     if (it.type === "note") rows.push(field("Created", fmtDateTime(it.created), { ctx: ctx2 }), field("Last modified", fmtDateTime(it.updated), { ctx: ctx2 }));
     for (const c of it.custom || []) rows.push(field(c.label || "Custom field", c.value, { secret: c.secret, copy: true, ctx: ctx2, pre: true }));
     if ((it.tags || []).length) rows.push(h("div", { class: "f" }, h("div", { class: "k", text: "Tags" }), h("div", { class: "v" }, h("div", { class: "tags" }, it.tags.map((t) => h("span", { class: "chip", text: "#" + t }))))));
-    return h("div", { class: "itemcard" }, h("div", { class: "detail-head" }, avatar(it.name, it.type), h("div", null, h("h2", { text: it.name || "(untitled)" }), h("span", { class: "chip" }, h("span", { class: "icn", text: TYPE_ICON[it.type] || "" }), " " + (TYPES[it.type] || it.type)))), h("div", { class: "fields" }, rows));
+    return h("div", { class: "itemcard" }, h("div", { class: "detail-head" }, withPhoto(ctx2, it, avatar(it.name, it.type)), h("div", null, h("h2", { text: it.name || "(untitled)" }), h("span", { class: "chip" }, h("span", { class: "icn", text: TYPE_ICON[it.type] || "" }), " " + (TYPES[it.type] || it.type)))), h("div", { class: "fields" }, rows));
   }
   function describeContents(it) {
     const t = TEMPLATES[it.type], filled = t ? t.fields.filter((f) => (it.fields || {})[f.k]) : [];
@@ -6635,7 +6910,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       ));
     }
     rows.push(h("div", { class: "f" }, h("div", { class: "k", text: "Updated" }), h("div", { class: "v hint", text: `${fmtDate(it.updated)} \xB7 created ${fmtDate(it.created)}${it.type === "login" && it.password ? " \xB7 password changed " + fmtDate(it.pwChanged) : ""}` })));
-    const out = h("div", null, navbar, h("div", { class: "detail-head" }, avatar(it.name, it.type), h("div", null, h("h2", { text: it.name || "(untitled)" }), h("span", { class: "chip" }, h("span", { class: "icn", text: TYPE_ICON[it.type] }), " " + TYPES[it.type]))), actions, h("div", { class: "fgroup" }, rows));
+    const out = h("div", null, navbar, h("div", { class: "detail-head" }, withPhoto(ctx2, it, avatar(it.name, it.type)), h("div", null, h("h2", { text: it.name || "(untitled)" }), h("span", { class: "chip" }, h("span", { class: "icn", text: TYPE_ICON[it.type] }), " " + TYPES[it.type]))), actions, h("div", { class: "fgroup" }, rows));
     currentItem = null;
     return out;
   }
@@ -6694,7 +6969,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   }
   function templateRow(ctx2, it, f) {
     const value = (it.fields || {})[f.k];
-    if (!value) return null;
+    if (!value || f.kind === "photo") return null;
     if (isFieldLocked(value)) {
       const plain = fieldValue(value);
       if (plain === null) return lockedFieldRow(ctx2, it, f.l, value);
@@ -6826,7 +7101,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     });
     if (pws.length && ctx2.store.settings.logReveal) ctx2.store.log("access", "Viewed previous passwords of \u201C" + it.name + "\u201D");
   }
-  function editItem(ctx2, item, type = "login") {
+  function editItem(ctx2, item, type = "login", { fromPicker = false } = {}) {
     const { store: store2 } = ctx2;
     if (item && item.lock && !store2.isOpen(item)) {
       unlockItemDialog(ctx2, item);
@@ -6867,6 +7142,22 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     }, ph: "work, finance" });
     if (isNote) body.push(contentField, datesHint, tagsField);
     if (it.type === "login") {
+      const siteSel = h("select", { id: "f_site", class: "sel", "aria-label": "Popular site", on: { change: () => {
+        const hit = POPULAR_SITES.find(([n]) => n === siteSel.value);
+        if (!hit) return;
+        it.url = hit[1];
+        const u = document.getElementById("f_url");
+        if (u) u.value = hit[1];
+        const t = document.getElementById("f_name");
+        if (t && !t.value.trim()) {
+          t.value = hit[0];
+          it.name = hit[0];
+          t.dispatchEvent(new Event("input"));
+        }
+      } } }, h("option", { value: "", text: "\u2014 choose a popular site (fills the website) \u2014" }), POPULAR_SITES.map(([n, u]) => h("option", { value: n, text: `${n}  (${u.replace(/^https?:\/\//, "")})` })));
+      const known = POPULAR_SITES.find(([, u]) => u === it.url);
+      if (known) siteSel.value = known[0];
+      body.push(h("div", { class: "field" }, h("label", { for: "f_site", text: "Popular site (optional)" }), siteSel, h("p", { class: "hint", text: "Pick a well-known service to fill in its sign-in address, or type any address in Website below." })));
       body.push(h("div", { class: "grid2" }, inp("username", "Username / email"), inp("url", "Website", { ph: "https://" })));
       const pf = pwField(it.password, { ctx: ctx2, onInput: (v) => {
         it.password = v;
@@ -7073,6 +7364,9 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
         err.textContent = e.message;
         return false;
       }
+      const photoChange = it.__photo;
+      delete it.__photo;
+      const oldPhoto = (it.fields || {}).photo;
       for (const k of Object.keys(it.fields || {})) if (!it.fields[k]) delete it.fields[k];
       if (isNew) {
         it.created = it.updated = it.pwChanged = Date.now();
@@ -7088,6 +7382,13 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       try {
         for (const id of removed) await store2.removeAttachment(it.id, id);
         for (const a of staged) await store2.addAttachment(it.id, a);
+        if (photoChange) {
+          if (oldPhoto && (store2.get(it.id).attachments || []).some((a) => a.id === oldPhoto)) await store2.removeAttachment(it.id, oldPhoto);
+          const fields = { ...store2.get(it.id).fields || {} };
+          delete fields.photo;
+          if (photoChange !== "remove") fields.photo = (await store2.addAttachment(it.id, photoChange)).id;
+          await store2.update(it.id, { fields });
+        }
       } catch (e) {
         toast(e.message, "err", 7e3);
       }
@@ -7101,9 +7402,10 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       ctx2.showItem(it.id);
       toast(isNew ? "Saved to your vault" : "Changes saved");
     };
-    modal({ title: (isNew ? "New " : "Edit ") + TYPES[it.type].toLowerCase(), body: h("div", null, body), actions: [{ label: "Cancel" }, { label: "Save", kind: "primary", onClick: save }], wide: false });
+    modal({ title: (isNew ? "New " : "Edit ") + TYPES[it.type].toLowerCase(), body: h("div", null, body), actions: [fromPicker ? { label: "Cancel", onClick: () => newItemMenu(ctx2, { start: it.type }) } : { label: "Cancel" }, { label: "Save", kind: "primary", onClick: save }], wide: false });
   }
   function tplInput(ctx2, it, f, locks = []) {
+    if (f.kind === "photo") return photoInput(ctx2, it, f);
     if (f.lockable) {
       const c = lockableField(ctx2, it, f);
       locks.push(c);
@@ -7144,6 +7446,65 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     } else control = h("input", { id, class: "inp" + (f.mono ? " mono" : ""), type: f.kind === "date" ? "date" : f.kind === "stamp" ? "datetime-local" : "text", value: val, autocomplete: "off", spellcheck: "false", placeholder: f.kind === "url" ? "https://" : null, on: { input: (e) => set(e.target.value) } });
     return h("div", { class: "field" + (full ? " full" : "") }, h("label", { for: id, text: f.l }), control, f.hint ? h("p", { class: "hint", text: f.hint }) : null);
   }
+  async function shrinkPhoto(file) {
+    if (!/^image\//.test(file.type)) throw new Error("That file is not a picture.");
+    if (file.size > 25 * 1048576) throw new Error("That picture is over 25 MB.");
+    const bmp = await createImageBitmap(file).catch(() => {
+      throw new Error("This picture format cannot be read here (try JPEG or PNG).");
+    });
+    const k = Math.min(1, 512 / Math.max(bmp.width, bmp.height)), c = document.createElement("canvas");
+    c.width = Math.round(bmp.width * k);
+    c.height = Math.round(bmp.height * k);
+    c.getContext("2d").drawImage(bmp, 0, 0, c.width, c.height);
+    if (bmp.close) bmp.close();
+    const blob = await new Promise((res) => c.toBlob(res, "image/jpeg", 0.85));
+    return { name: "contact-photo.jpg", type: "image/jpeg", bytes: new Uint8Array(await blob.arrayBuffer()) };
+  }
+  function photoInput(ctx2, it, f) {
+    const pic = h("div", { class: "avatar photo-prev", "aria-hidden": "true" }), err = h("p", { class: "err", role: "alert" });
+    const show = (url) => {
+      if (url) pic.style.setProperty("--photo", `url("${url}")`);
+      else pic.style.removeProperty("--photo");
+      pic.classList.toggle("has-photo", !!url);
+      rm.hidden = !url;
+    };
+    const take = async (file) => {
+      err.textContent = "";
+      try {
+        const p = await shrinkPhoto(file);
+        it.__photo = p;
+        show(URL.createObjectURL(new Blob([p.bytes], { type: p.type })));
+      } catch (e) {
+        err.textContent = e.message;
+      }
+    };
+    const pickIn = h("input", { type: "file", accept: "image/*", class: "offscreen", "aria-label": "Choose a photo", on: { change: (e) => {
+      const fl = e.target.files && e.target.files[0];
+      e.target.value = "";
+      if (fl) take(fl);
+    } } });
+    const camIn = h("input", { type: "file", accept: "image/*", capture: "user", class: "offscreen", "aria-label": "Take a photo", on: { change: (e) => {
+      const fl = e.target.files && e.target.files[0];
+      e.target.value = "";
+      if (fl) take(fl);
+    } } });
+    const rm = h("button", { type: "button", class: "btn sm", on: { click: () => {
+      it.__photo = "remove";
+      show("");
+    } } }, "{{trash}} Remove photo");
+    show("");
+    if ((it.fields || {}).photo) photoUrl(ctx2, it).then((u) => {
+      if (u && it.__photo === void 0) show(u);
+    });
+    return h(
+      "div",
+      { class: "field full" },
+      h("label", { text: f.l }),
+      h("div", { class: "photo-row" }, pic, h("div", { class: "row wrap" }, h("button", { type: "button", class: "btn sm", on: { click: () => pickIn.click() } }, "{{folder}} Choose a photo\u2026"), h("button", { type: "button", class: "btn sm", on: { click: () => camIn.click() } }, "{{camera}} Take a photo"), rm, pickIn, camIn)),
+      h("p", { class: "hint", text: "Shown as the contact\u2019s picture. It is shrunk to 512 px and stored encrypted, like any attachment." }),
+      err
+    );
+  }
   var CORE_FIELD_LABELS = { login: ["Username / email", "Website", "Password", "One-time code"], note: ["Title", "Content", "Category", "Expiration date", "Access permissions"], card: ["Cardholder", "Card number", "Expiry", "CVV", "PIN"] };
   var PICKER_KEY = "vaultmanager.picker";
   var pickerPref = () => {
@@ -7164,10 +7525,10 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     const p = pickerPref();
     return p === "3d" || p !== "list" && document.documentElement.dataset.fxanim === "on" && !reducedMotion();
   };
-  function newItemMenu(ctx2) {
+  function newItemMenu(ctx2, opts = {}) {
     const pick = (k) => h("button", { class: "btn", on: { click: () => {
       ctx2.closeModals();
-      editItem(ctx2, null, k);
+      editItem(ctx2, null, k, { fromPicker: true });
     } } }, h("span", { class: "icn", text: TYPE_ICON[k] }), " " + TYPES[k]);
     const grid = () => h("div", null, GROUPS.map(([g, keys]) => h("div", { class: "catgroup" }, h("p", { class: "lbl", text: g }), h("div", { class: "checks cats" }, keys.map(pick)))));
     const cards = GROUPS.flatMap(([g, keys]) => keys.map((k) => {
@@ -7194,8 +7555,8 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       if (m === "3d") {
         car = categoryCarousel({ cards, groups: GROUPS, still: reducedMotion(), onPick: (k) => {
           ctx2.closeModals();
-          editItem(ctx2, null, k);
-        } });
+          editItem(ctx2, null, k, { fromPicker: true });
+        }, start: Math.max(0, cards.findIndex((c) => c.key === opts.start)) });
         body.append(toggle(m), car.el);
       } else body.append(toggle(m), grid());
     };
@@ -8695,8 +9056,8 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   var lines = (t) => String(t || "").split(/\n+/).map((x) => x.trim()).filter(Boolean);
   function guideNodes(ctx2) {
     const st = ctx2.store.settings, f = st.family || {}, wallets = ctx2.store.active().filter((i) => i.type === "crypto"), notes = ctx2.store.active().filter((i) => i.type === "note" && ["Family", "Trusted contacts", "Emergency / heirs"].includes((i.fields || {}).access));
-    const blank = h("i", { text: "(not filled in yet)" });
-    const para = (t) => t && t.trim() ? lines(t).map((x) => h("p", { text: x })) : h("p", null, blank);
+    const blank2 = h("i", { text: "(not filled in yet)" });
+    const para = (t) => t && t.trim() ? lines(t).map((x) => h("p", { text: x })) : h("p", null, blank2);
     return [
       h("h1", { text: "Family recovery guide" }),
       h("p", { text: `Prepared ${fmtDate(Date.now())}${st.displayName ? " for " + st.displayName : ""}. This sheet has no passwords or secret words on it.` }),
@@ -8705,9 +9066,9 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       h("h2", { text: "Who to call first" }),
       ...[].concat(para(f.contact)),
       h("h2", { text: "Where things are" }),
-      h("p", null, h("b", { text: "The vault (USB drive or file): " }), f.usb && f.usb.trim() ? f.usb : blank),
-      h("p", null, h("b", { text: "Printed QR codes and paper copies: " }), f.paper && f.paper.trim() ? f.paper : blank),
-      h("p", null, h("b", { text: "Who holds the password shares: " }), f.holders && f.holders.trim() ? f.holders : blank),
+      h("p", null, h("b", { text: "The vault (USB drive or file): " }), f.usb && f.usb.trim() ? f.usb : blank2),
+      h("p", null, h("b", { text: "Printed QR codes and paper copies: " }), f.paper && f.paper.trim() ? f.paper : blank2),
+      h("p", null, h("b", { text: "Who holds the password shares: " }), f.holders && f.holders.trim() ? f.holders : blank2),
       h("p", { text: "The vault\u2019s password is split into pieces held by different people or places. A set number of pieces together reveal it (the pieces say how many); one piece alone is useless. Collect them from the people named above." }),
       h("h2", { text: "Steps" }),
       h(
@@ -12268,7 +12629,11 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     newItem: () => newItemMenu(ctx),
     showItem(id) {
       ctx.S.sel = id;
-      if (!isVaultView(ctx.S.view)) ctx.S.view = "all";
+      const it = store.get(id), v = ctx.S.view;
+      const listed = it && (v === "all" || v === it.type || v === "fav" && it.favorite || v.startsWith("tag:") && (it.tags || []).includes(v.slice(4)));
+      if (!isVaultView(v) || !listed) ctx.S.view = "all";
+      if (it && it.type === "note" && ctx.S.noteCat && (it.fields || {}).category !== ctx.S.noteCat) ctx.S.noteCat = "";
+      if (it && v === "fav" && ctx.S.favName && it.favName !== ctx.S.favName) ctx.S.favName = "";
       syncSearch();
       draw();
     },
@@ -12449,6 +12814,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   });
   function lock(erased, why) {
     closeSystemMenu();
+    clearPhotoCache();
     clearTimeout(idleTimer);
     stopSync();
     clearInterval(clockTimer);

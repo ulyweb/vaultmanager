@@ -11,7 +11,7 @@ import { initTooltips } from './tooltips.js';
 import { available } from './crypto.js';
 import { estimate } from './strength.js';
 import { generateStrongPassphrase } from './generator.js';
-import { renderVaultView, newItemMenu, showRecoveryKit, meter } from './views.js';
+import { renderVaultView, newItemMenu, showRecoveryKit, meter, clearPhotoCache } from './views.js';
 import { renderGenerator, renderHealth, renderQR, renderData } from './tools.js';
 import { renderTaskManager } from './taskman.js';
 import { renderFamily } from './family.js';
@@ -81,7 +81,15 @@ const ctx = {
   exportProfile: () => exportProfileDialog(ctx),
   importProfile: (onDone) => importProfileDialog(ctx, { onDone }),
   look: () => curLook(), setLook, setTheme, newItem: () => newItemMenu(ctx),
-  showItem(id) { ctx.S.sel = id; if (!isVaultView(ctx.S.view)) ctx.S.view = 'all'; syncSearch(); draw(); },
+  showItem(id) {
+    ctx.S.sel = id; const it = store.get(id), v = ctx.S.view;
+    // show it where it really is: a page that would not list it (another category, Favorites for a non-favorite, a tag it lacks, a filtered category) switches to All items
+    const listed = it && (v === 'all' || v === it.type || (v === 'fav' && it.favorite) || (v.startsWith('tag:') && (it.tags || []).includes(v.slice(4))));
+    if (!isVaultView(v) || !listed) ctx.S.view = 'all';
+    if (it && it.type === 'note' && ctx.S.noteCat && (it.fields || {}).category !== ctx.S.noteCat) ctx.S.noteCat = '';
+    if (it && v === 'fav' && ctx.S.favName && it.favName !== ctx.S.favName) ctx.S.favName = '';
+    syncSearch(); draw();
+  },
   showRecoveryKit(key) { return showRecoveryKit(ctx, key); },
   /* copy a secret, honouring the clipboard-clear setting, and note it (never the value) in the audit trail */
   copySecret(text, label, item, what) {
@@ -200,7 +208,7 @@ function armAutolock() {
 document.addEventListener('visibilitychange', () => { if (document.hidden && store.unlocked && store.settings.lockOnHide) lock(false, 'Locked because the tab was hidden'); });
 
 function lock(erased, why) {
-  closeSystemMenu(); clearTimeout(idleTimer); stopSync(); clearInterval(clockTimer); tour.stop();
+  closeSystemMenu(); clearPhotoCache(); clearTimeout(idleTimer); stopSync(); clearInterval(clockTimer); tour.stop();
   if (store.unlocked && !erased) store.log('security', why || 'Vault locked');
   ctx.runCleanup(); closeAllModals();
   clear(document.getElementById('printArea'));

@@ -1,6 +1,6 @@
 /* Application version, data-format versions and changelog (shown in Settings → About). */
 
-export const APP_VERSION = '0.43.0';
+export const APP_VERSION = '0.44.0';
 export const APP_NAME = 'VaultManager';
 export const REPO_URL = 'https://github.com/ulyweb/vaultmanager';
 
@@ -16,6 +16,12 @@ export const FORMATS = [
 ];
 
 export const CHANGELOG = [
+  { v: '0.44.0', date: '2026-11-20', notes: [
+    'Contacts: a Photo (choose or take one; shrunk to 512 px and stored encrypted; shown as the contact’s picture in the list and on the contact), and new fields Nickname, Department, Home phone, Other email, Anniversary and Work address (Phone is now Work phone, Address is now Home address). Imports and exports carry them, and .vcf files import and export photos.',
+    'Fixed Outlook imports from Exchange / Microsoft 365: the internal Exchange address (“/o=ExchangeLabs/…”) is no longer stored as the email. The real address is taken from the display name or another email column, and the internal one is kept in Notes. Contacts already imported that way get a “Fix them” button on the Contacts page.',
+    'New login: pick a popular site (Google, iCloud, Microsoft, Facebook, GitHub, Amazon, Netflix and about 80 more) to fill in its sign-in address; an empty title takes the site’s name.',
+    'Cancel in a new item now goes back to “Choose a category” instead of closing everything. A saved item is shown even when the page you were on would not list it.',
+  ] },
   { v: '0.43.0', date: '2026-11-20', notes: [
     'Secure notes now have structured fields: Title, Content (up to 50,000 characters, with a counter), Category, Tags, Creation date and Last modified (set automatically and shown on the note), Expiration date, Attachments and Access permissions. Category is one of five fixed choices: Homelab and Network Architecture, Crypto and Asset Vault, Project Specs, Personal Identification, Vaultwarden Backups. The Secure notes page has a filter for each category.',
     'Validation: a title is required, the category and access must be one of the listed choices (anything else is dropped on import), and the expiration date must be a real date that is not before the day the note was created. Notes with an expiration date appear in Vault health → Expiring soon.',

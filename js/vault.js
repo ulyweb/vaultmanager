@@ -783,7 +783,7 @@ export function exportCSV(items) {
   const lines = [head.join(',')];
   for (const i of items) {
     const tpl = TEMPLATES[i.type];
-    const extra = [...(tpl ? tpl.fields.map((f) => (i.fields[f.k] ? f.l + ': ' + i.fields[f.k] : '')) : []), ...(i.custom || []).map((c) => c.label + ': ' + c.value)].filter(Boolean);
+    const extra = [...(tpl ? tpl.fields.filter((f) => f.kind !== 'photo').map((f) => (i.fields[f.k] ? f.l + ': ' + i.fields[f.k] : '')) : []), ...(i.custom || []).map((c) => c.label + ': ' + c.value)].filter(Boolean);
     const notes = i.type === 'card' ? [i.notes, 'Card holder: ' + i.card.holder, 'Number: ' + i.card.number, 'Expiry: ' + i.card.expiry, 'CVV: ' + i.card.cvv, ...extra].filter(Boolean).join('\n') : [i.notes, ...extra].filter(Boolean).join('\n');
     lines.push([ (i.tags || [])[0] || '', i.favorite ? 1 : '', i.type === 'note' ? 'note' : 'login', i.name, notes, '', 0, i.url, i.username, i.password, i.totp ].map((v, n) => csvCell(v, n !== 9 && n !== 10)).join(','));
   }
@@ -794,7 +794,7 @@ export function exportCSV(items) {
 export function matches(item, q) {
   if (!q) return true;
   const tpl = TEMPLATES[item.type];
-  const fieldText = tpl ? tpl.fields.filter((f) => !isSecretField(f)).map((f) => (item.fields || {})[f.k] || '') : [];
+  const fieldText = tpl ? tpl.fields.filter((f) => !isSecretField(f) && f.kind !== 'photo').map((f) => (item.fields || {})[f.k] || '') : [];
   const customText = (item.custom || []).filter((c) => !c.secret).map((c) => c.label + ' ' + c.value);
   const hay = [item.name, item.description, item.username, item.url, item.notes, (item.tags || []).join(' '), ...fieldText, ...customText].join('\n').toLowerCase();
   return q.toLowerCase().split(/\s+/).filter(Boolean).every((w) => hay.includes(w));
