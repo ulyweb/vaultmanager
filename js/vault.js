@@ -36,7 +36,7 @@ export const DEFAULT_SETTINGS = {
 
 /* "now" as a local date + time, the value of a datetime-local input: 2026-11-15T23:41 */
 export const stampNow = (d = new Date()) => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
-const autoFields = (type) => Object.fromEntries(((TEMPLATES[type] || {}).fields || []).filter((f) => f.auto).map((f) => [f.k, stampNow()]));
+const autoFields = (type) => Object.fromEntries(((TEMPLATES[type] || {}).fields || []).filter((f) => f.auto || f.def !== undefined).map((f) => [f.k, f.auto ? stampNow() : f.def]));
 
 export function newItem(type = 'login', init = {}) {
   const now = Date.now();
@@ -664,7 +664,7 @@ export function sanitiseItem(r, { keepMeta = false, keepAttachments = false } = 
     tags: Array.isArray(r.tags) ? r.tags.map((t) => s(t, 50)).filter(Boolean).slice(0, 30) : [], favorite: !!r.favorite, favName: s(r.favName, 40).trim(),
     card: { holder: s(c.holder, 200), number: s(c.number, 40), expiry: s(c.expiry, 10), cvv: s(c.cvv, 10), pin: s(c.pin, 20) },
   });
-  if (TEMPLATES[type] && r.fields && typeof r.fields === 'object') for (const f of TEMPLATES[type].fields) { const v = r.fields[f.k]; if (typeof v === 'string' && v) it.fields[f.k] = v.slice(0, f.kind === 'multiline' || isFieldLocked(v) ? 20000 : 1000); }
+  if (TEMPLATES[type] && r.fields && typeof r.fields === 'object') for (const f of TEMPLATES[type].fields) { const v = r.fields[f.k]; if (f.strict && typeof v === 'string' && !f.options.includes(v)) continue; if (typeof v === 'string' && v) it.fields[f.k] = v.slice(0, f.kind === 'multiline' || isFieldLocked(v) ? 20000 : 1000); }
   if (Array.isArray(r.custom)) it.custom = r.custom.filter((c) => c && typeof c === 'object').slice(0, MAX_CUSTOM).map((c) => ({ label: s(c.label, 60), value: s(c.value, 5000), secret: !!c.secret })).filter((c) => c.label || c.value);
   if (typeof r.lock === 'string' && r.lock.length <= 400000 && /^[A-Za-z0-9+/=]+$/.test(r.lock)) { it.lock = r.lock; Object.assign(it, BLANK()); }
   if (Number.isFinite(r.created)) it.created = r.created;

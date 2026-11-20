@@ -15,7 +15,7 @@ const lines = (t) => String(t || '').split(/\n+/).map((x) => x.trim()).filter(Bo
 
 /* the printable guide: no passwords, no seed words — only names, places and steps */
 export function guideNodes(ctx) {
-  const st = ctx.store.settings, f = st.family || {}, wallets = ctx.store.active().filter((i) => i.type === 'crypto');
+  const st = ctx.store.settings, f = st.family || {}, wallets = ctx.store.active().filter((i) => i.type === 'crypto'), notes = ctx.store.active().filter((i) => i.type === 'note' && ['Family', 'Trusted contacts', 'Emergency / heirs'].includes((i.fields || {}).access));
   const blank = h('i', { text: '(not filled in yet)' });
   const para = (t) => (t && t.trim() ? lines(t).map((x) => h('p', { text: x })) : h('p', null, blank));
   return [
@@ -38,6 +38,7 @@ export function guideNodes(ctx) {
       h('li', { text: 'Do not rush and do not move any funds until you have read the instructions and asked someone you trust. Never type a seed phrase into a website or send it to anyone.' })),
     h('h2', { text: 'Crypto items in the vault' }),
     wallets.length ? h('ul', null, wallets.map((w) => h('li', { text: w.name || '(untitled)' }))) : h('p', null, h('i', { text: 'None recorded yet.' })),
+    notes.length ? [h('h2', { text: 'Notes meant for you' }), h('ul', null, notes.map((n) => h('li', { text: `${n.name || '(untitled)'}${(n.fields || {}).category ? ' (' + n.fields.category + ')' : ''}, for: ${n.fields.access}` })))] : null,
     h('h2', { text: 'Anything else' }), ...[].concat(para(f.notes)),
   ];
 }

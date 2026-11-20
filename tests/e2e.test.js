@@ -2278,3 +2278,31 @@ test('v0.42.0: Contacts import / export — the page states what works and what 
   await page.locator('.side .nav:has-text("Import & export")').click(); await page.waitForSelector('.contactsio');
   assert.deepEqual(problems.filter((p) => !/Failed to load resource/.test(p)), []); await ctx.close();
 });
+
+test('v0.43.0: secure notes — title, content, the five fixed categories, tags, created / modified dates, expiration date with validation, attachments, access permissions', async () => {
+  const { ctx, page, problems } = await newPage(); await createVault(page);
+  const day = (n) => new Date(Date.now() + n * 86400000 - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+  const open = async () => { await page.getByRole('button', { name: '＋ New' }).click(); await page.waitForSelector('.modal-sheet'); if (await page.locator('.c3-stage').count()) await page.locator('.pickseg button').nth(1).click(); await page.locator('.modal-sheet .cats .btn', { hasText: 'Secure note' }).click(); await page.waitForSelector('#f_name'); };
+  await open();
+  assert.deepEqual((await page.locator('#tf_category option').allTextContents()).slice(1), ['Homelab and Network Architecture', 'Crypto and Asset Vault', 'Project Specs', 'Personal Identification', 'Vaultwarden Backups']);
+  assert.equal(await page.inputValue('#tf_access'), 'Private (only me)', 'private by default'); assert.deepEqual((await page.locator('#tf_access option').allTextContents()).slice(1), ['Private (only me)', 'Family', 'Trusted contacts', 'Emergency / heirs']);
+  assert.equal(await page.getAttribute('#tf_expires', 'type'), 'date'); assert.equal(await page.getAttribute('#f_notes', 'maxlength'), '50000'); assert.ok(await page.locator('label[for=f_notes]:has-text("Content")').count());
+  await page.fill('#f_name', 'Rack plan'); await page.fill('#f_notes', 'Switch in U2, NAS in U4.'); assert.match(await page.textContent('.modal-sheet'), /24 \/ 50,000 characters/);
+  await page.selectOption('#tf_category', 'Homelab and Network Architecture'); await page.selectOption('#tf_access', 'Family'); await page.fill('#f_tags', 'lab, network');
+  await page.fill('#tf_expires', day(-1)); await page.getByRole('button', { name: 'Save' }).click(); assert.match(await page.locator('.modal-sheet .err:not(:empty)').first().textContent(), /cannot be before the day the note was created/);
+  await page.fill('#tf_expires', day(30)); await page.getByRole('button', { name: 'Save' }).click(); await page.waitForSelector('.detail h2:has-text("Rack plan")');
+  const d = await page.textContent('.detail'); for (const must of ['Homelab and Network Architecture', 'Family', day(30), 'Switch in U2', 'lab', 'network', 'Created', 'Last modified']) assert.ok(d.includes(must), 'detail shows ' + must);
+  assert.match(d, new RegExp('Created ?' + day(0))); 
+  await open(); await page.fill('#f_name', 'Cold storage map'); await page.selectOption('#tf_category', 'Crypto and Asset Vault'); await page.getByRole('button', { name: 'Save' }).click(); await page.waitForSelector('.detail h2:has-text("Cold storage map")');
+  await page.locator('.side .nav:has-text("Secure notes")').click(); await page.waitForSelector('.favchip');
+  const chips = (await page.locator('.favchip').allTextContents()).map((t) => t.replace(/\s+/g, ' ').trim()); assert.deepEqual(chips, ['All · 2', 'Homelab and Network Architecture · 1', 'Crypto and Asset Vault · 1', 'Project Specs · 0', 'Personal Identification · 0', 'Vaultwarden Backups · 0']);
+  await page.locator('.favchip', { hasText: 'Crypto and Asset Vault' }).click(); assert.equal(await page.locator('.items .item').count(), 1); assert.match(await page.textContent('.items'), /Cold storage map/);
+  await page.locator('.favchip', { hasText: 'All' }).click(); await page.locator('.items .item:has-text("Rack plan")').click(); await page.locator('.detail .act-edit').click(); await page.waitForSelector('#tf_category');
+  assert.equal(await page.inputValue('#tf_category'), 'Homelab and Network Architecture'); assert.match(await page.textContent('.modal-sheet'), /Created \d{4}-\d\d-\d\d \d\d:\d\d · Last modified/); await page.keyboard.press('Escape');
+  // attachments are there too
+  await page.locator('.detail .act-edit').click(); await page.waitForSelector('input[aria-label="Choose files"]', { state: 'attached' }); await page.keyboard.press('Escape');
+  // expiring soon + the family guide
+  await page.locator('.side .nav:has-text("Home")').click(); await page.waitForSelector('.widget'); assert.match(await page.textContent('.widgets'), /Expiring soon[\s\S]*Rack plan/);
+  await page.locator('.side .nav:has-text("Family recovery")').click(); await page.waitForSelector('.guideprev'); assert.match(await page.textContent('.guideprev'), /Notes meant for you[\s\S]*Rack plan \(Homelab and Network Architecture\), for: Family/); assert.ok(!(await page.textContent('.guideprev')).includes('Cold storage map'), 'private notes are not listed');
+  assert.deepEqual(problems.filter((p) => !/Failed to load resource/.test(p)), []); await ctx.close();
+});

@@ -64,3 +64,7 @@ export const drillState = (st) => {
   const days = st.drillAt ? Math.floor((Date.now() - st.drillAt) / 86400000) : null;
   return { days, due: days === null || days >= (st.drillDays || 90) };
 };
+
+/* local date and time of a timestamp: 2026-11-20 14:05 */
+export const fmtDateTime = (ts) => { if (!ts) return '—'; const d = new Date(ts), p = (n) => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`; };
+export const localDay = (ts = Date.now()) => { const d = new Date(ts), p = (n) => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`; };

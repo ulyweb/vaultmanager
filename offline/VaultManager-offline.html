@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VaultManager v0.42.0 — single-file offline build. Verify with the .sha256 file next to it. -->
+<!-- VaultManager v0.43.0 — single-file offline build. Verify with the .sha256 file next to it. -->
 <html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
@@ -11,7 +11,7 @@
 <meta name="application-name" content="VaultManager">
 <meta name="format-detection" content="telephone=no">
 <meta name="referrer" content="no-referrer">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-tauzjAWYvkq2EEey6/r1GOXzEWNzSydbYj43JCIjd2U=' 'sha256-vxHnpihfz1PBL8xHmp44jr1XhqpmVgdTUAMOngqs+Zw=' blob:; style-src 'sha256-g6UMDhQ7ACbXTcJ3KfXJn7mnnEL89aVDfikA8TA2rJY='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-tauzjAWYvkq2EEey6/r1GOXzEWNzSydbYj43JCIjd2U=' 'sha256-T50w6ajqG3I733/gJLWT9OJp6Jy1AdWAhoDkbjtyQcg=' blob:; style-src 'sha256-acsankcIBrK08wSiYH5rolOtLhc9Aaq7L6QIYJ0R0YA='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
 <title>VaultManager | Zero-Knowledge Password Manager</title>
 <meta name="description" content="VaultManager: an offline-first, zero-knowledge, end-to-end encrypted password manager with a strong password generator, TOTP codes and QR-sealed sharing and backup. Runs entirely in your browser.">
 <meta name="theme-color" content="#05080d">
@@ -1143,6 +1143,8 @@ html[data-clocksize=large] .barclock { font-size: 13px; }
 .cio-list { margin: 0; padding-left: 18px; display: grid; gap: 5px; font-size: 13px; line-height: 1.45; }
 .ctable { width: 100%; border-collapse: collapse; font-size: 13px; margin: 8px 0; }
 .ctable th { text-align: left; font: 700 11px var(--mono); color: var(--muted); padding: 4px 8px; } .ctable td { padding: 5px 8px; border-top: 1px solid var(--line); }
+
+.charcount { display: block; font-size: 12px; color: var(--muted); margin-top: 4px; }
 </style>
 </head>
 <body>
@@ -1728,6 +1730,15 @@ html[data-clocksize=large] .barclock { font-size: 13px; }
     const days = st.drillAt ? Math.floor((Date.now() - st.drillAt) / 864e5) : null;
     return { days, due: days === null || days >= (st.drillDays || 90) };
   };
+  var fmtDateTime = (ts) => {
+    if (!ts) return "\u2014";
+    const d = new Date(ts), p = (n) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+  };
+  var localDay = (ts = Date.now()) => {
+    const d = new Date(ts), p = (n) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+  };
 
   // js/crypto.js
   var ITER_DEFAULT = 6e5;
@@ -2294,7 +2305,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   }
 
   // js/version.js
-  var APP_VERSION = "0.42.0";
+  var APP_VERSION = "0.43.0";
   var APP_NAME = "VaultManager";
   var REPO_URL = "https://github.com/ulyweb/vaultmanager";
   var FORMATS = [
@@ -2308,6 +2319,11 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     ["Attachments at rest", "AES-256-GCM per file, bound to vault + file id"]
   ];
   var CHANGELOG = [
+    { v: "0.43.0", date: "2026-11-20", notes: [
+      "Secure notes now have structured fields: Title, Content (up to 50,000 characters, with a counter), Category, Tags, Creation date and Last modified (set automatically and shown on the note), Expiration date, Attachments and Access permissions. Category is one of five fixed choices: Homelab and Network Architecture, Crypto and Asset Vault, Project Specs, Personal Identification, Vaultwarden Backups. The Secure notes page has a filter for each category.",
+      "Validation: a title is required, the category and access must be one of the listed choices (anything else is dropped on import), and the expiration date must be a real date that is not before the day the note was created. Notes with an expiration date appear in Vault health \u2192 Expiring soon.",
+      "Access permissions (Private, Family, Trusted contacts, Emergency / heirs) are a label for your records, private by default. Notes marked Family, Trusted contacts or Emergency / heirs are listed by name in the Family guide. The label does not lock anything; use the item passcode for real protection."
+    ] },
     { v: "0.42.0", date: "2026-11-20", notes: [
       "Contacts can now be imported and exported. On the Contacts page (and on Import & export) a panel says plainly what it can and cannot do. Import vCard (.vcf) files from Outlook, Google Contacts, iCloud / Apple Contacts, Android and most phones, and Google or Outlook CSV files, with a preview and duplicate skipping. Export all contacts, or one, as .vcf, Google CSV or Outlook CSV. It works offline and never uploads anything.",
       "What it cannot do, stated on the page: no live sync or sign-in with Outlook, Google or iCloud; photos, groups and custom fields are not imported; only one phone, mobile, email and address are kept per contact (extras go into Notes); exported files are not encrypted; importing never changes existing contacts."
@@ -2912,7 +2928,14 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   var DT = (k, l, o = {}) => ({ k, l, kind: "stamp", ...o });
   var SEL = (k, l, options) => ({ k, l, kind: "select", options });
   var CH = (k, l, options, o = {}) => ({ k, l, kind: "choice", options, ...o });
+  var NOTE_CATEGORIES = ["Homelab and Network Architecture", "Crypto and Asset Vault", "Project Specs", "Personal Identification", "Vaultwarden Backups"];
+  var NOTE_ACCESS = ["Private (only me)", "Family", "Trusted contacts", "Emergency / heirs"];
   var TEMPLATES = {
+    note: { label: "Secure note", plural: "Secure notes", icon: "{{note}}", sub: "category", fields: [
+      { k: "category", l: "Category", kind: "select", options: NOTE_CATEGORIES, strict: true, wide: true },
+      D("expires", "Expiration date", { expiry: true, hint: "Optional. The note shows up in Vault health \u2192 Expiring soon as the date approaches. It cannot be before the day the note was created." }),
+      { k: "access", l: "Access permissions", kind: "select", options: NOTE_ACCESS, strict: true, def: NOTE_ACCESS[0], wide: true, hint: "Who this note is meant for. It is a label for your records and for the Family guide: it does not lock anything by itself. To really restrict a note, protect it with a passcode." }
+    ] },
     app: { label: "App / software", plural: "Apps", icon: "{{app}}", sub: "version", fields: [
       T("version", "Version"),
       S("license", "License key"),
@@ -3558,7 +3581,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     look: LOOK_DEFAULTS
   };
   var stampNow = (d = /* @__PURE__ */ new Date()) => new Date(d.getTime() - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 16);
-  var autoFields = (type) => Object.fromEntries(((TEMPLATES[type] || {}).fields || []).filter((f) => f.auto).map((f) => [f.k, stampNow()]));
+  var autoFields = (type) => Object.fromEntries(((TEMPLATES[type] || {}).fields || []).filter((f) => f.auto || f.def !== void 0).map((f) => [f.k, f.auto ? stampNow() : f.def]));
   function newItem(type = "login", init = {}) {
     const now = Date.now();
     return {
@@ -4522,6 +4545,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     });
     if (TEMPLATES[type] && r.fields && typeof r.fields === "object") for (const f of TEMPLATES[type].fields) {
       const v = r.fields[f.k];
+      if (f.strict && typeof v === "string" && !f.options.includes(v)) continue;
       if (typeof v === "string" && v) it.fields[f.k] = v.slice(0, f.kind === "multiline" || isFieldLocked(v) ? 2e4 : 1e3);
     }
     if (Array.isArray(r.custom)) it.custom = r.custom.filter((c2) => c2 && typeof c2 === "object").slice(0, MAX_CUSTOM).map((c2) => ({ label: s(c2.label, 60), value: s(c2.value, 5e3), secret: !!c2.secret })).filter((c2) => c2.label || c2.value);
@@ -6300,8 +6324,10 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       items = items.filter((i) => i.favorite);
       if (S2.favName) items = items.filter((i) => i.favName === S2.favName);
     } else if (v === "conflicts") items = items.filter((i) => (i.conflicts || []).length);
-    else if (v in TYPE_META) items = items.filter((i) => i.type === v);
-    else if (v.startsWith("tag:")) items = items.filter((i) => (i.tags || []).includes(v.slice(4)));
+    else if (v in TYPE_META) {
+      items = items.filter((i) => i.type === v);
+      if (v === "note" && S2.noteCat) items = items.filter((i) => S2.noteCat === "(none)" ? !(i.fields || {}).category : (i.fields || {}).category === S2.noteCat);
+    } else if (v.startsWith("tag:")) items = items.filter((i) => (i.tags || []).includes(v.slice(4)));
     if (S2.q) items = items.filter((i) => matches(i, S2.q));
     return items.sort((a, b) => b.favorite - a.favorite || a.name.localeCompare(b.name, void 0, { sensitivity: "base" }));
   }
@@ -6326,12 +6352,23 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
           }
         } } }, "Empty") : null
       ),
-      S2.view === "fav" ? favChips(ctx2) : null,
+      S2.view === "fav" ? favChips(ctx2) : S2.view === "note" ? noteChips(ctx2) : null,
       h("div", { class: "items", role: "listbox", "aria-label": "Items" }, items.length ? items.map((it) => itemRow(ctx2, it)) : emptyState(ctx2, items))
     );
     const detail = h("div", { class: "panel detail", "aria-live": "polite" }, sel2 ? detailPanel(ctx2, sel2) : h("div", { class: "empty" }, h("div", { class: "big", text: "{{shieldlock}}" }), h("p", { text: "Select an item to view it." })));
     const split2 = h("div", { class: "split" + (sel2 ? " has-sel" : "") }, list, detail);
     return S2.view === "contact" ? h("div", { class: "contactswrap" }, contactsPanel(ctx2), split2) : split2;
+  }
+  function noteChips(ctx2) {
+    const { S: S2, store: store2 } = ctx2, notes = store2.active().filter((i) => i.type === "note");
+    if (!notes.length) return null;
+    const count = (c) => notes.filter((i) => ((i.fields || {}).category || "") === c).length, none = notes.filter((i) => !(i.fields || {}).category).length;
+    const cur = S2.noteCat || "";
+    const chip = (label, value, n) => h("button", { type: "button", class: "chip favchip" + (cur === value ? " on" : ""), "aria-pressed": String(cur === value), on: { click: () => {
+      S2.noteCat = value;
+      ctx2.refresh();
+    } } }, `${label} \xB7 ${n}`);
+    return h("div", { class: "favchips", role: "group", "aria-label": "Note categories" }, chip("All", "", notes.length), NOTE_CATEGORIES.map((c) => chip(c, c, count(c))), none ? chip("Uncategorised", "(none)", none) : null);
   }
   function favChips(ctx2) {
     const { S: S2, store: store2 } = ctx2, names = store2.favNames();
@@ -6440,7 +6477,8 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       for (const f of TEMPLATES[it.type].fields) rows.push(templateRow(ctx2, it, f));
     }
     rows.unshift(field("Description", it.description, { pre: true, ctx: ctx2 }));
-    rows.push(field("Notes", it.notes, { pre: true, copy: it.type === "note", ctx: ctx2, stats: STATS_TYPES.has(it.type) }));
+    rows.push(field(it.type === "note" ? "Content" : "Notes", it.notes, { pre: true, copy: it.type === "note", ctx: ctx2, stats: STATS_TYPES.has(it.type) }));
+    if (it.type === "note") rows.push(field("Created", fmtDateTime(it.created), { ctx: ctx2 }), field("Last modified", fmtDateTime(it.updated), { ctx: ctx2 }));
     for (const c of it.custom || []) rows.push(field(c.label || "Custom field", c.value, { secret: c.secret, copy: true, ctx: ctx2, pre: true }));
     if ((it.tags || []).length) rows.push(h("div", { class: "f" }, h("div", { class: "k", text: "Tags" }), h("div", { class: "v" }, h("div", { class: "tags" }, it.tags.map((t) => h("span", { class: "chip", text: "#" + t }))))));
     return h("div", { class: "itemcard" }, h("div", { class: "detail-head" }, avatar(it.name, it.type), h("div", null, h("h2", { text: it.name || "(untitled)" }), h("span", { class: "chip" }, h("span", { class: "icn", text: TYPE_ICON[it.type] || "" }), " " + (TYPES[it.type] || it.type)))), h("div", { class: "fields" }, rows));
@@ -6556,7 +6594,8 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       for (const f of TEMPLATES[it.type].fields) rows.push(templateRow(ctx2, it, f));
     }
     rows.unshift(field("Description", it.description, { pre: true, ctx: ctx2 }));
-    rows.push(field("Notes", it.notes, { pre: true, copy: it.type === "note", ctx: ctx2, stats: STATS_TYPES.has(it.type) }));
+    rows.push(field(it.type === "note" ? "Content" : "Notes", it.notes, { pre: true, copy: it.type === "note", ctx: ctx2, stats: STATS_TYPES.has(it.type) }));
+    if (it.type === "note") rows.push(field("Created", fmtDateTime(it.created), { ctx: ctx2 }), field("Last modified", fmtDateTime(it.updated), { ctx: ctx2 }));
     for (const c of it.custom || []) rows.push(field(c.label || "Custom field", c.value, { secret: c.secret, copy: true, ctx: ctx2, pre: true }));
     rows.push(attachmentsField(ctx2, it));
     if ((it.tags || []).length) rows.push(h("div", { class: "f" }, h("div", { class: "k", text: "Tags" }), h("div", { class: "v" }, h("div", { class: "tags" }, it.tags.map((t) => h("button", { class: "chip", on: { click: () => ctx2.go("tag:" + t) } }, "#" + t))))));
@@ -6813,6 +6852,20 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     body.push(h("div", { class: "field" }, h("label", { for: "f_description", text: "Description (optional)" }), h("textarea", { id: "f_description", class: "ta", rows: "2", maxlength: "2000", placeholder: "A short summary: what this is for, which account, who it belongs to\u2026", on: { input: (e) => {
       it.description = e.target.value;
     } } }, it.description || "")));
+    const isNote = it.type === "note", count = h("span", { class: "charcount", "aria-live": "polite" });
+    const paintCount = () => {
+      count.textContent = isNote ? `${[...it.notes || ""].length.toLocaleString()} / 50,000 characters` : "";
+    };
+    const contentField = h("div", { class: "field" }, h("label", { for: "f_notes", text: isNote ? "Content" : "Notes" }), h("textarea", { id: "f_notes", class: "ta", rows: isNote ? "10" : "4", maxlength: isNote ? "50000" : null, on: { input: (e) => {
+      it.notes = e.target.value;
+      paintCount();
+    } } }, it.notes), count);
+    paintCount();
+    const datesHint = isNote ? h("p", { class: "hint", text: isNew ? "The creation date is set when you save; the modification date updates every time you save." : `Created ${fmtDateTime(it.created)} \xB7 Last modified ${fmtDateTime(it.updated)} (set automatically)` }) : null;
+    const tagsField = inp("tags", "Tags (comma separated)", { get: () => (it.tags || []).join(", "), set: (v) => {
+      it.tags = v.split(",").map((t) => t.trim().replace(/^#/, "")).filter(Boolean).slice(0, 30);
+    }, ph: "work, finance" });
+    if (isNote) body.push(contentField, datesHint, tagsField);
     if (it.type === "login") {
       body.push(h("div", { class: "grid2" }, inp("username", "Username / email"), inp("url", "Website", { ph: "https://" })));
       const pf = pwField(it.password, { ctx: ctx2, onInput: (v) => {
@@ -6927,12 +6980,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       h("div", { class: "row wrap" }, h("button", { type: "button", class: "btn sm", on: { click: () => fileIn.click() } }, "{{clip}} Add files"), h("button", { type: "button", class: "btn sm", on: { click: () => camIn.click() } }, "{{camera}} Take photo"), fileIn, camIn),
       attErr
     ));
-    body.push(h("div", { class: "field" }, h("label", { for: "f_notes", text: it.type === "note" ? "Note" : "Notes" }), h("textarea", { id: "f_notes", class: "ta", rows: it.type === "note" ? "10" : "4", on: { input: (e) => {
-      it.notes = e.target.value;
-    } } }, it.notes)));
-    body.push(inp("tags", "Tags (comma separated)", { get: () => (it.tags || []).join(", "), set: (v) => {
-      it.tags = v.split(",").map((t) => t.trim().replace(/^#/, "")).filter(Boolean).slice(0, 30);
-    }, ph: "work, finance" }));
+    if (!isNote) body.push(contentField, tagsField);
     const favBox = h("input", { type: "checkbox", checked: it.favorite, on: { change: (e) => {
       it.favorite = e.target.checked;
     } } });
@@ -6969,6 +7017,26 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
         err.textContent = "Please give this item a title.";
         document.getElementById("f_name").focus();
         return false;
+      }
+      if (it.type === "note") {
+        const exp = (it.fields || {}).expires, made = isNew ? localDay() : localDay(it.created);
+        if (exp && (!/^\d{4}-\d{2}-\d{2}$/.test(exp) || Number.isNaN(Date.parse(exp)))) {
+          err.textContent = "The expiration date is not a valid date.";
+          return false;
+        }
+        if (exp && exp < made) {
+          err.textContent = `The expiration date cannot be before the day the note was created (${made}).`;
+          return false;
+        }
+        const cat = (it.fields || {}).category;
+        if (cat && !NOTE_CATEGORIES.includes(cat)) {
+          err.textContent = "Choose one of the listed categories.";
+          return false;
+        }
+        if ((it.notes || "").length > 5e4) {
+          err.textContent = "The content is longer than 50,000 characters.";
+          return false;
+        }
       }
       if (it.type === "login" && it.totp.trim() && !totpValid(it.totp.trim())) {
         err.textContent = "That one-time code secret is not valid (expected base32 or an otpauth://totp link).";
@@ -7047,7 +7115,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     };
     const val = (it.fields || {})[f.k] || "";
     const id = "tf_" + f.k;
-    const full = f.kind === "multiline" || isSecretField(f) && f.gen;
+    const full = f.kind === "multiline" || f.wide || isSecretField(f) && f.gen;
     let control;
     if (f.kind === "choice") {
       const OTHER = "__other__", known = f.options.includes(val);
@@ -7074,9 +7142,9 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
         i.type = i.type === "password" ? "text" : "password";
       } } }, "{{eye}}"));
     } else control = h("input", { id, class: "inp" + (f.mono ? " mono" : ""), type: f.kind === "date" ? "date" : f.kind === "stamp" ? "datetime-local" : "text", value: val, autocomplete: "off", spellcheck: "false", placeholder: f.kind === "url" ? "https://" : null, on: { input: (e) => set(e.target.value) } });
-    return h("div", { class: "field" + (full ? " full" : "") }, h("label", { for: id, text: f.l }), control);
+    return h("div", { class: "field" + (full ? " full" : "") }, h("label", { for: id, text: f.l }), control, f.hint ? h("p", { class: "hint", text: f.hint }) : null);
   }
-  var CORE_FIELD_LABELS = { login: ["Username / email", "Website", "Password", "One-time code"], note: ["Note"], card: ["Cardholder", "Card number", "Expiry", "CVV", "PIN"] };
+  var CORE_FIELD_LABELS = { login: ["Username / email", "Website", "Password", "One-time code"], note: ["Title", "Content", "Category", "Expiration date", "Access permissions"], card: ["Cardholder", "Card number", "Expiry", "CVV", "PIN"] };
   var PICKER_KEY = "vaultmanager.picker";
   var pickerPref = () => {
     try {
@@ -8626,7 +8694,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   // js/family.js
   var lines = (t) => String(t || "").split(/\n+/).map((x) => x.trim()).filter(Boolean);
   function guideNodes(ctx2) {
-    const st = ctx2.store.settings, f = st.family || {}, wallets = ctx2.store.active().filter((i) => i.type === "crypto");
+    const st = ctx2.store.settings, f = st.family || {}, wallets = ctx2.store.active().filter((i) => i.type === "crypto"), notes = ctx2.store.active().filter((i) => i.type === "note" && ["Family", "Trusted contacts", "Emergency / heirs"].includes((i.fields || {}).access));
     const blank = h("i", { text: "(not filled in yet)" });
     const para = (t) => t && t.trim() ? lines(t).map((x) => h("p", { text: x })) : h("p", null, blank);
     return [
@@ -8653,6 +8721,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       ),
       h("h2", { text: "Crypto items in the vault" }),
       wallets.length ? h("ul", null, wallets.map((w) => h("li", { text: w.name || "(untitled)" }))) : h("p", null, h("i", { text: "None recorded yet." })),
+      notes.length ? [h("h2", { text: "Notes meant for you" }), h("ul", null, notes.map((n) => h("li", { text: `${n.name || "(untitled)"}${(n.fields || {}).category ? " (" + n.fields.category + ")" : ""}, for: ${n.fields.access}` })))] : null,
       h("h2", { text: "Anything else" }),
       ...[].concat(para(f.notes))
     ];
