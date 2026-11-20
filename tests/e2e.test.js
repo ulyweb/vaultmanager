@@ -7,7 +7,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
-import { TEMPLATES, GROUPS } from '../js/templates.js';
+import { TEMPLATES, GROUPS, TYPE_KEYS } from '../js/templates.js';
 import { execFileSync } from 'node:child_process';
 
 const require = createRequire(import.meta.url);
@@ -1830,7 +1830,7 @@ test('v0.30.0: the 3D tour page loads (with or without WebGL), its chapters, col
     const { ctx, page, problems } = await newPage(opts);
     await page.goto(base + 'experience/'); await page.waitForFunction(() => window.__vm3d && window.__vm3d.ready, null, { timeout: 60000 });
     assert.equal(await page.locator('main .ch').count(), 9, label + ': nine chapters');
-    assert.equal(await page.textContent('#catcount'), String(Object.keys(TEMPLATES).length + 3), label + ': the category count comes from the app');
+    assert.equal(await page.textContent('#catcount'), String(TYPE_KEYS.length), label + ': the category count comes from the app');
     assert.ok(await page.locator('a.btn.solid[href="../"]').count() >= 2, label + ': Open the vault leads back to the app');
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth <= 1), true, label + ': no sideways scroll');
     // the screen is a real game: it plays itself until a key is pressed
@@ -1863,13 +1863,13 @@ test('v0.31.0: New item opens a 3D category carousel (spin with keys, drag and g
   const R = await newPage(); await createVault(R.page);
   await R.page.getByRole('button', { name: '＋ New' }).click(); await R.page.waitForSelector('.modal-sheet .cats .btn');
   assert.equal(await R.page.locator('.c3-stage').count(), 0, 'list first for people who ask for reduced motion');
-  await R.page.locator('.pickseg button').first().click(); await R.page.waitForSelector('.c3-stage'); assert.equal(await R.page.locator('.c3-card').count(), Object.keys(TEMPLATES).length + 3, 'one card per category, even held still');
+  await R.page.locator('.pickseg button').first().click(); await R.page.waitForSelector('.c3-stage'); assert.equal(await R.page.locator('.c3-card').count(), TYPE_KEYS.length, 'one card per category, even held still');
   await R.ctx.close();
   // motion on: the carousel is the default
   for (const [label, opts] of [['desktop', { reducedMotion: 'no-preference' }], ['phone', { ...(({ defaultBrowserType, ...d }) => d)(devices['iPhone SE']), reducedMotion: 'no-preference' }]]) {
     const { ctx, page, problems } = await newPage(opts); await createVault(page);
     await page.getByRole('button', { name: label === 'phone' ? 'New item' : '＋ New' }).click({ force: true }); await page.waitForSelector('.c3-stage');
-    assert.equal(await page.locator('.c3-card').count(), Object.keys(TEMPLATES).length + 3, label + ': a card for every category');
+    assert.equal(await page.locator('.c3-card').count(), TYPE_KEYS.length, label + ': a card for every category');
     assert.equal(await page.textContent('.c3-name'), 'Login', label + ': starts on Login');
     assert.ok(await page.evaluate(() => document.activeElement && document.activeElement.classList.contains('c3-stage')), label + ': the ring has the keyboard focus');
     const t = await page.evaluate(() => getComputedStyle(document.querySelector('.c3-card.front')).transform); assert.match(t, /^matrix3d/, label + ': cards are really placed in 3D');
