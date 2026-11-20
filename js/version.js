@@ -1,6 +1,6 @@
 /* Application version, data-format versions and changelog (shown in Settings → About). */
 
-export const APP_VERSION = '0.41.0';
+export const APP_VERSION = '0.42.0';
 export const APP_NAME = 'VaultManager';
 export const REPO_URL = 'https://github.com/ulyweb/vaultmanager';
 
@@ -16,6 +16,10 @@ export const FORMATS = [
 ];
 
 export const CHANGELOG = [
+  { v: '0.42.0', date: '2026-11-20', notes: [
+    'Contacts can now be imported and exported. On the Contacts page (and on Import & export) a panel says plainly what it can and cannot do. Import vCard (.vcf) files from Outlook, Google Contacts, iCloud / Apple Contacts, Android and most phones, and Google or Outlook CSV files, with a preview and duplicate skipping. Export all contacts, or one, as .vcf, Google CSV or Outlook CSV. It works offline and never uploads anything.',
+    'What it cannot do, stated on the page: no live sync or sign-in with Outlook, Google or iCloud; photos, groups and custom fields are not imported; only one phone, mobile, email and address are kept per contact (extras go into Notes); exported files are not encrypted; importing never changes existing contacts.',
+  ] },
   { v: '0.41.0', date: '2026-11-19', notes: [
     'Pick-lists in the item editor. Fields where you used to type a name now offer a list with an “Other…” box for anything that is not on it: Bank (major US and international banks and credit unions), Crypto wallet / exchange (hardware and software wallets and the big exchanges), Blockchain / network, Insurance provider and Car insurer, Health plan, Phone carrier, Internet provider, Airline / hotel / travel program, Server host and Technical service, Membership, Voter state, Pharmacy, Product brand, Store and Lens brand. What you already saved keeps working: a name that is not on a list shows under Other…',
     '“How secure is this?” is removed from the system menu; it lives in Settings → About → FAQ.',

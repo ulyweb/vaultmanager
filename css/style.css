@@ -1112,3 +1112,16 @@ html[data-clocksize=large] .barclock { font-size: 13px; }
 /* pick-list fields (kind: choice): the list, plus a text box when "Other…" is chosen */
 .choicewrap { display: grid; gap: 6px; }
 .choicewrap .inp[hidden] { display: none; }
+
+/* Contacts: import and export */
+.contactswrap { display: grid; gap: 12px; }
+.contactsio h3 { margin: 0 0 8px; }
+.ccols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 12px; }
+@media (max-width: 760px) { .ccols { grid-template-columns: 1fr; } }
+.ccols h4 { margin: 0 0 6px; font: 800 13px var(--mono); }
+.ccan, .ccant { border: 1px solid var(--line-2); border-radius: 12px; padding: 10px 12px; }
+.ccan { border-color: color-mix(in srgb, var(--accent) 45%, transparent); } .ccan h4 { color: var(--accent); }
+.ccant { border-color: color-mix(in srgb, var(--warn) 50%, transparent); } .ccant h4 { color: var(--warn); }
+.cio-list { margin: 0; padding-left: 18px; display: grid; gap: 5px; font-size: 13px; line-height: 1.45; }
+.ctable { width: 100%; border-collapse: collapse; font-size: 13px; margin: 8px 0; }
+.ctable th { text-align: left; font: 700 11px var(--mono); color: var(--muted); padding: 4px 8px; } .ctable td { padding: 5px 8px; border-top: 1px solid var(--line); }

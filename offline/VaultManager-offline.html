@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VaultManager v0.41.0 — single-file offline build. Verify with the .sha256 file next to it. -->
+<!-- VaultManager v0.42.0 — single-file offline build. Verify with the .sha256 file next to it. -->
 <html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
@@ -11,7 +11,7 @@
 <meta name="application-name" content="VaultManager">
 <meta name="format-detection" content="telephone=no">
 <meta name="referrer" content="no-referrer">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-tauzjAWYvkq2EEey6/r1GOXzEWNzSydbYj43JCIjd2U=' 'sha256-TraYoGQrbN+ZdoTBd8E0fU5D0HYtBi66mhCS67wGcpo=' blob:; style-src 'sha256-U6v9SUhNuGy94zsMYqXX9Q9ongWzzTgRNUfBDQh3lzI='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-tauzjAWYvkq2EEey6/r1GOXzEWNzSydbYj43JCIjd2U=' 'sha256-vxHnpihfz1PBL8xHmp44jr1XhqpmVgdTUAMOngqs+Zw=' blob:; style-src 'sha256-g6UMDhQ7ACbXTcJ3KfXJn7mnnEL89aVDfikA8TA2rJY='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
 <title>VaultManager | Zero-Knowledge Password Manager</title>
 <meta name="description" content="VaultManager: an offline-first, zero-knowledge, end-to-end encrypted password manager with a strong password generator, TOTP codes and QR-sealed sharing and backup. Runs entirely in your browser.">
 <meta name="theme-color" content="#05080d">
@@ -1130,6 +1130,19 @@ html[data-clocksize=large] .barclock { font-size: 13px; }
 /* pick-list fields (kind: choice): the list, plus a text box when "Other…" is chosen */
 .choicewrap { display: grid; gap: 6px; }
 .choicewrap .inp[hidden] { display: none; }
+
+/* Contacts: import and export */
+.contactswrap { display: grid; gap: 12px; }
+.contactsio h3 { margin: 0 0 8px; }
+.ccols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 12px; }
+@media (max-width: 760px) { .ccols { grid-template-columns: 1fr; } }
+.ccols h4 { margin: 0 0 6px; font: 800 13px var(--mono); }
+.ccan, .ccant { border: 1px solid var(--line-2); border-radius: 12px; padding: 10px 12px; }
+.ccan { border-color: color-mix(in srgb, var(--accent) 45%, transparent); } .ccan h4 { color: var(--accent); }
+.ccant { border-color: color-mix(in srgb, var(--warn) 50%, transparent); } .ccant h4 { color: var(--warn); }
+.cio-list { margin: 0; padding-left: 18px; display: grid; gap: 5px; font-size: 13px; line-height: 1.45; }
+.ctable { width: 100%; border-collapse: collapse; font-size: 13px; margin: 8px 0; }
+.ctable th { text-align: left; font: 700 11px var(--mono); color: var(--muted); padding: 4px 8px; } .ctable td { padding: 5px 8px; border-top: 1px solid var(--line); }
 </style>
 </head>
 <body>
@@ -2181,10 +2194,10 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   // js/totp.js
   var B322 = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
   function base32Decode(s) {
-    const clean = String(s).toUpperCase().replace(/[\s=-]/g, "");
+    const clean2 = String(s).toUpperCase().replace(/[\s=-]/g, "");
     let bits = 0, val = 0;
     const out = [];
-    for (const ch of clean) {
+    for (const ch of clean2) {
       const i = B322.indexOf(ch);
       if (i < 0) throw new Error("Not a valid base32 secret.");
       val = val << 5 | i;
@@ -2198,14 +2211,14 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     return Uint8Array.from(out);
   }
   var HASH = { SHA1: "SHA-1", SHA256: "SHA-256", SHA512: "SHA-512" };
-  async function hotp(secret, counter, digits = 6, algo = "SHA1") {
+  async function hotp(secret, counter, digits2 = 6, algo = "SHA1") {
     const key = await crypto.subtle.importKey("raw", secret, { name: "HMAC", hash: HASH[algo] || "SHA-1" }, false, ["sign"]);
     const msg = new Uint8Array(8);
     new DataView(msg.buffer).setBigUint64(0, BigInt(counter), false);
     const h2 = new Uint8Array(await crypto.subtle.sign("HMAC", key, msg));
     const o = h2[h2.length - 1] & 15;
     const bin = (h2[o] & 127) << 24 | h2[o + 1] << 16 | h2[o + 2] << 8 | h2[o + 3];
-    return String(bin % Math.pow(10, digits)).padStart(digits, "0");
+    return String(bin % Math.pow(10, digits2)).padStart(digits2, "0");
   }
   function parseTotp(input) {
     const raw = String(input || "").trim();
@@ -2281,7 +2294,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   }
 
   // js/version.js
-  var APP_VERSION = "0.41.0";
+  var APP_VERSION = "0.42.0";
   var APP_NAME = "VaultManager";
   var REPO_URL = "https://github.com/ulyweb/vaultmanager";
   var FORMATS = [
@@ -2295,6 +2308,10 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     ["Attachments at rest", "AES-256-GCM per file, bound to vault + file id"]
   ];
   var CHANGELOG = [
+    { v: "0.42.0", date: "2026-11-20", notes: [
+      "Contacts can now be imported and exported. On the Contacts page (and on Import & export) a panel says plainly what it can and cannot do. Import vCard (.vcf) files from Outlook, Google Contacts, iCloud / Apple Contacts, Android and most phones, and Google or Outlook CSV files, with a preview and duplicate skipping. Export all contacts, or one, as .vcf, Google CSV or Outlook CSV. It works offline and never uploads anything.",
+      "What it cannot do, stated on the page: no live sync or sign-in with Outlook, Google or iCloud; photos, groups and custom fields are not imported; only one phone, mobile, email and address are kept per contact (extras go into Notes); exported files are not encrypted; importing never changes existing contacts."
+    ] },
     { v: "0.41.0", date: "2026-11-19", notes: [
       "Pick-lists in the item editor. Fields where you used to type a name now offer a list with an \u201COther\u2026\u201D box for anything that is not on it: Bank (major US and international banks and credit unions), Crypto wallet / exchange (hardware and software wallets and the big exchanges), Blockchain / network, Insurance provider and Car insurer, Health plan, Phone carrier, Internet provider, Airline / hotel / travel program, Server host and Technical service, Membership, Voter state, Pharmacy, Product brand, Store and Lens brand. What you already saved keeps working: a name that is not on a list shows under Other\u2026",
       "\u201CHow secure is this?\u201D is removed from the system menu; it lives in Settings \u2192 About \u2192 FAQ."
@@ -5211,6 +5228,410 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     }
   };
 
+  // js/contacts.js
+  var MAX_CONTACTS = 5e3;
+  var clean = (s, max = 500) => String(s == null ? "" : s).replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f<>]/g, "").trim().slice(0, max);
+  var digits = (s) => String(s || "").replace(/\D/g, "");
+  function normDate(v) {
+    const s = String(v || "").trim();
+    if (!s) return "";
+    let m = /^(\d{4})-?(\d{2})-?(\d{2})(?:[T ].*)?$/.exec(s);
+    if (!m) {
+      const u = /^(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})$/.exec(s);
+      if (u) {
+        let [, a, b, y2] = u;
+        a = +a;
+        b = +b;
+        if (a > 12 && b <= 12) [a, b] = [b, a];
+        m = [null, y2, String(a).padStart(2, "0"), String(b).padStart(2, "0")];
+      }
+    }
+    if (!m) return "";
+    const y = +m[1], mo = +m[2], d = +m[3];
+    if (y < 1e3 || y > 2100 || mo < 1 || mo > 12 || d < 1 || d > 31) return "";
+    return `${m[1]}-${String(mo).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+  }
+  var unesc = (s) => String(s).replace(/\\([nN,;\\])/g, (m, c) => c === "n" || c === "N" ? "\n" : c);
+  var splitUnesc = (v, sep) => {
+    const out = [];
+    let cur = "";
+    for (let i = 0; i < v.length; i++) {
+      const c = v[i];
+      if (c === "\\" && i + 1 < v.length) {
+        cur += c + v[i + 1];
+        i++;
+      } else if (c === sep) {
+        out.push(cur);
+        cur = "";
+      } else cur += c;
+    }
+    out.push(cur);
+    return out;
+  };
+  var qpDecode = (s) => {
+    const bytes2 = [];
+    const t = s.replace(/=\r?\n/g, "");
+    for (let i = 0; i < t.length; i++) {
+      if (t[i] === "=" && /^[0-9A-Fa-f]{2}$/.test(t.slice(i + 1, i + 3))) {
+        bytes2.push(parseInt(t.slice(i + 1, i + 3), 16));
+        i += 2;
+      } else bytes2.push(...new TextEncoder().encode(t[i]));
+    }
+    try {
+      return new TextDecoder("utf-8", { fatal: false }).decode(Uint8Array.from(bytes2));
+    } catch {
+      return t;
+    }
+  };
+  function unfold(text2) {
+    const lines2 = String(text2).replace(/^\uFEFF/, "").replace(/\r\n?/g, "\n").split("\n"), out = [];
+    for (let i = 0; i < lines2.length; i++) {
+      let l = lines2[i];
+      if (/^[ \t]/.test(l) && out.length) {
+        out[out.length - 1] += l.slice(1);
+        continue;
+      }
+      while (/QUOTED-PRINTABLE/i.test(l) && /=$/.test(l) && i + 1 < lines2.length) {
+        l = l.slice(0, -1) + lines2[++i];
+      }
+      out.push(l);
+    }
+    return out;
+  }
+  function parseVCard(text2) {
+    const lines2 = unfold(text2), cards = [];
+    let cur = null, photos = 0;
+    for (const raw of lines2) {
+      if (/^BEGIN:VCARD/i.test(raw)) {
+        cur = [];
+        continue;
+      }
+      if (/^END:VCARD/i.test(raw)) {
+        if (cur) cards.push(cur);
+        cur = null;
+        continue;
+      }
+      if (!cur || !raw.trim()) continue;
+      const colon = raw.indexOf(":");
+      if (colon < 1) continue;
+      const head = raw.slice(0, colon), param = head.split(";"), name = param[0].replace(/^.*\./, "").toUpperCase();
+      const types = /* @__PURE__ */ new Set(), meta = {};
+      for (const p of param.slice(1)) {
+        const [k, v] = p.includes("=") ? p.split(/=(.*)/s) : ["TYPE", p];
+        if (/^TYPE$/i.test(k)) v.split(",").forEach((t) => types.add(t.replace(/"/g, "").toUpperCase()));
+        else meta[k.toUpperCase()] = v;
+      }
+      let value = raw.slice(colon + 1);
+      if (/QUOTED-PRINTABLE/i.test(meta.ENCODING || "")) value = qpDecode(value);
+      cur.push({ name, types, value });
+    }
+    const contacts = [];
+    let empty2 = 0, extras = 0;
+    for (const props of cards) {
+      const c = { name: "", company: "", jobtitle: "", phone: "", mobile: "", email: "", address: "", url: "", birthday: "", notes: "", relation: "" }, other = [];
+      let fn = "", given = "", family = "";
+      for (const { name, types, value } of props) {
+        if (name === "FN") fn = clean(unesc(value), 200);
+        else if (name === "N") {
+          const p = splitUnesc(value, ";").map(unesc);
+          family = clean(p[0], 100);
+          given = clean([p[3], p[1], p[2]].filter(Boolean).join(" ") && [p[1], p[2]].filter(Boolean).join(" "), 100);
+        } else if (name === "ORG") c.company = c.company || clean(splitUnesc(value, ";").map(unesc).filter(Boolean).join(" \u2013 "), 200);
+        else if (name === "TITLE") c.jobtitle = c.jobtitle || clean(unesc(value), 200);
+        else if (name === "TEL") {
+          const v = clean(unesc(value).replace(/^tel:/i, ""), 60);
+          if (!v) continue;
+          const cell2 = types.has("CELL") || types.has("MOBILE") || types.has("IPHONE");
+          if (cell2 && !c.mobile) c.mobile = v;
+          else if (!cell2 && !c.phone) c.phone = v;
+          else other.push("Other phone: " + v);
+        } else if (name === "EMAIL") {
+          const v = clean(unesc(value), 200);
+          if (!v) continue;
+          if (!c.email) c.email = v;
+          else other.push("Other email: " + v);
+        } else if (name === "ADR") {
+          const p = splitUnesc(value, ";").map((x) => clean(unesc(x), 200));
+          const street = p[2] || "", city = [p[3], p[4]].filter(Boolean).join(", "), line2 = [city, p[5]].filter(Boolean).join(" "), a = [p[0], p[1], street, line2, p[6]].filter(Boolean).join("\n");
+          if (!a) continue;
+          if (!c.address) c.address = a;
+          else other.push("Other address: " + a.replace(/\n/g, ", "));
+        } else if (name === "URL") c.url = c.url || clean(unesc(value), 300);
+        else if (name === "BDAY") c.birthday = c.birthday || normDate(unesc(value));
+        else if (name === "NOTE") c.notes = clean(unesc(value), 4e3);
+        else if (name === "PHOTO" || name === "LOGO") photos++;
+        else if (name === "CATEGORIES") {
+          const g = clean(unesc(value), 100);
+          if (g) other.push("Group: " + g);
+        } else if (!["VERSION", "PRODID", "REV", "UID", "X-ABLABEL", "KIND", "X-ABUID"].includes(name) && !name.startsWith("X-")) extras++;
+      }
+      c.name = fn || [given, family].filter(Boolean).join(" ").trim() || c.company || c.email || c.phone || c.mobile;
+      if (!c.name) {
+        empty2++;
+        continue;
+      }
+      if (other.length) c.notes = [c.notes, ...other].filter(Boolean).join("\n");
+      contacts.push(c);
+    }
+    return { contacts, format: "vCard", left: { photos, empty: empty2, extras } };
+  }
+  var nk = (h2) => String(h2).toLowerCase().replace(/[^a-z0-9]/g, "");
+  function parseContactsCSV(text2) {
+    const rows = parseCSV(text2);
+    if (rows.length < 2) return { contacts: [], format: "CSV", left: { photos: 0, empty: 0, extras: 0 } };
+    const head = rows[0].map(nk);
+    const at = (r, ...names) => {
+      for (const n of names) {
+        const i = head.indexOf(nk(n));
+        if (i >= 0 && r[i] && r[i].trim()) return r[i].trim();
+      }
+      return "";
+    };
+    const hasHead = (re) => head.some((h2) => re.test(h2));
+    const format = hasHead(/^email1value|^organization1name|^organizationname|^phone1value|^givenname$/) ? "Google CSV" : hasHead(/^emailaddress$|^businessphone$|^mobilephone$|^homephone$|^jobtitle$/) ? "Outlook CSV" : "CSV";
+    const contacts = [];
+    let empty2 = 0;
+    const multi = (v) => String(v || "").split(/\s*:::\s*/).map((x) => x.trim()).filter(Boolean);
+    for (const r of rows.slice(1)) {
+      const c = { name: "", company: "", jobtitle: "", phone: "", mobile: "", email: "", address: "", url: "", birthday: "", notes: "", relation: "" }, other = [];
+      const full = [at(r, "First Name", "Given Name"), at(r, "Middle Name", "Additional Name"), at(r, "Last Name", "Family Name")].filter(Boolean).join(" ");
+      c.name = clean(full || at(r, "Name", "Display Name", "File As") || at(r, "Company", "Organization Name", "Organization 1 - Name"), 200);
+      c.company = clean(at(r, "Company", "Organization Name", "Organization 1 - Name"), 200);
+      c.jobtitle = clean(at(r, "Job Title", "Organization Title", "Organization 1 - Title"), 200);
+      const emails = [];
+      for (let n = 1; n <= 4; n++) emails.push(...multi(at(r, `E-mail ${n} - Value`, `Email ${n} - Value`)));
+      emails.push(...[at(r, "E-mail Address", "Email Address", "Email", "E-mail"), at(r, "E-mail 2 Address"), at(r, "E-mail 3 Address")].filter(Boolean));
+      [...new Set(emails)].forEach((e, i) => {
+        if (i === 0) c.email = clean(e, 200);
+        else other.push("Other email: " + e);
+      });
+      const phones = [];
+      for (let n = 1; n <= 5; n++) {
+        const lab = at(r, `Phone ${n} - Label`, `Phone ${n} - Type`);
+        for (const v of multi(at(r, `Phone ${n} - Value`))) phones.push([v, /mobile|cell|iphone/i.test(lab)]);
+      }
+      for (const [h2, mob] of [["Mobile Phone", true], ["Primary Phone", false], ["Business Phone", false], ["Home Phone", false], ["Business Phone 2", false], ["Home Phone 2", false], ["Phone", false], ["Mobile", true]]) {
+        const v = at(r, h2);
+        if (v) phones.push([v, mob]);
+      }
+      for (const [v, mob] of phones) {
+        if (mob && !c.mobile) c.mobile = clean(v, 60);
+        else if (!mob && !c.phone) c.phone = clean(v, 60);
+        else if (v !== c.phone && v !== c.mobile) other.push("Other phone: " + v);
+      }
+      const addrs = [at(r, "Address 1 - Formatted"), at(r, "Home Address"), [at(r, "Home Street"), [at(r, "Home City"), at(r, "Home State")].filter(Boolean).join(", ") + " " + at(r, "Home Postal Code"), at(r, "Home Country/Region")].map((x) => x.trim()).filter(Boolean).join("\n"), at(r, "Business Address"), [at(r, "Business Street"), [at(r, "Business City"), at(r, "Business State")].filter(Boolean).join(", ") + " " + at(r, "Business Postal Code"), at(r, "Business Country/Region")].map((x) => x.trim()).filter(Boolean).join("\n")].filter((a) => a && a.trim());
+      addrs.forEach((a, i) => {
+        if (i === 0) c.address = clean(a, 600);
+        else other.push("Other address: " + a.replace(/\n/g, ", "));
+      });
+      c.url = clean(at(r, "Website 1 - Value", "Web Page", "Website", "URL"), 300);
+      c.birthday = normDate(at(r, "Birthday", "Birthday 1 - Value"));
+      c.notes = clean(at(r, "Notes", "Note"), 4e3);
+      const labels = at(r, "Labels", "Categories", "Group Membership");
+      if (labels) other.push("Group: " + labels.replace(/\s*:::\s*/g, ", "));
+      if (!c.name) c.name = c.email || c.phone || c.mobile;
+      if (!c.name) {
+        empty2++;
+        continue;
+      }
+      if (other.length) c.notes = [c.notes, ...other].filter(Boolean).join("\n");
+      contacts.push(c);
+    }
+    return { contacts, format, left: { photos: 0, empty: empty2, extras: 0 } };
+  }
+  function parseContactsFile(text2) {
+    const t = String(text2 || "");
+    const r = /BEGIN:VCARD/i.test(t) ? parseVCard(t) : parseContactsCSV(t);
+    if (r.contacts.length > MAX_CONTACTS) throw new Error(`That file has ${r.contacts.length} contacts. The limit is ${MAX_CONTACTS} per import: split the file and import it in parts.`);
+    return r;
+  }
+  var toItemData = (c) => ({ type: "contact", name: c.name, notes: c.notes || "", fields: Object.fromEntries(Object.entries({ company: c.company, jobtitle: c.jobtitle, phone: c.phone, mobile: c.mobile, email: c.email, url: c.url, birthday: c.birthday, address: c.address, relation: c.relation }).filter(([, v]) => v)) });
+  var fromItem = (it) => {
+    const f = it.fields || {};
+    return { name: it.name || "", company: f.company || "", jobtitle: f.jobtitle || "", phone: f.phone || "", mobile: f.mobile || "", email: f.email || "", url: f.url || "", birthday: f.birthday || "", address: f.address || "", relation: f.relation || "", notes: [it.description, it.notes].filter(Boolean).join("\n") };
+  };
+  function isDuplicate(c, existing) {
+    const e = (c.email || "").toLowerCase(), ph = [digits(c.phone), digits(c.mobile)].filter((d) => d.length >= 7), n = (c.name || "").toLowerCase();
+    return existing.some((x) => {
+      const xe = (x.email || "").toLowerCase(), xp = [digits(x.phone), digits(x.mobile)].filter((d) => d.length >= 7);
+      if (e && xe && e === xe) return true;
+      if (ph.some((p) => xp.includes(p))) return true;
+      return !e && !ph.length && !xe && !xp.length && n && n === (x.name || "").toLowerCase();
+    });
+  }
+  var esc2 = (s) => String(s || "").replace(/\\/g, "\\\\").replace(/\r?\n/g, "\\n").replace(/,/g, "\\,").replace(/;/g, ";");
+  var fold = (line) => {
+    const out = [];
+    let rest = line;
+    while ([...rest].length > 74) {
+      const arr = [...rest];
+      out.push(arr.slice(0, 74).join(""));
+      rest = " " + arr.slice(74).join("");
+    }
+    out.push(rest);
+    return out.join("\r\n");
+  };
+  var splitName = (name) => {
+    const t = String(name || "").trim();
+    if (t.includes(",")) {
+      const [f, ...g] = t.split(",");
+      return [f.trim(), g.join(" ").trim()];
+    }
+    const p = t.split(/\s+/);
+    return p.length > 1 ? [p[p.length - 1], p.slice(0, -1).join(" ")] : ["", t];
+  };
+  function toVCard(list) {
+    return list.map((c) => {
+      const [family, given] = splitName(c.name), L = ["BEGIN:VCARD", "VERSION:3.0", `N:${esc2(family)};${esc2(given)};;;`, `FN:${esc2(c.name)}`];
+      if (c.company) L.push("ORG:" + esc2(c.company));
+      if (c.jobtitle) L.push("TITLE:" + esc2(c.jobtitle));
+      if (c.phone) L.push("TEL;TYPE=VOICE:" + esc2(c.phone));
+      if (c.mobile) L.push("TEL;TYPE=CELL:" + esc2(c.mobile));
+      if (c.email) L.push("EMAIL;TYPE=INTERNET:" + esc2(c.email));
+      if (c.address) L.push("ADR;TYPE=HOME:;;" + esc2(c.address) + ";;;;");
+      if (c.url) L.push("URL:" + esc2(c.url));
+      if (c.birthday) L.push("BDAY:" + c.birthday);
+      if (c.relation) L.push("CATEGORIES:" + esc2(c.relation));
+      if (c.notes) L.push("NOTE:" + esc2(c.notes));
+      L.push("END:VCARD");
+      return L.map(fold).join("\r\n");
+    }).join("\r\n") + "\r\n";
+  }
+  var cell = (v) => {
+    let s = String(v == null ? "" : v).replace(/\r?\n/g, " \n");
+    if (/^[=@\t\r]/.test(s) || /^[+-](?![\d( ])/.test(s)) s = "'" + s;
+    return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  };
+  var csv = (head, rows) => "\uFEFF" + [head, ...rows].map((r) => r.map(cell).join(",")).join("\r\n") + "\r\n";
+  function toGoogleCSV(list) {
+    const head = ["First Name", "Middle Name", "Last Name", "Organization Name", "Organization Title", "E-mail 1 - Label", "E-mail 1 - Value", "Phone 1 - Label", "Phone 1 - Value", "Phone 2 - Label", "Phone 2 - Value", "Address 1 - Formatted", "Birthday", "Website 1 - Value", "Notes", "Labels"];
+    return csv(head, list.map((c) => {
+      const [family, given] = splitName(c.name);
+      return [given, "", family, c.company, c.jobtitle, c.email ? "* " : "", c.email, c.mobile ? "Mobile" : "", c.mobile, c.phone ? "Work" : "", c.phone, c.address, c.birthday, c.url, c.notes, c.relation];
+    }));
+  }
+  function toOutlookCSV(list) {
+    const head = ["First Name", "Middle Name", "Last Name", "Company", "Job Title", "Business Phone", "Mobile Phone", "E-mail Address", "Home Street", "Birthday", "Web Page", "Notes", "Categories"];
+    return csv(head, list.map((c) => {
+      const [family, given] = splitName(c.name);
+      return [given, "", family, c.company, c.jobtitle, c.phone, c.mobile, c.email, c.address, c.birthday, c.url, c.notes, c.relation];
+    }));
+  }
+
+  // js/contacts-ui.js
+  var CAN = [
+    "Import contacts from a vCard file (.vcf). Outlook, Google Contacts, iCloud / Apple Contacts, Android and most phones export this.",
+    "Import Google Contacts CSV and Outlook CSV files.",
+    "Show a preview first, and skip people you already have.",
+    "Export all your contacts, or just one, as .vcf (works in all of the above), Google CSV or Outlook CSV.",
+    "Work completely offline: files are read on this device and never uploaded anywhere."
+  ];
+  var CANNOT = [
+    "No live sync and no sign-in with Outlook, Google or iCloud. You move files by hand (export from one, import into the other).",
+    "Photos, groups / labels and custom fields are not imported. The preview counts what is left out.",
+    "Only one phone, one mobile, one email and one address are kept per contact. Extra ones are added to Notes so nothing is lost.",
+    "Exported files are NOT encrypted: anyone who finds them can read them. Delete them after use.",
+    "Importing never changes or deletes contacts you already have.",
+    "Contacts locked with a passcode are not included in exports."
+  ];
+  var contactsOf = (ctx2) => ctx2.store.active().filter((i) => i.type === "contact" && !i.lock);
+  var existingOf = (ctx2) => ctx2.store.active().filter((i) => i.type === "contact").map(fromItem);
+  async function importFile(ctx2, file) {
+    if (file.size > 10 * 1024 * 1024) {
+      toast("That file is larger than 10 MB. Split it and import it in parts.", "err", 6e3);
+      return;
+    }
+    let parsed;
+    try {
+      parsed = parseContactsFile(await readFileText(file));
+    } catch (e) {
+      toast(e.message, "err", 6e3);
+      return;
+    }
+    const { contacts, format, left } = parsed;
+    if (!contacts.length) {
+      toast("No contacts found in that file. It should be a .vcf or a Google / Outlook CSV.", "err", 6e3);
+      return;
+    }
+    const have = existingOf(ctx2), dup = contacts.map((c) => isDuplicate(c, have)), dupCount = dup.filter(Boolean).length;
+    const withDup = h("input", { type: "checkbox", id: "cdup" });
+    const rows = contacts.slice(0, 8).map((c, i) => h("tr", null, h("td", { text: c.name }), h("td", { text: c.email || c.mobile || c.phone || "" }), h("td", { text: dup[i] ? "already here" : "" })));
+    const leftLines = [left.photos ? `${left.photos} photo${left.photos === 1 ? "" : "s"}` : "", left.extras ? `${left.extras} other detail${left.extras === 1 ? "" : "s"} (custom fields, labels\u2026)` : "", left.empty ? `${left.empty} entr${left.empty === 1 ? "y" : "ies"} with no name, email or phone` : ""].filter(Boolean);
+    const body = h(
+      "div",
+      null,
+      h("p", { class: "note ok", role: "status", text: `Found ${contacts.length} contact${contacts.length === 1 ? "" : "s"} in this ${format} file. ${dupCount} look like people you already have.` }),
+      h("table", { class: "ctable" }, h("thead", null, h("tr", null, h("th", { text: "Name" }), h("th", { text: "Email / phone" }), h("th"))), h("tbody", null, rows)),
+      contacts.length > 8 ? h("p", { class: "hint", text: `\u2026and ${contacts.length - 8} more.` }) : null,
+      dupCount ? h("label", { class: "chk", for: "cdup" }, withDup, `Import the ${dupCount} I already have as well (creates copies)`) : null,
+      leftLines.length ? h("p", { class: "note warn", text: "Left out: " + leftLines.join(", ") + ". Extra phones, emails and addresses are kept in Notes." }) : h("p", { class: "hint", text: "Nothing is left out." })
+    );
+    modal({ title: "Import contacts", sub: file.name, body, wide: true, actions: [{ label: "Cancel" }, { label: "Import", kind: "primary", onClick: async () => {
+      const pick = contacts.filter((c, i) => withDup.checked || !dup[i]);
+      if (!pick.length) {
+        toast("Nothing new to import.");
+        return;
+      }
+      const items = pick.map((c) => sanitiseItem(toItemData(c)));
+      const r = ctx2.store.mergeItems(items, {});
+      await r.save;
+      ctx2.store.log("import", `Imported ${r.added} contact${r.added === 1 ? "" : "s"} from a ${format} file`);
+      await ctx2.store.save().catch(() => {
+      });
+      toast(`Imported ${r.added} contact${r.added === 1 ? "" : "s"}` + (r.skipped ? `, skipped ${r.skipped} identical` : ""));
+      ctx2.refresh();
+    } }] });
+  }
+  async function exportAll(ctx2, kind) {
+    const list = contactsOf(ctx2).map(fromItem);
+    if (!list.length) {
+      toast("There are no contacts to export yet.");
+      return;
+    }
+    const label = { vcf: "a vCard (.vcf) file", google: "a Google Contacts CSV file", outlook: "an Outlook CSV file" }[kind];
+    if (!await confirmDialog({ title: "Export contacts?", text: `This saves ${list.length} contact${list.length === 1 ? "" : "s"} as ${label}. The file is NOT encrypted: anyone who finds it can read every name, number and address in it. Delete it after you have imported it.`, okLabel: "Export" })) return;
+    const name = `vaultmanager-contacts-${stamp()}`;
+    if (kind === "vcf") download(name + ".vcf", toVCard(list), "text/vcard");
+    else download(name + (kind === "google" ? "-google" : "-outlook") + ".csv", kind === "google" ? toGoogleCSV(list) : toOutlookCSV(list), "text/csv");
+    ctx2.store.log("export", `Exported ${list.length} contacts (${kind})`);
+    ctx2.store.save().catch(() => {
+    });
+  }
+  function exportContactVcf(ctx2, it) {
+    download(`${(it.name || "contact").replace(/[^\w.-]+/g, "_").slice(0, 40)}-${stamp()}.vcf`, toVCard([fromItem(it)]), "text/vcard");
+    toast("Saved as .vcf. The file is not encrypted: delete it after use.", "info", 5e3);
+  }
+  function contactsPanel(ctx2) {
+    const n = contactsOf(ctx2).length;
+    const ul = (items, cls) => h("ul", { class: "cio-list " + cls }, items.map((t) => h("li", { text: t })));
+    const file = h("input", { type: "file", accept: ".vcf,.csv,.txt,text/vcard,text/csv", class: "offscreen", "aria-label": "Contacts file", on: { change: async (e) => {
+      const f = e.target.files && e.target.files[0];
+      e.target.value = "";
+      if (f) await importFile(ctx2, f);
+    } } });
+    return h(
+      "div",
+      { class: "panel pad contactsio" },
+      h("h3", { text: "Contacts: import and export" }),
+      h(
+        "div",
+        { class: "ccols" },
+        h("div", { class: "ccan" }, h("h4", { text: "\u2713 What it can do" }), ul(CAN, "can")),
+        h("div", { class: "ccant" }, h("h4", { text: "\u2717 What it cannot do" }), ul(CANNOT, "cannot"))
+      ),
+      h(
+        "div",
+        { class: "row wrap" },
+        h("button", { class: "btn primary", on: { click: () => file.click() } }, "{{importfile}} Import contacts\u2026"),
+        file,
+        h("button", { class: "btn", on: { click: () => exportAll(ctx2, "vcf") } }, "{{exportfile}} Export all as .vcf"),
+        h("button", { class: "btn", on: { click: () => exportAll(ctx2, "google") } }, "Google CSV"),
+        h("button", { class: "btn", on: { click: () => exportAll(ctx2, "outlook") } }, "Outlook CSV"),
+        h("span", { class: "hint", text: `${n} contact${n === 1 ? "" : "s"} in this vault` })
+      )
+    );
+  }
+
   // js/secure-fields.js
   var WORD_COUNTS = [12, 15, 18, 21, 24];
   var MAX_WORDS = 48;
@@ -5909,7 +6330,8 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       h("div", { class: "items", role: "listbox", "aria-label": "Items" }, items.length ? items.map((it) => itemRow(ctx2, it)) : emptyState(ctx2, items))
     );
     const detail = h("div", { class: "panel detail", "aria-live": "polite" }, sel2 ? detailPanel(ctx2, sel2) : h("div", { class: "empty" }, h("div", { class: "big", text: "{{shieldlock}}" }), h("p", { text: "Select an item to view it." })));
-    return h("div", { class: "split" + (sel2 ? " has-sel" : "") }, list, detail);
+    const split2 = h("div", { class: "split" + (sel2 ? " has-sel" : "") }, list, detail);
+    return S2.view === "contact" ? h("div", { class: "contactswrap" }, contactsPanel(ctx2), split2) : split2;
   }
   function favChips(ctx2) {
     const { S: S2, store: store2 } = ctx2, names = store2.favNames();
@@ -6083,6 +6505,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
           await store2.update(it.id, { favorite: !it.favorite });
           ctx2.refresh();
         } } }, it.favorite ? "{{star}} " + (it.favName || "Favorite") : "{{starline}} Favorite"),
+        it.type === "contact" ? h("button", { class: "btn sm", title: "Save this contact as a vCard (.vcf) file that Outlook, Google and iCloud can import", on: { click: () => exportContactVcf(ctx2, it) } }, "{{download}} Export (.vcf)") : null,
         it.type === "network" && (it.fields || {}).ssid ? h("button", { class: "btn sm", on: { click: () => wifiModal(ctx2, it) } }, "{{network}} Wi-Fi QR") : null,
         h("button", { class: "btn sm", on: { click: () => shareItem(ctx2, it) } }, "{{qr}} Seal as QR"),
         it.lock ? null : h("button", { class: "btn sm", on: { click: async () => {
@@ -7620,6 +8043,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     return page(
       "Import & export",
       "Move data in and out. Encrypted backups are the safe way; plaintext files are for migrating only.",
+      contactsPanel(ctx2),
       h(
         "div",
         { class: "panel pad" },

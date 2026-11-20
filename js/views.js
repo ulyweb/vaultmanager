@@ -8,6 +8,7 @@ import { generatePassword, generatePassphrase, generateStrongPassphrase } from '
 import { totpNow, parseTotp } from './totp.js';
 import { sealText, openText } from './crypto.js';
 import { drawQR } from './qr.js';
+import { contactsPanel, exportContactVcf } from './contacts-ui.js';
 import { fmtDate, hostOf, safeHref, stamp, stampText } from './util.js';
 import { isFieldLocked, fieldValue } from './fieldlock.js';
 import { lockableField, lockedFieldRow, relockButton, seedView } from './secure-fields.js';
@@ -118,7 +119,8 @@ export function renderVaultView(ctx) {
     S.view === 'fav' ? favChips(ctx) : null,
     h('div', { class: 'items', role: 'listbox', 'aria-label': 'Items' }, items.length ? items.map((it) => itemRow(ctx, it)) : emptyState(ctx, items)));
   const detail = h('div', { class: 'panel detail', 'aria-live': 'polite' }, sel ? detailPanel(ctx, sel) : h('div', { class: 'empty' }, h('div', { class: 'big', text: '{{shieldlock}}' }), h('p', { text: 'Select an item to view it.' })));
-  return h('div', { class: 'split' + (sel ? ' has-sel' : '') }, list, detail);
+  const split = h('div', { class: 'split' + (sel ? ' has-sel' : '') }, list, detail);
+  return S.view === 'contact' ? h('div', { class: 'contactswrap' }, contactsPanel(ctx), split) : split;
 }
 
 /* the Favorites page: your own favorite names as filter chips (All · Work · Family …) */
@@ -242,6 +244,7 @@ function detailPanel(ctx, it0) {
         h('button', { class: 'btn danger sm', on: { click: () => trashWithConfirm(ctx, it) } }, '{{trash}} Delete')] :
       [h('button', { class: 'btn sm act-edit', on: { click: () => editItem(ctx, it) } }, '{{edit}} Edit'),
         h('button', { class: 'btn sm' + (it.favorite ? ' primary' : ''), 'aria-pressed': String(it.favorite), on: { click: async () => { await store.update(it.id, { favorite: !it.favorite }); ctx.refresh(); } } }, it.favorite ? '{{star}} ' + (it.favName || 'Favorite') : '{{starline}} Favorite'),
+        it.type === 'contact' ? h('button', { class: 'btn sm', title: 'Save this contact as a vCard (.vcf) file that Outlook, Google and iCloud can import', on: { click: () => exportContactVcf(ctx, it) } }, '{{download}} Export (.vcf)') : null,
         it.type === 'network' && (it.fields || {}).ssid ? h('button', { class: 'btn sm', on: { click: () => wifiModal(ctx, it) } }, '{{network}} Wi-Fi QR') : null,
         h('button', { class: 'btn sm', on: { click: () => shareItem(ctx, it) } }, '{{qr}} Seal as QR'),
         it.lock ? null : h('button', { class: 'btn sm', on: { click: async () => { const c = newItem(it.type, { ...structuredClone(it), id: undefined, name: it.name + ' (copy)', history: [], created: Date.now(), updated: Date.now() }); c.id = newItem().id; await store.add(c); ctx.showItem(c.id); toast('Duplicated'); } } }, '{{dup}} Duplicate'),

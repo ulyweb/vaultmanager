@@ -969,3 +969,37 @@ test('pick-list fields: every list is long enough, free of duplicates and sorted
   }
   for (const k of ['bank.bank', 'crypto.wallet', 'crypto.network', 'insurance.provider', 'phone.carrier', 'internet.isp', 'travel.program', 'car.insurer', 'healthcard.provider', 'prescription.pharmacy', 'voter.region']) assert.ok(seen.includes(k), k + ' is a pick-list');
 });
+
+test('contacts: vCard (2.1 / 3.0 / 4.0), Google and Outlook CSV import; vCard / CSV export round trip; duplicates; nothing lost', async () => {
+  const C = await import('../js/contacts.js');
+  // vCard 3.0 with folding, escapes, several phones / emails, address, birthday, notes, photo
+  const v3 = ['BEGIN:VCARD', 'VERSION:3.0', 'N:Rivera;Alex;Q;Dr.;', 'FN:Dr. Alex Rivera', 'ORG:Acme\\, Inc.;Sales', 'TITLE:Director', 'TEL;TYPE=CELL:+1 (555) 010-2000', 'TEL;TYPE=WORK,VOICE:555-0100', 'TEL;TYPE=HOME:555-0199', 'EMAIL;TYPE=INTERNET:alex@example.com', 'EMAIL;TYPE=HOME:alex.home@example.com',
+    'ADR;TYPE=WORK:;;1 Main St\\nSuite 4;Springfield;IL;62701;USA', 'BDAY:1985-03-09', 'URL:https://example.com', 'NOTE:Met at the\\nconference; says hi', 'PHOTO;ENCODING=b;TYPE=JPEG:AAAA', 'X-CUSTOM:1', 'END:VCARD'].join('\r\n') + '\r\n';
+  const a = C.parseVCard(v3); assert.equal(a.contacts.length, 1); const c = a.contacts[0];
+  assert.equal(c.name, 'Dr. Alex Rivera'); assert.equal(c.company, 'Acme, Inc. – Sales'); assert.equal(c.jobtitle, 'Director'); assert.equal(c.mobile, '+1 (555) 010-2000'); assert.equal(c.phone, '555-0100'); assert.equal(c.email, 'alex@example.com');
+  assert.match(c.address, /1 Main St\nSuite 4\nSpringfield, IL 62701\nUSA/); assert.equal(c.birthday, '1985-03-09'); assert.equal(c.url, 'https://example.com');
+  assert.match(c.notes, /Met at the\nconference; says hi/); assert.match(c.notes, /Other phone: 555-0199/); assert.match(c.notes, /Other email: alex\.home@example\.com/); assert.equal(a.left.photos, 1);
+  // 2.1 quoted-printable, folding, no FN
+  const v21 = 'BEGIN:VCARD\nVERSION:2.1\nN;CHARSET=UTF-8;ENCODING=QUOTED-PRINTABLE:M=C3=BCller;J=C3=B6rg;;;\nTEL;CELL:0171 555 0000\nEMAIL;INTERNET:j@example.de\nNOTE;ENCODING=QUOTED-PRINTABLE:line one=0Aline=\ntwo\nEND:VCARD\n';
+  const b = C.parseVCard(v21).contacts[0]; assert.equal(b.name, 'Jörg Müller'); assert.equal(b.mobile, '0171 555 0000'); assert.equal(b.notes, 'line one\nlinetwo');
+  // 4.0 + several cards + an empty one
+  const many = C.parseVCard('BEGIN:VCARD\nVERSION:4.0\nFN:Pat\nTEL;VALUE=uri;TYPE="cell,voice":tel:+15550001\nEND:VCARD\nBEGIN:VCARD\nVERSION:4.0\nEND:VCARD\nBEGIN:VCARD\nVERSION:4.0\nFN:Sam\nEND:VCARD\n'); assert.equal(many.contacts.length, 2); assert.equal(many.left.empty, 1); assert.equal(many.contacts[0].mobile, '+15550001');
+  // Google CSV (new layout with ::: multi values) and Outlook CSV
+  const g = C.parseContactsFile('First Name,Middle Name,Last Name,Organization Name,Organization Title,E-mail 1 - Value,Phone 1 - Label,Phone 1 - Value,Phone 2 - Label,Phone 2 - Value,Address 1 - Formatted,Birthday,Website 1 - Value,Notes,Labels\nAda,,Lovelace,Analytical Co,Engineer,ada@example.com ::: ada2@example.com,Mobile,555-1111,Work,555-2222,"1 Lane\nTown",1815-12-10,https://ada.example,"Hello, world",* myContacts ::: Family\n');
+  assert.equal(g.format, 'Google CSV'); const ga = g.contacts[0]; assert.equal(ga.name, 'Ada Lovelace'); assert.equal(ga.email, 'ada@example.com'); assert.equal(ga.mobile, '555-1111'); assert.equal(ga.phone, '555-2222'); assert.match(ga.address, /1 Lane\nTown/); assert.equal(ga.birthday, '1815-12-10'); assert.match(ga.notes, /Hello, world/); assert.match(ga.notes, /Other email: ada2@example\.com/); assert.match(ga.notes, /Group:/);
+  const o = C.parseContactsFile('First Name,Last Name,Company,Job Title,Business Phone,Mobile Phone,Home Phone,E-mail Address,Home Street,Home City,Home State,Home Postal Code,Birthday,Notes\nGrace,Hopper,Navy,Admiral,555-0001,555-0002,555-0003,grace@example.com,2 Bay Rd,Arlington,VA,22201,12/9/1906,Cobol\n');
+  assert.equal(o.format, 'Outlook CSV'); const oa = o.contacts[0]; assert.equal(oa.name, 'Grace Hopper'); assert.equal(oa.phone, '555-0001'); assert.equal(oa.mobile, '555-0002'); assert.match(oa.notes, /Other phone: 555-0003/); assert.equal(oa.birthday, '1906-12-09'); assert.match(oa.address, /2 Bay Rd\nArlington, VA 22201/);
+  assert.equal(C.normDate('0/0/00'), ''); assert.equal(C.normDate('--0517'), ''); assert.equal(C.normDate('19900517'), '1990-05-17'); assert.equal(C.normDate('31/12/1999'), '1999-12-31');
+  // export round trips through our own reader
+  const list = [{ name: 'Dr. Alex Rivera', company: 'Acme, Inc.', jobtitle: 'Director', phone: '555-0100', mobile: '+1 555 0102', email: 'alex@example.com', address: '1 Main St\nSpringfield, IL', url: 'https://example.com', birthday: '1985-03-09', notes: 'Line one\nLine; two, three', relation: 'Colleague' }, { name: 'Maria López', company: '', jobtitle: '', phone: '', mobile: '', email: '', address: '', url: '', birthday: '', notes: '', relation: '' }];
+  const vc = C.toVCard(list); assert.ok(vc.includes('\r\nFN:Dr. Alex Rivera\r\n') && vc.endsWith('END:VCARD\r\n')); assert.ok(vc.split('\r\n').every((l) => [...l].length <= 75), 'lines are folded');
+  const back = C.parseVCard(vc).contacts; assert.equal(back.length, 2); for (const k of ['name', 'company', 'jobtitle', 'phone', 'mobile', 'email', 'url', 'birthday']) assert.equal(back[0][k], list[0][k], k); assert.equal(back[0].address, list[0].address); assert.match(back[0].notes, /Line one\nLine; two, three/); assert.equal(back[1].name, 'Maria López');
+  for (const [fn, fmt] of [[C.toGoogleCSV, 'Google CSV'], [C.toOutlookCSV, 'Outlook CSV']]) { const r = C.parseContactsFile(fn(list)); assert.equal(r.format, fmt); assert.equal(r.contacts[0].name, 'Dr. Alex Rivera'.replace('Dr. ', 'Dr. ')); assert.equal(r.contacts[0].email, 'alex@example.com'); assert.equal(r.contacts[0].mobile, '+1 555 0102'); assert.equal(r.contacts[0].birthday, '1985-03-09'); }
+  assert.ok(C.toGoogleCSV([{ name: '=HYPERLINK("x")', notes: '' }]).includes("'=HYPERLINK"), 'a spreadsheet formula is defused');
+  assert.ok(C.toOutlookCSV([{ name: 'x', notes: '+cmd|\' /C calc\'!A0' }]).includes("'+cmd"), 'a +formula is defused'); assert.ok(C.toOutlookCSV([{ name: 'x', phone: '+1 555 0100' }]).includes(',+1 555 0100,') || C.toOutlookCSV([{ name: 'x', mobile: '+1 555 0100' }]).includes('+1 555 0100'), 'phone numbers keep their +');
+  // duplicates
+  const have = [{ name: 'Alex Rivera', email: 'ALEX@example.com', phone: '', mobile: '' }, { name: 'Pat', email: '', phone: '(555) 000-1234', mobile: '' }, { name: 'Sam', email: '', phone: '', mobile: '' }];
+  assert.ok(C.isDuplicate({ name: 'A. Rivera', email: 'alex@example.com' }, have)); assert.ok(C.isDuplicate({ name: 'Patrick', phone: '555-000-1234' }, have)); assert.ok(C.isDuplicate({ name: 'sam' }, have)); assert.ok(!C.isDuplicate({ name: 'Sam', email: 'new@example.com' }, have)); assert.ok(!C.isDuplicate({ name: 'Zed', email: 'z@example.com' }, have));
+  assert.throws(() => C.parseContactsFile(Array.from({ length: 5001 }, () => 'BEGIN:VCARD\nFN:x\nEND:VCARD').join('\n')), /limit/);
+  assert.deepEqual(C.toItemData({ name: 'X', company: '', phone: '1', notes: 'n' }), { type: 'contact', name: 'X', notes: 'n', fields: { phone: '1' } });
+});
