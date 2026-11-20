@@ -2271,7 +2271,7 @@ test('v0.42.0: Contacts import / export — the page states what works and what 
   const [dl] = await Promise.all([page.waitForEvent('download'), (async () => { await page.getByRole('button', { name: /Export all as \.vcf/ }).click(); await page.getByText(/NOT encrypted: anyone who finds it/).waitFor(); await page.getByRole('button', { name: 'Export', exact: true }).click(); })()]);
   assert.match(dl.suggestedFilename(), /^vaultmanager-contacts-.*\.vcf$/); const out = fs.readFileSync(await dl.path(), 'utf8'); assert.equal((out.match(/BEGIN:VCARD/g) || []).length, 3); assert.ok(out.includes('FN:Ada Lovelace') && out.includes('EMAIL;TYPE=INTERNET:alex@example.com'));
   const [dl2] = await Promise.all([page.waitForEvent('download'), (async () => { await page.getByRole('button', { name: 'Outlook CSV' }).click(); await page.getByRole('button', { name: 'Export', exact: true }).click(); })()]);
-  assert.match(fs.readFileSync(await dl2.path(), 'utf8'), /First Name,Middle Name,Last Name,Company/);
+  assert.match(fs.readFileSync(await dl2.path(), 'utf8'), /First Name,Middle Name,Last Name,Nickname,Company,Department/);
   // one contact from its own page
   await page.locator('.items .item:has-text("Pat Kim")').click(); const [dl3] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: /Export \(\.vcf\)/ }).click()]); assert.match(fs.readFileSync(await dl3.path(), 'utf8'), /FN:Pat Kim/);
   // the same panel is on Import & export
