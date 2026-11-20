@@ -2393,3 +2393,25 @@ test('profiles: a profile photo travels with "Export whole profile" and comes ba
   assert.equal(await B.page.locator('.sysmenu .sm-who .pav img').count(), 1, 'the imported profile shows the photo');
   await B.ctx.close();
 });
+
+test('contacts: a contact photo survives export to .vcf, delete, and import back into VaultManager', async () => {
+  const { ctx, page, problems } = await newPage(); await createVault(page);
+  const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+  await page.getByRole('button', { name: '＋ New' }).click(); await page.waitForSelector('.modal-sheet'); if (await page.locator('.c3-stage').count()) await page.locator('.pickseg button').nth(1).click();
+  await page.locator('.modal-sheet .cats .btn', { hasText: 'Contact' }).click(); await page.waitForSelector('#f_name');
+  await page.fill('#f_name', 'Rae Photo'); await page.setInputFiles('input[aria-label="Choose a photo"]', { name: 'me.png', mimeType: 'image/png', buffer: png }); await page.waitForSelector('.photo-prev.has-photo');
+  await page.fill('#tf_mobile', '555-0199');
+  await page.getByRole('button', { name: 'Save' }).click(); await page.waitForSelector('.detail .avatar.has-photo');
+  const [dl] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: /Export \(\.vcf\)/ }).click()]);
+  const vcf = fs.readFileSync(await dl.path(), 'utf8'); assert.match(vcf, /PHOTO;ENCODING=b;TYPE=JPEG:/, 'the export carries the photo');
+  await page.locator('.detail button:has-text("Delete")').first().click(); await page.waitForSelector('.modal-sheet:has-text("Move to trash?")');
+  await page.locator('.modal-sheet .btn.danger, .modal-sheet .btn.primary').last().click(); await page.waitForSelector('.modal-sheet', { state: 'detached' });
+  await page.locator('.side .nav:has-text("Contacts")').click(); await page.waitForSelector('.contactsio');
+  assert.equal(await page.locator('.items .item:has-text("Rae Photo")').count(), 0, 'deleted');
+  await page.setInputFiles('input[aria-label="Contacts file"]', { name: 'rae.vcf', mimeType: 'text/vcard', buffer: Buffer.from(vcf) });
+  await page.waitForSelector('.modal-sheet .ctable'); assert.match(await page.textContent('.modal-sheet'), /1 with a photo/);
+  await page.getByRole('button', { name: 'Import', exact: true }).click(); await page.getByText(/with 1 photo/).waitFor();
+  await page.waitForSelector('.items .item:has-text("Rae Photo") .avatar.has-photo');
+  await page.locator('.items .item:has-text("Rae Photo")').click(); await page.waitForSelector('.detail .avatar.has-photo');
+  assert.deepEqual(problems.filter((p) => !/Failed to load resource/.test(p)), []); await ctx.close();
+});
