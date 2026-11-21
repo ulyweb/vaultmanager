@@ -8,7 +8,7 @@ import { health, importAny, exportCSV, decryptBackup, newItem, sanitiseItem, OLD
 import { ITER_DEFAULT, sealText, openText, inspectSeal, available } from './crypto.js';
 import { drawQR, decodeFile, startScanner, chunkPayload, ChunkAssembler, parseChunk } from './qr.js';
 import { runSelfTest } from './selftest.js';
-import { meter, liveMeter, passwordRow, itemCard, describeContents, payloadBox, purgeButton, avatar, printNodes, showRecoveryKit } from './views.js';
+import { meter, liveMeter, passwordRow, itemCard, describeContents, qrFields, payloadBox, purgeButton, avatar, printNodes, showRecoveryKit } from './views.js';
 import { fmtDate, fmtInt, hostOf, stamp } from './util.js';
 import { contactsPanel } from './contacts-ui.js';
 import { fileCryptPanel } from './filecrypt-ui.js';
@@ -180,13 +180,13 @@ function openTab(ctx) {
         if (!info.ok) throw new Error(info.why);
         const text = await openText(p, pw.value);
         let item = null, single = null;
-        try { const j = JSON.parse(text); if (j && j.vm === 1 && j.item) item = sanitiseItem(j.item); else if (j && j.vm === 1 && j.field && typeof j.field.value === 'string') single = { name: String(j.name || ''), field: { label: String(j.field.label || 'Value').slice(0, 80), value: j.field.value } }; } catch { /* plain text */ }
+        try { const j = JSON.parse(text); if (j && j.vm === 1 && j.item) { item = sanitiseItem(j.item); item.fields = qrFields(item); } else if (j && j.vm === 1 && j.field && typeof j.field.value === 'string') single = { name: String(j.name || ''), field: { label: String(j.field.label || 'Value').slice(0, 80), value: j.field.value } }; } catch { /* plain text */ }
         if (item) {
           const dc = describeContents(item);
           out.append(h('div', { class: 'note ok', text: 'Opened a VaultManager item — this is everything the QR contained: ' + dc.included + '.' }), itemCard(ctx, item),
             h('div', { class: 'row wrap' }, h('button', { class: 'btn primary', on: { click: async () => { await ctx.store.add(item); ctx.showItem(item.id); toast('Added to your vault'); } } }, '{{plus}} Add to my vault'),
               h('button', { class: 'btn', on: { click: () => copyText(JSON.stringify(item, null, 2), 'Item copied as text', ctx.store.settings.clipboard) } }, '{{copy}} Copy as text')),
-            h('p', { class: 'hint', text: 'Attached files are never inside a QR. Nothing is added to your vault until you press the button.' }));
+            h('p', { class: 'hint', text: 'Attached files (including a contact’s photo) are never inside a QR. Nothing is added to your vault until you press the button.' }));
         } else if (single) {
           out.append(h('div', { class: 'note ok', text: 'Opened a single value sealed from “' + (single.name || 'an item') + '”.' }), h('div', { class: 'kv' }, h('span', { text: single.field.label }), h('b', { class: 'mono', text: single.field.value })),
             h('div', { class: 'row wrap' }, h('button', { class: 'btn sm', on: { click: () => copyText(single.field.value, 'Copied', ctx.store.settings.clipboard) } }, '{{copy}} Copy')));
