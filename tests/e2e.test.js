@@ -2417,3 +2417,32 @@ test('contacts: a contact photo survives export to .vcf, delete, and import back
   await page.locator('.items .item:has-text("Rae Photo")').click(); await page.waitForSelector('.detail .avatar.has-photo');
   assert.deepEqual(problems.filter((p) => !/Failed to load resource/.test(p)), []); await ctx.close();
 });
+
+test('Seal as QR on a contact names the photo as not included, and the QR carries no photo reference', async () => {
+  const { ctx, page, problems } = await newPage(); await createVault(page); await showEverything(page);
+  const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+  await page.getByRole('button', { name: '＋ New' }).click(); await page.waitForSelector('.modal-sheet'); if (await page.locator('.c3-stage').count()) await page.locator('.pickseg button').nth(1).click();
+  await page.locator('.modal-sheet .cats .btn', { hasText: 'Contact' }).click(); await page.waitForSelector('#f_name');
+  await page.fill('#f_name', 'Quinn Photo'); await page.setInputFiles('input[aria-label="Choose a photo"]', { name: 'me.png', mimeType: 'image/png', buffer: png }); await page.waitForSelector('.photo-prev.has-photo');
+  await page.fill('#tf_mobile', '555-0142');
+  await page.getByRole('button', { name: 'Save' }).click(); await page.waitForSelector('.detail .avatar.has-photo');
+  await page.getByRole('button', { name: /Seal as QR/ }).first().click(); await page.waitForSelector('.modal-sheet');
+  assert.match(await page.textContent('.modal-sheet'), /Share with its contact photo/);
+  await page.fill('.modal-sheet input[aria-label="QR password"]', 'contact-qr-pass'); await page.fill('.modal-sheet input[aria-label="Confirm QR password"]', 'contact-qr-pass');
+  await page.getByRole('button', { name: 'Create QR' }).click(); await page.waitForSelector('.modal-sheet .note.ok', { timeout: 30000 });
+  const status = await page.textContent('.modal-sheet .note.ok');
+  assert.match(status, /Not included: the contact photo \(QR codes are far too small for a picture/);
+  assert.match(status, /1 filled field\b/, 'the photo is not counted as a filled field: ' + status);
+  const payload = await page.inputValue('.modal-sheet textarea.payload');
+  await page.keyboard.press('Escape');
+  // open it: the contact comes back with its text fields and no dangling photo
+  await page.getByRole('button', { name: /QR tools/ }).click(); await page.getByRole('tab', { name: 'Open QR' }).click();
+  await page.fill('textarea[aria-label="Sealed payload"]', payload); await page.fill('input[aria-label="Password"]', 'contact-qr-pass');
+  await page.getByRole('button', { name: /^🔓 Open/ }).click(); await page.waitForSelector('text=Opened a VaultManager item', { timeout: 30000 });
+  assert.match(await page.textContent('main'), /including a contact’s photo/);
+  await page.getByRole('button', { name: /Add to my vault/ }).click(); await page.waitForSelector('.detail h2:has-text("Quinn Photo")');
+  const added = await page.evaluate(() => [...document.querySelectorAll('.detail .avatar')].map((e) => e.classList.contains('has-photo')));
+  assert.deepEqual(added, [false], 'the copy from the QR has no photo');
+  assert.match(await page.textContent('.detail'), /555-0142/);
+  assert.deepEqual(problems.filter((p) => !/Failed to load resource/.test(p)), []); await ctx.close();
+});

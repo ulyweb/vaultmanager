@@ -231,8 +231,17 @@ export function itemCard(ctx, it) {
 }
 
 /* Plain-language list of what an item QR holds (and what it cannot). */
+/* The fields that can go into a QR: a photo field only points at an attachment, and attachments never fit in a QR. */
+export function qrFields(it) {
+  const f = { ...(it.fields || {}) }, t = TEMPLATES[it.type];
+  if (t) for (const d of t.fields) if (d.kind === 'photo') delete f[d.k];
+  return f;
+}
+
 export function describeContents(it) {
-  const t = TEMPLATES[it.type], filled = t ? t.fields.filter((f) => (it.fields || {})[f.k]) : [];
+  const t = TEMPLATES[it.type], filled = t ? t.fields.filter((f) => f.kind !== 'photo' && (it.fields || {})[f.k]) : [];
+  const photoIds = t ? t.fields.filter((f) => f.kind === 'photo').map((f) => (it.fields || {})[f.k]).filter(Boolean) : [];
+  const atts = it.attachments || [], photo = atts.some((a) => photoIds.includes(a.id));
   const secrets = filled.filter((f) => isSecretField(f)).length + (it.password ? 1 : 0) + (it.card && (it.card.number || it.card.cvv || it.card.pin) ? 1 : 0) + (it.custom || []).filter((c) => c.secret && c.value).length;
   const parts = [];
   if (filled.length) parts.push(filled.length + ' filled field' + (filled.length === 1 ? '' : 's') + (secrets ? ' (' + secrets + ' secret)' : ''));
@@ -244,7 +253,7 @@ export function describeContents(it) {
   if (it.notes) parts.push('notes');
   if ((it.custom || []).length) parts.push(it.custom.length + ' custom field' + (it.custom.length === 1 ? '' : 's'));
   if ((it.tags || []).length) parts.push(it.tags.length + ' tag' + (it.tags.length === 1 ? '' : 's'));
-  return { included: parts.length ? parts.join(', ') : 'the name only (this item has no other details filled in)', attachments: (it.attachments || []).length };
+  return { included: parts.length ? parts.join(', ') : 'the name only (this item has no other details filled in)', attachments: atts.length, photo, files: atts.length - (photo ? 1 : 0) };
 }
 
 /* Delete = move to the trash, after asking. The trash keeps it for a while, so it can still be restored. */
@@ -706,17 +715,17 @@ export function shareItem(ctx, it, only = null) {
     err.textContent = ''; clear(out);
     if (!pwOk()) { err.textContent = 'The two QR passwords do not match.'; return false; }
     if (qrPw().length < 8) { err.textContent = 'Use at least 8 characters for the QR password' + (itemCode && useCode.checked ? ' (this item’s passcode is shorter — untick the box and choose a separate QR password).' : '.'); return false; }
-    const payload = only ? { vm: 1, name: it.name, field: { label: only.label, value: only.value } } : { vm: 1, item: { type: it.type, name: it.name, description: it.description, username: it.username, password: it.password, url: it.url, totp: it.totp, notes: it.notes, tags: it.tags, card: it.card, fields: it.fields, custom: it.custom } };
+    const payload = only ? { vm: 1, name: it.name, field: { label: only.label, value: only.value } } : { vm: 1, item: { type: it.type, name: it.name, description: it.description, username: it.username, password: it.password, url: it.url, totp: it.totp, notes: it.notes, tags: it.tags, card: it.card, fields: qrFields(it), custom: it.custom } };
     try {
       out.append(h('p', { class: 'hint', text: 'Deriving the key (600,000 rounds) and sealing…' }));
       const sealed = await sealText(JSON.stringify(payload), qrPw());
       canvas = h('canvas', { role: 'img', 'aria-label': 'Encrypted QR code' });
       const r = await drawQR(canvas, sealed, { scale: 6 });
       const back = JSON.parse(await openText(sealed, qrPw()));   // prove it opens again, exactly like the Open QR tab will
-      const verified = only ? back.field && back.field.value === only.value : back.item && back.item.name === it.name && JSON.stringify(back.item.fields || {}) === JSON.stringify(it.fields || {}) && back.item.notes === it.notes && back.item.password === it.password;
+      const verified = only ? back.field && back.field.value === only.value : back.item && back.item.name === it.name && JSON.stringify(back.item.fields || {}) === JSON.stringify(qrFields(it)) && back.item.notes === it.notes && back.item.password === it.password;
       if (!verified) throw new Error('The QR did not read back correctly — nothing was changed. Try again.');
       const dc = only ? null : describeContents(it);
-      clear(out).append(h('div', { class: 'qrbox' }, canvas), payloadBox(ctx, sealed, { file: 'vaultmanager-' + (it.name.replace(/\W+/g, '-').toLowerCase() || 'item') + '-payload' }), h('div', { class: 'note ok', role: 'status' }, h('b', { text: '✓ Checked: this QR opens again with the password. ' }), only ? 'It holds this single value.' : ['It holds the WHOLE item: ', h('b', { text: dc.included }), '.', dc.attachments ? ` Not included: ${dc.attachments} attached file${dc.attachments === 1 ? '' : 's'} (QR codes are far too small for files — use “Save item + files as encrypted file” below to share them).` : ' This item has no attached files.'], it.lock ? h('p', { class: 'hint', text: 'This item has a secondary passcode in your vault. The QR is protected by the QR password only — it does NOT carry the item passcode, so whoever has the picture and the QR password can read it. Pick a QR password as strong as the item passcode.' }) : null,
+      clear(out).append(h('div', { class: 'qrbox' }, canvas), payloadBox(ctx, sealed, { file: 'vaultmanager-' + (it.name.replace(/\W+/g, '-').toLowerCase() || 'item') + '-payload' }), h('div', { class: 'note ok', role: 'status' }, h('b', { text: '✓ Checked: this QR opens again with the password. ' }), only ? 'It holds this single value.' : ['It holds the WHOLE item: ', h('b', { text: dc.included }), '.', dc.attachments ? ` Not included: ${[dc.photo ? 'the contact photo' : '', dc.files ? `${dc.files}${dc.photo ? ' other' : ''} attached file${dc.files === 1 ? '' : 's'}` : ''].filter(Boolean).join(' and ')} (QR codes are far too small for ${dc.photo && !dc.files ? 'a picture' : 'files'} — use “Save item + files as encrypted file” below to share ${dc.photo && !dc.files ? 'it' : 'them'}).` : ' This item has no attached files.'], it.lock ? h('p', { class: 'hint', text: 'This item has a secondary passcode in your vault. The QR is protected by the QR password only — it does NOT carry the item passcode, so whoever has the picture and the QR password can read it. Pick a QR password as strong as the item passcode.' }) : null,
         only ? null : h('div', { class: 'row' }, h('button', { class: 'btn sm', on: { click: () => modal({ title: 'What a scan restores', sub: 'Exactly what “Open QR” will show', wide: true, body: itemCard(ctx, sanitiseItem(back.item)), actions: [{ label: 'Close' }] }) } }, '{{search}} Preview what a scan restores'))), h('p', { class: 'hint', text: `QR version ${r.version} · ECC ${r.ecc} · AES-256-GCM · PBKDF2-SHA256 600,000 rounds. The password is NOT in the code — share it by a different channel.` }),
         h('div', { class: 'row wrap' }, h('button', { class: 'btn sm', on: { click: () => canvas.toBlob((b) => download(`vaultmanager-${it.name.replace(/\W+/g, '-').toLowerCase() || 'item'}-${stamp()}.png`, b, 'image/png')) } }, '{{download}} PNG'),
           h('button', { class: 'btn sm', on: { click: () => { const c2 = h('canvas'); c2.width = canvas.width; c2.height = canvas.height; c2.getContext('2d').drawImage(canvas, 0, 0); printNodes([h('h1', { text: 'VaultManager — encrypted QR' }), h('div', { class: 'pq' }, c2, h('div', { text: it.name })), h('p', { text: 'Scan in VaultManager (QR tools → Open) or QR Seal and enter the password. The password is not on this page.' })]); } } }, '{{print}} Print')));
@@ -725,8 +734,8 @@ export function shareItem(ctx, it, only = null) {
   };
   modal({ title: only ? 'Seal “' + only.label + '” as QR' : 'Seal as QR code', sub: it.name, wide: true,
     body: h('div', null, h('p', { class: 'note warn', text: 'Anyone with the QR image AND this password can read the item. Pick a password you can tell the recipient separately.' }),
-      h('details', { class: 'how' }, h('summary', { text: 'How does this work?' }), h('ol', null, h('li', { text: only ? 'Only this one value is encrypted (AES-256-GCM) into the QR.' : 'The WHOLE item — every field, notes, custom fields and tags — is encrypted (AES-256-GCM) into the QR with the password below.' }), h('li', { text: only ? 'Attached files can never go into a QR.' : 'Attached files are NOT included, and this cannot be changed: a QR code holds at most about 2–3 KB (roughly 2,900 bytes) once encrypted, while even a small photo or PDF is hundreds of KB to several MB — a thousand times too big. Splitting a file over many QR codes would mean scanning hundreds of them. Instead, use the “Save item + files as encrypted file” button below (when the item has files): it seals the item and its attachments into one file with the same password.' }), h('li', { text: 'Save, print or show the picture. It is useless without the password, so give the password through a different channel.' }), h('li', { text: 'To restore: Tools → QR tools → Open QR → scan it (or choose the image) → enter the password. You see the full card and press “Add to my vault”.' }))),
-      !only && (it.attachments || []).length ? h('div', { class: 'panel pad' }, h('h4', { text: `Share with its ${it.attachments.length} attached file${it.attachments.length === 1 ? '' : 's'}` }),
+      h('details', { class: 'how' }, h('summary', { text: 'How does this work?' }), h('ol', null, h('li', { text: only ? 'Only this one value is encrypted (AES-256-GCM) into the QR.' : 'The WHOLE item — every field, notes, custom fields and tags — is encrypted (AES-256-GCM) into the QR with the password below.' }), h('li', { text: only ? 'Attached files can never go into a QR.' : 'Attached files are NOT included (that means a contact’s photo too), and this cannot be changed: a QR code holds at most about 2–3 KB (roughly 2,900 bytes) once encrypted, while even a small photo or PDF is hundreds of KB to several MB — a thousand times too big. Splitting a file over many QR codes would mean scanning hundreds of them. Instead, use the “Save item + files as encrypted file” button below (when the item has files): it seals the item and its attachments into one file with the same password.' }), h('li', { text: 'Save, print or show the picture. It is useless without the password, so give the password through a different channel.' }), h('li', { text: 'To restore: Tools → QR tools → Open QR → scan it (or choose the image) → enter the password. You see the full card and press “Add to my vault”.' }))),
+      !only && (it.attachments || []).length ? h('div', { class: 'panel pad' }, h('h4', { text: (() => { const d = describeContents(it); return 'Share with its ' + [d.photo ? 'contact photo' : '', d.files ? `${d.files}${d.photo ? ' other' : ''} attached file${d.files === 1 ? '' : 's'}` : ''].filter(Boolean).join(' and '); })() }),
         h('p', { class: 'hint', text: 'A QR picture is too small for files, so this makes one encrypted file instead: the whole item and its attachments, sealed with the QR password above. Send the file; the recipient opens Import & export → Restore from backup, chooses it and enters the password (the item and its files are added to their vault).' }),
         h('div', { class: 'row' }, h('button', { class: 'btn', on: { click: async () => {
           fileErr.textContent = '';
