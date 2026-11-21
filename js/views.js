@@ -230,7 +230,6 @@ export function itemCard(ctx, it) {
   return h('div', { class: 'itemcard' }, h('div', { class: 'detail-head' }, withPhoto(ctx, it, avatar(it.name, it.type)), h('div', null, h('h2', { text: it.name || '(untitled)' }), h('span', { class: 'chip' }, h('span', { class: 'icn', text: TYPE_ICON[it.type] || '' }), ' ' + (TYPES[it.type] || it.type)))), h('div', { class: 'fields' }, rows));
 }
 
-/* Plain-language list of what an item QR holds (and what it cannot). */
 /* The fields that can go into a QR: a photo field only points at an attachment, and attachments never fit in a QR. */
 export function qrFields(it) {
   const f = { ...(it.fields || {}) }, t = TEMPLATES[it.type];
@@ -238,6 +237,7 @@ export function qrFields(it) {
   return f;
 }
 
+/* Plain-language list of what an item QR holds (and what it cannot). */
 export function describeContents(it) {
   const t = TEMPLATES[it.type], filled = t ? t.fields.filter((f) => f.kind !== 'photo' && (it.fields || {})[f.k]) : [];
   const photoIds = t ? t.fields.filter((f) => f.kind === 'photo').map((f) => (it.fields || {})[f.k]).filter(Boolean) : [];
