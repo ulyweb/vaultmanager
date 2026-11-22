@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VaultManager v0.45.0 — single-file offline build. Verify with the .sha256 file next to it. -->
+<!-- VaultManager v0.46.0 — single-file offline build. Verify with the .sha256 file next to it. -->
 <html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
@@ -11,7 +11,7 @@
 <meta name="application-name" content="VaultManager">
 <meta name="format-detection" content="telephone=no">
 <meta name="referrer" content="no-referrer">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-tauzjAWYvkq2EEey6/r1GOXzEWNzSydbYj43JCIjd2U=' 'sha256-6vqVURYVtjiRv+y3Ydxgs49R4APJELxb1e3tqUW90+E=' blob:; style-src 'sha256-9SLOh2IKv/iEHafZl7lw9qrSUpaUtaMgb8qcxxsxFjA='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-tauzjAWYvkq2EEey6/r1GOXzEWNzSydbYj43JCIjd2U=' 'sha256-es0MQiMXkmXUbgdHdTVb2Ys/MxC+7HkIZkcj7upxfa0=' blob:; style-src 'sha256-MtW8rsTVO1Prol8YbfPSri+un3XJzkQjxX9XZxcCmcQ='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
 <title>VaultManager | Zero-Knowledge Password Manager</title>
 <meta name="description" content="VaultManager: an offline-first, zero-knowledge, end-to-end encrypted password manager with a strong password generator, TOTP codes and QR-sealed sharing and backup. Runs entirely in your browser.">
 <meta name="theme-color" content="#05080d">
@@ -1156,6 +1156,8 @@ html[data-avatar] .avatar.has-photo, .avatar.has-photo { background: var(--photo
 /* Encrypt a photo or file */
 .filecrypt .ccols h4 { margin: 0 0 8px; }
 .fileprev img { display: block; max-width: 100%; max-height: 220px; border-radius: 10px; margin: 8px 0; border: 1px solid var(--line); }
+/* 2FA field: scan buttons under the input, no empty space for a message that is not there */
+.totp-field > .row { margin-top: 8px; } .totp-field .err:empty, .totp-field [role=status]:empty { display: none; } .totp-field .scanner { margin: 8px 0 0; }
 </style>
 </head>
 <body>
@@ -2310,6 +2312,18 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     const remaining = cfg.period - Math.floor(nowMs / 1e3) % cfg.period;
     return { code, remaining, period: cfg.period };
   }
+  function totpFromQR(text2) {
+    const t = String(text2 || "").trim();
+    if (/^otpauth-migration:\/\//i.test(t)) return { error: "This is a Google Authenticator export QR (several accounts in one). VaultManager cannot read that format. Scan each site\u2019s own 2FA setup QR instead, or paste the setup key the site shows." };
+    if (/^otpauth:\/\/hotp\//i.test(t)) return { error: "This QR is for a counter-based (HOTP) code. Only time-based codes (TOTP) are supported, which is what almost every site uses." };
+    if (!/^otpauth:\/\/totp\//i.test(t)) return { error: "This QR is not a 2FA setup code. A 2FA setup QR holds a link that starts with otpauth://totp/." };
+    try {
+      const cfg = parseTotp(t), label = cfg.label || "", i = label.indexOf(":");
+      return { value: t, issuer: cfg.issuer || (i > 0 ? label.slice(0, i).trim() : ""), account: (i >= 0 ? label.slice(i + 1) : label).trim() };
+    } catch (e) {
+      return { error: "This 2FA QR could not be used: " + (e && e.message ? e.message : "it is not valid") + "." };
+    }
+  }
 
   // js/blobs.js
   function memoryBlobs() {
@@ -2360,7 +2374,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   }
 
   // js/version.js
-  var APP_VERSION = "0.45.0";
+  var APP_VERSION = "0.46.0";
   var APP_NAME = "VaultManager";
   var REPO_URL = "https://github.com/ulyweb/vaultmanager";
   var FORMATS = [
@@ -2375,6 +2389,14 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     ["Attachments at rest", "AES-256-GCM per file, bound to vault + file id"]
   ];
   var CHANGELOG = [
+    { v: "0.46.0", date: "2026-11-22", notes: [
+      "The 2FA field on a login has \u201CScan QR with camera\u201D and \u201CQR from image / screenshot\u201D. Point the camera at the site\u2019s 2FA setup QR, or choose a screenshot of it, and the secret is filled in; an empty title and username are filled from the QR too. The picture is read on this device only.",
+      "A QR that is not a 2FA setup code, a counter-based (HOTP) code or a Google Authenticator export is refused with a plain explanation.",
+      "The 2FA field explains the trade-off of keeping 2FA in the same vault as the password, and Settings \u2192 About \u2192 FAQ has a new entry on what the 2FA codes can and cannot do.",
+      "\u201CExport whole profile\u201D now keeps a profile photo, so importing the backup brings it back.",
+      "Seal as QR on a contact says the photo is not included, and the QR no longer carries a reference to it.",
+      "The New, Lock and Help buttons no longer slide through other positions when the clock is moved."
+    ] },
     { v: "0.45.0", date: "2026-11-20", notes: [
       "New tool on Import & export: \u201CEncrypt a photo or file\u201D. Pick any picture or file (up to 100 MB), choose a password, and save one encrypted .vmenc file (AES-256-GCM, password stretched 600,000 times; the file name is encrypted too). Open it again on the same page, in any copy of VaultManager including the offline file, to see the picture and save the original back.",
       "Before saving, the tool checks that the file opens again with your password. A wrong password or a changed file is refused. There is no password reset, and your original photo is not changed or deleted."
@@ -7163,6 +7185,99 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     });
     if (pws.length && ctx2.store.settings.logReveal) ctx2.store.log("access", "Viewed previous passwords of \u201C" + it.name + "\u201D");
   }
+  function totpSecretField(it) {
+    const input = h("input", { id: "f_totp", class: "inp mono", value: it.totp || "", autocomplete: "off", spellcheck: "false", placeholder: "Base32 setup key or otpauth:// link", on: { input: (e) => {
+      it.totp = e.target.value;
+    } } });
+    const status = h("p", { class: "hint", role: "status" }), err = h("p", { class: "err totp-err", role: "alert" });
+    const video = h("video", { muted: true, playsinline: true, "aria-label": "Camera preview for the 2FA QR" }), camBox = h("div", { class: "scanner", hidden: true }, video);
+    let stopCam = null;
+    const stop = () => {
+      if (stopCam) {
+        stopCam();
+        stopCam = null;
+      }
+      camBox.hidden = true;
+      setLabel(camBtn, "{{camera}} Scan QR with camera");
+    };
+    const use = (text2) => {
+      const r = totpFromQR(text2);
+      if (r.error) {
+        err.textContent = r.error;
+        status.textContent = "";
+        return false;
+      }
+      stop();
+      err.textContent = "";
+      input.value = r.value;
+      it.totp = r.value;
+      input.dispatchEvent(new Event("input"));
+      const filled = [];
+      const t = document.getElementById("f_name");
+      if (t && !t.value.trim() && r.issuer) {
+        t.value = r.issuer;
+        it.name = r.issuer;
+        t.dispatchEvent(new Event("input"));
+        filled.push("title");
+      }
+      const u = document.getElementById("f_username");
+      if (u && !u.value.trim() && r.account) {
+        u.value = r.account;
+        it.username = r.account;
+        u.dispatchEvent(new Event("input"));
+        filled.push("username");
+      }
+      status.textContent = "\u2713 2FA set up from the QR" + (r.issuer ? " for " + r.issuer : "") + (filled.length ? " (also filled the empty " + filled.join(" and ") + ")" : "") + ". Save the item; it then shows the 6-digit code to type on the site to finish setting up 2FA.";
+      return true;
+    };
+    const camBtn = h("button", { type: "button", class: "btn sm", on: { click: async () => {
+      err.textContent = "";
+      if (stopCam) {
+        stop();
+        return;
+      }
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        err.textContent = "Camera access is unavailable here (it needs https:// or localhost). Use \u201CQR from image\u201D with a screenshot instead.";
+        return;
+      }
+      try {
+        camBox.hidden = false;
+        setLabel(camBtn, "{{close}} Stop camera");
+        stopCam = await startScanner(video, (t) => {
+          use(t);
+        });
+        status.textContent = "Point the camera at the 2FA QR code on the site.";
+      } catch (e) {
+        stop();
+        err.textContent = "Could not start the camera: " + (e.message || e.name);
+      }
+    } } }, "{{camera}} Scan QR with camera");
+    const file = h("input", { type: "file", accept: "image/*", class: "offscreen", "aria-label": "2FA QR image", on: { change: async (e) => {
+      err.textContent = "";
+      const f = e.target.files && e.target.files[0];
+      e.target.value = "";
+      if (!f) return;
+      try {
+        const t = await decodeFile(f);
+        if (t) use(t);
+        else err.textContent = "No QR code found in " + (f.name || "that image") + ". Crop the screenshot closer to the QR and try again.";
+      } catch (x) {
+        err.textContent = "Could not read that image: " + x.message;
+      }
+    } } });
+    const el = h(
+      "div",
+      { class: "field totp-field" },
+      h("label", { for: "f_totp", text: "2FA one-time code secret (optional)" }),
+      input,
+      h("div", { class: "row wrap" }, camBtn, h("button", { type: "button", class: "btn sm", on: { click: () => file.click() } }, "{{photoid}} QR from image / screenshot"), file),
+      camBox,
+      status,
+      err,
+      h("p", { class: "hint", text: "Keeping the 2FA secret here is convenient, but it puts both sign-in steps in one place: anyone who unlocks this vault has the password and the code. For your most important accounts (main email, bank, the account that protects your backups) keep 2FA in a separate authenticator app or on a security key. Settings \u2192 About \u2192 FAQ explains what this can and cannot do." })
+    );
+    return { el, stop };
+  }
   function editItem(ctx2, item, type = "login", { fromPicker = false } = {}) {
     const { store: store2 } = ctx2;
     if (item && item.lock && !store2.isOpen(item)) {
@@ -7182,6 +7297,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     );
     const err = h("p", { class: "err", role: "alert" });
     const locks = [];
+    let totpBox = null;
     const body = [];
     body.push(h("div", { class: "field" }, h("label", { for: "f_name", text: "Title" }), h("input", { id: "f_name", class: "inp", value: it.name, autofocus: true, autocomplete: "off", placeholder: { card: "e.g. Visa ending 4242", note: "e.g. Safe-deposit notes", network: "e.g. Home Wi-Fi", app: "e.g. Adobe Creative Cloud", computer: "e.g. Work laptop", shopping: "e.g. Amazon", insurance: "e.g. Car insurance", locker: "e.g. Gym locker", travel: "e.g. Passport \u2014 Alex", identity: "e.g. Driver licence", bank: "e.g. Checking account", server: "e.g. Production API", contact: "e.g. Dr. Rivera", phone: "e.g. My mobile", technical: "e.g. AWS production", crypto: "e.g. Ledger Nano", emergency: "e.g. ICE \u2014 Sam", lens: "e.g. Glasses 2026", membership: "e.g. City Gym", internet: "e.g. Home fibre", prescription: "e.g. Amoxicillin", serial: "e.g. MacBook Pro", voter: "e.g. Voter card", photoid: "e.g. Student ID", library: "e.g. Central Library", health: "e.g. Health insurance", car: "e.g. Honda Civic" }[it.type] || "e.g. GitHub", on: { input: (e) => {
       it.name = e.target.value;
@@ -7225,7 +7341,8 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
         it.password = v;
       } });
       body.push(h("div", { class: "field" }, h("label", { for: "f_pw", text: "Password" }), pf.el));
-      body.push(inp("totp", "One-time code secret (optional)", { mono: true, ph: "Base32 secret or otpauth:// link" }));
+      totpBox = totpSecretField(it);
+      body.push(totpBox.el);
     } else if (it.type === "card") {
       const c = it.card;
       body.push(h(
@@ -7464,7 +7581,9 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       ctx2.showItem(it.id);
       toast(isNew ? "Saved to your vault" : "Changes saved");
     };
-    modal({ title: (isNew ? "New " : "Edit ") + TYPES[it.type].toLowerCase(), body: h("div", null, body), actions: [fromPicker ? { label: "Cancel", onClick: () => newItemMenu(ctx2, { start: it.type }) } : { label: "Cancel" }, { label: "Save", kind: "primary", onClick: save }], wide: false });
+    modal({ title: (isNew ? "New " : "Edit ") + TYPES[it.type].toLowerCase(), body: h("div", null, body), actions: [fromPicker ? { label: "Cancel", onClick: () => newItemMenu(ctx2, { start: it.type }) } : { label: "Cancel" }, { label: "Save", kind: "primary", onClick: save }], wide: false, onClose: () => {
+      if (totpBox) totpBox.stop();
+    } });
   }
   function tplInput(ctx2, it, f, locks = []) {
     if (f.kind === "photo") return photoInput(ctx2, it, f);
@@ -9637,6 +9756,13 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     ["Does it work on a phone?", "Yes. Open the site in the phone\u2019s browser and add it to the home screen. Phones and tablets lock the vault as soon as the app is hidden."],
     ["What leaves my device?", "Nothing, unless you turn on optional features: GitHub gist sync (encrypted before it leaves), Beam to another device, or the contact-admin note. Watch your browser\u2019s Network tab to see for yourself."],
     ["How can my family get in if something happens to me?", "Open Family recovery in the left menu. It helps you write a printable guide for them, split the vault password into shares (for example any 2 of 3 people can rebuild it, but no single person can), and run a restore drill so you know it really works. Keep the sealed data and the password shares in different places."],
+    ["Can it be my authenticator for 2FA codes? What it can and cannot do, and the trade-off", [
+      "Yes, for logins. Open a Login item, then paste the site\u2019s 2FA setup key into \u201C2FA one-time code secret\u201D, or press \u201CScan QR with camera\u201D or \u201CQR from image / screenshot\u201D. The item then shows the current code with a countdown and a copy button, and the Home screen has a \u201COne-time codes\u201D widget. It is the standard time-based method (TOTP) that Google Authenticator, Microsoft Authenticator, Authy and Bitwarden use. Your browser works out each code on this device, with no server, so it also works offline. Bitwarden exports bring their 2FA secrets across.",
+      "It can: make the 6, 7 or 8-digit codes for any site that offers \u201Cuse an authenticator app\u201D; read the site\u2019s setup QR from the camera or from a screenshot, on this device only; and keep the secret encrypted with the rest of the vault, in backups, sync and Seal as QR.",
+      "It cannot: do counter-based (HOTP) codes, \u201Ctap Yes on your phone\u201D push approvals, SMS or email codes, or security keys; read a Google Authenticator export QR (add each account from its own site instead); add 2FA to categories other than Login; or fill the code in for you (copy and paste it). Codes depend on this device\u2019s clock, so keep the clock set automatically. And it cannot bring 2FA back if you lose the vault: keep each site\u2019s recovery codes outside VaultManager, for example printed.",
+      "The trade-off: 2FA is meant to be a second, separate step, something you know (the password) plus something you have (an authenticator on another device). When the 2FA secret sits in the same vault as the password, anyone who opens the vault, for example with your master password or through malware on this computer, gets both steps at once. It still protects you when a site\u2019s password leaks or is guessed, because the code is not in that leak. It does not protect you if the vault itself is opened. Bitwarden has the same trade-off.",
+      "What we recommend: keep 2FA here for everyday accounts if you like the convenience. For the accounts everything else depends on (your main email, your bank, and the account that holds your backups or sync, such as GitHub), keep 2FA in a separate authenticator app or on a security key."
+    ]],
     ["Is it audited?", "No. It has been tested heavily and its code is public so anyone can read it, but it has not had an independent security audit. Read \u201CHow secure is this, honestly?\u201D above for what that means."]
   ];
 
@@ -11676,7 +11802,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
           h("button", { class: "btn", on: { click: () => selfTest() } }, "{{check}} Run crypto self-test")
         )
       ),
-      panel2("FAQ", h("details", { class: "faq" }, h("summary", { text: "How secure is this, honestly?" }), trustBody()), ...FAQ.map(([q2, a]) => h("details", { class: "faq" }, h("summary", { text: q2 }), h("p", { class: "hint", text: a })))),
+      panel2("FAQ", h("details", { class: "faq" }, h("summary", { text: "How secure is this, honestly?" }), trustBody()), ...FAQ.map(([q2, a]) => h("details", { class: "faq" }, h("summary", { text: q2 }), (Array.isArray(a) ? a : [a]).map((t) => h("p", { class: "hint", text: t }))))),
       panel2("Version history", CHANGELOG.map((r, i) => h("div", { class: "rel" }, h("div", { class: "row wrap" }, h("b", { class: "mono", text: "v" + r.v }), h("span", { class: "chip" + (i === 0 ? " accent" : ""), text: i === 0 ? "current" : r.date }), i === 0 ? h("span", { class: "hint", text: r.date }) : null), h("ul", null, r.notes.map((n) => h("li", { text: n })))))),
       contactPanel(ctx2),
       panel2("Data formats", h("div", { class: "kv" }, FORMATS.map(([k, v]) => [h("span", { text: k }), h("b", { text: v })]))),

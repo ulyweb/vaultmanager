@@ -1,6 +1,6 @@
 /* Application version, data-format versions and changelog (shown in Settings → About). */
 
-export const APP_VERSION = '0.45.0';
+export const APP_VERSION = '0.46.0';
 export const APP_NAME = 'VaultManager';
 export const REPO_URL = 'https://github.com/ulyweb/vaultmanager';
 
@@ -17,6 +17,14 @@ export const FORMATS = [
 ];
 
 export const CHANGELOG = [
+  { v: '0.46.0', date: '2026-11-22', notes: [
+    'The 2FA field on a login has “Scan QR with camera” and “QR from image / screenshot”. Point the camera at the site’s 2FA setup QR, or choose a screenshot of it, and the secret is filled in; an empty title and username are filled from the QR too. The picture is read on this device only.',
+    'A QR that is not a 2FA setup code, a counter-based (HOTP) code or a Google Authenticator export is refused with a plain explanation.',
+    'The 2FA field explains the trade-off of keeping 2FA in the same vault as the password, and Settings → About → FAQ has a new entry on what the 2FA codes can and cannot do.',
+    '“Export whole profile” now keeps a profile photo, so importing the backup brings it back.',
+    'Seal as QR on a contact says the photo is not included, and the QR no longer carries a reference to it.',
+    'The New, Lock and Help buttons no longer slide through other positions when the clock is moved.',
+  ] },
   { v: '0.45.0', date: '2026-11-20', notes: [
     'New tool on Import & export: “Encrypt a photo or file”. Pick any picture or file (up to 100 MB), choose a password, and save one encrypted .vmenc file (AES-256-GCM, password stretched 600,000 times; the file name is encrypted too). Open it again on the same page, in any copy of VaultManager including the offline file, to see the picture and save the original back.',
     'Before saving, the tool checks that the file opens again with your password. A wrong password or a changed file is refused. There is no password reset, and your original photo is not changed or deleted.',

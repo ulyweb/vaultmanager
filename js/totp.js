@@ -55,3 +55,16 @@ export async function totpNow(input, nowMs = Date.now()) {
   const remaining = cfg.period - (Math.floor(nowMs / 1000) % cfg.period);
   return { code, remaining, period: cfg.period };
 }
+
+/* Read the text of a scanned 2FA setup QR. Returns { value, issuer, account } for an otpauth://totp link,
+   or { error } with a plain explanation of why it cannot be used. Nothing here touches the network. */
+export function totpFromQR(text) {
+  const t = String(text || '').trim();
+  if (/^otpauth-migration:\/\//i.test(t)) return { error: 'This is a Google Authenticator export QR (several accounts in one). VaultManager cannot read that format. Scan each site’s own 2FA setup QR instead, or paste the setup key the site shows.' };
+  if (/^otpauth:\/\/hotp\//i.test(t)) return { error: 'This QR is for a counter-based (HOTP) code. Only time-based codes (TOTP) are supported, which is what almost every site uses.' };
+  if (!/^otpauth:\/\/totp\//i.test(t)) return { error: 'This QR is not a 2FA setup code. A 2FA setup QR holds a link that starts with otpauth://totp/.' };
+  try {
+    const cfg = parseTotp(t), label = cfg.label || '', i = label.indexOf(':');
+    return { value: t, issuer: cfg.issuer || (i > 0 ? label.slice(0, i).trim() : ''), account: (i >= 0 ? label.slice(i + 1) : label).trim() };
+  } catch (e) { return { error: 'This 2FA QR could not be used: ' + (e && e.message ? e.message : 'it is not valid') + '.' }; }
+}

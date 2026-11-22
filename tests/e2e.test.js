@@ -70,10 +70,10 @@ test('full journey: create → add → lock → unlock → tools → QR round tr
   // weak and mismatched passwords are refused
   await page.fill('#pw1', 'password1234'); await page.fill('#pw2', 'password1234'); await page.check('#ack');
   await page.click('button[type=submit]');
-  assert.match(await page.textContent('.err:not(.photo-err)'), /too easy|easy to guess/i);
+  assert.match(await page.textContent('.err:not(.photo-err):not(.totp-err)'), /too easy|easy to guess/i);
   await page.fill('#pw1', MASTER); await page.fill('#pw2', MASTER + 'x');
   await page.click('button[type=submit]');
-  assert.match(await page.textContent('.err:not(.photo-err)'), /do not match/);
+  assert.match(await page.textContent('.err:not(.photo-err):not(.totp-err)'), /do not match/);
   await page.fill('#pw2', MASTER);
   await page.click('button[type=submit]');
   await page.getByRole('button', { name: 'Skip for now' }).click(); await dismissWelcome(page); await showEverything(page);
@@ -419,7 +419,7 @@ test('attachments: add image + document to login, note and card; preview, downlo
   await page.getByRole('button', { name: /Edit/ }).click();
   const big = path.join(tmp, 'big.bin'); fs.writeFileSync(big, Buffer.alloc(10 * 1024 * 1024 + 1));
   await page.setInputFiles('input[aria-label="Choose files"]', big);
-  assert.match(await page.textContent('.modal-sheet .err:not(.photo-err)'), /limit/); await page.keyboard.press('Escape');
+  assert.match(await page.textContent('.modal-sheet .err:not(.photo-err):not(.totp-err)'), /limit/); await page.keyboard.press('Escape');
 
   // IndexedDB holds only ciphertext
   const leak = await page.evaluate(async () => new Promise((res) => { const r = indexedDB.open('vaultmanager-blobs'); r.onsuccess = () => { const t = r.result.transaction('blobs'); const q = t.objectStore('blobs').getAll(); q.onsuccess = () => { const hay = q.result.map((x) => Array.from(new Uint8Array(x.ct)).map((b) => String.fromCharCode(b)).join('')).join(''); res(hay.includes('IHDR') || hay.includes('code-1')); }; }; }));
@@ -475,7 +475,7 @@ test('sync file: export from one device, import on another (items + attachments)
 
   await settingsTab(A.page, /Sync/);
   await A.page.fill('input[aria-label="Sync passphrase"]', 'short'); await A.page.getByRole('button', { name: 'Save passphrase' }).click();
-  assert.match(await A.page.textContent('.err:not(.photo-err)'), /at least 12/);
+  assert.match(await A.page.textContent('.err:not(.photo-err):not(.totp-err)'), /at least 12/);
   await A.page.fill('input[aria-label="Sync passphrase"]', SYNC_PASS); await A.page.getByRole('button', { name: 'Save passphrase' }).click();
   await shot(A.page, '09-sync');
   const [dl] = await Promise.all([A.page.waitForEvent('download'), A.page.getByRole('button', { name: /Export sync file/ }).click()]);
@@ -2444,5 +2444,34 @@ test('Seal as QR on a contact names the photo as not included, and the QR carrie
   const added = await page.evaluate(() => [...document.querySelectorAll('.detail .avatar')].map((e) => e.classList.contains('has-photo')));
   assert.deepEqual(added, [false], 'the copy from the QR has no photo');
   assert.match(await page.textContent('.detail'), /555-0142/);
+  assert.deepEqual(problems.filter((p) => !/Failed to load resource/.test(p)), []); await ctx.close();
+});
+
+test('v0.46.0: the 2FA field reads a setup QR from an image, refuses other QR codes, explains the trade-off; the FAQ says what 2FA can and cannot do', async () => {
+  const { ctx, page, problems } = await newPage(); await createVault(page);
+  const qrPng = async (text) => Buffer.from((await page.evaluate(async (t) => { const { drawQR } = await import('./js/qr.js'); const c = document.createElement('canvas'); await drawQR(c, t, { scale: 6 }); return c.toDataURL('image/png'); }, text)).split(',')[1], 'base64');
+  const uri = 'otpauth://totp/Example:alice@example.com?secret=JBSWY3DPEHPK3PXP&issuer=Example';
+  const good = await qrPng(uri), other = await qrPng('https://example.com/not-2fa');
+  await page.getByRole('button', { name: '＋ New' }).click(); await page.waitForSelector('.modal-sheet'); if (await page.locator('.c3-stage').count()) await page.locator('.pickseg button').nth(1).click();
+  await page.locator('.modal-sheet .cats .btn', { hasText: 'Login' }).first().click(); await page.waitForSelector('#f_totp');
+  assert.ok(await page.getByRole('button', { name: /Scan QR with camera/ }).count() && await page.getByRole('button', { name: /QR from image/ }).count(), 'both scan buttons');
+  assert.match(await page.textContent('.totp-field'), /both sign-in steps in one place[\s\S]*separate authenticator app or on a security key[\s\S]*FAQ/);
+  // a QR that is not a 2FA code is refused, and nothing is filled in
+  await page.setInputFiles('input[aria-label="2FA QR image"]', { name: 'other.png', mimeType: 'image/png', buffer: other });
+  await page.waitForSelector('.totp-field .err:has-text("not a 2FA setup code")');
+  assert.equal(await page.inputValue('#f_totp'), ''); assert.equal(await page.inputValue('#f_name'), '');
+  // the site's setup QR fills the secret, and the empty title and username
+  await page.setInputFiles('input[aria-label="2FA QR image"]', { name: 'setup.png', mimeType: 'image/png', buffer: good });
+  await page.waitForSelector('.totp-field [role=status]:has-text("2FA set up from the QR for Example")');
+  assert.equal(await page.inputValue('#f_totp'), uri); assert.equal(await page.inputValue('#f_name'), 'Example'); assert.equal(await page.inputValue('#f_username'), 'alice@example.com');
+  assert.equal(await page.textContent('.totp-field .err'), '', 'the earlier error is cleared');
+  await page.getByRole('button', { name: 'Save' }).click(); await page.waitForSelector('.detail h2:has-text("Example")');
+  await page.waitForFunction(() => /^\d{3} \d{3}$/.test((document.querySelector('.detail .totp-code') || {}).textContent || ''));
+  // the FAQ entry
+  await settingsTab(page, 'About');
+  const faq = page.locator('.faq', { hasText: 'Can it be my authenticator' }); await faq.locator('summary').click();
+  const txt = await faq.textContent();
+  for (const re of [/Scan QR with camera/, /It can:/, /It cannot:/, /HOTP/, /push approvals/, /Google Authenticator export/, /The trade-off:/, /gets both steps at once/, /does not protect you if the vault itself is opened/, /recovery codes outside VaultManager/, /What we recommend:/]) assert.match(txt, re);
+  assert.ok(await faq.locator('p').count() >= 5, 'the answer is several paragraphs');
   assert.deepEqual(problems.filter((p) => !/Failed to load resource/.test(p)), []); await ctx.close();
 });

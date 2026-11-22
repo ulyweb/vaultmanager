@@ -1,13 +1,13 @@
 /* Vault views: item list, detail panel, editor, QR share, recovery kit. */
 
-import { h, clear, focusSoon, secretInput, modal, toast, confirmDialog, copyText, download } from './dom.js';
+import { h, clear, focusSoon, secretInput, modal, toast, confirmDialog, copyText, download, setLabel } from './dom.js';
 import { newItem, sanitiseItem, SENSITIVE, TYPES, matches, totpValid, MAX_ATTACHMENT, MAX_ATTACHMENTS_PER_ITEM, keyLabel, keyIsSecret, describeValue, currentValue } from './vault.js';
 import { TYPE_META, TEMPLATES, GROUPS, NOTE_CATEGORIES, isSecretField, MAX_CUSTOM, daysUntil, wifiQRString } from './templates.js';
 import { estimate, crackTime } from './strength.js';
 import { generatePassword, generatePassphrase, generateStrongPassphrase } from './generator.js';
-import { totpNow, parseTotp } from './totp.js';
+import { totpNow, parseTotp, totpFromQR } from './totp.js';
 import { sealText, openText } from './crypto.js';
-import { drawQR } from './qr.js';
+import { drawQR, decodeFile, startScanner } from './qr.js';
 import { contactsPanel, exportContactVcf } from './contacts-ui.js';
 import { POPULAR_SITES } from './lists.js';
 import { fmtDate, fmtDateTime, localDay, hostOf, safeHref, stamp, stampText } from './util.js';
@@ -442,6 +442,44 @@ function historyModal(ctx, it) {
 }
 
 /* ---------- editor ---------- */
+/* The 2FA field of a login: paste the setup key, or read the site's setup QR with the camera or from a screenshot.
+   Everything is decoded on this device. Returns { el, stop } — stop() turns the camera off. */
+function totpSecretField(it) {
+  const input = h('input', { id: 'f_totp', class: 'inp mono', value: it.totp || '', autocomplete: 'off', spellcheck: 'false', placeholder: 'Base32 setup key or otpauth:// link', on: { input: (e) => { it.totp = e.target.value; } } });
+  const status = h('p', { class: 'hint', role: 'status' }), err = h('p', { class: 'err totp-err', role: 'alert' });
+  const video = h('video', { muted: true, playsinline: true, 'aria-label': 'Camera preview for the 2FA QR' }), camBox = h('div', { class: 'scanner', hidden: true }, video);
+  let stopCam = null;
+  const stop = () => { if (stopCam) { stopCam(); stopCam = null; } camBox.hidden = true; setLabel(camBtn, '{{camera}} Scan QR with camera'); };
+  const use = (text) => {
+    const r = totpFromQR(text);
+    if (r.error) { err.textContent = r.error; status.textContent = ''; return false; }
+    stop(); err.textContent = '';
+    input.value = r.value; it.totp = r.value; input.dispatchEvent(new Event('input'));
+    const filled = [];
+    const t = document.getElementById('f_name'); if (t && !t.value.trim() && r.issuer) { t.value = r.issuer; it.name = r.issuer; t.dispatchEvent(new Event('input')); filled.push('title'); }
+    const u = document.getElementById('f_username'); if (u && !u.value.trim() && r.account) { u.value = r.account; it.username = r.account; u.dispatchEvent(new Event('input')); filled.push('username'); }
+    status.textContent = '✓ 2FA set up from the QR' + (r.issuer ? ' for ' + r.issuer : '') + (filled.length ? ' (also filled the empty ' + filled.join(' and ') + ')' : '') + '. Save the item; it then shows the 6-digit code to type on the site to finish setting up 2FA.';
+    return true;
+  };
+  const camBtn = h('button', { type: 'button', class: 'btn sm', on: { click: async () => {
+    err.textContent = '';
+    if (stopCam) { stop(); return; }
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { err.textContent = 'Camera access is unavailable here (it needs https:// or localhost). Use “QR from image” with a screenshot instead.'; return; }
+    try { camBox.hidden = false; setLabel(camBtn, '{{close}} Stop camera'); stopCam = await startScanner(video, (t) => { use(t); }); status.textContent = 'Point the camera at the 2FA QR code on the site.'; }
+    catch (e) { stop(); err.textContent = 'Could not start the camera: ' + (e.message || e.name); }
+  } } }, '{{camera}} Scan QR with camera');
+  const file = h('input', { type: 'file', accept: 'image/*', class: 'offscreen', 'aria-label': '2FA QR image', on: { change: async (e) => {
+    err.textContent = ''; const f = e.target.files && e.target.files[0]; e.target.value = ''; if (!f) return;
+    try { const t = await decodeFile(f); if (t) use(t); else err.textContent = 'No QR code found in ' + (f.name || 'that image') + '. Crop the screenshot closer to the QR and try again.'; }
+    catch (x) { err.textContent = 'Could not read that image: ' + x.message; }
+  } } });
+  const el = h('div', { class: 'field totp-field' }, h('label', { for: 'f_totp', text: '2FA one-time code secret (optional)' }), input,
+    h('div', { class: 'row wrap' }, camBtn, h('button', { type: 'button', class: 'btn sm', on: { click: () => file.click() } }, '{{photoid}} QR from image / screenshot'), file),
+    camBox, status, err,
+    h('p', { class: 'hint', text: 'Keeping the 2FA secret here is convenient, but it puts both sign-in steps in one place: anyone who unlocks this vault has the password and the code. For your most important accounts (main email, bank, the account that protects your backups) keep 2FA in a separate authenticator app or on a security key. Settings → About → FAQ explains what this can and cannot do.' }));
+  return { el, stop };
+}
+
 export function editItem(ctx, item, type = 'login', { fromPicker = false } = {}) {
   const { store } = ctx;
   if (item && item.lock && !store.isOpen(item)) { unlockItemDialog(ctx, item); return; }
@@ -452,6 +490,7 @@ export function editItem(ctx, item, type = 'login', { fromPicker = false } = {})
     h('input', { id: 'f_' + key, class: 'inp' + (opts.mono ? ' mono' : ''), value: opts.get ? opts.get() : it[key] || '', autocomplete: 'off', spellcheck: 'false', inputmode: opts.inputmode, placeholder: opts.ph, on: { input: (e) => { opts.set ? opts.set(e.target.value) : (it[key] = e.target.value); } } }));
   const err = h('p', { class: 'err', role: 'alert' });
   const locks = [];   // fields that can carry a passcode of their own (seed phrase, 25th word)
+  let totpBox = null;   // the 2FA field on a login (it may have the camera open)
 
   const body = [];
   body.push(h('div', { class: 'field' }, h('label', { for: 'f_name', text: 'Title' }), h('input', { id: 'f_name', class: 'inp', value: it.name, autofocus: true, autocomplete: 'off', placeholder: ({ card: 'e.g. Visa ending 4242', note: 'e.g. Safe-deposit notes', network: 'e.g. Home Wi-Fi', app: 'e.g. Adobe Creative Cloud', computer: 'e.g. Work laptop', shopping: 'e.g. Amazon', insurance: 'e.g. Car insurance', locker: 'e.g. Gym locker', travel: 'e.g. Passport — Alex', identity: 'e.g. Driver licence', bank: 'e.g. Checking account', server: 'e.g. Production API', contact: 'e.g. Dr. Rivera', phone: 'e.g. My mobile', technical: 'e.g. AWS production', crypto: 'e.g. Ledger Nano', emergency: 'e.g. ICE — Sam', lens: 'e.g. Glasses 2026', membership: 'e.g. City Gym', internet: 'e.g. Home fibre', prescription: 'e.g. Amoxicillin', serial: 'e.g. MacBook Pro', voter: 'e.g. Voter card', photoid: 'e.g. Student ID', library: 'e.g. Central Library', health: 'e.g. Health insurance', car: 'e.g. Honda Civic' })[it.type] || 'e.g. GitHub', on: { input: (e) => { it.name = e.target.value; } } })));
@@ -474,7 +513,7 @@ export function editItem(ctx, item, type = 'login', { fromPicker = false } = {})
     body.push(h('div', { class: 'grid2' }, inp('username', 'Username / email'), inp('url', 'Website', { ph: 'https://' })));
     const pf = pwField(it.password, { ctx, onInput: (v) => { it.password = v; } });
     body.push(h('div', { class: 'field' }, h('label', { for: 'f_pw', text: 'Password' }), pf.el));
-    body.push(inp('totp', 'One-time code secret (optional)', { mono: true, ph: 'Base32 secret or otpauth:// link' }));
+    totpBox = totpSecretField(it); body.push(totpBox.el);
   } else if (it.type === 'card') {
     const c = it.card;
     body.push(h('div', { class: 'grid2' }, inp('holder', 'Cardholder', { get: () => c.holder, set: (v) => { c.holder = v; } }), inp('number', 'Card number', { mono: true, inputmode: 'numeric', get: () => c.number, set: (v) => { c.number = v; } }),
@@ -573,7 +612,7 @@ export function editItem(ctx, item, type = 'login', { fromPicker = false } = {})
     if (isNew && lockOn.checked) { try { await store.lockItem(it.id, lp1.value); } catch (e) { toast(e.message, 'err', 7000); } }   // after the files are attached, so they are sealed too
     ctx.showItem(it.id); toast(isNew ? 'Saved to your vault' : 'Changes saved');
   };
-  modal({ title: (isNew ? 'New ' : 'Edit ') + TYPES[it.type].toLowerCase(), body: h('div', null, body), actions: [fromPicker ? { label: 'Cancel', onClick: () => newItemMenu(ctx, { start: it.type }) } : { label: 'Cancel' }, { label: 'Save', kind: 'primary', onClick: save }], wide: false });
+  modal({ title: (isNew ? 'New ' : 'Edit ') + TYPES[it.type].toLowerCase(), body: h('div', null, body), actions: [fromPicker ? { label: 'Cancel', onClick: () => newItemMenu(ctx, { start: it.type }) } : { label: 'Cancel' }, { label: 'Save', kind: 'primary', onClick: save }], wide: false, onClose: () => { if (totpBox) totpBox.stop(); } });
 }
 
 function tplInput(ctx, it, f, locks = []) {
