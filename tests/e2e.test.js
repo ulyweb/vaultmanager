@@ -1896,7 +1896,9 @@ test('v0.31.0: New item offers a 3D category carousel (spin with keys, drag and 
     await page.keyboard.press('Escape');
     // the list switch is remembered
     await page.getByRole('button', { name: label === 'phone' ? 'New item' : '＋ New' }).click({ force: true }); await page.waitForSelector('.c3-stage');
-    await page.locator('.pickseg button').nth(1).click(); await page.waitForSelector('.modal-sheet .cats .btn'); await page.keyboard.press('Escape');
+    await page.locator('.pickseg button').nth(1).click(); await page.waitForSelector('.modal-sheet .cats .btn');
+    assert.ok(await page.evaluate(() => !!document.activeElement && document.activeElement.matches('.cats .btn')), label + ': switching to List puts the keyboard on the first category');
+    await page.keyboard.press('Escape');
     await page.getByRole('button', { name: label === 'phone' ? 'New item' : '＋ New' }).click({ force: true }); await page.waitForSelector('.modal-sheet .cats .btn'); assert.equal(await page.locator('.c3-stage').count(), 0, label + ': the list choice sticks');
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth <= 1), true, label + ': no sideways scroll');
     assert.deepEqual(problems.filter(quiet), [], label); await ctx.close();

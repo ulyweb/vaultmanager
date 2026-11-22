@@ -719,7 +719,7 @@ export function newItemMenu(ctx, opts = {}) {
   const body = h('div', { class: 'picker' });
   let car = null, mode = '';
   const toggle = (m) => h('div', { class: 'seg pickseg', role: 'group', 'aria-label': 'How to show the categories' },
-    ['3d', 'list'].map((v) => h('button', { type: 'button', 'aria-pressed': String(v === m), class: v === m ? 'on' : '', on: { click: () => { savePickerPref(v); render(v); } } }, v === '3d' ? '{{sparkles}} 3D' : '{{menu}} List')));
+    ['3d', 'list'].map((v) => h('button', { type: 'button', 'aria-pressed': String(v === m), class: v === m ? 'on' : '', on: { click: () => { savePickerPref(v); render(v); focusPicker(); } } }, v === '3d' ? '{{sparkles}} 3D' : '{{menu}} List')));
   const render = (m) => {
     if (car) { car.destroy(); car = null; }
     mode = m; clear(body);
@@ -728,6 +728,9 @@ export function newItemMenu(ctx, opts = {}) {
       body.append(toggle(m), car.el);
     } else body.append(toggle(m), grid());
   };
+  /* after switching, the keyboard lands on the new view (the clicked switch was just replaced, and Safari never focuses a clicked button):
+     the ring, so the arrow keys spin it at once, or the first category in the list */
+  const focusPicker = () => { if (car) car.focus(); else { const b = body.querySelector('.cats .btn'); if (b) b.focus({ preventScroll: true }); } };
   render(carouselWanted() ? '3d' : 'list');
   modal({ title: 'Choose a category', sub: Object.keys(TYPES).length + ' categories. Every one can also hold attachments, notes, tags and custom fields', wide: true, body, actions: [{ label: 'Cancel' }], onClose: () => { if (car) { car.destroy(); car = null; } } });
 }
