@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VaultManager v0.47.0 — single-file offline build. Verify with the .sha256 file next to it. -->
+<!-- VaultManager v0.48.0 — single-file offline build. Verify with the .sha256 file next to it. -->
 <html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
@@ -11,7 +11,7 @@
 <meta name="application-name" content="VaultManager">
 <meta name="format-detection" content="telephone=no">
 <meta name="referrer" content="no-referrer">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-tauzjAWYvkq2EEey6/r1GOXzEWNzSydbYj43JCIjd2U=' 'sha256-TlheKhq87jTQnPgIHAtBi0vHQ0cCtAiKdGMIgPl22aw=' blob:; style-src 'sha256-3WMFD9fxE1Pm6HFMGw0I1bquAjb0qnzkv4Wu7X/9ImE='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-tauzjAWYvkq2EEey6/r1GOXzEWNzSydbYj43JCIjd2U=' 'sha256-tCnp3KpcJVcPP2Un6YqCJmer55j+B6YbTWrghwNqz+k=' blob:; style-src 'sha256-u306DIuFbWdgxpGQv1V6Xct7NzT0PhKSXGCpac3R1vw='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
 <title>VaultManager | Zero-Knowledge Password Manager</title>
 <meta name="description" content="VaultManager: an offline-first, zero-knowledge, end-to-end encrypted password manager with a strong password generator, TOTP codes and QR-sealed sharing and backup. Runs entirely in your browser.">
 <meta name="theme-color" content="#05080d">
@@ -1160,6 +1160,8 @@ html[data-avatar] .avatar.has-photo, .avatar.has-photo { background: var(--photo
 .totp-field > .row { margin-top: 8px; } .totp-field .err:empty, .totp-field [role=status]:empty { display: none; } .totp-field .scanner { margin: 8px 0 0; }
 /* editor: the "Additional options" section (master password re-prompt, secondary passcode) */
 .opts-head { margin: 18px 0 6px; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-dim); }
+/* create screen → Import a profile: the QR backup section */
+.qrimport { margin: 12px 0 4px; padding-top: 10px; border-top: 1px solid var(--line); } .qrimport .progress { margin: 8px 0; } .qrimport .scanner { margin: 8px 0; }
 </style>
 </head>
 <body>
@@ -2376,7 +2378,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   }
 
   // js/version.js
-  var APP_VERSION = "0.47.0";
+  var APP_VERSION = "0.48.0";
   var APP_NAME = "VaultManager";
   var REPO_URL = "https://github.com/ulyweb/vaultmanager";
   var FORMATS = [
@@ -2391,6 +2393,11 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     ["Attachments at rest", "AES-256-GCM per file, bound to vault + file id"]
   ];
   var CHANGELOG = [
+    { v: "0.48.0", date: "2026-11-22", notes: [
+      "Create a new profile from a QR backup right on the first screen: \u201CImport a profile backup\u201D now has \u201CScan QR backup\u201D (camera) and \u201CQR images / screenshots\u201D. Scan the codes in any order; it shows which ones are still missing, and \u201CStart over\u201D clears a scan begun with the wrong backup\u2019s codes.",
+      "The codes are read on this device and only rebuild the encrypted backup; opening it still needs the backup password. A QR code that is not part of a VaultManager backup is refused with an explanation.",
+      "A QR backup holds every item, but not attached files or photos, settings or the look; the dialog says so. For everything, use a .vmprofile file."
+    ] },
     { v: "0.47.0", date: "2026-11-22", notes: [
       "New for every category: \u201CMaster password re-prompt\u201D, under \u201CAdditional options\u201D when you create or edit an item (like Bitwarden). The item then shows only its name and category, in the list, in search and in the Trash, until you type your master password again; seeing, copying, editing and its code in the Home one-time-codes widget all wait for it. It stays shown for 5 minutes or until the vault locks, and \u201CHide now\u201D hides it at once.",
       "Wrong master passwords at the re-prompt make you wait longer each time, and both right and wrong answers are written to the audit trail (never the password).",
@@ -8769,7 +8776,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     const restore = h(
       "ol",
       null,
-      h("li", { text: "On the new device, create or open a profile." }),
+      h("li", { text: "On a new device, the quickest way: on the first screen choose \u201CImport a profile backup\u201D \u2192 Scan QR backup (or QR images / screenshots). It creates a new profile with these items. Or, in a profile you already have:" }),
       h("li", { text: "Tools \u2192 QR tools \u2192 Open QR." }),
       h("li", { text: "Scan every code with the camera (any order), or choose the saved / photographed images. A counter shows what is still missing." }),
       h("li", { text: "Type the backup password and press Open." }),
@@ -11243,8 +11250,97 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       const f = e.target.files[0];
       e.target.value = "";
       if (f) {
+        resetQR();
         text2 = (await readFileText(f)).trim();
         fname.textContent = f.name;
+      }
+    } } });
+    let asm = new ChunkAssembler(), stopCam = null;
+    const qrStatus = h("p", { class: "hint", role: "status" }), qrBar = h("div", { class: "progress", hidden: true }, h("i"));
+    const video = h("video", { muted: true, playsinline: true, "aria-label": "Camera preview for the QR backup" }), camBox = h("div", { class: "scanner", hidden: true }, video);
+    const stopScan = () => {
+      if (stopCam) {
+        stopCam();
+        stopCam = null;
+      }
+      camBox.hidden = true;
+      setLabel(camBtn, "{{camera}} Scan QR backup");
+    };
+    const resetQR = () => {
+      stopScan();
+      asm = new ChunkAssembler();
+      qrStatus.textContent = "";
+      qrBar.hidden = true;
+      restartBtn.hidden = true;
+    };
+    const onQR = (t) => {
+      err1.textContent = "";
+      if (parseChunk(t)) {
+        const r = asm.add(t);
+        restartBtn.hidden = false;
+        if (r.status === "other-set") {
+          qrStatus.textContent = `That code belongs to a different QR backup. Keep scanning the same set (${r.have} of ${r.count} so far), or press Start over if the first code was the wrong one.`;
+          return;
+        }
+        qrBar.hidden = false;
+        qrBar.firstChild.style.width = r.have / r.count * 100 + "%";
+        if (r.done) {
+          text2 = asm.payload();
+          paste.value = "";
+          fname.textContent = `QR backup: all ${r.count} code${r.count === 1 ? "" : "s"} scanned`;
+          stopScan();
+          qrStatus.textContent = `\u2713 All ${r.count} code${r.count === 1 ? "" : "s"} scanned. Enter the backup password and press Open backup.`;
+          bpw.focus();
+        } else {
+          const miss = asm.missing();
+          qrStatus.textContent = `Scanned ${r.have} of ${r.count} codes. Still missing: ${miss.slice(0, 12).join(", ")}${miss.length > 12 ? "\u2026" : ""}.`;
+        }
+      } else if (/^VM[PX]1:/.test(String(t).trim())) {
+        resetQR();
+        text2 = String(t).trim();
+        fname.textContent = "QR backup: 1 code scanned";
+        qrStatus.textContent = "\u2713 Backup read from the QR code. Enter the backup password and press Open backup.";
+        bpw.focus();
+      } else qrStatus.textContent = "That QR code is not part of a VaultManager backup. Use the codes made with QR tools \u2192 Backup to QR. (A single sealed item opens inside a vault: QR tools \u2192 Open QR.)";
+    };
+    const camBtn = h("button", { class: "btn", type: "button", on: { click: async () => {
+      err1.textContent = "";
+      if (stopCam) {
+        stopScan();
+        return;
+      }
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        err1.textContent = "Camera access is unavailable here (it needs https:// or localhost). Choose photos or screenshots of the codes instead.";
+        return;
+      }
+      try {
+        camBox.hidden = false;
+        setLabel(camBtn, "{{close}} Stop camera");
+        stopCam = await startScanner(video, onQR);
+        qrStatus.textContent = "Point the camera at each code of the QR backup, in any order.";
+      } catch (e) {
+        stopScan();
+        err1.textContent = "Could not start the camera: " + (e.message || e.name);
+      }
+    } } }, "{{camera}} Scan QR backup");
+    const restartBtn = h("button", { class: "btn sm", type: "button", hidden: true, on: { click: () => {
+      resetQR();
+      text2 = "";
+      fname.textContent = "No file chosen";
+      qrStatus.textContent = "Cleared. Scan the codes of one QR backup.";
+    } } }, "{{refresh}} Start over");
+    const qrFiles = h("input", { type: "file", accept: "image/*", multiple: true, class: "offscreen", "aria-label": "QR backup images", on: { change: async (e) => {
+      err1.textContent = "";
+      const list = Array.from(e.target.files || []);
+      e.target.value = "";
+      for (const f of list) {
+        try {
+          const t = await decodeFile(f);
+          if (t) onQR(t);
+          else qrStatus.textContent = "No QR code found in " + (f.name || "an image") + ".";
+        } catch (x) {
+          qrStatus.textContent = "Could not read " + (f.name || "an image") + ": " + x.message;
+        }
       }
     } } });
     const fname = h("span", { class: "hint", text: "No file chosen" });
@@ -11256,6 +11352,16 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       h("p", { class: "hint", text: "Bring a profile back from an encrypted backup (.vmprofile from \u201CExport profile\u201D, or a .vmvault backup). The whole database \u2014 items, attachments, settings \u2014 is restored into a new profile with a master password you choose now." }),
       h("div", { class: "row wrap" }, h("button", { class: "btn", type: "button", on: { click: () => file.click() } }, "{{folder}} Choose backup file"), file, fname),
       paste,
+      h(
+        "div",
+        { class: "qrimport" },
+        h("p", { class: "lbl", text: "Or from a QR backup" }),
+        h("div", { class: "row wrap" }, camBtn, h("button", { class: "btn", type: "button", on: { click: () => qrFiles.click() } }, "{{photoid}} QR images / screenshots"), qrFiles, restartBtn),
+        camBox,
+        qrBar,
+        qrStatus,
+        h("p", { class: "hint", text: "A QR backup (QR tools \u2192 Backup to QR) holds every item, but not attached files or photos, settings or the look. For everything, use a .vmprofile file." })
+      ),
       h("div", { class: "field" }, h("label", { text: "Backup password" }), bpw),
       err1,
       h("div", { class: "row" }, openBtn)
@@ -11296,15 +11402,21 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       err2,
       h("div", { class: "row" }, createBtn)
     );
-    const m = modal({ title: "Import a profile", sub: "Restore everything from an encrypted backup", wide: false, body: h("div", null, step1, step2), actions: [{ label: "Cancel" }] });
+    const m = modal({ title: "Import a profile", sub: "Restore everything from an encrypted backup", wide: false, body: h("div", null, step1, step2), actions: [{ label: "Cancel" }], onClose: () => stopScan() });
     m.el.classList.add("m3d");
     openBtn.addEventListener("click", async () => {
       err1.textContent = "";
       const t = (text2 || paste.value).trim();
-      if (!t) {
-        err1.textContent = "Choose a backup file or paste its text.";
+      if (!t && asm.count) {
+        const miss = asm.missing();
+        err1.textContent = `Scan the remaining QR code${miss.length === 1 ? "" : "s"} first: ${miss.slice(0, 12).join(", ")}${miss.length > 12 ? "\u2026" : ""}.`;
         return;
       }
+      if (!t) {
+        err1.textContent = "Choose a backup file, paste its text, or scan a QR backup.";
+        return;
+      }
+      stopScan();
       if (!bpw.value) {
         err1.textContent = "Enter the backup password.";
         return;

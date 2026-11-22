@@ -2578,3 +2578,55 @@ test('a built-in photo wallpaper loads in every browser (its address is resolved
   assert.equal(await page.evaluate(async (u) => (await fetch(u)).status, url), 200, 'the picture really loads');
   assert.deepEqual(problems.filter((p) => !/Failed to load resource/.test(p)), []); await ctx.close();
 });
+
+test('v0.48.0: create a new profile from a QR backup on the first screen (codes in any order, from images); missing codes are named; a non-backup QR is refused', async () => {
+  // device A: a vault big enough for several QR codes, then Backup to QR
+  const A = await newPage(); await createVault(A.page); await showEverything(A.page);
+  const long = Array.from({ length: 60 }, (_, i) => `line ${i} of a long note that makes the backup span several codes`).join('\n');
+  await addLogin(A.page, 'QR Bank', async () => { await A.page.fill('#f_notes', long); });
+  await addLogin(A.page, 'QR Mail');
+  await A.page.getByRole('button', { name: /QR tools/ }).click(); await A.page.getByRole('tab', { name: 'Backup to QR' }).click();
+  await A.page.fill('input[aria-label="Backup password"]', 'qr-backup-pass-77'); await A.page.fill('input[aria-label="Confirm Backup password"]', 'qr-backup-pass-77');
+  await A.page.getByRole('button', { name: /Create QR backup/ }).click(); await A.page.waitForSelector('.qrgrid canvas');
+  const pngs = (await A.page.$$eval('.qrgrid canvas', (cs) => cs.map((c) => c.toDataURL('image/png')))).map((u, i) => ({ name: `code-${i + 1}.png`, mimeType: 'image/png', buffer: Buffer.from(u.split(',')[1], 'base64') }));
+  assert.ok(pngs.length >= 3, 'the backup spans several codes: ' + pngs.length);
+  const other = Buffer.from((await A.page.evaluate(async () => { const { drawQR } = await import('./js/qr.js'); const c = document.createElement('canvas'); await drawQR(c, 'https://example.com', { scale: 6 }); return c.toDataURL('image/png'); })).split(',')[1], 'base64');
+  await A.ctx.close();
+
+  // device B, first screen: Import a profile → QR images
+  const B = await newPage(); await B.page.goto(base); await B.page.waitForSelector('#pw1');
+  await B.page.getByRole('button', { name: /Import a profile backup/ }).click(); await B.page.waitForSelector('.qrimport');
+  assert.ok(await B.page.getByRole('button', { name: /Scan QR backup/ }).count(), 'camera scan offered on the first screen');
+  assert.match(await B.page.textContent('.qrimport'), /not attached files or photos, settings or the look/);
+  // a QR that is not a backup is refused
+  await B.page.setInputFiles('input[aria-label="QR backup images"]', { name: 'other.png', mimeType: 'image/png', buffer: other });
+  await B.page.waitForSelector('.qrimport [role=status]:has-text("not part of a VaultManager backup")');
+  // some codes, out of order: the missing ones are named, and Open backup says what is left
+  const shuffled = [...pngs].reverse();
+  await B.page.setInputFiles('input[aria-label="QR backup images"]', shuffled.slice(0, shuffled.length - 1));
+  await B.page.waitForSelector(`.qrimport [role=status]:has-text("Scanned ${pngs.length - 1} of ${pngs.length} codes. Still missing: 1.")`);
+  await B.page.fill('input[aria-label="Backup password"]', 'qr-backup-pass-77'); await B.page.getByRole('button', { name: 'Open backup' }).click();
+  await B.page.waitForSelector('.modal-sheet .err:has-text("Scan the remaining QR code first: 1")');
+  // Start over clears a half-done scan (a stray code from another backup must not lock the dialog)
+  await B.page.getByRole('button', { name: /Start over/ }).click(); await B.page.waitForSelector('.qrimport [role=status]:has-text("Cleared")');
+  await B.page.getByRole('button', { name: 'Open backup' }).click(); await B.page.waitForSelector('.modal-sheet .err:has-text("scan a QR backup")');
+  await B.page.setInputFiles('input[aria-label="QR backup images"]', shuffled.slice(0, shuffled.length - 1));
+  await B.page.waitForSelector(`.qrimport [role=status]:has-text("Still missing: 1.")`);
+  // the last one completes it
+  await B.page.setInputFiles('input[aria-label="QR backup images"]', [shuffled[shuffled.length - 1]]);
+  await B.page.waitForSelector(`.qrimport [role=status]:has-text("All ${pngs.length} codes scanned")`);
+  // wrong password refused, right one opens it
+  await B.page.fill('input[aria-label="Backup password"]', 'wrong-password-123'); await B.page.getByRole('button', { name: 'Open backup' }).click();
+  await B.page.waitForFunction(() => [...document.querySelectorAll('.modal-sheet .err')].some((e) => e.textContent.trim()), null, { timeout: 90000 });
+  await B.page.fill('input[aria-label="Backup password"]', 'qr-backup-pass-77'); await B.page.getByRole('button', { name: 'Open backup' }).click();
+  await B.page.waitForSelector('.impcenter:not([hidden])', { timeout: 90000 });
+  assert.match(await B.page.textContent('.impcenter .kv'), /Items only \(VMX1\)/);
+  await B.page.fill('input[aria-label="Profile name"]', 'From QR');
+  await B.page.fill('input[aria-label="New master password"]', 'a-new-master-pass-123'); await B.page.fill('input[aria-label="Repeat new master password"]', 'a-new-master-pass-123');
+  await B.page.locator('.modal-sheet input[type=checkbox]').last().check();
+  await B.page.getByRole('button', { name: 'Create profile' }).click(); await B.page.waitForSelector('.topbar', { timeout: 90000 });
+  await dismissWelcome(B.page).catch(() => {}); await openAll(B.page);
+  for (const n of ['QR Bank', 'QR Mail']) assert.ok(await B.page.locator('.items .item', { hasText: n }).count(), n + ' restored from the QR codes');
+  await B.page.locator('.items .item', { hasText: 'QR Bank' }).click(); assert.match(await B.page.textContent('.detail'), /line 59 of a long note/, 'the long note came through whole');
+  assert.deepEqual(B.problems.filter((p) => !/Failed to load resource/.test(p)), []); await B.ctx.close();
+});

@@ -1142,3 +1142,5 @@ html[data-avatar] .avatar.has-photo, .avatar.has-photo { background: var(--photo
 .totp-field > .row { margin-top: 8px; } .totp-field .err:empty, .totp-field [role=status]:empty { display: none; } .totp-field .scanner { margin: 8px 0 0; }
 /* editor: the "Additional options" section (master password re-prompt, secondary passcode) */
 .opts-head { margin: 18px 0 6px; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-dim); }
+/* create screen → Import a profile: the QR backup section */
+.qrimport { margin: 12px 0 4px; padding-top: 10px; border-top: 1px solid var(--line); } .qrimport .progress { margin: 8px 0; } .qrimport .scanner { margin: 8px 0; }

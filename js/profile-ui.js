@@ -1,8 +1,9 @@
 /* Profile pictures, and the export / import dialogs for whole-profile backups (the entire database:
    items, attachments, settings, audit trail — encrypted with a backup password). */
 
-import { h, clear, focusSoon, modal, toast, readFileText, download } from './dom.js';
+import { h, clear, focusSoon, modal, toast, readFileText, download, setLabel } from './dom.js';
 import { decryptProfile } from './vault.js';
+import { decodeFile, startScanner, ChunkAssembler, parseChunk } from './qr.js';
 import { createProfileFromImport, sanitizeAvatar } from './profiles.js';
 import { meter, passwordRow } from './views.js';
 import { generateStrongPassphrase } from './generator.js';
@@ -84,7 +85,41 @@ export function exportProfileDialog(ctx) {
 /* ---------- import a backup as a NEW profile (also used on the very first screen) ---------- */
 export function importProfileDialog(ctx, { onDone } = {}) {
   let text = '', data = null;
-  const file = h('input', { type: 'file', accept: '.vmprofile,.vmvault,.txt', class: 'offscreen', 'aria-label': 'Backup file', on: { change: async (e) => { const f = e.target.files[0]; e.target.value = ''; if (f) { text = (await readFileText(f)).trim(); fname.textContent = f.name; } } } });
+  const file = h('input', { type: 'file', accept: '.vmprofile,.vmvault,.txt', class: 'offscreen', 'aria-label': 'Backup file', on: { change: async (e) => { const f = e.target.files[0]; e.target.value = ''; if (f) { resetQR(); text = (await readFileText(f)).trim(); fname.textContent = f.name; } } } });
+
+  /* QR backup (Tools → QR tools → Backup to QR): scan its codes in any order with the camera, or choose photos / screenshots of them.
+     The codes only rebuild the encrypted backup text; opening it still needs the backup password, exactly like a file. Decoded on this device. */
+  let asm = new ChunkAssembler(), stopCam = null;
+  const qrStatus = h('p', { class: 'hint', role: 'status' }), qrBar = h('div', { class: 'progress', hidden: true }, h('i'));
+  const video = h('video', { muted: true, playsinline: true, 'aria-label': 'Camera preview for the QR backup' }), camBox = h('div', { class: 'scanner', hidden: true }, video);
+  const stopScan = () => { if (stopCam) { stopCam(); stopCam = null; } camBox.hidden = true; setLabel(camBtn, '{{camera}} Scan QR backup'); };
+  const resetQR = () => { stopScan(); asm = new ChunkAssembler(); qrStatus.textContent = ''; qrBar.hidden = true; restartBtn.hidden = true; };
+  const onQR = (t) => {
+    err1.textContent = '';
+    if (parseChunk(t)) {
+      const r = asm.add(t); restartBtn.hidden = false;
+      if (r.status === 'other-set') { qrStatus.textContent = `That code belongs to a different QR backup. Keep scanning the same set (${r.have} of ${r.count} so far), or press Start over if the first code was the wrong one.`; return; }
+      qrBar.hidden = false; qrBar.firstChild.style.width = (r.have / r.count * 100) + '%';
+      if (r.done) {
+        text = asm.payload(); paste.value = ''; fname.textContent = `QR backup: all ${r.count} code${r.count === 1 ? '' : 's'} scanned`; stopScan();
+        qrStatus.textContent = `✓ All ${r.count} code${r.count === 1 ? '' : 's'} scanned. Enter the backup password and press Open backup.`; bpw.focus();
+      } else { const miss = asm.missing(); qrStatus.textContent = `Scanned ${r.have} of ${r.count} codes. Still missing: ${miss.slice(0, 12).join(', ')}${miss.length > 12 ? '…' : ''}.`; }
+    } else if (/^VM[PX]1:/.test(String(t).trim())) { resetQR(); text = String(t).trim(); fname.textContent = 'QR backup: 1 code scanned'; qrStatus.textContent = '✓ Backup read from the QR code. Enter the backup password and press Open backup.'; bpw.focus(); }
+    else qrStatus.textContent = 'That QR code is not part of a VaultManager backup. Use the codes made with QR tools → Backup to QR. (A single sealed item opens inside a vault: QR tools → Open QR.)';
+  };
+  const camBtn = h('button', { class: 'btn', type: 'button', on: { click: async () => {
+    err1.textContent = '';
+    if (stopCam) { stopScan(); return; }
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { err1.textContent = 'Camera access is unavailable here (it needs https:// or localhost). Choose photos or screenshots of the codes instead.'; return; }
+    try { camBox.hidden = false; setLabel(camBtn, '{{close}} Stop camera'); stopCam = await startScanner(video, onQR); qrStatus.textContent = 'Point the camera at each code of the QR backup, in any order.'; }
+    catch (e) { stopScan(); err1.textContent = 'Could not start the camera: ' + (e.message || e.name); }
+  } } }, '{{camera}} Scan QR backup');
+  /* the first code decides which backup is being collected: a stray code from an older backup must not lock the dialog */
+  const restartBtn = h('button', { class: 'btn sm', type: 'button', hidden: true, on: { click: () => { resetQR(); text = ''; fname.textContent = 'No file chosen'; qrStatus.textContent = 'Cleared. Scan the codes of one QR backup.'; } } }, '{{refresh}} Start over');
+  const qrFiles = h('input', { type: 'file', accept: 'image/*', multiple: true, class: 'offscreen', 'aria-label': 'QR backup images', on: { change: async (e) => {
+    err1.textContent = ''; const list = Array.from(e.target.files || []); e.target.value = '';
+    for (const f of list) { try { const t = await decodeFile(f); if (t) onQR(t); else qrStatus.textContent = 'No QR code found in ' + (f.name || 'an image') + '.'; } catch (x) { qrStatus.textContent = 'Could not read ' + (f.name || 'an image') + ': ' + x.message; } }
+  } } });
   const fname = h('span', { class: 'hint', text: 'No file chosen' });
   const paste = h('textarea', { class: 'ta', rows: '2', placeholder: 'Or paste the backup text here (starts with VMP1: or VMX1:)', 'aria-label': 'Backup text', spellcheck: 'false' });
   const bpw = h('input', { class: 'inp mono', type: 'password', autocomplete: 'off', 'aria-label': 'Backup password' });
@@ -92,6 +127,10 @@ export function importProfileDialog(ctx, { onDone } = {}) {
   const openBtn = h('button', { class: 'btn primary', type: 'button' }, 'Open backup');
   step1.append(h('p', { class: 'hint', text: 'Bring a profile back from an encrypted backup (.vmprofile from “Export profile”, or a .vmvault backup). The whole database — items, attachments, settings — is restored into a new profile with a master password you choose now.' }),
     h('div', { class: 'row wrap' }, h('button', { class: 'btn', type: 'button', on: { click: () => file.click() } }, '{{folder}} Choose backup file'), file, fname), paste,
+    h('div', { class: 'qrimport' }, h('p', { class: 'lbl', text: 'Or from a QR backup' }),
+      h('div', { class: 'row wrap' }, camBtn, h('button', { class: 'btn', type: 'button', on: { click: () => qrFiles.click() } }, '{{photoid}} QR images / screenshots'), qrFiles, restartBtn),
+      camBox, qrBar, qrStatus,
+      h('p', { class: 'hint', text: 'A QR backup (QR tools → Backup to QR) holds every item, but not attached files or photos, settings or the look. For everything, use a .vmprofile file.' })),
     h('div', { class: 'field' }, h('label', { text: 'Backup password' }), bpw), err1, h('div', { class: 'row' }, openBtn));
 
   const name = h('input', { class: 'inp', maxlength: '40', 'aria-label': 'Profile name', autocomplete: 'off' });
@@ -113,12 +152,14 @@ export function importProfileDialog(ctx, { onDone } = {}) {
     h('label', { class: 'chk', for: 'f_samepw' }, same, '{{lock}} Use the backup password as this profile’s master password'), sameNote, own,
     h('label', { class: 'chk' }, ack, 'I understand that if I forget this master password, nobody can recover this profile.'), err2, h('div', { class: 'row' }, createBtn));
 
-  const m = modal({ title: 'Import a profile', sub: 'Restore everything from an encrypted backup', wide: false, body: h('div', null, step1, step2), actions: [{ label: 'Cancel' }] });
+  const m = modal({ title: 'Import a profile', sub: 'Restore everything from an encrypted backup', wide: false, body: h('div', null, step1, step2), actions: [{ label: 'Cancel' }], onClose: () => stopScan() });
   m.el.classList.add('m3d');   // leans toward the pointer over the 3D card space
 
   openBtn.addEventListener('click', async () => {
     err1.textContent = ''; const t = (text || paste.value).trim();
-    if (!t) { err1.textContent = 'Choose a backup file or paste its text.'; return; }
+    if (!t && asm.count) { const miss = asm.missing(); err1.textContent = `Scan the remaining QR code${miss.length === 1 ? '' : 's'} first: ${miss.slice(0, 12).join(', ')}${miss.length > 12 ? '…' : ''}.`; return; }
+    if (!t) { err1.textContent = 'Choose a backup file, paste its text, or scan a QR backup.'; return; }
+    stopScan();
     if (!bpw.value) { err1.textContent = 'Enter the backup password.'; return; }
     openBtn.disabled = true; openBtn.textContent = 'Deriving the key…'; ctx.surge();
     try {
