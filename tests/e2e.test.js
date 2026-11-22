@@ -2475,3 +2475,74 @@ test('v0.46.0: the 2FA field reads a setup QR from an image, refuses other QR co
   assert.ok(await faq.locator('p').count() >= 5, 'the answer is several paragraphs');
   assert.deepEqual(problems.filter((p) => !/Failed to load resource/.test(p)), []); await ctx.close();
 });
+
+test('master password re-prompt: offered on every category; hides the item, its edit and its 2FA code until the master password is typed; wrong password refused; hides again; FAQ', async () => {
+  const { ctx, page, problems } = await newPage(); await createVault(page); await showEverything(page);
+  // every category's editor has the toggle under "Additional options"
+  await page.getByRole('button', { name: '＋ New' }).click(); await page.waitForSelector('.modal-sheet'); if (await page.locator('.c3-stage').count()) await page.locator('.pickseg button').nth(1).click();
+  const n = await page.locator('.modal-sheet .cats .btn').count(); assert.ok(n >= 28, 'categories: ' + n);
+  for (let i = 0; i < n; i++) {
+    const btn = page.locator('.modal-sheet .cats .btn').nth(i), label = (await btn.textContent()).trim();
+    await btn.click(); await page.waitForSelector('#f_name');
+    assert.equal(await page.locator('#f_reprompt').count(), 1, 'toggle in ' + label); assert.equal(await page.locator('#f_reprompt').isChecked(), false, 'off by default in ' + label);
+    assert.match(await page.textContent('.modal-sheet'), /Additional options[\s\S]*does not add encryption/, label);
+    await page.getByRole('button', { name: 'Cancel' }).click(); await page.waitForSelector('.modal-sheet:has-text("Choose a category")');
+  }
+  await page.keyboard.press('Escape');
+  // a login with re-prompt on: still shown right after saving (you just had it open)
+  const PW = 'Guarded-Secret-Pw-9431';
+  await addLogin(page, 'Guarded', async () => { await page.fill('.modal-sheet input[aria-label="Password"]', PW); await page.fill('#f_totp', 'JBSWY3DPEHPK3PXP'); await page.check('#f_reprompt'); });
+  await page.waitForSelector('.detail :text("Shown after your master password")');
+  // hide it: only the name and category are on the page, nothing of the item
+  await page.getByRole('button', { name: /Hide now/ }).click(); await page.waitForSelector('.reprompt-gate');
+  const gate = await page.locator('.detail').innerHTML();
+  for (const secret of [PW, 'user-Guarded', 'JBSWY3DPEHPK3PXP']) assert.ok(!gate.includes(secret), 'not on the page: ' + secret);
+  assert.equal(await page.locator('.detail .act-edit').count(), 0, 'no Edit while hidden');
+  const row = await page.locator('.items .item:has-text("Guarded")').textContent();
+  assert.match(row, /Master password re-prompt/); assert.ok(!row.includes('user-Guarded'), 'the list row shows no username while hidden');
+  await page.fill('input[aria-label="Search your vault"]', 'user-Guarded'); await page.waitForTimeout(200);
+  assert.equal(await page.locator('.items .item:has-text("Guarded")').count(), 0, 'not found by what is inside it');
+  await page.fill('input[aria-label="Search your vault"]', 'Guarded'); await page.waitForSelector('.items .item:has-text("Guarded")');
+  await page.fill('input[aria-label="Search your vault"]', ''); await page.locator('.items .item:has-text("Guarded")').click(); await page.waitForSelector('.reprompt-gate');
+  // wrong password refused, then a short wait; the right one shows it
+  await page.getByRole('button', { name: /Show item/ }).click(); await page.waitForSelector('.modal-sheet input[aria-label="Master password"]');
+  await page.fill('.modal-sheet input[aria-label="Master password"]', 'not-my-password-1'); await page.getByRole('button', { name: 'Show', exact: true }).click();
+  await page.waitForSelector('.modal-sheet .err:has-text("That is not your master password")');
+  await page.fill('.modal-sheet input[aria-label="Master password"]', MASTER); await page.getByRole('button', { name: 'Show', exact: true }).click();
+  await page.waitForSelector('.modal-sheet .err:has-text("Too many wrong passwords")');
+  await page.waitForTimeout(2200);
+  await page.getByRole('button', { name: 'Show', exact: true }).click(); await page.waitForSelector('.modal-sheet', { state: 'detached' });
+  await page.waitForSelector('.detail .act-edit'); assert.ok((await page.locator('.detail').innerHTML()).includes('user-Guarded'));
+  // the Home 2FA widget hides its code while the item is hidden, and asks for the master password on click
+  await page.getByRole('button', { name: /Hide now/ }).click(); await page.waitForSelector('.reprompt-gate');
+  await page.locator('.side .nav:has-text("Home")').first().click(); await page.waitForSelector('.totp-tile');
+  const tile = page.locator('.totp-tile', { hasText: 'Guarded' }); await page.waitForFunction(() => /hidden/.test([...document.querySelectorAll('.totp-tile')].map((t) => t.textContent).join()));
+  assert.doesNotMatch(await tile.textContent(), /\d{3} \d{3}/);
+  await tile.click(); await page.waitForSelector('.modal-sheet:has-text("Master password re-prompt")'); await page.keyboard.press('Escape');
+  // locking the vault forgets every answer
+  await page.locator('.side .nav:has-text("Logins")').first().click(); await page.locator('.items .item:has-text("Guarded")').click(); await page.waitForSelector('.reprompt-gate');
+  await page.getByRole('button', { name: /Show item/ }).click(); await page.fill('.modal-sheet input[aria-label="Master password"]', MASTER); await page.getByRole('button', { name: 'Show', exact: true }).click(); await page.waitForSelector('.detail .act-edit');
+  await page.getByRole('button', { name: /Lock/ }).first().click(); await page.fill('#upw', MASTER); await page.click('button[type=submit]'); await page.waitForSelector('.topbar');
+  await page.locator('.side .nav:has-text("Logins")').first().click(); await page.locator('.items .item:has-text("Guarded")').click(); await page.waitForSelector('.reprompt-gate');
+  // turning it off needs the master password first (Edit is behind the gate), then the item stays open
+  await page.getByRole('button', { name: /Show item/ }).click(); await page.fill('.modal-sheet input[aria-label="Master password"]', MASTER); await page.getByRole('button', { name: 'Show', exact: true }).click(); await page.waitForSelector('.detail .act-edit');
+  await page.locator('.detail .act-edit').click(); await page.waitForSelector('#f_reprompt'); assert.equal(await page.locator('#f_reprompt').isChecked(), true);
+  await page.uncheck('#f_reprompt'); await page.getByRole('button', { name: 'Save' }).click(); await page.waitForSelector('.detail .act-edit');
+  assert.equal(await page.locator('.detail :text("Shown after your master password")').count(), 0);
+  // a trashed item with re-prompt stays hidden in the Trash too
+  await page.locator('.detail .act-edit').click(); await page.check('#f_reprompt'); await page.getByRole('button', { name: 'Save' }).click(); await page.waitForSelector('.detail .act-edit');
+  await page.getByRole('button', { name: /Hide now/ }).click(); await page.waitForSelector('.reprompt-gate');
+  await page.getByRole('button', { name: /Show item/ }).click(); await page.fill('.modal-sheet input[aria-label="Master password"]', MASTER); await page.getByRole('button', { name: 'Show', exact: true }).click(); await page.waitForSelector('.detail .act-edit');
+  await page.locator('.detail button:has-text("Delete")').first().click(); await page.locator('.modal-sheet .btn.danger, .modal-sheet .btn.primary').last().click(); await page.waitForSelector('.modal-sheet', { state: 'detached' });
+  await page.evaluate(() => document.querySelectorAll('.toast').forEach((t) => t.remove()));
+  await page.locator('.side .nav:has-text("Trash")').first().click(); await page.locator('.items .item:has-text("Guarded")').click();
+  await page.waitForSelector('.detail :text("Shown after your master password")');   // still within its 5 minutes
+  await page.getByRole('button', { name: /Hide now/ }).click(); await page.waitForSelector('.reprompt-gate');
+  assert.equal(await page.locator('.reprompt-gate button:has-text("Delete")').count(), 0, 'Restore and Delete forever are behind the gate'); assert.ok(!(await page.locator('.detail').innerHTML()).includes('user-Guarded'), 'nothing of it in the Trash detail');
+  // FAQ
+  await settingsTab(page, 'About');
+  const faq = page.locator('.faq', { hasText: 'Master password re-prompt' }); await faq.locator('summary').click();
+  const txt = await faq.textContent();
+  for (const re of [/any item, in any category/, /5 minutes/, /What it protects against/, /adds no encryption/, /malware/, /secondary passcode/]) assert.match(txt, re);
+  assert.deepEqual(problems.filter((p) => !/Failed to load resource/.test(p)), []); await ctx.close();
+});

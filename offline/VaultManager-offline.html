@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VaultManager v0.46.0 — single-file offline build. Verify with the .sha256 file next to it. -->
+<!-- VaultManager v0.47.0 — single-file offline build. Verify with the .sha256 file next to it. -->
 <html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
@@ -11,7 +11,7 @@
 <meta name="application-name" content="VaultManager">
 <meta name="format-detection" content="telephone=no">
 <meta name="referrer" content="no-referrer">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-tauzjAWYvkq2EEey6/r1GOXzEWNzSydbYj43JCIjd2U=' 'sha256-es0MQiMXkmXUbgdHdTVb2Ys/MxC+7HkIZkcj7upxfa0=' blob:; style-src 'sha256-MtW8rsTVO1Prol8YbfPSri+un3XJzkQjxX9XZxcCmcQ='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-tauzjAWYvkq2EEey6/r1GOXzEWNzSydbYj43JCIjd2U=' 'sha256-q672QWELJF4h7vHekz8Ix9MndTry1k7YYB1NIzHYyy0=' blob:; style-src 'sha256-3WMFD9fxE1Pm6HFMGw0I1bquAjb0qnzkv4Wu7X/9ImE='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
 <title>VaultManager | Zero-Knowledge Password Manager</title>
 <meta name="description" content="VaultManager: an offline-first, zero-knowledge, end-to-end encrypted password manager with a strong password generator, TOTP codes and QR-sealed sharing and backup. Runs entirely in your browser.">
 <meta name="theme-color" content="#05080d">
@@ -1158,6 +1158,8 @@ html[data-avatar] .avatar.has-photo, .avatar.has-photo { background: var(--photo
 .fileprev img { display: block; max-width: 100%; max-height: 220px; border-radius: 10px; margin: 8px 0; border: 1px solid var(--line); }
 /* 2FA field: scan buttons under the input, no empty space for a message that is not there */
 .totp-field > .row { margin-top: 8px; } .totp-field .err:empty, .totp-field [role=status]:empty { display: none; } .totp-field .scanner { margin: 8px 0 0; }
+/* editor: the "Additional options" section (master password re-prompt, secondary passcode) */
+.opts-head { margin: 18px 0 6px; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-dim); }
 </style>
 </head>
 <body>
@@ -2374,7 +2376,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   }
 
   // js/version.js
-  var APP_VERSION = "0.46.0";
+  var APP_VERSION = "0.47.0";
   var APP_NAME = "VaultManager";
   var REPO_URL = "https://github.com/ulyweb/vaultmanager";
   var FORMATS = [
@@ -2389,6 +2391,12 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     ["Attachments at rest", "AES-256-GCM per file, bound to vault + file id"]
   ];
   var CHANGELOG = [
+    { v: "0.47.0", date: "2026-11-22", notes: [
+      "New for every category: \u201CMaster password re-prompt\u201D, under \u201CAdditional options\u201D when you create or edit an item (like Bitwarden). The item then shows only its name and category, in the list, in search and in the Trash, until you type your master password again; seeing, copying, editing and its code in the Home one-time-codes widget all wait for it. It stays shown for 5 minutes or until the vault locks, and \u201CHide now\u201D hides it at once.",
+      "Wrong master passwords at the re-prompt make you wait longer each time, and both right and wrong answers are written to the audit trail (never the password).",
+      "The setting travels with Bitwarden CSV and JSON imports, the Bitwarden CSV export, backups, sync and Seal as QR. A device still on an older version cannot switch it off by syncing.",
+      "It is a confirmation step, not extra encryption: Settings \u2192 About \u2192 FAQ explains what it protects against and when to use a secondary passcode instead."
+    ] },
     { v: "0.46.0", date: "2026-11-22", notes: [
       "The 2FA field on a login has \u201CScan QR with camera\u201D and \u201CQR from image / screenshot\u201D. Point the camera at the site\u2019s 2FA setup QR, or choose a screenshot of it, and the secret is filled in; an empty title and username are filled from the QR too. The picture is read on this device only.",
       "A QR that is not a 2FA setup code, a counter-based (HOTP) code or a Google Authenticator export is refused with a plain explanation.",
@@ -3738,6 +3746,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   var pickSensitive = (o) => Object.fromEntries(SENSITIVE.map((k) => [k, o[k]]));
   var BLANK = () => ({ description: "", username: "", password: "", url: "", totp: "", notes: "", card: { holder: "", number: "", expiry: "", cvv: "", pin: "" }, fields: {}, custom: [] });
   var LOCK_UNLOCK_MS = 10 * 60 * 1e3;
+  var REPROMPT_MS = 5 * 60 * 1e3;
   var DEFAULT_SETTINGS = {
     autolock: 5,
     clipboard: 30,
@@ -3790,12 +3799,13 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       pwChanged: now,
       deleted: 0,
       lock: "",
+      reprompt: false,
       ...init
     };
   }
   var same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
-  var MERGE_KEYS = ["name", "description", "username", "url", "password", "totp", "notes", "tags", "card", "custom", "lock", "favorite", "favName", "deleted"];
-  var NO_CONFLICT = /* @__PURE__ */ new Set(["favorite", "favName", "deleted"]);
+  var MERGE_KEYS = ["name", "description", "username", "url", "password", "totp", "notes", "tags", "card", "custom", "lock", "reprompt", "favorite", "favName", "deleted"];
+  var NO_CONFLICT = /* @__PURE__ */ new Set(["favorite", "favName", "deleted", "reprompt"]);
   var keysOf = (it) => [...MERGE_KEYS, ...Object.keys(it.fields || {}).map((k) => "f:" + k)];
   var getKey = (it, k) => k.startsWith("f:") ? (it.fields || {})[k.slice(2)] ?? "" : it[k];
   var setKey = (it, k, v) => {
@@ -3812,7 +3822,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       const f = ((TEMPLATES[it.type] || {}).fields || []).find((x) => x.k === k.slice(2));
       return f ? f.l : k.slice(2);
     }
-    return { favName: "Favorite name", name: "Title", description: "Description", username: "Username", url: "Website", password: "Password", totp: "One-time code secret", notes: "Notes", tags: "Tags", card: "Card details", custom: "Custom fields", lock: "Secondary passcode lock" }[k] || k;
+    return { reprompt: "Master password re-prompt", favName: "Favorite name", name: "Title", description: "Description", username: "Username", url: "Website", password: "Password", totp: "One-time code secret", notes: "Notes", tags: "Tags", card: "Card details", custom: "Custom fields", lock: "Secondary passcode lock" }[k] || k;
   }
   function keyIsSecret(it, k) {
     if (["password", "totp", "card", "lock"].includes(k)) return true;
@@ -3844,6 +3854,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     for (const k of TRACKED) before[k] = structuredClone(l[k]);
     const changed = [], found = [];
     for (const k of /* @__PURE__ */ new Set([...keysOf(l), ...keysOf(r)])) {
+      if (k === "reprompt" && !(r.ft && r.ft.reprompt !== void 0) && !(r.sv && r.sv.reprompt !== void 0)) continue;
       const lv = getKey(l, k), rv = getKey(r, k), lt = ftOf(l, k), rt = ftOf(r, k);
       if (same(lv, rv)) {
         l.ft[k] = Math.max(lt, rt);
@@ -3893,6 +3904,8 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       this.chain = Promise.resolve();
       this.itemKeys = /* @__PURE__ */ new Map();
       this.itemFails = /* @__PURE__ */ new Map();
+      this.reprompted = /* @__PURE__ */ new Map();
+      this.repromptFail = { n: 0, until: 0 };
       this.onSaved = null;
       this._auditDirty = false;
       this._auditSave = debounce(() => {
@@ -4008,6 +4021,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       this.session = null;
       this.data = null;
       this.itemKeys.clear();
+      this.reprompted.clear();
       clearOpenFields();
       this.chain = this.chain.then(() => s.lock(), () => s.lock());
     }
@@ -4037,6 +4051,42 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
         throw e;
       });
       return this.chain;
+    }
+    /* ----- master password re-prompt -----
+       An item marked "reprompt" is hidden in the UI until the master password is typed again (like Bitwarden). It is a
+       confirmation step on an unlocked vault, not extra encryption: the item is decrypted with the rest of the vault.
+       The answer is remembered in memory for REPROMPT_MS per item and forgotten when the vault locks. Wrong passwords
+       back off exponentially (shared across items, so trying many items does not reset it). */
+    needsReprompt(it) {
+      if (!it || !it.reprompt) return false;
+      const t = this.reprompted.get(it.id);
+      if (t && Date.now() - t < REPROMPT_MS) return false;
+      this.reprompted.delete(it.id);
+      return true;
+    }
+    async confirmReprompt(id, password) {
+      if (!this.session) throw new Error("The vault is locked.");
+      const it = this.get(id);
+      if (!it) throw new Error("Item not found.");
+      const f = this.repromptFail;
+      if (Date.now() < f.until) throw new Error("Too many wrong passwords. Wait " + Math.ceil((f.until - Date.now()) / 1e3) + "s.");
+      if (!await this.session.verifyPassword(String(password || ""))) {
+        f.n++;
+        f.until = Date.now() + Math.min(6e4, 1e3 * 2 ** Math.min(f.n, 6));
+        this.log("access", "Wrong master password at the re-prompt for \u201C" + it.name + "\u201D", "warn");
+        throw new Error("bad-password");
+      }
+      f.n = 0;
+      f.until = 0;
+      this.reprompted.set(id, Date.now());
+      this.log("access", "Confirmed the master password to open \u201C" + it.name + "\u201D");
+    }
+    hideAgain(id) {
+      this.reprompted.delete(id);
+    }
+    /* the editor just had the item open: keep it shown (only called right after a save from the editor) */
+    keepShown(id) {
+      if (this.session && this.get(id)) this.reprompted.set(id, Date.now());
     }
     /* ----- per-item secondary passcode -----
        The sensitive fields of an item are sealed again (PBKDF2 → AES-256-GCM, the same format as QR Seal) under a passcode
@@ -4730,6 +4780,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       it.lock = r.lock;
       Object.assign(it, BLANK());
     }
+    it.reprompt = r.reprompt === true || r.reprompt === 1 || r.reprompt === "1";
     if (Number.isFinite(r.created)) it.created = r.created;
     if (Number.isFinite(r.pwChanged)) it.pwChanged = r.pwChanged;
     if (Array.isArray(r.history)) it.history = r.history.filter((h2) => h2 && typeof h2.pw === "string").slice(0, HISTORY_MAX).map((h2) => ({ pw: s(h2.pw, 2e3), at: num2(Number(h2.at)) }));
@@ -4800,6 +4851,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     totp: ["totp", "login_totp", "otpauth", "one-time password", "otp"],
     folder: ["folder", "group", "grouping", "tags"],
     favorite: ["favorite", "fav"],
+    reprompt: ["reprompt"],
     type: ["type"]
   };
   function importCSV(text2) {
@@ -4826,7 +4878,8 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
         notes: unguard((col.notes !== void 0 ? r[col.notes] : "") || ""),
         totp: g("totp"),
         tags: g("folder") ? [g("folder")] : [],
-        favorite: ["1", "true", "yes"].includes(g("favorite").toLowerCase())
+        favorite: ["1", "true", "yes"].includes(g("favorite").toLowerCase()),
+        reprompt: ["1", "true", "yes"].includes(g("reprompt").toLowerCase())
       };
       if (!it.password && !it.username && !it.notes && !it.url) continue;
       out.push(sanitiseItem(it));
@@ -4847,6 +4900,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
         name: b.name,
         notes: b.notes,
         favorite: b.favorite,
+        reprompt: b.reprompt === 1,
         tags: b.folderId && folders.get(b.folderId) ? [folders.get(b.folderId)] : [],
         username: l.username,
         password: l.password,
@@ -4870,7 +4924,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       const tpl = TEMPLATES[i.type];
       const extra = [...tpl ? tpl.fields.filter((f) => f.kind !== "photo").map((f) => i.fields[f.k] ? f.l + ": " + i.fields[f.k] : "") : [], ...(i.custom || []).map((c) => c.label + ": " + c.value)].filter(Boolean);
       const notes = i.type === "card" ? [i.notes, "Card holder: " + i.card.holder, "Number: " + i.card.number, "Expiry: " + i.card.expiry, "CVV: " + i.card.cvv, ...extra].filter(Boolean).join("\n") : [i.notes, ...extra].filter(Boolean).join("\n");
-      lines2.push([(i.tags || [])[0] || "", i.favorite ? 1 : "", i.type === "note" ? "note" : "login", i.name, notes, "", 0, i.url, i.username, i.password, i.totp].map((v, n) => csvCell(v, n !== 9 && n !== 10)).join(","));
+      lines2.push([(i.tags || [])[0] || "", i.favorite ? 1 : "", i.type === "note" ? "note" : "login", i.name, notes, "", i.reprompt ? 1 : 0, i.url, i.username, i.password, i.totp].map((v, n) => csvCell(v, n !== 9 && n !== 10)).join(","));
     }
     return lines2.join("\r\n") + "\r\n";
   }
@@ -6678,7 +6732,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       items = items.filter((i) => i.type === v);
       if (v === "note" && S2.noteCat) items = items.filter((i) => S2.noteCat === "(none)" ? !(i.fields || {}).category : (i.fields || {}).category === S2.noteCat);
     } else if (v.startsWith("tag:")) items = items.filter((i) => (i.tags || []).includes(v.slice(4)));
-    if (S2.q) items = items.filter((i) => matches(i, S2.q));
+    if (S2.q) items = items.filter((i) => ctx2.store.needsReprompt(i) ? matches({ type: i.type, name: i.name, tags: i.tags }, S2.q) : matches(i, S2.q));
     return items.sort((a, b) => b.favorite - a.favorite || a.name.localeCompare(b.name, void 0, { sensitivity: "base" }));
   }
   var TITLES = { all: "All items", fav: "Favorites", trash: "Trash", conflicts: "Needs review", ...Object.fromEntries(Object.entries(TYPE_META).map(([k, m]) => [k, m.plural])) };
@@ -6749,6 +6803,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     return h("div", { class: "empty" }, h("p", { text: "No items here yet." }));
   }
   function itemRow(ctx2, it) {
+    const hidden = ctx2.store.needsReprompt(it);
     const sub = it.type === "login" ? it.username || hostOf(it.url) : it.type === "card" ? "\u2022\u2022\u2022\u2022 " + (it.card.number || "").replace(/\D/g, "").slice(-4) : TEMPLATES[it.type] ? (it.fields || {})[TEMPLATES[it.type].sub] || (it.type === "contact" ? (it.fields || {}).phone || (it.fields || {}).email : "") || (it.description || it.notes || "").split("\n")[0].slice(0, 60) : (it.description || it.notes || "").split("\n")[0].slice(0, 60);
     return h(
       "button",
@@ -6756,8 +6811,8 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
         ctx2.S.sel = it.id;
         ctx2.refresh();
       } } },
-      withPhoto(ctx2, it, avatar(it.name, it.type)),
-      h("div", { class: "t" }, h("b", { text: it.name || "(untitled)" }), h("small", { text: it.lock ? "\u{1F512} Locked \u2014 passcode required" : sub })),
+      hidden ? avatar(it.name, it.type) : withPhoto(ctx2, it, avatar(it.name, it.type)),
+      h("div", { class: "t" }, h("b", { text: it.name || "(untitled)" }), h("small", { text: it.lock ? "\u{1F512} Locked \u2014 passcode required" : hidden ? "\u{1F512} Master password re-prompt" : sub })),
       (it.attachments || []).length ? h("span", { class: "clip", text: "{{clip}}", title: it.attachments.length + " attachment(s)" }) : null,
       it.favorite ? h("span", { class: "star", text: "{{star}}", "aria-label": "Favorite" }) : null,
       h("span", { class: "disc", "aria-hidden": "true", text: "{{chevright}}" })
@@ -6866,8 +6921,70 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     toast("Moved to trash");
     ctx2.refresh();
   }
+  function repromptGate(ctx2, it) {
+    const back = () => {
+      ctx2.S.sel = null;
+      ctx2.refresh();
+    };
+    return h(
+      "div",
+      { class: "reprompt-gate" },
+      h("div", { class: "detail-nav" }, h("button", { class: "navback", "aria-label": "Back", on: { click: back } }, "{{chevleft}}", h("span", { text: "Back" })), h("span", { class: "navtitle", text: it.name || "" }), h("span")),
+      h(
+        "div",
+        { class: "detail-actions" },
+        h("button", { class: "btn back sm", on: { click: back } }, "{{chevleft}} Back"),
+        h("button", { class: "btn primary sm", on: { click: () => repromptDialog(ctx2, it) } }, "{{lock}} Show item"),
+        it.deleted ? null : h("button", { class: "btn danger sm", on: { click: () => trashWithConfirm(ctx2, it) } }, "{{trash}} Delete")
+      ),
+      h("div", { class: "detail-head" }, avatar(it.name, it.type), h("div", null, h("h2", { text: it.name || "(untitled)" }), h("span", { class: "chip" }, h("span", { class: "icn", text: TYPE_ICON[it.type] }), " " + TYPES[it.type]))),
+      h(
+        "div",
+        { class: "note lockbox", role: "status" },
+        h("b", { text: "{{lock}} Master password re-prompt is on for this item" }),
+        h("p", { text: "Type your master password again to see, copy or edit it. It stays shown for 5 minutes, or until the vault locks." }),
+        h("div", { class: "row" }, h("button", { class: "btn primary", on: { click: () => repromptDialog(ctx2, it) } }, "{{lock}} Enter master password\u2026"))
+      )
+    );
+  }
+  function repromptDialog(ctx2, it, then = null) {
+    const input = h("input", { type: "password", class: "inp mono", autocomplete: "current-password", "aria-label": "Master password" }), err = h("p", { class: "err", role: "alert" });
+    let m;
+    const go = async () => {
+      err.textContent = "";
+      const b = m && m.el && m.el.querySelector(".btn.primary");
+      if (b) b.disabled = true;
+      try {
+        await ctx2.store.confirmReprompt(it.id, input.value);
+        input.value = "";
+        m.close();
+        ctx2.refresh();
+        if (then) then();
+      } catch (e) {
+        err.textContent = e.message === "bad-password" ? "That is not your master password." : e.message;
+        input.select();
+      } finally {
+        if (b) b.disabled = false;
+      }
+      return false;
+    };
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        go();
+      }
+    });
+    m = modal({
+      title: "Show \u201C" + (it.name || "this item") + "\u201D",
+      sub: "Master password re-prompt",
+      body: h("div", null, h("p", { text: "This item asks for your master password again before it is shown, copied or edited." }), input, err),
+      actions: [{ label: "Cancel" }, { label: "Show", kind: "primary", onClick: go, close: false }]
+    });
+    focusSoon(input, 50);
+  }
   function detailPanel(ctx2, it0) {
     const { store: store2 } = ctx2;
+    if (store2.needsReprompt(it0)) return repromptGate(ctx2, it0);
     const it = store2.reveal(it0);
     const lockedClosed = !!it.lock && !it._open;
     currentItem = it;
@@ -6993,6 +7110,17 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
         )
       ));
     }
+    if (it.reprompt) rows.unshift(h(
+      "div",
+      { class: "note ok lockbox", role: "status" },
+      h("b", { text: "Shown after your master password" }),
+      h("small", { text: " \u2014 it hides again in 5 minutes, or when the vault locks." }),
+      h("div", { class: "row wrap" }, h("button", { class: "btn sm", on: { click: () => {
+        store2.hideAgain(it.id);
+        ctx2.refresh();
+        toast("Hidden again");
+      } } }, "{{lock}} Hide now"))
+    ));
     rows.push(h("div", { class: "f" }, h("div", { class: "k", text: "Updated" }), h("div", { class: "v hint", text: `${fmtDate(it.updated)} \xB7 created ${fmtDate(it.created)}${it.type === "login" && it.password ? " \xB7 password changed " + fmtDate(it.pwChanged) : ""}` })));
     const out = h("div", null, navbar, h("div", { class: "detail-head" }, withPhoto(ctx2, it, avatar(it.name, it.type)), h("div", null, h("h2", { text: it.name || "(untitled)" }), h("span", { class: "chip" }, h("span", { class: "icn", text: TYPE_ICON[it.type] }), " " + TYPES[it.type]))), actions, h("div", { class: "fgroup" }, rows));
     currentItem = null;
@@ -7280,6 +7408,10 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   }
   function editItem(ctx2, item, type = "login", { fromPicker = false } = {}) {
     const { store: store2 } = ctx2;
+    if (item && store2.needsReprompt(item)) {
+      repromptDialog(ctx2, item, () => editItem(ctx2, store2.get(item.id), type, { fromPicker }));
+      return;
+    }
     if (item && item.lock && !store2.isOpen(item)) {
       unlockItemDialog(ctx2, item);
       return;
@@ -7480,6 +7612,14 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       lockBox.hidden = !lockOn.checked;
       if (lockOn.checked) lp1.focus();
     });
+    const repromptOn = h("input", { type: "checkbox", id: "f_reprompt", checked: !!it.reprompt, on: { change: (e) => {
+      it.reprompt = e.target.checked;
+    } } });
+    body.push(
+      h("h4", { class: "opts-head", text: "Additional options" }),
+      h("label", { class: "chk", for: "f_reprompt" }, repromptOn, "{{lock}} Master password re-prompt"),
+      h("p", { class: "hint", text: "Asks for your master password again before this item is shown, copied or edited. It guards an unlocked screen (someone at your desk, or showing your screen); it does not add encryption, so it does not stop malware or anyone who knows your master password. For that, use a secondary passcode." })
+    );
     if (isNew) body.push(h("label", { class: "chk", for: "f_lockon" }, lockOn, "{{lock}} Protect this item with a secondary passcode"), lockBox);
     body.push(err);
     const save = async () => {
@@ -7552,7 +7692,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
         it.attachments = [];
         await store2.add(it);
       } else if (it.lock) {
-        const meta = { name: it.name, tags: it.tags, favorite: it.favorite, favName: it.favName };
+        const meta = { name: it.name, tags: it.tags, favorite: it.favorite, favName: it.favName, reprompt: !!it.reprompt };
         await store2.saveLocked(it.id, meta, it);
       } else {
         const { id, history, created, pwChanged, attachments, revisions, deleted, lock: lock2, _open, ...patch } = it;
@@ -7578,6 +7718,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
           toast(e.message, "err", 7e3);
         }
       }
+      if (it.reprompt) store2.keepShown(it.id);
       ctx2.showItem(it.id);
       toast(isNew ? "Saved to your vault" : "Changes saved");
     };
@@ -7861,7 +8002,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
         err.textContent = "Use at least 8 characters for the QR password" + (itemCode && useCode.checked ? " (this item\u2019s passcode is shorter \u2014 untick the box and choose a separate QR password)." : ".");
         return false;
       }
-      const payload = only ? { vm: 1, name: it.name, field: { label: only.label, value: only.value } } : { vm: 1, item: { type: it.type, name: it.name, description: it.description, username: it.username, password: it.password, url: it.url, totp: it.totp, notes: it.notes, tags: it.tags, card: it.card, fields: qrFields(it), custom: it.custom } };
+      const payload = only ? { vm: 1, name: it.name, field: { label: only.label, value: only.value } } : { vm: 1, item: { type: it.type, name: it.name, description: it.description, username: it.username, password: it.password, url: it.url, totp: it.totp, notes: it.notes, tags: it.tags, card: it.card, fields: qrFields(it), custom: it.custom, reprompt: !!it.reprompt } };
       try {
         out.append(h("p", { class: "hint", text: "Deriving the key (600,000 rounds) and sealing\u2026" }));
         const sealed = await sealText(JSON.stringify(payload), qrPw());
@@ -9762,6 +9903,12 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       "It cannot: do counter-based (HOTP) codes, \u201Ctap Yes on your phone\u201D push approvals, SMS or email codes, or security keys; read a Google Authenticator export QR (add each account from its own site instead); add 2FA to categories other than Login; or fill the code in for you (copy and paste it). Codes depend on this device\u2019s clock, so keep the clock set automatically. And it cannot bring 2FA back if you lose the vault: keep each site\u2019s recovery codes outside VaultManager, for example printed.",
       "The trade-off: 2FA is meant to be a second, separate step, something you know (the password) plus something you have (an authenticator on another device). When the 2FA secret sits in the same vault as the password, anyone who opens the vault, for example with your master password or through malware on this computer, gets both steps at once. It still protects you when a site\u2019s password leaks or is guessed, because the code is not in that leak. It does not protect you if the vault itself is opened. Bitwarden has the same trade-off.",
       "What we recommend: keep 2FA here for everyday accounts if you like the convenience. For the accounts everything else depends on (your main email, your bank, and the account that holds your backups or sync, such as GitHub), keep 2FA in a separate authenticator app or on a security key."
+    ]],
+    ["What does \u201CMaster password re-prompt\u201D do, and how is it different from a secondary passcode?", [
+      "Turn it on for any item, in any category, under \u201CAdditional options\u201D when you create or edit it. That item then shows only its name and category, in the list, in search and in the Trash, until you type your master password again. Seeing, copying or editing it, and its code in the Home \u201COne-time codes\u201D widget, all wait for the master password. After that it stays shown for 5 minutes, or until the vault locks. Wrong passwords make you wait longer each time.",
+      "What it protects against: someone using your computer or phone while the vault is unlocked, or people seeing your screen while you share it or work in public. It works like Bitwarden\u2019s option of the same name, and the setting travels with Bitwarden imports and exports.",
+      "What it does not protect against: it adds no encryption. The item is decrypted with the rest of the vault, so malware on the device, or anyone who knows your master password, can still read it.",
+      "If you need real extra protection for an item, use \u201CProtect this item with a secondary passcode\u201D instead. That encrypts the item\u2019s details again with a separate passcode, so even someone who has your master password cannot read it. You can use both on the same item."
     ]],
     ["Is it audited?", "No. It has been tested heavily and its code is public so anyone can read it, but it has not had an independent security audit. Read \u201CHow secure is this, honestly?\u201D above for what that means."]
   ];
@@ -12443,12 +12590,23 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
           continue;
         }
         const code = h("div", { class: "wcode", text: "------" }), left = h("small", { text: "" });
-        const tile = h("button", { class: "totp-tile", title: "Click to copy", on: { click: () => ctx2.copySecret(tile.dataset.code || "", "Code copied", it, "one-time code") } }, h("b", { text: it.name }), code, left);
-        tiles.push({ cfg, code, left, tile });
+        const tile = h("button", { class: "totp-tile", title: "Click to copy", on: { click: () => {
+          if (ctx2.store.needsReprompt(it)) repromptDialog(ctx2, it);
+          else ctx2.copySecret(tile.dataset.code || "", "Code copied", it, "one-time code");
+        } } }, h("b", { text: it.name }), code, left);
+        tiles.push({ it, cfg, code, left, tile });
         box.append(tile);
       }
       const tick = async () => {
         for (const t of tiles) {
+          if (ctx2.store.needsReprompt(t.it)) {
+            delete t.tile.dataset.code;
+            t.code.textContent = "\u{1F512} hidden";
+            t.left.textContent = "master password";
+            t.tile.title = "Master password re-prompt: click to show";
+            continue;
+          }
+          t.tile.title = "Click to copy";
           try {
             const r = await totpNow(t.cfg);
             t.tile.dataset.code = r.code;

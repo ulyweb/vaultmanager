@@ -1,6 +1,6 @@
 /* Application version, data-format versions and changelog (shown in Settings → About). */
 
-export const APP_VERSION = '0.46.0';
+export const APP_VERSION = '0.47.0';
 export const APP_NAME = 'VaultManager';
 export const REPO_URL = 'https://github.com/ulyweb/vaultmanager';
 
@@ -17,6 +17,12 @@ export const FORMATS = [
 ];
 
 export const CHANGELOG = [
+  { v: '0.47.0', date: '2026-11-22', notes: [
+    'New for every category: “Master password re-prompt”, under “Additional options” when you create or edit an item (like Bitwarden). The item then shows only its name and category, in the list, in search and in the Trash, until you type your master password again; seeing, copying, editing and its code in the Home one-time-codes widget all wait for it. It stays shown for 5 minutes or until the vault locks, and “Hide now” hides it at once.',
+    'Wrong master passwords at the re-prompt make you wait longer each time, and both right and wrong answers are written to the audit trail (never the password).',
+    'The setting travels with Bitwarden CSV and JSON imports, the Bitwarden CSV export, backups, sync and Seal as QR. A device still on an older version cannot switch it off by syncing.',
+    'It is a confirmation step, not extra encryption: Settings → About → FAQ explains what it protects against and when to use a secondary passcode instead.',
+  ] },
   { v: '0.46.0', date: '2026-11-22', notes: [
     'The 2FA field on a login has “Scan QR with camera” and “QR from image / screenshot”. Point the camera at the site’s 2FA setup QR, or choose a screenshot of it, and the secret is filled in; an empty title and username are filled from the QR too. The picture is read on this device only.',
     'A QR that is not a 2FA setup code, a counter-based (HOTP) code or a Google Authenticator export is refused with a plain explanation.',

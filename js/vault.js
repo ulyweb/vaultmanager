@@ -24,6 +24,8 @@ export const SENSITIVE = ['description', 'username', 'password', 'url', 'totp', 
 const pickSensitive = (o) => Object.fromEntries(SENSITIVE.map((k) => [k, o[k]]));
 const BLANK = () => ({ description: '', username: '', password: '', url: '', totp: '', notes: '', card: { holder: '', number: '', expiry: '', cvv: '', pin: '' }, fields: {}, custom: [] });
 export const LOCK_UNLOCK_MS = 10 * 60 * 1000;
+/* how long an item stays shown after its master password re-prompt was answered (memory only; cleared on lock) */
+export const REPROMPT_MS = 5 * 60 * 1000;
 
 export const DEFAULT_SETTINGS = {
   autolock: 5, clipboard: 30, theme: 'auto', lockOnHide: typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches,   // phones and tablets lock the moment the app is backgrounded; computers keep the 5 minute timer
@@ -43,7 +45,7 @@ export function newItem(type = 'login', init = {}) {
   return {
     id: uid(), type, name: '', description: '', username: '', password: '', url: '', totp: '', notes: '', tags: [], favorite: false, favName: '',
     card: { holder: '', number: '', expiry: '', cvv: '', pin: '' }, fields: autoFields(type), custom: [], attachments: [], revisions: [], ft: {}, sv: {}, attRemoved: {}, conflicts: [], cr: {},
-    history: [], created: now, updated: now, pwChanged: now, deleted: 0, lock: '', ...init,
+    history: [], created: now, updated: now, pwChanged: now, deleted: 0, lock: '', reprompt: false, ...init,
   };
 }
 
@@ -54,8 +56,8 @@ const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
    Two devices that edit DIFFERENT fields of one item both keep their changes. If both edited the SAME field
    since they last merged, the newest wins deterministically (both devices pick the same winner) and the other
    value is kept as a conflict for the user to review. */
-const MERGE_KEYS = ['name', 'description', 'username', 'url', 'password', 'totp', 'notes', 'tags', 'card', 'custom', 'lock', 'favorite', 'favName', 'deleted'];
-const NO_CONFLICT = new Set(['favorite', 'favName', 'deleted']);
+const MERGE_KEYS = ['name', 'description', 'username', 'url', 'password', 'totp', 'notes', 'tags', 'card', 'custom', 'lock', 'reprompt', 'favorite', 'favName', 'deleted'];
+const NO_CONFLICT = new Set(['favorite', 'favName', 'deleted', 'reprompt']);
 const keysOf = (it) => [...MERGE_KEYS, ...Object.keys(it.fields || {}).map((k) => 'f:' + k)];
 const getKey = (it, k) => (k.startsWith('f:') ? (it.fields || {})[k.slice(2)] ?? '' : it[k]);
 const setKey = (it, k, v) => { if (k.startsWith('f:')) { it.fields = it.fields || {}; if (v === '' || v == null) delete it.fields[k.slice(2)]; else it.fields[k.slice(2)] = v; } else it[k] = v; };
@@ -63,7 +65,7 @@ const ftOf = (it, k) => (it.ft && it.ft[k] !== undefined ? it.ft[k] : it.sv && i
 const svOf = (it, k) => (it.sv && it.sv[k] !== undefined ? it.sv[k] : null);   // null: never merged, so nothing counts as "edited since"
 export function keyLabel(it, k) {
   if (k.startsWith('f:')) { const f = ((TEMPLATES[it.type] || {}).fields || []).find((x) => x.k === k.slice(2)); return f ? f.l : k.slice(2); }
-  return ({ favName: 'Favorite name', name: 'Title', description: 'Description', username: 'Username', url: 'Website', password: 'Password', totp: 'One-time code secret', notes: 'Notes', tags: 'Tags', card: 'Card details', custom: 'Custom fields', lock: 'Secondary passcode lock' })[k] || k;
+  return ({ reprompt: 'Master password re-prompt', favName: 'Favorite name', name: 'Title', description: 'Description', username: 'Username', url: 'Website', password: 'Password', totp: 'One-time code secret', notes: 'Notes', tags: 'Tags', card: 'Card details', custom: 'Custom fields', lock: 'Secondary passcode lock' })[k] || k;
 }
 export function keyIsSecret(it, k) {
   if (['password', 'totp', 'card', 'lock'].includes(k)) return true;
@@ -83,6 +85,8 @@ export function mergeItem(l, r) {
   const before = {}; for (const k of TRACKED) before[k] = structuredClone(l[k]);
   const changed = [], found = [];
   for (const k of new Set([...keysOf(l), ...keysOf(r)])) {
+    // a device running an older version does not know the re-prompt flag (it never stamps it): it must never turn it off
+    if (k === 'reprompt' && !(r.ft && r.ft.reprompt !== undefined) && !(r.sv && r.sv.reprompt !== undefined)) continue;
     const lv = getKey(l, k), rv = getKey(r, k), lt = ftOf(l, k), rt = ftOf(r, k);
     if (same(lv, rv)) { l.ft[k] = Math.max(lt, rt); continue; }
     const lsv = svOf(l, k), rsv = svOf(r, k);
@@ -117,6 +121,7 @@ export class VaultStore {
     this.storage = storage; this.key = key; this.blobs = blobs; this.failKey = failKey;
     this.session = null; this.data = null; this.chain = Promise.resolve();
     this.itemKeys = new Map(); this.itemFails = new Map();   // opened locked items (memory only) / wrong-passcode counters
+    this.reprompted = new Map(); this.repromptFail = { n: 0, until: 0 };   // items whose re-prompt was answered (id → time) / wrong master passwords
     this.onSaved = null; this._auditDirty = false;
     this._auditSave = debounce(() => { if (this._auditDirty && this.session) { this._auditDirty = false; this.save().catch(() => {}); } }, 1500);
   }
@@ -182,7 +187,7 @@ export class VaultStore {
     if (!s) return;
     this._auditSave.cancel();
     if (this._auditDirty) { this._auditDirty = false; this.save().catch(() => {}); }
-    this.session = null; this.data = null; this.itemKeys.clear(); clearOpenFields();
+    this.session = null; this.data = null; this.itemKeys.clear(); this.reprompted.clear(); clearOpenFields();
     this.chain = this.chain.then(() => s.lock(), () => s.lock());
   }
 
@@ -199,6 +204,35 @@ export class VaultStore {
     }).catch((e) => { this.lastError = e; throw e; });
     return this.chain;
   }
+
+  /* ----- master password re-prompt -----
+     An item marked "reprompt" is hidden in the UI until the master password is typed again (like Bitwarden). It is a
+     confirmation step on an unlocked vault, not extra encryption: the item is decrypted with the rest of the vault.
+     The answer is remembered in memory for REPROMPT_MS per item and forgotten when the vault locks. Wrong passwords
+     back off exponentially (shared across items, so trying many items does not reset it). */
+  needsReprompt(it) {
+    if (!it || !it.reprompt) return false;
+    const t = this.reprompted.get(it.id);
+    if (t && Date.now() - t < REPROMPT_MS) return false;
+    this.reprompted.delete(it.id); return true;
+  }
+  async confirmReprompt(id, password) {
+    if (!this.session) throw new Error('The vault is locked.');
+    const it = this.get(id); if (!it) throw new Error('Item not found.');
+    const f = this.repromptFail;
+    if (Date.now() < f.until) throw new Error('Too many wrong passwords. Wait ' + Math.ceil((f.until - Date.now()) / 1000) + 's.');
+    if (!(await this.session.verifyPassword(String(password || '')))) {
+      f.n++; f.until = Date.now() + Math.min(60000, 1000 * 2 ** Math.min(f.n, 6));
+      this.log('access', 'Wrong master password at the re-prompt for “' + it.name + '”', 'warn');
+      throw new Error('bad-password');
+    }
+    f.n = 0; f.until = 0;
+    this.reprompted.set(id, Date.now());
+    this.log('access', 'Confirmed the master password to open “' + it.name + '”');
+  }
+  hideAgain(id) { this.reprompted.delete(id); }
+  /* the editor just had the item open: keep it shown (only called right after a save from the editor) */
+  keepShown(id) { if (this.session && this.get(id)) this.reprompted.set(id, Date.now()); }
 
   /* ----- per-item secondary passcode -----
      The sensitive fields of an item are sealed again (PBKDF2 → AES-256-GCM, the same format as QR Seal) under a passcode
@@ -667,6 +701,7 @@ export function sanitiseItem(r, { keepMeta = false, keepAttachments = false } = 
   if (TEMPLATES[type] && r.fields && typeof r.fields === 'object') for (const f of TEMPLATES[type].fields) { const v = r.fields[f.k]; if (f.strict && typeof v === 'string' && !f.options.includes(v)) continue; if (typeof v === 'string' && v) it.fields[f.k] = v.slice(0, f.kind === 'multiline' || isFieldLocked(v) ? 20000 : 1000); }
   if (Array.isArray(r.custom)) it.custom = r.custom.filter((c) => c && typeof c === 'object').slice(0, MAX_CUSTOM).map((c) => ({ label: s(c.label, 60), value: s(c.value, 5000), secret: !!c.secret })).filter((c) => c.label || c.value);
   if (typeof r.lock === 'string' && r.lock.length <= 400000 && /^[A-Za-z0-9+/=]+$/.test(r.lock)) { it.lock = r.lock; Object.assign(it, BLANK()); }
+  it.reprompt = r.reprompt === true || r.reprompt === 1 || r.reprompt === '1';   // Bitwarden writes 1
   if (Number.isFinite(r.created)) it.created = r.created;
   if (Number.isFinite(r.pwChanged)) it.pwChanged = r.pwChanged;
   if (Array.isArray(r.history)) it.history = r.history.filter((h) => h && typeof h.pw === 'string').slice(0, HISTORY_MAX).map((h) => ({ pw: s(h.pw, 2000), at: num(Number(h.at)) }));
@@ -723,6 +758,7 @@ const ALIAS = {
   totp: ['totp', 'login_totp', 'otpauth', 'one-time password', 'otp'],
   folder: ['folder', 'group', 'grouping', 'tags'],
   favorite: ['favorite', 'fav'],
+  reprompt: ['reprompt'],
   type: ['type'],
 };
 
@@ -744,6 +780,7 @@ export function importCSV(text) {
       name: unguard(g('name')) || hostOf(g('url')) || '(unnamed)', url: unguard(g('url')), username: unguard(g('username')), password: r[col.password] || '',
       notes: unguard((col.notes !== undefined ? r[col.notes] : '') || ''), totp: g('totp'), tags: g('folder') ? [g('folder')] : [],
       favorite: ['1', 'true', 'yes'].includes(g('favorite').toLowerCase()),
+      reprompt: ['1', 'true', 'yes'].includes(g('reprompt').toLowerCase()),
     };
     if (!it.password && !it.username && !it.notes && !it.url) continue;
     out.push(sanitiseItem(it));
@@ -762,7 +799,7 @@ export function importBitwardenJSON(text) {
     const type = b.type === 2 ? 'note' : b.type === 3 ? 'card' : b.type === 4 ? 'identity' : 'login';
     const idn = b.identity || {};
     return sanitiseItem({
-      type, name: b.name, notes: b.notes, favorite: b.favorite, tags: b.folderId && folders.get(b.folderId) ? [folders.get(b.folderId)] : [],
+      type, name: b.name, notes: b.notes, favorite: b.favorite, reprompt: b.reprompt === 1, tags: b.folderId && folders.get(b.folderId) ? [folders.get(b.folderId)] : [],
       username: l.username, password: l.password, totp: l.totp, url: (l.uris && l.uris[0] && l.uris[0].uri) || '',
       card: { holder: c.cardholderName, number: c.number, expiry: [c.expMonth, c.expYear].filter(Boolean).join('/'), cvv: c.code },
       fields: type === 'identity' ? { fullname: [idn.firstName, idn.middleName, idn.lastName].filter(Boolean).join(' '), number: idn.passportNumber || idn.licenseNumber || idn.ssn || '', country: idn.country || '' } : {},
@@ -785,7 +822,7 @@ export function exportCSV(items) {
     const tpl = TEMPLATES[i.type];
     const extra = [...(tpl ? tpl.fields.filter((f) => f.kind !== 'photo').map((f) => (i.fields[f.k] ? f.l + ': ' + i.fields[f.k] : '')) : []), ...(i.custom || []).map((c) => c.label + ': ' + c.value)].filter(Boolean);
     const notes = i.type === 'card' ? [i.notes, 'Card holder: ' + i.card.holder, 'Number: ' + i.card.number, 'Expiry: ' + i.card.expiry, 'CVV: ' + i.card.cvv, ...extra].filter(Boolean).join('\n') : [i.notes, ...extra].filter(Boolean).join('\n');
-    lines.push([ (i.tags || [])[0] || '', i.favorite ? 1 : '', i.type === 'note' ? 'note' : 'login', i.name, notes, '', 0, i.url, i.username, i.password, i.totp ].map((v, n) => csvCell(v, n !== 9 && n !== 10)).join(','));
+    lines.push([ (i.tags || [])[0] || '', i.favorite ? 1 : '', i.type === 'note' ? 'note' : 'login', i.name, notes, '', i.reprompt ? 1 : 0, i.url, i.username, i.password, i.totp ].map((v, n) => csvCell(v, n !== 9 && n !== 10)).join(','));
   }
   return lines.join('\r\n') + '\r\n';
 }

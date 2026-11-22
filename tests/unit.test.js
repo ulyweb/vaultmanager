@@ -12,7 +12,7 @@ import { memoryBlobs } from '../js/blobs.js';
 import { sealBundle, openBundle, GistClient, syncGist, exportSyncFile, importSyncFile } from '../js/sync.js';
 import { sealText, openText, inspectSeal } from '../js/crypto.js';
 import { Profiles, keysFor, sanitizeAvatar, createProfileFromImport } from '../js/profiles.js';
-import { decryptProfile } from '../js/vault.js';
+import { decryptProfile, REPROMPT_MS } from '../js/vault.js';
 
 /* words in a generated passphrase: the EFF list has one hyphenated word, "yo-yo", so a plain split('-') miscounts it */
 const wordCount = (s) => String(s).replace(/(^|-)yo-yo(?=-|$)/g, '$1yoyo').split('-').length;
@@ -1073,4 +1073,57 @@ test('totpFromQR: reads a 2FA setup QR, refuses what it cannot use', () => {
   assert.match(totpFromQR('').error, /not a 2FA setup code/);
   assert.match(totpFromQR('otpauth://totp/X:y?secret=not-base32!').error, /could not be used/);
   assert.match(totpFromQR('otpauth://totp/X:y?secret=JBSWY3DPEHPK3PXP&digits=4').error, /could not be used/);
+});
+
+test('master password re-prompt: flag, check with back-off, expiry, lock, sanitise, merge, Bitwarden import / export', async () => {
+  const S = new VaultStore(new MemStorage(), 'k', memoryBlobs(), 'f'); await S.create('correct horse battery', FAST);
+  const plain = newItem('login'); plain.name = 'Plain'; await S.add(plain);
+  const it = newItem('bank'); it.name = 'Bank'; it.reprompt = true; it.fields = { account: '12345678' }; await S.add(it);
+  assert.equal(newItem('note').reprompt, false, 'off by default');
+  assert.equal(S.needsReprompt(S.get(plain.id)), false); assert.equal(S.needsReprompt(S.get(it.id)), true);
+  // a wrong password is refused, logged and throttled; the right one opens the item
+  await assert.rejects(() => S.confirmReprompt(it.id, 'not the password'), /bad-password/);
+  await assert.rejects(() => S.confirmReprompt(it.id, 'correct horse battery'), /Too many/, 'throttled right after a failure');
+  await assert.rejects(() => S.confirmReprompt(plain.id, 'correct horse battery'), /Too many/, 'the back-off is shared across items');
+  assert.equal(S.needsReprompt(S.get(it.id)), true);
+  S.repromptFail.until = 0;
+  await S.confirmReprompt(it.id, 'correct horse battery');
+  assert.equal(S.needsReprompt(S.get(it.id)), false); assert.equal(S.repromptFail.n, 0, 'a correct answer resets the counter');
+  assert.ok(S.data.audit.some((e) => /Wrong master password at the re-prompt for “Bank”/.test(e.m)) && S.data.audit.some((e) => /Confirmed the master password to open “Bank”/.test(e.m)));
+  assert.ok(!JSON.stringify(S.data.audit).includes('correct horse'), 'the password never reaches the audit trail');
+  // it hides again: on request, after REPROMPT_MS, and when the vault locks
+  S.hideAgain(it.id); assert.equal(S.needsReprompt(S.get(it.id)), true);
+  await S.confirmReprompt(it.id, 'correct horse battery');
+  S.reprompted.set(it.id, Date.now() - REPROMPT_MS - 1); assert.equal(S.needsReprompt(S.get(it.id)), true, 'expires');
+  await S.confirmReprompt(it.id, 'correct horse battery');
+  S.keepShown(plain.id); assert.ok(S.reprompted.has(plain.id));
+  S.lock(); assert.equal(S.reprompted.size, 0, 'forgotten when the vault locks');
+  await assert.rejects(() => S.confirmReprompt(it.id, 'correct horse battery'));
+  // a trashed item stays hidden too (its detail shows every field); unknown items are refused
+  const T = new VaultStore(new MemStorage(), 'k', memoryBlobs(), 'f'); await T.create('correct horse battery', FAST);
+  await assert.rejects(() => T.confirmReprompt('nope', 'correct horse battery'), /not found/);
+  assert.equal(T.needsReprompt({ ...newItem('login'), reprompt: true, deleted: Date.now() }), true);
+  // untrusted data: only true, 1 or '1' turn it on
+  for (const [v, want] of [[true, true], [1, true], ['1', true], [false, false], [0, false], ['true', false], ['yes', false], [{}, false], [undefined, false]]) assert.equal(sanitiseItem({ type: 'login', name: 'x', reprompt: v }).reprompt, want, JSON.stringify(v));
+  // sync: turning it on (or off) on one device reaches the other
+  const l = sanitiseItem({ ...newItem('login'), name: 'Mail', updated: 1000, ft: {}, sv: {} }, { keepMeta: true }), r = structuredClone(l);
+  r.reprompt = true; r.updated = 2000; r.ft = { reprompt: 2000 };
+  mergeItem(l, r); assert.equal(l.reprompt, true, 'merged from the other device');
+  assert.equal(l.conflicts.length, 0);
+  // a device on an older version (it never stamps the flag) edits something else later: the flag must stay on
+  const old = structuredClone(l); delete old.reprompt; old.reprompt = false; delete old.ft.reprompt; delete old.sv.reprompt; old.notes = 'edited on the old app'; old.updated = 9000; old.ft = { notes: 9000 };
+  mergeItem(l, old); assert.equal(l.reprompt, true, 'an older app never turns it off'); assert.equal(l.notes, 'edited on the old app', 'its other edits still arrive');
+  // a current device that really turned it off, later, wins
+  const off = structuredClone(l); off.reprompt = false; off.ft = { ...off.ft, reprompt: 10000 }; off.updated = 10000;
+  mergeItem(l, off); assert.equal(l.reprompt, false, 'a real change from a current device arrives');
+  // both devices changed it since the last merge: newest wins, no conflict to review (it is an on / off setting)
+  const both = structuredClone(l), mine = structuredClone(l); mine.reprompt = true; mine.ft.reprompt = 11000; both.reprompt = false; both.ft.reprompt = 12000;
+  mergeItem(mine, both); assert.equal(mine.reprompt, false); assert.equal(mine.conflicts.filter((c) => c.key === 'reprompt').length, 0);
+  // Bitwarden: CSV and JSON import, CSV export
+  const csv = 'folder,favorite,type,name,notes,fields,reprompt,login_uri,login_username,login_password,login_totp\n,,login,Guarded,,,1,https://a.example,me,pw1,\n,,login,Open,,,0,https://b.example,me,pw2,\n';
+  const imp = importCSV(csv); assert.deepEqual(imp.map((i) => [i.name, i.reprompt]), [['Guarded', true], ['Open', false]]);
+  const bw = importBitwardenJSON(JSON.stringify({ items: [{ type: 1, name: 'A', reprompt: 1, login: { password: 'x' } }, { type: 1, name: 'B', reprompt: 0, login: { password: 'y' } }] }));
+  assert.deepEqual(bw.map((i) => i.reprompt), [true, false]);
+  const out = parseCSV(exportCSV(imp)); const col = out[0].indexOf('reprompt');
+  assert.deepEqual(out.slice(1).filter((row) => row.length > 1).map((row) => row[col]), ['1', '0'], 'exported for Bitwarden');
 });

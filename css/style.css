@@ -1140,3 +1140,5 @@ html[data-avatar] .avatar.has-photo, .avatar.has-photo { background: var(--photo
 .fileprev img { display: block; max-width: 100%; max-height: 220px; border-radius: 10px; margin: 8px 0; border: 1px solid var(--line); }
 /* 2FA field: scan buttons under the input, no empty space for a message that is not there */
 .totp-field > .row { margin-top: 8px; } .totp-field .err:empty, .totp-field [role=status]:empty { display: none; } .totp-field .scanner { margin: 8px 0 0; }
+/* editor: the "Additional options" section (master password re-prompt, secondary passcode) */
+.opts-head { margin: 18px 0 6px; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-dim); }
