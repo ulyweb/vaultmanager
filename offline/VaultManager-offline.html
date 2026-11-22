@@ -11,7 +11,7 @@
 <meta name="application-name" content="VaultManager">
 <meta name="format-detection" content="telephone=no">
 <meta name="referrer" content="no-referrer">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-tauzjAWYvkq2EEey6/r1GOXzEWNzSydbYj43JCIjd2U=' 'sha256-yCqZHxt5NDKeuL9ezFn5RZiVlE8XhWC9PGGt0JTvttA=' blob:; style-src 'sha256-MtW8rsTVO1Prol8YbfPSri+un3XJzkQjxX9XZxcCmcQ='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-tauzjAWYvkq2EEey6/r1GOXzEWNzSydbYj43JCIjd2U=' 'sha256-es0MQiMXkmXUbgdHdTVb2Ys/MxC+7HkIZkcj7upxfa0=' blob:; style-src 'sha256-MtW8rsTVO1Prol8YbfPSri+un3XJzkQjxX9XZxcCmcQ='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
 <title>VaultManager | Zero-Knowledge Password Manager</title>
 <meta name="description" content="VaultManager: an offline-first, zero-knowledge, end-to-end encrypted password manager with a strong password generator, TOTP codes and QR-sealed sharing and backup. Runs entirely in your browser.">
 <meta name="theme-color" content="#05080d">
@@ -7189,7 +7189,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     const input = h("input", { id: "f_totp", class: "inp mono", value: it.totp || "", autocomplete: "off", spellcheck: "false", placeholder: "Base32 setup key or otpauth:// link", on: { input: (e) => {
       it.totp = e.target.value;
     } } });
-    const status = h("p", { class: "hint", role: "status" }), err = h("p", { class: "err", role: "alert" });
+    const status = h("p", { class: "hint", role: "status" }), err = h("p", { class: "err totp-err", role: "alert" });
     const video = h("video", { muted: true, playsinline: true, "aria-label": "Camera preview for the 2FA QR" }), camBox = h("div", { class: "scanner", hidden: true }, video);
     let stopCam = null;
     const stop = () => {

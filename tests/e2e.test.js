@@ -70,10 +70,10 @@ test('full journey: create → add → lock → unlock → tools → QR round tr
   // weak and mismatched passwords are refused
   await page.fill('#pw1', 'password1234'); await page.fill('#pw2', 'password1234'); await page.check('#ack');
   await page.click('button[type=submit]');
-  assert.match(await page.textContent('.err:not(.photo-err)'), /too easy|easy to guess/i);
+  assert.match(await page.textContent('.err:not(.photo-err):not(.totp-err)'), /too easy|easy to guess/i);
   await page.fill('#pw1', MASTER); await page.fill('#pw2', MASTER + 'x');
   await page.click('button[type=submit]');
-  assert.match(await page.textContent('.err:not(.photo-err)'), /do not match/);
+  assert.match(await page.textContent('.err:not(.photo-err):not(.totp-err)'), /do not match/);
   await page.fill('#pw2', MASTER);
   await page.click('button[type=submit]');
   await page.getByRole('button', { name: 'Skip for now' }).click(); await dismissWelcome(page); await showEverything(page);
@@ -419,7 +419,7 @@ test('attachments: add image + document to login, note and card; preview, downlo
   await page.getByRole('button', { name: /Edit/ }).click();
   const big = path.join(tmp, 'big.bin'); fs.writeFileSync(big, Buffer.alloc(10 * 1024 * 1024 + 1));
   await page.setInputFiles('input[aria-label="Choose files"]', big);
-  assert.match(await page.textContent('.modal-sheet .err:not(.photo-err)'), /limit/); await page.keyboard.press('Escape');
+  assert.match(await page.textContent('.modal-sheet .err:not(.photo-err):not(.totp-err)'), /limit/); await page.keyboard.press('Escape');
 
   // IndexedDB holds only ciphertext
   const leak = await page.evaluate(async () => new Promise((res) => { const r = indexedDB.open('vaultmanager-blobs'); r.onsuccess = () => { const t = r.result.transaction('blobs'); const q = t.objectStore('blobs').getAll(); q.onsuccess = () => { const hay = q.result.map((x) => Array.from(new Uint8Array(x.ct)).map((b) => String.fromCharCode(b)).join('')).join(''); res(hay.includes('IHDR') || hay.includes('code-1')); }; }; }));
@@ -475,7 +475,7 @@ test('sync file: export from one device, import on another (items + attachments)
 
   await settingsTab(A.page, /Sync/);
   await A.page.fill('input[aria-label="Sync passphrase"]', 'short'); await A.page.getByRole('button', { name: 'Save passphrase' }).click();
-  assert.match(await A.page.textContent('.err:not(.photo-err)'), /at least 12/);
+  assert.match(await A.page.textContent('.err:not(.photo-err):not(.totp-err)'), /at least 12/);
   await A.page.fill('input[aria-label="Sync passphrase"]', SYNC_PASS); await A.page.getByRole('button', { name: 'Save passphrase' }).click();
   await shot(A.page, '09-sync');
   const [dl] = await Promise.all([A.page.waitForEvent('download'), A.page.getByRole('button', { name: /Export sync file/ }).click()]);

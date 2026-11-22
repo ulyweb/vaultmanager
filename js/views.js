@@ -446,7 +446,7 @@ function historyModal(ctx, it) {
    Everything is decoded on this device. Returns { el, stop } — stop() turns the camera off. */
 function totpSecretField(it) {
   const input = h('input', { id: 'f_totp', class: 'inp mono', value: it.totp || '', autocomplete: 'off', spellcheck: 'false', placeholder: 'Base32 setup key or otpauth:// link', on: { input: (e) => { it.totp = e.target.value; } } });
-  const status = h('p', { class: 'hint', role: 'status' }), err = h('p', { class: 'err', role: 'alert' });
+  const status = h('p', { class: 'hint', role: 'status' }), err = h('p', { class: 'err totp-err', role: 'alert' });
   const video = h('video', { muted: true, playsinline: true, 'aria-label': 'Camera preview for the 2FA QR' }), camBox = h('div', { class: 'scanner', hidden: true }, video);
   let stopCam = null;
   const stop = () => { if (stopCam) { stopCam(); stopCam = null; } camBox.hidden = true; setLabel(camBtn, '{{camera}} Scan QR with camera'); };
