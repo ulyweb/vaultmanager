@@ -211,7 +211,7 @@ function qrBackupGuide(ctx, { short = false } = {}) {
   for (const i of items) by[i.type] = (by[i.type] || 0) + 1;
   const cats = Object.entries(by).sort((a, b) => b[1] - a[1]).map(([k, n]) => `${(TYPE_META[k] || { plural: k }).plural} ${n}`).join(' · ');
   const locked = items.filter((i) => i.lock).length, files = items.reduce((n, i) => n + (i.attachments || []).length, 0);
-  const restore = h('ol', null, h('li', { text: 'On the new device, create or open a profile.' }), h('li', { text: 'Tools → QR tools → Open QR.' }), h('li', { text: 'Scan every code with the camera (any order), or choose the saved / photographed images. A counter shows what is still missing.' }),
+  const restore = h('ol', null, h('li', { text: 'On a new device, the quickest way: on the first screen choose “Import a profile backup” → Scan QR backup (or QR images / screenshots). It creates a new profile with these items. Or, in a profile you already have:' }), h('li', { text: 'Tools → QR tools → Open QR.' }), h('li', { text: 'Scan every code with the camera (any order), or choose the saved / photographed images. A counter shows what is still missing.' }),
     h('li', { text: 'Type the backup password and press Open.' }), h('li', { text: 'Press “Import N items”. Duplicates are skipped; nothing in the vault is deleted or overwritten.' }));
   if (short) return h('details', { class: 'how' }, h('summary', { text: 'How do I restore a “Backup to QR”?' }), restore);
   return h('div', { class: 'panel pad how-panel' }, h('h3', { text: 'How Backup to QR works' }),

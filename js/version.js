@@ -1,6 +1,6 @@
 /* Application version, data-format versions and changelog (shown in Settings → About). */
 
-export const APP_VERSION = '0.47.0';
+export const APP_VERSION = '0.48.0';
 export const APP_NAME = 'VaultManager';
 export const REPO_URL = 'https://github.com/ulyweb/vaultmanager';
 
@@ -17,6 +17,11 @@ export const FORMATS = [
 ];
 
 export const CHANGELOG = [
+  { v: '0.48.0', date: '2026-11-22', notes: [
+    'Create a new profile from a QR backup right on the first screen: “Import a profile backup” now has “Scan QR backup” (camera) and “QR images / screenshots”. Scan the codes in any order; it shows which ones are still missing, and “Start over” clears a scan begun with the wrong backup’s codes.',
+    'The codes are read on this device and only rebuild the encrypted backup; opening it still needs the backup password. A QR code that is not part of a VaultManager backup is refused with an explanation.',
+    'A QR backup holds every item, but not attached files or photos, settings or the look; the dialog says so. For everything, use a .vmprofile file.',
+  ] },
   { v: '0.47.0', date: '2026-11-22', notes: [
     'New for every category: “Master password re-prompt”, under “Additional options” when you create or edit an item (like Bitwarden). The item then shows only its name and category, in the list, in search and in the Trash, until you type your master password again; seeing, copying, editing and its code in the Home one-time-codes widget all wait for it. It stays shown for 5 minutes or until the vault locks, and “Hide now” hides it at once.',
     'Wrong master passwords at the re-prompt make you wait longer each time, and both right and wrong answers are written to the audit trail (never the password).',
