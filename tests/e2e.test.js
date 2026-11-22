@@ -352,9 +352,12 @@ test('icons are identical on desktop and phone (one SVG set, no emoji)', async (
   const html = Object.values(desk).join('').replace(/aria-label="[^"]*"/g, ''); assert.ok(!EMOJI.test(html), 'icons are drawn shapes, not emoji glyphs');
 });
 
-test('light theme renders', async () => {
+test('light theme renders (dark is the default, even on a light device; Light can be chosen on the create screen)', async () => {
   const { ctx, page } = await newPage({ colorScheme: 'light' });
   await page.goto(base); await page.waitForSelector('#pw1');
+  assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), 'dark', 'a new device starts dark');
+  assert.equal(await page.getAttribute('.themeseg button[aria-pressed="true"]', 'data-theme-choice'), 'dark', 'the create screen pre-selects Dark');
+  await page.click('.themeseg button[data-theme-choice="light"]');
   assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), 'light');
   await shot(page, '20-light-create');
   await ctx.close();
@@ -1859,7 +1862,7 @@ test('v0.30.0: the 3D tour page loads (with or without WebGL), its chapters, col
   await ctx.close();
 });
 
-test('v0.31.0: New item opens a 3D category carousel (spin with keys, drag and group chips), creates the chosen kind, and keeps a plain list as the choice for reduced motion', async () => {
+test('v0.31.0: New item offers a 3D category carousel (spin with keys, drag and group chips) that creates the chosen kind; since v0.47.0 the plain list is the default and 3D is remembered once chosen', async () => {
   const quiet = (p) => !/Failed to load resource/.test(p);
   // reduced motion (what every other test runs with): the plain list comes first, so nothing about the old picker changed
   const R = await newPage(); await createVault(R.page);
@@ -1867,10 +1870,13 @@ test('v0.31.0: New item opens a 3D category carousel (spin with keys, drag and g
   assert.equal(await R.page.locator('.c3-stage').count(), 0, 'list first for people who ask for reduced motion');
   await R.page.locator('.pickseg button').first().click(); await R.page.waitForSelector('.c3-stage'); assert.equal(await R.page.locator('.c3-card').count(), TYPE_KEYS.length, 'one card per category, even held still');
   await R.ctx.close();
-  // motion on: the carousel is the default
+  // motion on: the list is still the default (v0.47.0); choosing 3D shows the carousel
   for (const [label, opts] of [['desktop', { reducedMotion: 'no-preference' }], ['phone', { ...(({ defaultBrowserType, ...d }) => d)(devices['iPhone SE']), reducedMotion: 'no-preference' }]]) {
     const { ctx, page, problems } = await newPage(opts); await createVault(page);
-    await page.getByRole('button', { name: label === 'phone' ? 'New item' : '＋ New' }).click({ force: true }); await page.waitForSelector('.c3-stage');
+    await page.getByRole('button', { name: label === 'phone' ? 'New item' : '＋ New' }).click({ force: true }); await page.waitForSelector('.modal-sheet .cats .btn');
+    assert.equal(await page.locator('.c3-stage').count(), 0, label + ': the list is the default, even with motion on');
+    assert.equal(await page.getAttribute('.pickseg button:nth-child(2)', 'aria-pressed'), 'true', label + ': List is the selected choice');
+    await page.locator('.pickseg button').first().click(); await page.waitForSelector('.c3-stage');
     assert.equal(await page.locator('.c3-card').count(), TYPE_KEYS.length, label + ': a card for every category');
     assert.equal(await page.textContent('.c3-name'), 'Login', label + ': starts on Login');
     assert.ok(await page.evaluate(() => document.activeElement && document.activeElement.classList.contains('c3-stage')), label + ': the ring has the keyboard focus');
@@ -1897,7 +1903,7 @@ test('v0.31.0: New item opens a 3D category carousel (spin with keys, drag and g
   }
 });
 
-test('v0.32.0: the 3D card space flows behind the sign-in, create and Home screens, holds still for reduced motion, never blocks a click, and can be switched off', async () => {
+test('v0.32.0: the 3D card space (off by default since v0.47.0) can be turned on, flows behind the sign-in, create and Home screens, holds still for reduced motion, never blocks a click, and can be switched off', async () => {
   const quiet = (p) => !/Failed to load resource/.test(p);
   // reduced motion (what the other tests run with): the cards are there but nothing is animated
   const R = await newPage(); await R.page.goto(base); await R.page.waitForSelector('#pw1');
@@ -1905,9 +1911,14 @@ test('v0.32.0: the 3D card space flows behind the sign-in, create and Home scree
   assert.equal(await R.page.evaluate(() => document.body.dataset.space), 'gate');
   { const t = () => R.page.evaluate(() => document.querySelector('.s3-card').style.transform); const a = await t(); await R.page.waitForTimeout(700); assert.equal(await t(), a, 'still under reduce motion'); }
   await R.ctx.close();
-  // motion on
+  // motion on: off by default, turned on from the sign-in screen's 3D effects panel
   const { ctx, page, problems } = await newPage({ reducedMotion: 'no-preference' });
   await page.goto(base); await page.waitForSelector('#pw1');
+  assert.equal(await page.evaluate(() => document.documentElement.dataset.fx3d), 'off', 'the 3D card space is off by default');
+  assert.equal(await page.evaluate(() => getComputedStyle(document.getElementById('space3d')).display), 'none', 'nothing flows until it is turned on');
+  await page.locator('.gfx-btn').click(); assert.equal(await page.getAttribute('#gfx-panel button[aria-label="fx3d"]', 'aria-checked'), 'false');
+  await page.locator('#gfx-panel button[aria-label="fx3d"]').click(); assert.equal(await page.evaluate(() => document.documentElement.dataset.fx3d), 'on');
+  await page.locator('.gfx-btn').click();
   assert.equal(await page.evaluate(() => getComputedStyle(document.getElementById('space3d')).pointerEvents), 'none', 'the space never takes a click');
   const spin = async () => page.evaluate(() => document.querySelector('.s3-card').style.transform);
   const a = await spin(); await page.waitForTimeout(700); assert.notEqual(await spin(), a, 'the cards really move');
@@ -1940,6 +1951,7 @@ test('v0.32.0: the 3D card space flows behind the sign-in, create and Home scree
   assert.deepEqual(problems.filter(quiet), []); await ctx.close();
   // the import dialog opens over the cards
   const I = await newPage({ reducedMotion: 'no-preference' }); await I.page.goto(base); await I.page.waitForSelector('#pw1');
+  await I.page.locator('.gfx-btn').click(); await I.page.locator('#gfx-panel button[aria-label="fx3d"]').click(); await I.page.locator('.gfx-btn').click();
   await I.page.getByRole('button', { name: /Import a profile backup/ }).click(); await I.page.waitForSelector('.modal-sheet.m3d');
   assert.equal(await I.page.evaluate(() => getComputedStyle(document.getElementById('space3d')).display), 'block', 'the cards stay visible behind the import dialog');
   await I.ctx.close();
@@ -1953,12 +1965,18 @@ test('v0.33.0: thick cards and windows, tilt / thickness / float settings from t
   const data = (k) => page.evaluate((x) => document.documentElement.dataset[x], k);
   // every floating card is a slab: a face plus slices behind it, and the windows carry a stacked edge
   const layers = (sel) => page.evaluate((q) => (getComputedStyle(document.querySelector(q)).boxShadow.match(/(rgba?|color)\(/g) || []).length, sel);
+  // v0.47.0 defaults: the panel opens on off / 5 px / 1° / 6; thick cards need the 3D card space, so turn it on
+  await page.click('.gfx-btn'); await page.waitForSelector('.gfx-panel:not([hidden])');
+  assert.deepEqual(await page.locator('.gfx-panel input[type=range]').evaluateAll((els) => els.map((e) => e.value)), ['5', '1', '6'], 'the panel opens on the defaults');
+  assert.equal(await page.getAttribute('#gfx-panel button[aria-label="fx3d"]', 'aria-checked'), 'false', '3D card space off by default');
+  await page.locator('#gfx-panel button[aria-label="fx3d"]').click(); await page.click('.gfx-btn'); assert.equal(await data('fx3d'), 'on');
   assert.equal(await page.locator('.s3-card').count(), 16); assert.ok(await layers('.s3-inner') >= 9, 'each floating card has a solid edge, one layer per card (no extra 3D layers behind it)');
   assert.equal(await page.locator('.s3-card > *').count(), 16, 'exactly one layer inside each card: the face');
   assert.ok(await page.evaluate(() => document.querySelector('.s3-card').style.getPropertyValue('--ex') !== ''), 'the edge direction follows the card across the screen');
-  assert.equal(await css('--fx3d-thick'), '14'); assert.equal(await data('thick'), 'on');
+  assert.equal(await css('--fx3d-thick'), '5', 'default thickness 5 (v0.47.0)'); assert.equal(await data('thick'), 'on');
+  await page.waitForFunction(() => (getComputedStyle(document.querySelector('.gate-card')).boxShadow.match(/(rgba?|color)\(/g) || []).length >= 12, null, { timeout: 5000 });   // the edge fades in after the card space was switched on
   assert.ok(((await page.evaluate(() => getComputedStyle(document.querySelector('.gate-card')).boxShadow)).match(/(rgba?|color)\(/g) || []).length >= 12, 'the sign-in window has a stacked edge');
-  assert.equal(await css('--fx3d-float'), '3');
+  assert.equal(await css('--fx3d-float'), '6', 'default float 6 (v0.47.0)'); assert.equal(await css('--tilt'), '1deg', 'default tilt 1° (v0.47.0)');
   assert.equal(await data('float'), 'off', 'scripted browsers get a still window so clicks stay reliable (real browsers float)');
   // the 3D effects panel on the create screen
   await page.click('.gfx-btn'); await page.waitForSelector('.gfx-panel:not([hidden])');
@@ -1978,7 +1996,7 @@ test('v0.33.0: thick cards and windows, tilt / thickness / float settings from t
   assert.equal(await css('--fx3d-thick'), '20'); assert.equal(await css('--fx3d-float'), '6');
   await settingsTab(page, 'Effects');
   assert.equal(await page.locator('input[aria-label="fx3dThick"]').inputValue(), '20'); assert.equal(await page.locator('input[aria-label="fx3dFloat"]').inputValue(), '6'); assert.equal(await page.locator('input[aria-label="fxTilt"]').inputValue(), '9');
-  assert.equal(await page.locator('button[aria-label="fx3d"]').getAttribute('aria-checked'), 'true');
+  assert.equal(await page.locator('button[aria-label="fx3d"]').getAttribute('aria-checked'), 'true', 'the 3D card space turned on at sign-in comes with the profile');
   await page.locator('input[aria-label="fx3dThick"]').fill('8'); assert.equal(await css('--fx3d-thick'), '8', 'the same slider lives in Settings');
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth <= 1), true, 'no sideways scroll with thick widgets');
   assert.deepEqual(problems.filter(quiet), []); await ctx.close();
@@ -2097,7 +2115,7 @@ for (const [label, offline] of [['served', false], ['single file', true]]) {
     await page.goto(offline ? 'file://' + path.join(ROOT, 'offline/VaultManager-offline.html') : base); await page.waitForSelector('#pw1');
     await page.fill('#pw1', MASTER); await page.fill('#pw2', MASTER); await page.check('#ack'); await page.click('button[type=submit]');
     await page.getByRole('button', { name: 'Skip for now' }).click(); await page.waitForSelector('.welcome.in').catch(() => {}); await page.keyboard.press('Escape'); await page.waitForTimeout(250);
-    await page.getByRole('button', { name: '＋ New' }).click(); await page.waitForSelector('.c3-obj');
+    await page.getByRole('button', { name: '＋ New' }).click(); await page.waitForSelector('.modal-sheet .pickseg'); await page.locator('.pickseg button').first().click(); await page.waitForSelector('.c3-obj');   // the list is the default since v0.47.0: choose 3D
     await page.waitForFunction(() => [...document.querySelectorAll('.c3-obj')].every((i) => i.complete && i.naturalWidth > 100), null, { timeout: 15000 });
     assert.equal(await page.locator('.c3-obj').count(), 29, 'every category card carries its own 3D object');
     await page.keyboard.press('Escape');

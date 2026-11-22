@@ -28,7 +28,7 @@ export const LOCK_UNLOCK_MS = 10 * 60 * 1000;
 export const REPROMPT_MS = 5 * 60 * 1000;
 
 export const DEFAULT_SETTINGS = {
-  autolock: 5, clipboard: 30, theme: 'auto', lockOnHide: typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches,   // phones and tablets lock the moment the app is backgrounded; computers keep the 5 minute timer
+  autolock: 5, clipboard: 30, theme: 'dark', lockOnHide: typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches,   // phones and tablets lock the moment the app is backgrounded; computers keep the 5 minute timer
    trashDays: 30, logReveal: true, displayName: '', tourSeen: false, welcomeAlways: false,
   family: { contact: '', usb: '', paper: '', holders: '', notes: '' }, drillAt: 0, drillDays: 90,   // Family recovery: the family guide text and the restore drill
   gen: { mode: 'password', length: 20, lower: true, upper: true, digits: true, symbols: true, noAmbiguous: false, words: 10, separator: '-', capitalize: false, number: false },
@@ -652,7 +652,7 @@ export function portableSettings(st = {}) {
   const out = {}, D = DEFAULT_SETTINGS_FOR_IMPORT;
   if (st.autolock !== undefined) out.autolock = clampInt(st.autolock, 0, 240, D.autolock);
   if (st.clipboard !== undefined) out.clipboard = clampInt(st.clipboard, 0, 300, D.clipboard);
-  if (st.theme !== undefined) out.theme = ['auto', 'dark', 'light'].includes(st.theme) ? st.theme : 'auto';
+  if (st.theme !== undefined) out.theme = ['auto', 'dark', 'light'].includes(st.theme) ? st.theme : DEFAULT_SETTINGS.theme;
   if (st.trashDays !== undefined) out.trashDays = [0, 7, 30, 90].includes(+st.trashDays) ? +st.trashDays : D.trashDays;
   for (const k of ['lockOnHide', 'logReveal', 'tourSeen', 'welcomeAlways']) if (st[k] !== undefined) out[k] = flag(st[k], D[k]);
   if (typeof st.displayName === 'string') out.displayName = st.displayName.replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, 40);

@@ -710,7 +710,7 @@ const pickerPref = () => { try { return localStorage.getItem(PICKER_KEY) || ''; 
 const savePickerPref = (v) => { try { localStorage.setItem(PICKER_KEY, v); } catch { /* private window: just not remembered */ } };
 const reducedMotion = () => !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 /* 3D unless the person chose the list, or has animations off / asks for reduced motion and never chose 3D */
-const carouselWanted = () => { const p = pickerPref(); return p === '3d' || (p !== 'list' && document.documentElement.dataset.fxanim === 'on' && !reducedMotion()); };
+const carouselWanted = () => pickerPref() === '3d';   // the list is the default; the 3D carousel when someone chooses it (remembered)
 
 export function newItemMenu(ctx, opts = {}) {
   const pick = (k) => h('button', { class: 'btn', on: { click: () => { ctx.closeModals(); editItem(ctx, null, k, { fromPicker: true }); } } }, h('span', { class: 'icn', text: TYPE_ICON[k] }), ' ' + TYPES[k]);

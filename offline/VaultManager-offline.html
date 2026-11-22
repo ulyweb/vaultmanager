@@ -11,7 +11,7 @@
 <meta name="application-name" content="VaultManager">
 <meta name="format-detection" content="telephone=no">
 <meta name="referrer" content="no-referrer">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-tauzjAWYvkq2EEey6/r1GOXzEWNzSydbYj43JCIjd2U=' 'sha256-q672QWELJF4h7vHekz8Ix9MndTry1k7YYB1NIzHYyy0=' blob:; style-src 'sha256-3WMFD9fxE1Pm6HFMGw0I1bquAjb0qnzkv4Wu7X/9ImE='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-tauzjAWYvkq2EEey6/r1GOXzEWNzSydbYj43JCIjd2U=' 'sha256-joqptMv6T5HvVJPcjQijDYSyHPlkd/ypgsRJKS+puCo=' blob:; style-src 'sha256-3WMFD9fxE1Pm6HFMGw0I1bquAjb0qnzkv4Wu7X/9ImE='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
 <title>VaultManager | Zero-Knowledge Password Manager</title>
 <meta name="description" content="VaultManager: an offline-first, zero-knowledge, end-to-end encrypted password manager with a strong password generator, TOTP codes and QR-sealed sharing and backup. Runs entirely in your browser.">
 <meta name="theme-color" content="#05080d">
@@ -2395,7 +2395,10 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       "New for every category: \u201CMaster password re-prompt\u201D, under \u201CAdditional options\u201D when you create or edit an item (like Bitwarden). The item then shows only its name and category, in the list, in search and in the Trash, until you type your master password again; seeing, copying, editing and its code in the Home one-time-codes widget all wait for it. It stays shown for 5 minutes or until the vault locks, and \u201CHide now\u201D hides it at once.",
       "Wrong master passwords at the re-prompt make you wait longer each time, and both right and wrong answers are written to the audit trail (never the password).",
       "The setting travels with Bitwarden CSV and JSON imports, the Bitwarden CSV export, backups, sync and Seal as QR. A device still on an older version cannot switch it off by syncing.",
-      "It is a confirmation step, not extra encryption: Settings \u2192 About \u2192 FAQ explains what it protects against and when to use a secondary passcode instead."
+      "It is a confirmation step, not extra encryption: Settings \u2192 About \u2192 FAQ explains what it protects against and when to use a secondary passcode instead.",
+      "New defaults for new profiles and devices: the 3D card space is off (turn it on in the 3D effects panel or Settings \u2192 Effects), with card thickness 5 px, 3D tilt 1\xB0 and card float 6; \u201CReset\u201D in the 3D effects panel goes back to these.",
+      "New item opens the category list; the 3D carousel is one click away and is remembered once you choose it.",
+      "Dark is the default theme (the create screen still offers Auto and Light), and icons are Large by default. Profiles you already have keep their own settings."
     ] },
     { v: "0.46.0", date: "2026-11-22", notes: [
       "The 2FA field on a login has \u201CScan QR with camera\u201D and \u201CQR from image / screenshot\u201D. Point the camera at the site\u2019s 2FA setup QR, or choose a screenshot of it, and the secret is filled in; an empty title and username are filled from the QR too. The picture is read on this device only.",
@@ -3513,7 +3516,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     wallUrl: "",
     bgDim: 55,
     iconStyle: "3d",
-    iconSize: "medium",
+    iconSize: "large",
     avatar: "letter",
     uiScale: 100,
     density: "comfortable",
@@ -3526,11 +3529,11 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     bootAnim: true,
     fxAnim: true,
     tips: true,
-    fx3d: true,
-    fx3dThick: 14,
-    fx3dFloat: 3,
+    fx3d: false,
+    fx3dThick: 5,
+    fx3dFloat: 6,
     fxAurora: 65,
-    fxTilt: 5,
+    fxTilt: 1,
     fxGlow: 35,
     fxScan: false,
     blur: 12,
@@ -3750,7 +3753,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   var DEFAULT_SETTINGS = {
     autolock: 5,
     clipboard: 30,
-    theme: "auto",
+    theme: "dark",
     lockOnHide: typeof matchMedia === "function" && matchMedia("(pointer: coarse)").matches,
     // phones and tablets lock the moment the app is backgrounded; computers keep the 5 minute timer
     trashDays: 30,
@@ -4716,7 +4719,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     const out = {}, D2 = DEFAULT_SETTINGS_FOR_IMPORT;
     if (st.autolock !== void 0) out.autolock = clampInt(st.autolock, 0, 240, D2.autolock);
     if (st.clipboard !== void 0) out.clipboard = clampInt(st.clipboard, 0, 300, D2.clipboard);
-    if (st.theme !== void 0) out.theme = ["auto", "dark", "light"].includes(st.theme) ? st.theme : "auto";
+    if (st.theme !== void 0) out.theme = ["auto", "dark", "light"].includes(st.theme) ? st.theme : DEFAULT_SETTINGS.theme;
     if (st.trashDays !== void 0) out.trashDays = [0, 7, 30, 90].includes(+st.trashDays) ? +st.trashDays : D2.trashDays;
     for (const k of ["lockOnHide", "logReveal", "tourSeen", "welcomeAlways"]) if (st[k] !== void 0) out[k] = flag(st[k], D2[k]);
     if (typeof st.displayName === "string") out.displayName = st.displayName.replace(/[\u0000-\u001f<>]/g, "").trim().slice(0, 40);
@@ -5133,7 +5136,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       panel3.append(
         h("p", { class: "hint", text: "These follow you into the vault: Settings \u2192 Effects has the same sliders." }),
         h("button", { type: "button", class: "btn sm", on: { click: () => {
-          ctx2.setGateLook({ fx3d: true, fx3dThick: 14, fxTilt: 5, fx3dFloat: 3 });
+          ctx2.setGateLook({ fx3d: LOOK_DEFAULTS.fx3d, fx3dThick: LOOK_DEFAULTS.fx3dThick, fxTilt: LOOK_DEFAULTS.fxTilt, fx3dFloat: LOOK_DEFAULTS.fx3dFloat });
           draw2();
         } } }, "Reset")
       );
@@ -7843,10 +7846,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     }
   };
   var reducedMotion = () => !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
-  var carouselWanted = () => {
-    const p = pickerPref();
-    return p === "3d" || p !== "list" && document.documentElement.dataset.fxanim === "on" && !reducedMotion();
-  };
+  var carouselWanted = () => pickerPref() === "3d";
   function newItemMenu(ctx2, opts = {}) {
     const pick = (k) => h("button", { class: "btn", on: { click: () => {
       ctx2.closeModals();
@@ -13056,7 +13056,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     ctx.S.profileId = id || null;
     const cos = loadCosmetic(env.storage, keysFor(id || "main").look);
     bootLook = normalizeLook(cos && cos.look || {});
-    bootTheme = cos && cos.theme || "auto";
+    bootTheme = cos && cos.theme || "dark";
   }
   var ctx = {
     get store() {
@@ -13164,7 +13164,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   ctx.tour = tour;
   var isVaultView = (v) => ["all", "fav", "trash", "conflicts"].includes(v) || v in TYPE_META || v.startsWith("tag:");
   var bootLook = normalizeLook({});
-  var bootTheme = "auto";
+  var bootTheme = "dark";
   var cosKey = () => keysFor(ctx.S.profileId || "main").look;
   var lightMQ = window.matchMedia("(prefers-color-scheme: light)");
   var reducedMotion2 = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -13448,7 +13448,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     p1.input.addEventListener("input", () => clear(m).append(meter(p1.input.value).el));
     const btn = h("button", { class: "btn primary cta", type: "submit", style: null }, first ? "Create my vault" : "Create profile");
     const originalTheme = bootTheme;
-    let themeChoice = ["auto", "dark", "light"].includes(bootTheme) ? bootTheme : "auto";
+    let themeChoice = ["auto", "dark", "light"].includes(bootTheme) ? bootTheme : "dark";
     const THEMES = [["auto", "monitor", "Auto"], ["dark", "moon", "Dark"], ["light", "sun", "Light"]];
     const themeSeg = h("div", { class: "seg themeseg", role: "group", "aria-label": "Appearance" }, THEMES.map(([v, icon, label]) => h("button", { type: "button", class: v === themeChoice ? "on" : "", "aria-pressed": String(v === themeChoice), "data-theme-choice": v, on: { click: () => {
       themeChoice = v;

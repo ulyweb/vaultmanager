@@ -32,10 +32,10 @@ export const DEFAULT_HIDDEN_CATS = Object.keys(TYPE_META).filter((k) => !['login
 export const DEFAULT_HIDDEN_NAV = ['gen', 'qr', 'family', 'beam'];
 export const LOOK_DEFAULTS = {
   // appearance
-  accent: '#2fe6d0', cursor: false, cursorStyle: 'neon', cursorSize: 100, cursorColor: '', cursorRing: true, hiddenCats: DEFAULT_HIDDEN_CATS, hiddenNav: DEFAULT_HIDDEN_NAV, bg: 'default', wallpaper: 'forest', wallImage: '', wallUrl: '', bgDim: 55, iconStyle: '3d', iconSize: 'medium', avatar: 'letter',
+  accent: '#2fe6d0', cursor: false, cursorStyle: 'neon', cursorSize: 100, cursorColor: '', cursorRing: true, hiddenCats: DEFAULT_HIDDEN_CATS, hiddenNav: DEFAULT_HIDDEN_NAV, bg: 'default', wallpaper: 'forest', wallImage: '', wallUrl: '', bgDim: 55, iconStyle: '3d', iconSize: 'large', avatar: 'letter',
   uiScale: 100, density: 'comfortable', radius: 12, widgetStyle: 'vivid',
   // effects
-  animations: true, animStyle: 'scale', animSpeed: 1, bootAnim: true, fxAnim: true, tips: true, fx3d: true, fx3dThick: 14, fx3dFloat: 3, fxAurora: 65, fxTilt: 5, fxGlow: 35, fxScan: false, blur: 12, glassAlpha: 0.72,
+  animations: true, animStyle: 'scale', animSpeed: 1, bootAnim: true, fxAnim: true, tips: true, fx3d: false, fx3dThick: 5, fx3dFloat: 6, fxAurora: 65, fxTilt: 1, fxGlow: 35, fxScan: false, blur: 12, glassAlpha: 0.72,
   // layout (dock & menu bar)
   haptics: true, nav: 'sidebar', dockSize: 46, dockMagnify: true, dockLabels: false, dockAutoHide: false,
   clock: true, clockPos: 'center', clockSize: 'large', clock24: false, dateFmt: 'short', barLabels: true, startPage: 'home',

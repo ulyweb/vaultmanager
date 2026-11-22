@@ -823,7 +823,7 @@ test('hostile backups cannot weaken the app: settings are typed and bounded, fil
   const { portableSettings, sanitizeGen, sanitiseItem } = await import('../js/vault.js');
   const { ITER_MAX, inspectSeal } = await import('../js/crypto.js');
   const s = portableSettings({ autolock: 'never', clipboard: 99999, theme: '<x>', lockOnHide: 'yes', trashDays: 3, logReveal: 0, displayName: '<b>Al\u0000ex</b>'.repeat(20), gen: { length: 1e9, words: -4, separator: '\n\n\n\n\n\n', customSymbols: 'a b\u0000c', mode: 'evil', __proto__: { x: 1 } }, sync: { token: 'ghp_x', auto: 1 } });
-  assert.equal(s.autolock, 5); assert.equal(s.clipboard, 300); assert.equal(s.theme, 'auto'); assert.equal('lockOnHide' in s ? s.lockOnHide : false, false); assert.equal(s.trashDays, 30); assert.equal(s.logReveal, true);
+  assert.equal(s.autolock, 5); assert.equal(s.clipboard, 300); assert.equal(s.theme, 'dark', 'an invalid theme falls back to the default (dark)'); assert.equal('lockOnHide' in s ? s.lockOnHide : false, false); assert.equal(s.trashDays, 30); assert.equal(s.logReveal, true);
   assert.ok(s.displayName.length <= 40 && !/[<>\u0000]/.test(s.displayName)); assert.equal(s.gen.length, 128); assert.equal(s.gen.words, 3); assert.equal(s.gen.separator.length <= 4, true); assert.equal(s.gen.customSymbols, 'abc'); assert.equal('mode' in s.gen, false);
   assert.deepEqual(s.sync, { auto: true, attachments: true }, 'the sync token never travels');
   assert.equal(portableSettings({ autolock: 0 }).autolock, 0, 'a deliberate "never" still works'); assert.deepEqual(sanitizeGen(null || {}), {});
@@ -880,8 +880,12 @@ test('master-password suggestion is at least 100 bits (10 words), well above the
 test('look: 3D settings have defaults and a look saved before the 3D card space gets the new tilt default', async () => {
   const { normalizeLook, LOOK_DEFAULTS } = await import('../js/look.js');
   const d = normalizeLook({});
-  assert.equal(d.fx3d, true); assert.equal(d.fx3dThick, LOOK_DEFAULTS.fx3dThick); assert.equal(d.fx3dFloat, LOOK_DEFAULTS.fx3dFloat); assert.equal(d.fxTilt, 5);
-  assert.equal(normalizeLook({ fxTilt: 0 }).fxTilt, 5, 'an old saved look (tilt 0 was the old default) gets the new default');
+  // v0.47.0 defaults (the owner's chosen look): 3D card space off, thickness 5, tilt 1, float 6, large icons
+  assert.equal(d.fx3d, false); assert.equal(d.fx3dThick, 5); assert.equal(d.fx3dFloat, 6); assert.equal(d.fxTilt, 1); assert.equal(d.iconSize, 'large');
+  assert.equal(LOOK_DEFAULTS.fx3dThick, 5); assert.equal(LOOK_DEFAULTS.fx3dFloat, 6);
+  for (const [k, v] of [['accent', '#2fe6d0'], ['bg', 'default'], ['iconStyle', '3d'], ['avatar', 'letter'], ['tips', true], ['uiScale', 100], ['density', 'comfortable'], ['radius', 12], ['widgetStyle', 'vivid'], ['nav', 'sidebar'], ['startPage', 'home'], ['dockAutoHide', false]]) assert.deepEqual(d[k], v, k);
+  assert.deepEqual([...d.hiddenNav].sort(), ['beam', 'family', 'gen', 'qr'], 'Favorites, Trash, Vault health, Import & export and Task manager show; Generator and QR tools are hidden');
+  assert.equal(normalizeLook({ fxTilt: 0 }).fxTilt, 1, 'an old saved look (tilt 0 was the old default) gets the new default');
   assert.equal(normalizeLook({ fx3d: true, fxTilt: 0 }).fxTilt, 0, 'a deliberate 0 stays 0');
   assert.equal(normalizeLook({ fx3dThick: 99, fx3dFloat: -4, fxTilt: 40, fx3d: true }).fx3dThick, 28); assert.equal(normalizeLook({ fx3dFloat: -4 }).fx3dFloat, 0); assert.equal(normalizeLook({ fx3d: true, fxTilt: 40 }).fxTilt, 12);
 });
@@ -1126,4 +1130,10 @@ test('master password re-prompt: flag, check with back-off, expiry, lock, saniti
   assert.deepEqual(bw.map((i) => i.reprompt), [true, false]);
   const out = parseCSV(exportCSV(imp)); const col = out[0].indexOf('reprompt');
   assert.deepEqual(out.slice(1).filter((row) => row.length > 1).map((row) => row[col]), ['1', '0'], 'exported for Bitwarden');
+});
+
+test('a new vault starts with the dark theme; a saved theme is kept', async () => {
+  const S = new VaultStore(new MemStorage(), 'k', memoryBlobs(), 'f'); await S.create('correct horse battery', FAST);
+  assert.equal(S.settings.theme, 'dark');
+  S.settings.theme = 'light'; await S.save(); S.lock(); await S.unlock({ password: 'correct horse battery' }); assert.equal(S.settings.theme, 'light', 'an existing choice is not overwritten');
 });
