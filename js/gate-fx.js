@@ -4,6 +4,7 @@
    (app.js: ctx.setGateLook / pendingLook). The panel is not a dialog: it sits beside the screen so you see the cards change live. */
 
 import { h, clear } from './dom.js';
+import { LOOK_DEFAULTS as D } from './look.js';
 
 const CONTROLS = [
   ['fx3dThick', 'Card thickness', 0, 28, 1, (v) => v + ' px'],
@@ -26,7 +27,7 @@ export function gateFxControl(ctx) {
       panel.append(h('label', { class: 'gfx-row' }, h('span', { text: label }), input, val));
     }
     panel.append(h('p', { class: 'hint', text: 'These follow you into the vault: Settings → Effects has the same sliders.' }),
-      h('button', { type: 'button', class: 'btn sm', on: { click: () => { ctx.setGateLook({ fx3d: true, fx3dThick: 14, fxTilt: 5, fx3dFloat: 3 }); draw(); } } }, 'Reset'));
+      h('button', { type: 'button', class: 'btn sm', on: { click: () => { ctx.setGateLook({ fx3d: D.fx3d, fx3dThick: D.fx3dThick, fxTilt: D.fxTilt, fx3dFloat: D.fx3dFloat }); draw(); } } }, 'Reset'));
   };
   function toggle(open) {
     const show = open === undefined ? panel.hidden : open;

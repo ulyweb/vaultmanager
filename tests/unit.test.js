@@ -12,7 +12,7 @@ import { memoryBlobs } from '../js/blobs.js';
 import { sealBundle, openBundle, GistClient, syncGist, exportSyncFile, importSyncFile } from '../js/sync.js';
 import { sealText, openText, inspectSeal } from '../js/crypto.js';
 import { Profiles, keysFor, sanitizeAvatar, createProfileFromImport } from '../js/profiles.js';
-import { decryptProfile } from '../js/vault.js';
+import { decryptProfile, REPROMPT_MS } from '../js/vault.js';
 
 /* words in a generated passphrase: the EFF list has one hyphenated word, "yo-yo", so a plain split('-') miscounts it */
 const wordCount = (s) => String(s).replace(/(^|-)yo-yo(?=-|$)/g, '$1yoyo').split('-').length;
@@ -823,7 +823,7 @@ test('hostile backups cannot weaken the app: settings are typed and bounded, fil
   const { portableSettings, sanitizeGen, sanitiseItem } = await import('../js/vault.js');
   const { ITER_MAX, inspectSeal } = await import('../js/crypto.js');
   const s = portableSettings({ autolock: 'never', clipboard: 99999, theme: '<x>', lockOnHide: 'yes', trashDays: 3, logReveal: 0, displayName: '<b>Al\u0000ex</b>'.repeat(20), gen: { length: 1e9, words: -4, separator: '\n\n\n\n\n\n', customSymbols: 'a b\u0000c', mode: 'evil', __proto__: { x: 1 } }, sync: { token: 'ghp_x', auto: 1 } });
-  assert.equal(s.autolock, 5); assert.equal(s.clipboard, 300); assert.equal(s.theme, 'auto'); assert.equal('lockOnHide' in s ? s.lockOnHide : false, false); assert.equal(s.trashDays, 30); assert.equal(s.logReveal, true);
+  assert.equal(s.autolock, 5); assert.equal(s.clipboard, 300); assert.equal(s.theme, 'dark', 'an invalid theme falls back to the default (dark)'); assert.equal('lockOnHide' in s ? s.lockOnHide : false, false); assert.equal(s.trashDays, 30); assert.equal(s.logReveal, true);
   assert.ok(s.displayName.length <= 40 && !/[<>\u0000]/.test(s.displayName)); assert.equal(s.gen.length, 128); assert.equal(s.gen.words, 3); assert.equal(s.gen.separator.length <= 4, true); assert.equal(s.gen.customSymbols, 'abc'); assert.equal('mode' in s.gen, false);
   assert.deepEqual(s.sync, { auto: true, attachments: true }, 'the sync token never travels');
   assert.equal(portableSettings({ autolock: 0 }).autolock, 0, 'a deliberate "never" still works'); assert.deepEqual(sanitizeGen(null || {}), {});
@@ -880,8 +880,12 @@ test('master-password suggestion is at least 100 bits (10 words), well above the
 test('look: 3D settings have defaults and a look saved before the 3D card space gets the new tilt default', async () => {
   const { normalizeLook, LOOK_DEFAULTS } = await import('../js/look.js');
   const d = normalizeLook({});
-  assert.equal(d.fx3d, true); assert.equal(d.fx3dThick, LOOK_DEFAULTS.fx3dThick); assert.equal(d.fx3dFloat, LOOK_DEFAULTS.fx3dFloat); assert.equal(d.fxTilt, 5);
-  assert.equal(normalizeLook({ fxTilt: 0 }).fxTilt, 5, 'an old saved look (tilt 0 was the old default) gets the new default');
+  // v0.47.0 defaults (the owner's chosen look): 3D card space off, thickness 5, tilt 1, float 6, large icons
+  assert.equal(d.fx3d, false); assert.equal(d.fx3dThick, 5); assert.equal(d.fx3dFloat, 6); assert.equal(d.fxTilt, 1); assert.equal(d.iconSize, 'large');
+  assert.equal(LOOK_DEFAULTS.fx3dThick, 5); assert.equal(LOOK_DEFAULTS.fx3dFloat, 6);
+  for (const [k, v] of [['accent', '#2fe6d0'], ['bg', 'default'], ['iconStyle', '3d'], ['avatar', 'letter'], ['tips', true], ['uiScale', 100], ['density', 'comfortable'], ['radius', 12], ['widgetStyle', 'vivid'], ['nav', 'sidebar'], ['startPage', 'home'], ['dockAutoHide', false]]) assert.deepEqual(d[k], v, k);
+  assert.deepEqual([...d.hiddenNav].sort(), ['beam', 'family', 'gen', 'qr'], 'Favorites, Trash, Vault health, Import & export and Task manager show; Generator and QR tools are hidden');
+  assert.equal(normalizeLook({ fxTilt: 0 }).fxTilt, 1, 'an old saved look (tilt 0 was the old default) gets the new default');
   assert.equal(normalizeLook({ fx3d: true, fxTilt: 0 }).fxTilt, 0, 'a deliberate 0 stays 0');
   assert.equal(normalizeLook({ fx3dThick: 99, fx3dFloat: -4, fxTilt: 40, fx3d: true }).fx3dThick, 28); assert.equal(normalizeLook({ fx3dFloat: -4 }).fx3dFloat, 0); assert.equal(normalizeLook({ fx3d: true, fxTilt: 40 }).fxTilt, 12);
 });
@@ -1073,4 +1077,63 @@ test('totpFromQR: reads a 2FA setup QR, refuses what it cannot use', () => {
   assert.match(totpFromQR('').error, /not a 2FA setup code/);
   assert.match(totpFromQR('otpauth://totp/X:y?secret=not-base32!').error, /could not be used/);
   assert.match(totpFromQR('otpauth://totp/X:y?secret=JBSWY3DPEHPK3PXP&digits=4').error, /could not be used/);
+});
+
+test('master password re-prompt: flag, check with back-off, expiry, lock, sanitise, merge, Bitwarden import / export', async () => {
+  const S = new VaultStore(new MemStorage(), 'k', memoryBlobs(), 'f'); await S.create('correct horse battery', FAST);
+  const plain = newItem('login'); plain.name = 'Plain'; await S.add(plain);
+  const it = newItem('bank'); it.name = 'Bank'; it.reprompt = true; it.fields = { account: '12345678' }; await S.add(it);
+  assert.equal(newItem('note').reprompt, false, 'off by default');
+  assert.equal(S.needsReprompt(S.get(plain.id)), false); assert.equal(S.needsReprompt(S.get(it.id)), true);
+  // a wrong password is refused, logged and throttled; the right one opens the item
+  await assert.rejects(() => S.confirmReprompt(it.id, 'not the password'), /bad-password/);
+  await assert.rejects(() => S.confirmReprompt(it.id, 'correct horse battery'), /Too many/, 'throttled right after a failure');
+  await assert.rejects(() => S.confirmReprompt(plain.id, 'correct horse battery'), /Too many/, 'the back-off is shared across items');
+  assert.equal(S.needsReprompt(S.get(it.id)), true);
+  S.repromptFail.until = 0;
+  await S.confirmReprompt(it.id, 'correct horse battery');
+  assert.equal(S.needsReprompt(S.get(it.id)), false); assert.equal(S.repromptFail.n, 0, 'a correct answer resets the counter');
+  assert.ok(S.data.audit.some((e) => /Wrong master password at the re-prompt for “Bank”/.test(e.m)) && S.data.audit.some((e) => /Confirmed the master password to open “Bank”/.test(e.m)));
+  assert.ok(!JSON.stringify(S.data.audit).includes('correct horse'), 'the password never reaches the audit trail');
+  // it hides again: on request, after REPROMPT_MS, and when the vault locks
+  S.hideAgain(it.id); assert.equal(S.needsReprompt(S.get(it.id)), true);
+  await S.confirmReprompt(it.id, 'correct horse battery');
+  S.reprompted.set(it.id, Date.now() - REPROMPT_MS - 1); assert.equal(S.needsReprompt(S.get(it.id)), true, 'expires');
+  await S.confirmReprompt(it.id, 'correct horse battery');
+  S.keepShown(plain.id); assert.ok(S.reprompted.has(plain.id));
+  S.lock(); assert.equal(S.reprompted.size, 0, 'forgotten when the vault locks');
+  await assert.rejects(() => S.confirmReprompt(it.id, 'correct horse battery'));
+  // a trashed item stays hidden too (its detail shows every field); unknown items are refused
+  const T = new VaultStore(new MemStorage(), 'k', memoryBlobs(), 'f'); await T.create('correct horse battery', FAST);
+  await assert.rejects(() => T.confirmReprompt('nope', 'correct horse battery'), /not found/);
+  assert.equal(T.needsReprompt({ ...newItem('login'), reprompt: true, deleted: Date.now() }), true);
+  // untrusted data: only true, 1 or '1' turn it on
+  for (const [v, want] of [[true, true], [1, true], ['1', true], [false, false], [0, false], ['true', false], ['yes', false], [{}, false], [undefined, false]]) assert.equal(sanitiseItem({ type: 'login', name: 'x', reprompt: v }).reprompt, want, JSON.stringify(v));
+  // sync: turning it on (or off) on one device reaches the other
+  const l = sanitiseItem({ ...newItem('login'), name: 'Mail', updated: 1000, ft: {}, sv: {} }, { keepMeta: true }), r = structuredClone(l);
+  r.reprompt = true; r.updated = 2000; r.ft = { reprompt: 2000 };
+  mergeItem(l, r); assert.equal(l.reprompt, true, 'merged from the other device');
+  assert.equal(l.conflicts.length, 0);
+  // a device on an older version (it never stamps the flag) edits something else later: the flag must stay on
+  const old = structuredClone(l); delete old.reprompt; old.reprompt = false; delete old.ft.reprompt; delete old.sv.reprompt; old.notes = 'edited on the old app'; old.updated = 9000; old.ft = { notes: 9000 };
+  mergeItem(l, old); assert.equal(l.reprompt, true, 'an older app never turns it off'); assert.equal(l.notes, 'edited on the old app', 'its other edits still arrive');
+  // a current device that really turned it off, later, wins
+  const off = structuredClone(l); off.reprompt = false; off.ft = { ...off.ft, reprompt: 10000 }; off.updated = 10000;
+  mergeItem(l, off); assert.equal(l.reprompt, false, 'a real change from a current device arrives');
+  // both devices changed it since the last merge: newest wins, no conflict to review (it is an on / off setting)
+  const both = structuredClone(l), mine = structuredClone(l); mine.reprompt = true; mine.ft.reprompt = 11000; both.reprompt = false; both.ft.reprompt = 12000;
+  mergeItem(mine, both); assert.equal(mine.reprompt, false); assert.equal(mine.conflicts.filter((c) => c.key === 'reprompt').length, 0);
+  // Bitwarden: CSV and JSON import, CSV export
+  const csv = 'folder,favorite,type,name,notes,fields,reprompt,login_uri,login_username,login_password,login_totp\n,,login,Guarded,,,1,https://a.example,me,pw1,\n,,login,Open,,,0,https://b.example,me,pw2,\n';
+  const imp = importCSV(csv); assert.deepEqual(imp.map((i) => [i.name, i.reprompt]), [['Guarded', true], ['Open', false]]);
+  const bw = importBitwardenJSON(JSON.stringify({ items: [{ type: 1, name: 'A', reprompt: 1, login: { password: 'x' } }, { type: 1, name: 'B', reprompt: 0, login: { password: 'y' } }] }));
+  assert.deepEqual(bw.map((i) => i.reprompt), [true, false]);
+  const out = parseCSV(exportCSV(imp)); const col = out[0].indexOf('reprompt');
+  assert.deepEqual(out.slice(1).filter((row) => row.length > 1).map((row) => row[col]), ['1', '0'], 'exported for Bitwarden');
+});
+
+test('a new vault starts with the dark theme; a saved theme is kept', async () => {
+  const S = new VaultStore(new MemStorage(), 'k', memoryBlobs(), 'f'); await S.create('correct horse battery', FAST);
+  assert.equal(S.settings.theme, 'dark');
+  S.settings.theme = 'light'; await S.save(); S.lock(); await S.unlock({ password: 'correct horse battery' }); assert.equal(S.settings.theme, 'light', 'an existing choice is not overwritten');
 });

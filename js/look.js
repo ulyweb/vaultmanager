@@ -32,10 +32,10 @@ export const DEFAULT_HIDDEN_CATS = Object.keys(TYPE_META).filter((k) => !['login
 export const DEFAULT_HIDDEN_NAV = ['gen', 'qr', 'family', 'beam'];
 export const LOOK_DEFAULTS = {
   // appearance
-  accent: '#2fe6d0', cursor: false, cursorStyle: 'neon', cursorSize: 100, cursorColor: '', cursorRing: true, hiddenCats: DEFAULT_HIDDEN_CATS, hiddenNav: DEFAULT_HIDDEN_NAV, bg: 'default', wallpaper: 'forest', wallImage: '', wallUrl: '', bgDim: 55, iconStyle: '3d', iconSize: 'medium', avatar: 'letter',
+  accent: '#2fe6d0', cursor: false, cursorStyle: 'neon', cursorSize: 100, cursorColor: '', cursorRing: true, hiddenCats: DEFAULT_HIDDEN_CATS, hiddenNav: DEFAULT_HIDDEN_NAV, bg: 'default', wallpaper: 'forest', wallImage: '', wallUrl: '', bgDim: 55, iconStyle: '3d', iconSize: 'large', avatar: 'letter',
   uiScale: 100, density: 'comfortable', radius: 12, widgetStyle: 'vivid',
   // effects
-  animations: true, animStyle: 'scale', animSpeed: 1, bootAnim: true, fxAnim: true, tips: true, fx3d: true, fx3dThick: 14, fx3dFloat: 3, fxAurora: 65, fxTilt: 5, fxGlow: 35, fxScan: false, blur: 12, glassAlpha: 0.72,
+  animations: true, animStyle: 'scale', animSpeed: 1, bootAnim: true, fxAnim: true, tips: true, fx3d: false, fx3dThick: 5, fx3dFloat: 6, fxAurora: 65, fxTilt: 1, fxGlow: 35, fxScan: false, blur: 12, glassAlpha: 0.72,
   // layout (dock & menu bar)
   haptics: true, nav: 'sidebar', dockSize: 46, dockMagnify: true, dockLabels: false, dockAutoHide: false,
   clock: true, clockPos: 'center', clockSize: 'large', clock24: false, dateFmt: 'short', barLabels: true, startPage: 'home',
@@ -113,7 +113,12 @@ export function applyLook(look, theme, landscapes = null) {
   /* the windows float only when asked to, and never for scripted browsers (automation clicks need a card that holds still) */
   d.float = look.fx3d && look.animations && look.fx3dFloat > 0 && !(typeof navigator !== 'undefined' && navigator.webdriver) ? 'on' : 'off'; d.anim = look.animStyle; d.scan = look.fxScan ? 'on' : 'off';
   d.bg = look.bg === 'wallpaper' && landscapes ? 'wallpaper' : look.bg === 'plain' ? 'plain' : 'default'; d.wstyle = look.widgetStyle; d.nav = look.nav; d.clockpos = look.clockPos; d.clocksize = look.clockSize; d.dockautohide = look.dockAutoHide ? '1' : '0'; d.dockmagnify = look.dockMagnify ? '1' : '0'; d.barlabels = look.barLabels ? '1' : '0'; d.haptics = look.haptics ? '1' : '0';
-  if (landscapes && look.bg === 'wallpaper') { const u = landscapes.url(look.wallpaper, look) || landscapes.url('forest'); set('--wall', `url("${u}")`); } else el.style.removeProperty('--wall');
+  if (landscapes && look.bg === 'wallpaper') {
+    const u = landscapes.url(look.wallpaper, look) || landscapes.url('forest');
+    // a relative address inside a CSS variable is resolved against the stylesheet that uses it in Firefox (css/…), so make it absolute
+    const abs = /^(data:|blob:|https?:)/i.test(u) ? u : new URL(u, document.baseURI).href;
+    set('--wall', `url("${abs}")`);
+  } else el.style.removeProperty('--wall');
 }
 
 /* a copy of the (non-secret) cosmetic settings, so the lock screen is styled before the vault is opened */

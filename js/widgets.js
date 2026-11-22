@@ -9,6 +9,7 @@ import { generatePassword } from './generator.js';
 import { TYPE_META } from './templates.js';
 import { WIDGET_DEFS, TIPS } from './look.js';
 import { fmtDate, hostOf, drillState } from './util.js';
+import { repromptDialog } from './views.js';
 
 const HUES = ['#2fe6d0', '#59b4ff', '#8b7dff', '#ff7ad9', '#ffb547', '#7dff9b', '#ff6b6b', '#ff8a4c', '#d6e2ee', '#4fd1c5', '#f6ad55'];
 const greeting = (name) => { const hr = new Date().getHours(), n = (name || '').trim(); return hr < 5 ? (n ? 'Still up, ' + n + '?' : 'Still up?') : (hr < 12 ? 'Good morning' : hr < 18 ? 'Good afternoon' : 'Good evening') + (n ? ', ' + n : ''); };
@@ -71,10 +72,10 @@ const BUILD = {
     for (const it of items) {
       let cfg; try { cfg = parseTotp(it.totp); } catch { continue; }
       const code = h('div', { class: 'wcode', text: '------' }), left = h('small', { text: '' });
-      const tile = h('button', { class: 'totp-tile', title: 'Click to copy', on: { click: () => ctx.copySecret(tile.dataset.code || '', 'Code copied', it, 'one-time code') } }, h('b', { text: it.name }), code, left);
-      tiles.push({ cfg, code, left, tile }); box.append(tile);
+      const tile = h('button', { class: 'totp-tile', title: 'Click to copy', on: { click: () => { if (ctx.store.needsReprompt(it)) repromptDialog(ctx, it); else ctx.copySecret(tile.dataset.code || '', 'Code copied', it, 'one-time code'); } } }, h('b', { text: it.name }), code, left);
+      tiles.push({ it, cfg, code, left, tile }); box.append(tile);
     }
-    const tick = async () => { for (const t of tiles) { try { const r = await totpNow(t.cfg); t.tile.dataset.code = r.code; t.code.textContent = r.code.slice(0, r.code.length / 2) + ' ' + r.code.slice(r.code.length / 2); t.left.textContent = r.remaining + 's'; } catch { /* ignore */ } } };
+    const tick = async () => { for (const t of tiles) { if (ctx.store.needsReprompt(t.it)) { delete t.tile.dataset.code; t.code.textContent = '🔒 hidden'; t.left.textContent = 'master password'; t.tile.title = 'Master password re-prompt: click to show'; continue; } t.tile.title = 'Click to copy'; try { const r = await totpNow(t.cfg); t.tile.dataset.code = r.code; t.code.textContent = r.code.slice(0, r.code.length / 2) + ' ' + r.code.slice(r.code.length / 2); t.left.textContent = r.remaining + 's'; } catch { /* ignore */ } } };
     tick(); const i = setInterval(tick, 1000); ctx.cleanup.push(() => clearInterval(i));
     return box;
   },

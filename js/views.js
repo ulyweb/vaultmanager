@@ -116,7 +116,8 @@ export function filterItems(ctx) {
   else if (v === 'conflicts') items = items.filter((i) => (i.conflicts || []).length);
   else if (v in TYPE_META) { items = items.filter((i) => i.type === v); if (v === 'note' && S.noteCat) items = items.filter((i) => (S.noteCat === '(none)' ? !(i.fields || {}).category : (i.fields || {}).category === S.noteCat)); }
   else if (v.startsWith('tag:')) items = items.filter((i) => (i.tags || []).includes(v.slice(4)));
-  if (S.q) items = items.filter((i) => matches(i, S.q));
+  // an item behind the master password re-prompt is found by its name and tags only, not by what is inside it
+  if (S.q) items = items.filter((i) => (ctx.store.needsReprompt(i) ? matches({ type: i.type, name: i.name, tags: i.tags }, S.q) : matches(i, S.q)));
   return items.sort((a, b) => (b.favorite - a.favorite) || a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
 }
 
@@ -168,9 +169,10 @@ function emptyState(ctx, items) {
 }
 
 function itemRow(ctx, it) {
+  const hidden = ctx.store.needsReprompt(it);   // master password re-prompt: only the name until it is answered
   const sub = it.type === 'login' ? (it.username || hostOf(it.url)) : it.type === 'card' ? '•••• ' + (it.card.number || '').replace(/\D/g, '').slice(-4) : TEMPLATES[it.type] ? ((it.fields || {})[TEMPLATES[it.type].sub] || (it.type === 'contact' ? (it.fields || {}).phone || (it.fields || {}).email : '') || (it.description || it.notes || '').split('\n')[0].slice(0, 60)) : (it.description || it.notes || '').split('\n')[0].slice(0, 60);
   return h('button', { class: 'item' + (ctx.S.sel === it.id ? ' on' : ''), role: 'option', 'aria-selected': String(ctx.S.sel === it.id), on: { click: () => { ctx.S.sel = it.id; ctx.refresh(); } } },
-    withPhoto(ctx, it, avatar(it.name, it.type)), h('div', { class: 't' }, h('b', { text: it.name || '(untitled)' }), h('small', { text: it.lock ? '🔒 Locked — passcode required' : sub })), (it.attachments || []).length ? h('span', { class: 'clip', text: '{{clip}}', title: it.attachments.length + ' attachment(s)' }) : null, it.favorite ? h('span', { class: 'star', text: '{{star}}', 'aria-label': 'Favorite' }) : null, h('span', { class: 'disc', 'aria-hidden': 'true', text: '{{chevright}}' }));
+    (hidden ? avatar(it.name, it.type) : withPhoto(ctx, it, avatar(it.name, it.type))), h('div', { class: 't' }, h('b', { text: it.name || '(untitled)' }), h('small', { text: it.lock ? '🔒 Locked — passcode required' : hidden ? '🔒 Master password re-prompt' : sub })), (it.attachments || []).length ? h('span', { class: 'clip', text: '{{clip}}', title: it.attachments.length + ' attachment(s)' }) : null, it.favorite ? h('span', { class: 'star', text: '{{star}}', 'aria-label': 'Favorite' }) : null, h('span', { class: 'disc', 'aria-hidden': 'true', text: '{{chevright}}' }));
 }
 
 /* ---------- detail ---------- */
@@ -264,8 +266,41 @@ async function trashWithConfirm(ctx, it) {
   await ctx.store.trash(it.id); ctx.S.sel = null; toast('Moved to trash'); ctx.refresh();
 }
 
+/* What an item with "Master password re-prompt" shows until the master password is typed again: its name and
+   category only. Nothing else of the item is put on the page. */
+function repromptGate(ctx, it) {
+  const back = () => { ctx.S.sel = null; ctx.refresh(); };
+  return h('div', { class: 'reprompt-gate' },
+    h('div', { class: 'detail-nav' }, h('button', { class: 'navback', 'aria-label': 'Back', on: { click: back } }, '{{chevleft}}', h('span', { text: 'Back' })), h('span', { class: 'navtitle', text: it.name || '' }), h('span')),
+    h('div', { class: 'detail-actions' }, h('button', { class: 'btn back sm', on: { click: back } }, '{{chevleft}} Back'),
+      h('button', { class: 'btn primary sm', on: { click: () => repromptDialog(ctx, it) } }, '{{lock}} Show item'),
+      it.deleted ? null : h('button', { class: 'btn danger sm', on: { click: () => trashWithConfirm(ctx, it) } }, '{{trash}} Delete')),
+    h('div', { class: 'detail-head' }, avatar(it.name, it.type), h('div', null, h('h2', { text: it.name || '(untitled)' }), h('span', { class: 'chip' }, h('span', { class: 'icn', text: TYPE_ICON[it.type] }), ' ' + TYPES[it.type]))),
+    h('div', { class: 'note lockbox', role: 'status' }, h('b', { text: '{{lock}} Master password re-prompt is on for this item' }),
+      h('p', { text: 'Type your master password again to see, copy or edit it. It stays shown for 5 minutes, or until the vault locks.' }),
+      h('div', { class: 'row' }, h('button', { class: 'btn primary', on: { click: () => repromptDialog(ctx, it) } }, '{{lock}} Enter master password…'))));
+}
+
+/* Ask for the master password again for one item. then() runs after a correct answer. */
+export function repromptDialog(ctx, it, then = null) {
+  const input = h('input', { type: 'password', class: 'inp mono', autocomplete: 'current-password', 'aria-label': 'Master password' }), err = h('p', { class: 'err', role: 'alert' });
+  let m;
+  const go = async () => {
+    err.textContent = ''; const b = m && m.el && m.el.querySelector('.btn.primary'); if (b) b.disabled = true;
+    try { await ctx.store.confirmReprompt(it.id, input.value); input.value = ''; m.close(); ctx.refresh(); if (then) then(); }
+    catch (e) { err.textContent = e.message === 'bad-password' ? 'That is not your master password.' : e.message; input.select(); }
+    finally { if (b) b.disabled = false; }
+    return false;
+  };
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); go(); } });
+  m = modal({ title: 'Show “' + (it.name || 'this item') + '”', sub: 'Master password re-prompt', body: h('div', null, h('p', { text: 'This item asks for your master password again before it is shown, copied or edited.' }), input, err),
+    actions: [{ label: 'Cancel' }, { label: 'Show', kind: 'primary', onClick: go, close: false }] });
+  focusSoon(input, 50);
+}
+
 function detailPanel(ctx, it0) {
   const { store } = ctx;
+  if (store.needsReprompt(it0)) return repromptGate(ctx, it0);
   const it = store.reveal(it0);
   const lockedClosed = !!it.lock && !it._open;
   currentItem = it;
@@ -326,6 +361,8 @@ function detailPanel(ctx, it0) {
       h('div', { class: 'row wrap' }, h('button', { class: 'btn sm', on: { click: () => lockDialog(ctx, it, { change: true }) } }, 'Change passcode'),
         h('button', { class: 'btn sm danger', on: { click: async () => { if (await confirmDialog({ title: 'Remove the passcode lock?', text: 'The details go back to being protected by your master password only.', okLabel: 'Remove lock', danger: true })) { try { await store.removeItemLock(it.id, store.itemKeys.get(it.id).code); toast('Lock removed'); ctx.refresh(); } catch (e) { toast(e.message, 'err'); } } } } }, 'Remove lock'))));
   }
+  if (it.reprompt) rows.unshift(h('div', { class: 'note ok lockbox', role: 'status' }, h('b', { text: 'Shown after your master password' }), h('small', { text: ' — it hides again in 5 minutes, or when the vault locks.' }),
+    h('div', { class: 'row wrap' }, h('button', { class: 'btn sm', on: { click: () => { store.hideAgain(it.id); ctx.refresh(); toast('Hidden again'); } } }, '{{lock}} Hide now'))));
   rows.push(h('div', { class: 'f' }, h('div', { class: 'k', text: 'Updated' }), h('div', { class: 'v hint', text: `${fmtDate(it.updated)} · created ${fmtDate(it.created)}${it.type === 'login' && it.password ? ' · password changed ' + fmtDate(it.pwChanged) : ''}` })));
 
   const out = h('div', null, navbar, h('div', { class: 'detail-head' }, withPhoto(ctx, it, avatar(it.name, it.type)), h('div', null, h('h2', { text: it.name || '(untitled)' }), h('span', { class: 'chip' }, h('span', { class: 'icn', text: TYPE_ICON[it.type] }), ' ' + TYPES[it.type]))), actions, h('div', { class: 'fgroup' }, rows));
@@ -482,6 +519,7 @@ function totpSecretField(it) {
 
 export function editItem(ctx, item, type = 'login', { fromPicker = false } = {}) {
   const { store } = ctx;
+  if (item && store.needsReprompt(item)) { repromptDialog(ctx, item, () => editItem(ctx, store.get(item.id), type, { fromPicker })); return; }
   if (item && item.lock && !store.isOpen(item)) { unlockItemDialog(ctx, item); return; }
   if (item) item = store.reveal(item);
   const isNew = !item;
@@ -575,6 +613,10 @@ export function editItem(ctx, item, type = 'login', { fromPicker = false } = {})
   const lockBox = h('div', { class: 'field lockfields', hidden: true }, h('label', { for: 'f_lock1', text: 'Item passcode' }), lp1, liveMeter(lp1), h('label', { for: 'f_lock2', text: 'Repeat passcode' }), lp2,
     h('p', { class: 'hint', text: 'Encrypts this item’s details again with this passcode. If you forget it, nobody can recover them.' }));
   lockOn.addEventListener('change', () => { lockBox.hidden = !lockOn.checked; if (lockOn.checked) lp1.focus(); });
+  const repromptOn = h('input', { type: 'checkbox', id: 'f_reprompt', checked: !!it.reprompt, on: { change: (e) => { it.reprompt = e.target.checked; } } });
+  body.push(h('h4', { class: 'opts-head', text: 'Additional options' }),
+    h('label', { class: 'chk', for: 'f_reprompt' }, repromptOn, '{{lock}} Master password re-prompt'),
+    h('p', { class: 'hint', text: 'Asks for your master password again before this item is shown, copied or edited. It guards an unlocked screen (someone at your desk, or showing your screen); it does not add encryption, so it does not stop malware or anyone who knows your master password. For that, use a secondary passcode.' }));
   if (isNew) body.push(h('label', { class: 'chk', for: 'f_lockon' }, lockOn, '{{lock}} Protect this item with a secondary passcode'), lockBox);
   body.push(err);
 
@@ -597,7 +639,7 @@ export function editItem(ctx, item, type = 'login', { fromPicker = false } = {})
     const photoChange = it.__photo; delete it.__photo; const oldPhoto = (it.fields || {}).photo;
     for (const k of Object.keys(it.fields || {})) if (!it.fields[k]) delete it.fields[k];
     if (isNew) { it.created = it.updated = it.pwChanged = Date.now(); it.attachments = []; await store.add(it); }
-    else if (it.lock) { const meta = { name: it.name, tags: it.tags, favorite: it.favorite, favName: it.favName }; await store.saveLocked(it.id, meta, it); }
+    else if (it.lock) { const meta = { name: it.name, tags: it.tags, favorite: it.favorite, favName: it.favName, reprompt: !!it.reprompt }; await store.saveLocked(it.id, meta, it); }
     else { const { id, history, created, pwChanged, attachments, revisions, deleted, lock, _open, ...patch } = it; await store.update(id, patch); }
     try {
       for (const id of removed) await store.removeAttachment(it.id, id);
@@ -610,6 +652,7 @@ export function editItem(ctx, item, type = 'login', { fromPicker = false } = {})
       }
     } catch (e) { toast(e.message, 'err', 7000); }
     if (isNew && lockOn.checked) { try { await store.lockItem(it.id, lp1.value); } catch (e) { toast(e.message, 'err', 7000); } }   // after the files are attached, so they are sealed too
+    if (it.reprompt) store.keepShown(it.id);   // you just had it open in the editor
     ctx.showItem(it.id); toast(isNew ? 'Saved to your vault' : 'Changes saved');
   };
   modal({ title: (isNew ? 'New ' : 'Edit ') + TYPES[it.type].toLowerCase(), body: h('div', null, body), actions: [fromPicker ? { label: 'Cancel', onClick: () => newItemMenu(ctx, { start: it.type }) } : { label: 'Cancel' }, { label: 'Save', kind: 'primary', onClick: save }], wide: false, onClose: () => { if (totpBox) totpBox.stop(); } });
@@ -667,7 +710,7 @@ const pickerPref = () => { try { return localStorage.getItem(PICKER_KEY) || ''; 
 const savePickerPref = (v) => { try { localStorage.setItem(PICKER_KEY, v); } catch { /* private window: just not remembered */ } };
 const reducedMotion = () => !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 /* 3D unless the person chose the list, or has animations off / asks for reduced motion and never chose 3D */
-const carouselWanted = () => { const p = pickerPref(); return p === '3d' || (p !== 'list' && document.documentElement.dataset.fxanim === 'on' && !reducedMotion()); };
+const carouselWanted = () => pickerPref() === '3d';   // the list is the default; the 3D carousel when someone chooses it (remembered)
 
 export function newItemMenu(ctx, opts = {}) {
   const pick = (k) => h('button', { class: 'btn', on: { click: () => { ctx.closeModals(); editItem(ctx, null, k, { fromPicker: true }); } } }, h('span', { class: 'icn', text: TYPE_ICON[k] }), ' ' + TYPES[k]);
@@ -676,7 +719,7 @@ export function newItemMenu(ctx, opts = {}) {
   const body = h('div', { class: 'picker' });
   let car = null, mode = '';
   const toggle = (m) => h('div', { class: 'seg pickseg', role: 'group', 'aria-label': 'How to show the categories' },
-    ['3d', 'list'].map((v) => h('button', { type: 'button', 'aria-pressed': String(v === m), class: v === m ? 'on' : '', on: { click: () => { savePickerPref(v); render(v); } } }, v === '3d' ? '{{sparkles}} 3D' : '{{menu}} List')));
+    ['3d', 'list'].map((v) => h('button', { type: 'button', 'aria-pressed': String(v === m), class: v === m ? 'on' : '', on: { click: () => { savePickerPref(v); render(v); focusPicker(); } } }, v === '3d' ? '{{sparkles}} 3D' : '{{menu}} List')));
   const render = (m) => {
     if (car) { car.destroy(); car = null; }
     mode = m; clear(body);
@@ -685,6 +728,9 @@ export function newItemMenu(ctx, opts = {}) {
       body.append(toggle(m), car.el);
     } else body.append(toggle(m), grid());
   };
+  /* after switching, the keyboard lands on the new view (the clicked switch was just replaced, and Safari never focuses a clicked button):
+     the ring, so the arrow keys spin it at once, or the first category in the list */
+  const focusPicker = () => { if (car) car.focus(); else { const b = body.querySelector('.cats .btn'); if (b) b.focus({ preventScroll: true }); } };
   render(carouselWanted() ? '3d' : 'list');
   modal({ title: 'Choose a category', sub: Object.keys(TYPES).length + ' categories. Every one can also hold attachments, notes, tags and custom fields', wide: true, body, actions: [{ label: 'Cancel' }], onClose: () => { if (car) { car.destroy(); car = null; } } });
 }
@@ -754,7 +800,7 @@ export function shareItem(ctx, it, only = null) {
     err.textContent = ''; clear(out);
     if (!pwOk()) { err.textContent = 'The two QR passwords do not match.'; return false; }
     if (qrPw().length < 8) { err.textContent = 'Use at least 8 characters for the QR password' + (itemCode && useCode.checked ? ' (this item’s passcode is shorter — untick the box and choose a separate QR password).' : '.'); return false; }
-    const payload = only ? { vm: 1, name: it.name, field: { label: only.label, value: only.value } } : { vm: 1, item: { type: it.type, name: it.name, description: it.description, username: it.username, password: it.password, url: it.url, totp: it.totp, notes: it.notes, tags: it.tags, card: it.card, fields: qrFields(it), custom: it.custom } };
+    const payload = only ? { vm: 1, name: it.name, field: { label: only.label, value: only.value } } : { vm: 1, item: { type: it.type, name: it.name, description: it.description, username: it.username, password: it.password, url: it.url, totp: it.totp, notes: it.notes, tags: it.tags, card: it.card, fields: qrFields(it), custom: it.custom, reprompt: !!it.reprompt } };
     try {
       out.append(h('p', { class: 'hint', text: 'Deriving the key (600,000 rounds) and sealing…' }));
       const sealed = await sealText(JSON.stringify(payload), qrPw());

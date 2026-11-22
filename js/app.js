@@ -50,7 +50,7 @@ function openProfile(id) {
   store = new VaultStore(env.storage, k ? k.vault : 'vaultmanager.vault.new', env.blobs, k ? k.fails : 'vaultmanager.fails.new');
   ctx.S.profileId = id || null;
   const cos = loadCosmetic(env.storage, keysFor(id || 'main').look);
-  bootLook = normalizeLook((cos && cos.look) || {}); bootTheme = (cos && cos.theme) || 'auto';
+  bootLook = normalizeLook((cos && cos.look) || {}); bootTheme = (cos && cos.theme) || 'dark';
 }
 
 const ctx = {
@@ -110,7 +110,7 @@ ctx.tour = tour;
 const isVaultView = (v) => ['all', 'fav', 'trash', 'conflicts'].includes(v) || v in TYPE_META || v.startsWith('tag:');
 
 /* ---------- look & feel (theme, accent, effects, layout) ---------- */
-let bootLook = normalizeLook({}), bootTheme = 'auto';   // what the sign-in screen uses (the last profile's look)
+let bootLook = normalizeLook({}), bootTheme = 'dark';   // a brand-new device starts dark   // what the sign-in screen uses (the last profile's look)
 const cosKey = () => keysFor(ctx.S.profileId || 'main').look;
 const lightMQ = window.matchMedia('(prefers-color-scheme: light)');
 const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -305,7 +305,7 @@ function gateCreate({ first }) {
   p1.input.addEventListener('input', () => clear(m).append(meter(p1.input.value).el));
   const btn = h('button', { class: 'btn primary cta', type: 'submit', style: null }, first ? 'Create my vault' : 'Create profile');
   /* appearance: Auto follows the device; the choice is kept in the new profile's settings */
-  const originalTheme = bootTheme; let themeChoice = ['auto', 'dark', 'light'].includes(bootTheme) ? bootTheme : 'auto';
+  const originalTheme = bootTheme; let themeChoice = ['auto', 'dark', 'light'].includes(bootTheme) ? bootTheme : 'dark';
   const THEMES = [['auto', 'monitor', 'Auto'], ['dark', 'moon', 'Dark'], ['light', 'sun', 'Light']];
   const themeSeg = h('div', { class: 'seg themeseg', role: 'group', 'aria-label': 'Appearance' }, THEMES.map(([v, icon, label]) => h('button', { type: 'button', class: v === themeChoice ? 'on' : '', 'aria-pressed': String(v === themeChoice), 'data-theme-choice': v, on: { click: () => {
     themeChoice = v; for (const b of themeSeg.children) { const on = b.dataset.themeChoice === v; b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on)); }
