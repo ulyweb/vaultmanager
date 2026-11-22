@@ -5,7 +5,7 @@ import { generatePassword, generatePassphrase, generatePin, passwordEntropy, pas
 import { estimate } from '../js/strength.js';
 import { VaultStore, mergeItem, sanitiseItem, importCSV, importBitwardenJSON, exportCSV, health, decryptBackup, newItem, matches, parseCSV } from '../js/vault.js';
 import { chunkPayload, ChunkAssembler, parseChunk } from '../js/qr.js';
-import { parseTotp } from '../js/totp.js';
+import { parseTotp, totpFromQR } from '../js/totp.js';
 import { TEMPLATES, TYPE_META, GROUPS, TYPE_KEYS, RESERVED_VIEWS, wifiQRString, daysUntil } from '../js/templates.js';
 import { encode, decode, verifyCode } from '../js/beam.js';
 import { memoryBlobs } from '../js/blobs.js';
@@ -1060,4 +1060,17 @@ test('encrypted files (VMF1): any bytes round-trip with name and type; wrong pas
   await assert.rejects(C.openFile(new TextEncoder().encode('just some text that is long enough to look like a file'), 'x'), /not a VaultManager encrypted file/);
   const s2 = await C.sealFile(bytes, { name: 'beach.jpg', type: 'image/jpeg' }, 'correct horse battery staple', { iterations: 100000 }); assert.ok(Buffer.compare(Buffer.from(s), Buffer.from(s2)) !== 0, 'fresh salt and IV every time');
   const evil = await C.sealFile(new Uint8Array(3), { name: '../../etc/passwd', type: 'text/plain' }, 'pw-pw-pw-pw', { iterations: 100000 }); assert.ok(!(await C.openFile(evil, 'pw-pw-pw-pw')).name.includes('/'), 'a path in the name is defused');
+});
+
+test('totpFromQR: reads a 2FA setup QR, refuses what it cannot use', () => {
+  const r = totpFromQR('  otpauth://totp/Example:alice@example.com?secret=JBSWY3DPEHPK3PXP&issuer=Example  ');
+  assert.deepEqual(r, { value: 'otpauth://totp/Example:alice@example.com?secret=JBSWY3DPEHPK3PXP&issuer=Example', issuer: 'Example', account: 'alice@example.com' });
+  assert.deepEqual(totpFromQR('otpauth://totp/ACME%20Co:bob?secret=JBSWY3DPEHPK3PXP'), { value: 'otpauth://totp/ACME%20Co:bob?secret=JBSWY3DPEHPK3PXP', issuer: 'ACME Co', account: 'bob' }, 'issuer from the label');
+  assert.equal(totpFromQR('otpauth://totp/just-me?secret=JBSWY3DPEHPK3PXP').account, 'just-me');
+  assert.match(totpFromQR('otpauth://hotp/X:y?secret=JBSWY3DPEHPK3PXP&counter=1').error, /HOTP/);
+  assert.match(totpFromQR('otpauth-migration://offline?data=AAAA').error, /Google Authenticator export/);
+  assert.match(totpFromQR('https://example.com').error, /not a 2FA setup code/);
+  assert.match(totpFromQR('').error, /not a 2FA setup code/);
+  assert.match(totpFromQR('otpauth://totp/X:y?secret=not-base32!').error, /could not be used/);
+  assert.match(totpFromQR('otpauth://totp/X:y?secret=JBSWY3DPEHPK3PXP&digits=4').error, /could not be used/);
 });
