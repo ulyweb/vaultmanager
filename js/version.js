@@ -25,6 +25,7 @@ export const CHANGELOG = [
     'New defaults for new profiles and devices: the 3D card space is off (turn it on in the 3D effects panel or Settings → Effects), with card thickness 5 px, 3D tilt 1° and card float 6; “Reset” in the 3D effects panel goes back to these.',
     'New item opens the category list; the 3D carousel is one click away and is remembered once you choose it.',
     'Dark is the default theme (the create screen still offers Auto and Light), and icons are Large by default. Profiles you already have keep their own settings.',
+    'Fixed: in Firefox the built-in photo wallpapers (NASA and city photos) did not load. Choosing 3D or List in the category picker now moves the keyboard to it (in Safari the arrow keys did nothing until you clicked).',
   ] },
   { v: '0.46.0', date: '2026-11-22', notes: [
     'The 2FA field on a login has “Scan QR with camera” and “QR from image / screenshot”. Point the camera at the site’s 2FA setup QR, or choose a screenshot of it, and the secret is filled in; an empty title and username are filled from the QR too. The picture is read on this device only.',

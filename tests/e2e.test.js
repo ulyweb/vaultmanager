@@ -2566,3 +2566,15 @@ test('master password re-prompt: offered on every category; hides the item, its 
   for (const re of [/any item, in any category/, /5 minutes/, /What it protects against/, /adds no encryption/, /malware/, /secondary passcode/]) assert.match(txt, re);
   assert.deepEqual(problems.filter((p) => !/Failed to load resource/.test(p)), []); await ctx.close();
 });
+
+test('a built-in photo wallpaper loads in every browser (its address is resolved against the page, not the stylesheet)', async () => {
+  const { ctx, page, problems } = await newPage(); await createVault(page);
+  await settingsTab(page, 'Appearance'); await page.waitForSelector('.wall[data-group=city]');
+  await page.locator('.wall[data-group=city]').first().click();
+  const bg = await page.evaluate(() => getComputedStyle(document.getElementById('wall')).backgroundImage);
+  assert.match(bg, /\/wallpapers\/night1\.jpg/, 'the city photo is the background: ' + bg);
+  assert.doesNotMatch(bg, /\/css\/wallpapers\//, 'not looked up next to the stylesheet: ' + bg);
+  const url = /url\("?([^")]+)"?\)/.exec(bg)[1];
+  assert.equal(await page.evaluate(async (u) => (await fetch(u)).status, url), 200, 'the picture really loads');
+  assert.deepEqual(problems.filter((p) => !/Failed to load resource/.test(p)), []); await ctx.close();
+});

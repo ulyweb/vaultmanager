@@ -11,7 +11,7 @@
 <meta name="application-name" content="VaultManager">
 <meta name="format-detection" content="telephone=no">
 <meta name="referrer" content="no-referrer">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-tauzjAWYvkq2EEey6/r1GOXzEWNzSydbYj43JCIjd2U=' 'sha256-j/KzZUhWPotUNqYk7ess3ls67cgLVeRK7dMV/ZH7Poo=' blob:; style-src 'sha256-3WMFD9fxE1Pm6HFMGw0I1bquAjb0qnzkv4Wu7X/9ImE='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-tauzjAWYvkq2EEey6/r1GOXzEWNzSydbYj43JCIjd2U=' 'sha256-TlheKhq87jTQnPgIHAtBi0vHQ0cCtAiKdGMIgPl22aw=' blob:; style-src 'sha256-3WMFD9fxE1Pm6HFMGw0I1bquAjb0qnzkv4Wu7X/9ImE='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
 <title>VaultManager | Zero-Knowledge Password Manager</title>
 <meta name="description" content="VaultManager: an offline-first, zero-knowledge, end-to-end encrypted password manager with a strong password generator, TOTP codes and QR-sealed sharing and backup. Runs entirely in your browser.">
 <meta name="theme-color" content="#05080d">
@@ -2398,7 +2398,8 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
       "It is a confirmation step, not extra encryption: Settings \u2192 About \u2192 FAQ explains what it protects against and when to use a secondary passcode instead.",
       "New defaults for new profiles and devices: the 3D card space is off (turn it on in the 3D effects panel or Settings \u2192 Effects), with card thickness 5 px, 3D tilt 1\xB0 and card float 6; \u201CReset\u201D in the 3D effects panel goes back to these.",
       "New item opens the category list; the 3D carousel is one click away and is remembered once you choose it.",
-      "Dark is the default theme (the create screen still offers Auto and Light), and icons are Large by default. Profiles you already have keep their own settings."
+      "Dark is the default theme (the create screen still offers Auto and Light), and icons are Large by default. Profiles you already have keep their own settings.",
+      "Fixed: in Firefox the built-in photo wallpapers (NASA and city photos) did not load. Choosing 3D or List in the category picker now moves the keyboard to it (in Safari the arrow keys did nothing until you clicked)."
     ] },
     { v: "0.46.0", date: "2026-11-22", notes: [
       "The 2FA field on a login has \u201CScan QR with camera\u201D and \u201CQR from image / screenshot\u201D. Point the camera at the site\u2019s 2FA setup QR, or choose a screenshot of it, and the secret is filled in; an empty title and username are filled from the QR too. The picture is read on this device only.",
@@ -3689,7 +3690,8 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     d.haptics = look.haptics ? "1" : "0";
     if (landscapes2 && look.bg === "wallpaper") {
       const u = landscapes2.url(look.wallpaper, look) || landscapes2.url("forest");
-      set("--wall", `url("${u}")`);
+      const abs = /^(data:|blob:|https?:)/i.test(u) ? u : new URL(u, document.baseURI).href;
+      set("--wall", `url("${abs}")`);
     } else el.style.removeProperty("--wall");
   }
   var KEY = "vaultmanager.look";
