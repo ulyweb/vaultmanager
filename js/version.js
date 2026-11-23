@@ -1,6 +1,6 @@
 /* Application version, data-format versions and changelog (shown in Settings → About). */
 
-export const APP_VERSION = '0.48.0';
+export const APP_VERSION = '0.49.0';
 export const APP_NAME = 'VaultManager';
 export const REPO_URL = 'https://github.com/ulyweb/vaultmanager';
 
@@ -17,6 +17,9 @@ export const FORMATS = [
 ];
 
 export const CHANGELOG = [
+  { v: '0.49.0', date: '2026-11-23', notes: [
+    'Categories in the side bar: one click opens the list, or, when the category has no items yet, starts a new item of that kind (no more empty “No items here yet.” page). A double-click always starts a new item of that kind. Hover a category to see this.',
+  ] },
   { v: '0.48.0', date: '2026-11-22', notes: [
     'Create a new profile from a QR backup right on the first screen: “Import a profile backup” now has “Scan QR backup” (camera) and “QR images / screenshots”. Scan the codes in any order; it shows which ones are still missing, and “Start over” clears a scan begun with the wrong backup’s codes.',
     'The codes are read on this device and only rebuild the encrypted backup; opening it still needs the backup password. A QR code that is not part of a VaultManager backup is refused with an explanation.',

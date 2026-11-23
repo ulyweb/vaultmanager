@@ -2270,7 +2270,7 @@ test('v0.41.0: pick-lists with an Other… box (banks, wallets / exchanges, netw
 
 test('v0.42.0: Contacts import / export — the page states what works and what does not; vCard and CSV import with preview and duplicate skipping; export to .vcf, Google and Outlook CSV', async () => {
   const { ctx, page, problems } = await newPage(); await createVault(page);
-  await page.locator('.side .nav:has-text("Contacts")').click(); await page.waitForSelector('.contactsio');
+  await page.locator('.side .nav:has-text("Contacts")').click(); await page.waitForSelector('.modal-sheet h2:has-text("New contact")'); await page.keyboard.press('Escape'); await page.waitForSelector('.modal-sheet', { state: 'detached' }); await page.waitForSelector('.contactsio');   // empty Contacts: one click starts a new contact (v0.49.0); cancel it to use the import panel
   const txt = await page.textContent('.contactsio');
   for (const must of ['What it can do', 'What it cannot do', 'vCard', 'Outlook', 'Google Contacts', 'iCloud', 'No live sync', 'NOT encrypted', 'Photos', 'never changes or deletes', 'offline']) assert.ok(txt.includes(must), 'the panel must say: ' + must);
   const vcf = 'BEGIN:VCARD\nVERSION:3.0\nFN:Alex Rivera\nORG:Acme\nTEL;TYPE=CELL:555-0102\nEMAIL:alex@example.com\nPHOTO;ENCODING=b;TYPE=JPEG:AAAA\nEND:VCARD\nBEGIN:VCARD\nVERSION:3.0\nFN:Pat Kim\nTEL;TYPE=WORK:555-0199\nEND:VCARD\n';
@@ -2428,7 +2428,7 @@ test('contacts: a contact photo survives export to .vcf, delete, and import back
   const vcf = fs.readFileSync(await dl.path(), 'utf8'); assert.match(vcf, /PHOTO;ENCODING=b;TYPE=JPEG:/, 'the export carries the photo');
   await page.locator('.detail button:has-text("Delete")').first().click(); await page.waitForSelector('.modal-sheet:has-text("Move to trash?")');
   await page.locator('.modal-sheet .btn.danger, .modal-sheet .btn.primary').last().click(); await page.waitForSelector('.modal-sheet', { state: 'detached' });
-  await page.locator('.side .nav:has-text("Contacts")').click(); await page.waitForSelector('.contactsio');
+  await page.locator('.side .nav:has-text("Contacts")').click(); await page.waitForSelector('.modal-sheet h2:has-text("New contact")'); await page.keyboard.press('Escape'); await page.waitForSelector('.modal-sheet', { state: 'detached' }); await page.waitForSelector('.contactsio');   // empty Contacts: one click starts a new contact (v0.49.0); cancel it to use the import panel
   assert.equal(await page.locator('.items .item:has-text("Rae Photo")').count(), 0, 'deleted');
   await page.setInputFiles('input[aria-label="Contacts file"]', { name: 'rae.vcf', mimeType: 'text/vcard', buffer: Buffer.from(vcf) });
   await page.waitForSelector('.modal-sheet .ctable'); assert.match(await page.textContent('.modal-sheet'), /1 with a photo/);
@@ -2629,4 +2629,31 @@ test('v0.48.0: create a new profile from a QR backup on the first screen (codes 
   for (const n of ['QR Bank', 'QR Mail']) assert.ok(await B.page.locator('.items .item', { hasText: n }).count(), n + ' restored from the QR codes');
   await B.page.locator('.items .item', { hasText: 'QR Bank' }).click(); assert.match(await B.page.textContent('.detail'), /line 59 of a long note/, 'the long note came through whole');
   assert.deepEqual(B.problems.filter((p) => !/Failed to load resource/.test(p)), []); await B.ctx.close();
+});
+
+test('v0.49.0: side-bar categories — one click opens the list (or a new item when the category is empty), a double-click always starts a new item', async () => {
+  const { ctx, page, problems } = await newPage(); await createVault(page);
+  const side = (name) => page.locator('.side .nav', { hasText: name }).first();
+  const editorFor = async (kind) => { await page.waitForSelector('.modal-sheet #f_name'); assert.match(await page.textContent('.modal-sheet h2'), new RegExp('^New ' + kind, 'i')); };
+  // empty category, one click: its list, then the editor for that kind
+  await side('Logins').click();
+  await editorFor('login');
+  assert.equal(await page.evaluate(() => document.querySelector('.side .nav.on').textContent.includes('Logins')), true, 'the Logins list is selected behind the editor');
+  await page.fill('#f_name', 'First login'); await page.getByRole('button', { name: 'Save' }).click(); await page.waitForSelector('.detail h2:has-text("First login")');
+  // a category with items, one click: just the list, no editor
+  await side('Secure notes').click(); await editorFor('secure note'); await page.keyboard.press('Escape'); await page.waitForSelector('.modal-sheet', { state: 'detached' });
+  await side('Logins').click(); await page.waitForSelector('.items .item:has-text("First login")'); await page.waitForTimeout(700);
+  assert.equal(await page.locator('.modal-sheet').count(), 0, 'one click on a category with items opens no editor');
+  // a category with items, double-click: a new item of that kind
+  await side('Logins').dblclick(); await editorFor('login'); assert.equal(await page.locator('.modal-sheet').count(), 1);
+  await page.keyboard.press('Escape'); await page.waitForSelector('.modal-sheet', { state: 'detached' });
+  // an empty category, double-click: exactly one editor, and it stays open (the second click must not close it)
+  await side('Cards').dblclick(); await editorFor('payment card'); await page.waitForTimeout(700);
+  assert.equal(await page.locator('.modal-sheet').count(), 1, 'one editor, still open');
+  await page.keyboard.press('Escape'); await page.waitForSelector('.modal-sheet', { state: 'detached' });
+  // clicking somewhere else right after an empty category cancels its pending editor
+  await side('Cards').click(); await side('All items').click(); await page.waitForTimeout(700);
+  assert.equal(await page.locator('.modal-sheet').count(), 0, 'moving on cancels the pending editor');
+  assert.match(await side('Logins').getAttribute('title'), /double-click to add a new one/);
+  assert.deepEqual(problems.filter((p) => !/Failed to load resource/.test(p)), []); await ctx.close();
 });
