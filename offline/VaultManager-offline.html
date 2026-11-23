@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VaultManager v0.48.0 — single-file offline build. Verify with the .sha256 file next to it. -->
+<!-- VaultManager v0.49.0 — single-file offline build. Verify with the .sha256 file next to it. -->
 <html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
@@ -11,7 +11,7 @@
 <meta name="application-name" content="VaultManager">
 <meta name="format-detection" content="telephone=no">
 <meta name="referrer" content="no-referrer">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-tauzjAWYvkq2EEey6/r1GOXzEWNzSydbYj43JCIjd2U=' 'sha256-4b8d8tN+EfwwN/VCsyplx27XJ98P6uJbuODidQbdDVY=' blob:; style-src 'sha256-u306DIuFbWdgxpGQv1V6Xct7NzT0PhKSXGCpac3R1vw='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-tauzjAWYvkq2EEey6/r1GOXzEWNzSydbYj43JCIjd2U=' 'sha256-hl+2lFtmK+45E4TLbK1g1QovGg1plTMjhGDfEgoz7cw=' blob:; style-src 'sha256-u306DIuFbWdgxpGQv1V6Xct7NzT0PhKSXGCpac3R1vw='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
 <title>VaultManager | Zero-Knowledge Password Manager</title>
 <meta name="description" content="VaultManager: an offline-first, zero-knowledge, end-to-end encrypted password manager with a strong password generator, TOTP codes and QR-sealed sharing and backup. Runs entirely in your browser.">
 <meta name="theme-color" content="#05080d">
@@ -2378,7 +2378,7 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
   }
 
   // js/version.js
-  var APP_VERSION = "0.48.0";
+  var APP_VERSION = "0.49.0";
   var APP_NAME = "VaultManager";
   var REPO_URL = "https://github.com/ulyweb/vaultmanager";
   var FORMATS = [
@@ -2393,6 +2393,9 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     ["Attachments at rest", "AES-256-GCM per file, bound to vault + file id"]
   ];
   var CHANGELOG = [
+    { v: "0.49.0", date: "2026-11-23", notes: [
+      "Categories in the side bar: one click opens the list, or, when the category has no items yet, starts a new item of that kind (no more empty \u201CNo items here yet.\u201D page). A double-click always starts a new item of that kind. Hover a category to see this."
+    ] },
     { v: "0.48.0", date: "2026-11-22", notes: [
       "Create a new profile from a QR backup right on the first screen: \u201CImport a profile backup\u201D now has \u201CScan QR backup\u201D (camera) and \u201CQR images / screenshots\u201D. Scan the codes in any order; it shows which ones are still missing, and \u201CStart over\u201D clears a scan begun with the wrong backup\u2019s codes.",
       "The codes are read on this device and only rebuild the encrypted backup; opening it still needs the backup password. A QR code that is not part of a VaultManager backup is refused with an explanation.",
