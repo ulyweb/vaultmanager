@@ -2270,7 +2270,7 @@ test('v0.41.0: pick-lists with an Other… box (banks, wallets / exchanges, netw
 
 test('v0.42.0: Contacts import / export — the page states what works and what does not; vCard and CSV import with preview and duplicate skipping; export to .vcf, Google and Outlook CSV', async () => {
   const { ctx, page, problems } = await newPage(); await createVault(page);
-  await page.locator('.side .nav:has-text("Contacts")').click(); await page.waitForSelector('.contactsio');
+  await page.locator('.side .nav:has-text("Contacts")').click(); await page.waitForSelector('.modal-sheet h2:has-text("New contact")'); await page.keyboard.press('Escape'); await page.waitForSelector('.modal-sheet', { state: 'detached' }); await page.waitForSelector('.contactsio');   // empty Contacts: one click starts a new contact (v0.49.0); cancel it to use the import panel
   const txt = await page.textContent('.contactsio');
   for (const must of ['What it can do', 'What it cannot do', 'vCard', 'Outlook', 'Google Contacts', 'iCloud', 'No live sync', 'NOT encrypted', 'Photos', 'never changes or deletes', 'offline']) assert.ok(txt.includes(must), 'the panel must say: ' + must);
   const vcf = 'BEGIN:VCARD\nVERSION:3.0\nFN:Alex Rivera\nORG:Acme\nTEL;TYPE=CELL:555-0102\nEMAIL:alex@example.com\nPHOTO;ENCODING=b;TYPE=JPEG:AAAA\nEND:VCARD\nBEGIN:VCARD\nVERSION:3.0\nFN:Pat Kim\nTEL;TYPE=WORK:555-0199\nEND:VCARD\n';
@@ -2428,7 +2428,7 @@ test('contacts: a contact photo survives export to .vcf, delete, and import back
   const vcf = fs.readFileSync(await dl.path(), 'utf8'); assert.match(vcf, /PHOTO;ENCODING=b;TYPE=JPEG:/, 'the export carries the photo');
   await page.locator('.detail button:has-text("Delete")').first().click(); await page.waitForSelector('.modal-sheet:has-text("Move to trash?")');
   await page.locator('.modal-sheet .btn.danger, .modal-sheet .btn.primary').last().click(); await page.waitForSelector('.modal-sheet', { state: 'detached' });
-  await page.locator('.side .nav:has-text("Contacts")').click(); await page.waitForSelector('.contactsio');
+  await page.locator('.side .nav:has-text("Contacts")').click(); await page.waitForSelector('.modal-sheet h2:has-text("New contact")'); await page.keyboard.press('Escape'); await page.waitForSelector('.modal-sheet', { state: 'detached' }); await page.waitForSelector('.contactsio');   // empty Contacts: one click starts a new contact (v0.49.0); cancel it to use the import panel
   assert.equal(await page.locator('.items .item:has-text("Rae Photo")').count(), 0, 'deleted');
   await page.setInputFiles('input[aria-label="Contacts file"]', { name: 'rae.vcf', mimeType: 'text/vcard', buffer: Buffer.from(vcf) });
   await page.waitForSelector('.modal-sheet .ctable'); assert.match(await page.textContent('.modal-sheet'), /1 with a photo/);
