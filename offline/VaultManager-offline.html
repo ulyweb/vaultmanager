@@ -11,7 +11,7 @@
 <meta name="application-name" content="VaultManager">
 <meta name="format-detection" content="telephone=no">
 <meta name="referrer" content="no-referrer">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-tauzjAWYvkq2EEey6/r1GOXzEWNzSydbYj43JCIjd2U=' 'sha256-tCnp3KpcJVcPP2Un6YqCJmer55j+B6YbTWrghwNqz+k=' blob:; style-src 'sha256-u306DIuFbWdgxpGQv1V6Xct7NzT0PhKSXGCpac3R1vw='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-tauzjAWYvkq2EEey6/r1GOXzEWNzSydbYj43JCIjd2U=' 'sha256-4b8d8tN+EfwwN/VCsyplx27XJ98P6uJbuODidQbdDVY=' blob:; style-src 'sha256-u306DIuFbWdgxpGQv1V6Xct7NzT0PhKSXGCpac3R1vw='; img-src data: blob: https:; connect-src https://api.github.com; media-src blob:; font-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'">
 <title>VaultManager | Zero-Knowledge Password Manager</title>
 <meta name="description" content="VaultManager: an offline-first, zero-knowledge, end-to-end encrypted password manager with a strong password generator, TOTP codes and QR-sealed sharing and backup. Runs entirely in your browser.">
 <meta name="theme-color" content="#05080d">
@@ -14121,8 +14121,36 @@ yo-yo yodel yoga yoyo yummy zebra zero zesty zippy zone zoom`.trim().split(/\s+/
     );
     return h("div", { class: "ngroup-wrap" }, head, h("div", { class: "nbody" + (closed ? " collapsed" : "") }, keys.map((k) => btn(k, TYPE_META[k].icon, TYPE_META[k].plural, c[k]))));
   }
+  var DBL_MS = 400;
+  var catTap = { id: null, t: 0 };
+  var catTimer = 0;
+  function categoryClick(k, count) {
+    const now = Date.now(), second = catTap.id === k && now - catTap.t < DBL_MS;
+    catTap = second ? { id: null, t: 0 } : { id: k, t: now };
+    const openNew = () => {
+      if (store.unlocked) editItem(ctx, null, k);
+    };
+    if (!count) {
+      if (!second) {
+        clearTimeout(catTimer);
+        ctx.go(k);
+        catTimer = setTimeout(openNew, DBL_MS);
+      }
+      return;
+    }
+    clearTimeout(catTimer);
+    if (second) openNew();
+    else ctx.go(k);
+  }
   function drawSide() {
-    const c = counts(), btn = (id, ic2, label, n, dot) => h("button", { class: "nav" + (ctx.S.view === id ? " on" : ""), "aria-current": ctx.S.view === id ? "page" : null, on: { click: () => ctx.go(id) } }, h("span", { class: "ic icn", text: ic2 }), label, dot ? h("span", { class: "dot", title: "Needs attention" }) : n !== void 0 ? h("span", { class: "n", text: String(n) }) : null);
+    const c = counts(), btn = (id, ic2, label, n, dot) => h("button", { class: "nav" + (ctx.S.view === id ? " on" : ""), "aria-current": ctx.S.view === id ? "page" : null, title: id in TYPE_META ? n ? `Open ${label} \xB7 double-click to add a new one` : `Add your first ${TYPE_META[id].label.toLowerCase()} \xB7 double-click works too` : null, on: { click: () => {
+      if (id in TYPE_META) categoryClick(id, n);
+      else {
+        clearTimeout(catTimer);
+        catTap = { id: null, t: 0 };
+        ctx.go(id);
+      }
+    } } }, h("span", { class: "ic icn", text: ic2 }), label, dot ? h("span", { class: "dot", title: "Needs attention" }) : n !== void 0 ? h("span", { class: "n", text: String(n) }) : null);
     const hl = health(store.items);
     const attention = hl.weak.length + hl.reused.length + hl.expiring.length > 0;
     clear(shell.side).append(

@@ -2630,3 +2630,30 @@ test('v0.48.0: create a new profile from a QR backup on the first screen (codes 
   await B.page.locator('.items .item', { hasText: 'QR Bank' }).click(); assert.match(await B.page.textContent('.detail'), /line 59 of a long note/, 'the long note came through whole');
   assert.deepEqual(B.problems.filter((p) => !/Failed to load resource/.test(p)), []); await B.ctx.close();
 });
+
+test('v0.49.0: side-bar categories — one click opens the list (or a new item when the category is empty), a double-click always starts a new item', async () => {
+  const { ctx, page, problems } = await newPage(); await createVault(page);
+  const side = (name) => page.locator('.side .nav', { hasText: name }).first();
+  const editorFor = async (kind) => { await page.waitForSelector('.modal-sheet #f_name'); assert.match(await page.textContent('.modal-sheet h2'), new RegExp('^New ' + kind, 'i')); };
+  // empty category, one click: its list, then the editor for that kind
+  await side('Logins').click();
+  await editorFor('login');
+  assert.equal(await page.evaluate(() => document.querySelector('.side .nav.on').textContent.includes('Logins')), true, 'the Logins list is selected behind the editor');
+  await page.fill('#f_name', 'First login'); await page.getByRole('button', { name: 'Save' }).click(); await page.waitForSelector('.detail h2:has-text("First login")');
+  // a category with items, one click: just the list, no editor
+  await side('Secure notes').click(); await editorFor('secure note'); await page.keyboard.press('Escape'); await page.waitForSelector('.modal-sheet', { state: 'detached' });
+  await side('Logins').click(); await page.waitForSelector('.items .item:has-text("First login")'); await page.waitForTimeout(700);
+  assert.equal(await page.locator('.modal-sheet').count(), 0, 'one click on a category with items opens no editor');
+  // a category with items, double-click: a new item of that kind
+  await side('Logins').dblclick(); await editorFor('login'); assert.equal(await page.locator('.modal-sheet').count(), 1);
+  await page.keyboard.press('Escape'); await page.waitForSelector('.modal-sheet', { state: 'detached' });
+  // an empty category, double-click: exactly one editor, and it stays open (the second click must not close it)
+  await side('Cards').dblclick(); await editorFor('payment card'); await page.waitForTimeout(700);
+  assert.equal(await page.locator('.modal-sheet').count(), 1, 'one editor, still open');
+  await page.keyboard.press('Escape'); await page.waitForSelector('.modal-sheet', { state: 'detached' });
+  // clicking somewhere else right after an empty category cancels its pending editor
+  await side('Cards').click(); await side('All items').click(); await page.waitForTimeout(700);
+  assert.equal(await page.locator('.modal-sheet').count(), 0, 'moving on cancels the pending editor');
+  assert.match(await side('Logins').getAttribute('title'), /double-click to add a new one/);
+  assert.deepEqual(problems.filter((p) => !/Failed to load resource/.test(p)), []); await ctx.close();
+});

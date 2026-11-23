@@ -11,7 +11,7 @@ import { initTooltips } from './tooltips.js';
 import { available } from './crypto.js';
 import { estimate } from './strength.js';
 import { generateStrongPassphrase } from './generator.js';
-import { renderVaultView, newItemMenu, showRecoveryKit, meter, clearPhotoCache } from './views.js';
+import { renderVaultView, newItemMenu, editItem, showRecoveryKit, meter, clearPhotoCache } from './views.js';
 import { renderGenerator, renderHealth, renderQR, renderData } from './tools.js';
 import { renderTaskManager } from './taskman.js';
 import { renderFamily } from './family.js';
@@ -581,8 +581,24 @@ function groupBlock(g, keys, c, btn) {
   return h('div', { class: 'ngroup-wrap' }, head, h('div', { class: 'nbody' + (closed ? ' collapsed' : '') }, keys.map((k) => btn(k, TYPE_META[k].icon, TYPE_META[k].plural, c[k]))));
 }
 
+/* A category in the side bar: one click opens its list, or (when it has no items yet) a new item of that kind;
+   a double-click always starts a new item. The side bar is redrawn on every click, so the browser's own dblclick
+   never reaches the new button: two clicks on the same category within DBL_MS count as a double-click. For an empty
+   category the editor opens after that window, so the second click cannot land on the new dialog's backdrop (which
+   closes it). Any other side-bar click cancels a pending editor. */
+const DBL_MS = 400;
+let catTap = { id: null, t: 0 }, catTimer = 0;
+function categoryClick(k, count) {
+  const now = Date.now(), second = catTap.id === k && now - catTap.t < DBL_MS;
+  catTap = second ? { id: null, t: 0 } : { id: k, t: now };
+  const openNew = () => { if (store.unlocked) editItem(ctx, null, k); };
+  if (!count) { if (!second) { clearTimeout(catTimer); ctx.go(k); catTimer = setTimeout(openNew, DBL_MS); } return; }
+  clearTimeout(catTimer);
+  if (second) openNew(); else ctx.go(k);
+}
+
 function drawSide() {
-  const c = counts(), btn = (id, ic, label, n, dot) => h('button', { class: 'nav' + (ctx.S.view === id ? ' on' : ''), 'aria-current': ctx.S.view === id ? 'page' : null, on: { click: () => ctx.go(id) } }, h('span', { class: 'ic icn', text: ic }), label, dot ? h('span', { class: 'dot', title: 'Needs attention' }) : n !== undefined ? h('span', { class: 'n', text: String(n) }) : null);
+  const c = counts(), btn = (id, ic, label, n, dot) => h('button', { class: 'nav' + (ctx.S.view === id ? ' on' : ''), 'aria-current': ctx.S.view === id ? 'page' : null, title: id in TYPE_META ? (n ? `Open ${label} · double-click to add a new one` : `Add your first ${TYPE_META[id].label.toLowerCase()} · double-click works too`) : null, on: { click: () => { if (id in TYPE_META) categoryClick(id, n); else { clearTimeout(catTimer); catTap = { id: null, t: 0 }; ctx.go(id); } } } }, h('span', { class: 'ic icn', text: ic }), label, dot ? h('span', { class: 'dot', title: 'Needs attention' }) : n !== undefined ? h('span', { class: 'n', text: String(n) }) : null);
   const hl = health(store.items);
   const attention = hl.weak.length + hl.reused.length + hl.expiring.length > 0;
   clear(shell.side).append(h('h4', { text: 'Vault' }), visNav().map(([id, ic, l]) => btn(id, ic, l, id === 'home' ? undefined : c[id])), store.conflictCount() ? btn('conflicts', '{{alert}}', 'Needs review', store.conflictCount()) : null, visGroups().length ? [h('h4', { text: 'Categories' }), visGroups().map(([g, keys]) => groupBlock(g, keys, c, btn))] : null,
